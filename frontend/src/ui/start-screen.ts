@@ -13,6 +13,7 @@ import { listProjects, newProject, openProject } from "../engine/persistence";
 import { api } from "../engine/api";
 import { icon } from "./icons";
 import { LOCALE_NAMES, locale, setLocale, t } from "../i18n";
+import { text } from "../i18n/text";
 
 interface MediaItem {
   id: string;
@@ -299,7 +300,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       for (const area of usage.areas) {
         const row = document.createElement("div");
         row.className = "panel-row";
-        row.innerHTML = `<span>${area.label}${area.derived ? ` · ${t("home.derived")}` : ""}</span><span>${size(area.bytes)} · ${area.files}</span>`;
+        row.innerHTML = `<span>${text(area.label)}${area.derived ? ` · ${t("home.derived")}` : ""}</span><span>${size(area.bytes)} · ${area.files}</span>`;
         rows.append(row);
       }
     } catch {

@@ -99,6 +99,218 @@ Kokoro local speech|Synthèse vocale locale Kokoro|Sintesi vocale locale Kokoro|
 Import Object cutout (U2Net small)|Importer le détourage d'objet (U2Net small)|Importa scontorno oggetti (U2Net small)|物体の切り抜き（U2Net small）を読み込み|개체 오려내기(U2Net small) 가져오기|Importar recorte de objeto (U2Net small)|Импортировать вырезание объекта (U2Net small)|Nesne dekupesini içe aktar (U2Net small)|导入物体抠像（U2Net small）|匯入物體去背（U2Net small）
 Import Person cutout (U2Net)|Importer le détourage de personne (U2Net)|Importa scontorno persone (U2Net)|人物の切り抜き（U2Net）を読み込み|인물 오려내기(U2Net) 가져오기|Importar recorte de pessoa (U2Net)|Импортировать вырезание человека (U2Net)|Kişi dekupesini içe aktar (U2Net)|导入人像抠像（U2Net）|匯入人像去背（U2Net）
 Import Kokoro local speech|Importer la synthèse vocale locale Kokoro|Importa sintesi vocale locale Kokoro|Kokoro ローカル音声合成を読み込み|Kokoro 로컬 음성 합성 가져오기|Importar fala local Kokoro|Импортировать локальный синтез речи Kokoro|Kokoro yerel konuşmayı içe aktar|导入 Kokoro 本地语音|匯入 Kokoro 本機語音
+Neutral|Neutre|Neutro|ニュートラル|뉴트럴|Neutro|Нейтральный|Nötr|中性|中性
+Exposure|Exposition|Esposizione|露出|노출|Exposição|Экспозиция|Pozlama|曝光|曝光
+Contrast|Contraste|Contrasto|コントラスト|대비|Contraste|Контраст|Kontrast|对比度|對比
+Saturation|Saturation|Saturazione|彩度|채도|Saturação|Насыщенность|Doygunluk|饱和度|飽和度
+Monochrome|Monochrome|Monocromatico|モノクロ|흑백|Monocromático|Монохром|Tek renkli|单色|單色
+Warmth|Chaleur|Calore|暖かみ|따뜻함|Calor|Тепло|Sıcaklık|暖调|暖調
+Cooling|Refroidissement|Raffreddamento|クール|쿨링|Resfriamento|Охлаждение|Soğutma|冷调|冷調
+Sepia|Sépia|Seppia|セピア|세피아|Sépia|Сепия|Sepya|棕褐色|棕褐色
+Faded|Délavé|Sbiadito|色あせ|바랜 색감|Desbotado|Выцветший|Soluk|褪色|褪色
+Halide Mono|Mono halogénure|Mono alogenuro|ハライドモノ|할라이드 모노|Mono haleto|Галоидный монохром|Halid mono|卤化银黑白|鹵化銀黑白
+Burnished|Bruni|Brunito|バーニッシュ|번니시|Brunido|Полированный|Cilalı|抛光|拋光
+Cyan Shadows|Ombres cyan|Ombre ciano|シアンのシャドウ|시안 그림자|Sombras cianas|Голубые тени|Camgöbeği gölgeler|青色阴影|青色陰影
+Amber Highlights|Hautes lumières ambrées|Luci ambrate|アンバーのハイライト|앰버 하이라이트|Realces âmbar|Янтарные света|Kehribar vurgular|琥珀高光|琥珀高光
+Teal Amber|Sarcelle et ambre|Verde acqua e ambra|ティールとアンバー|틸 앰버|Azul-petróleo e âmbar|Бирюза и янтарь|Deniz mavisi ve kehribar|青橙|青橙
+Blush Lift|Rehaussement rosé|Tocco rosato|ブラッシュリフト|블러시 리프트|Realce rosado|Розовый подъём|Pembe dokunuş|腮红提亮|腮紅提亮
+Moss Tint|Teinte mousse|Tinta muschio|モスティント|이끼 틴트|Tom musgo|Оттенок мха|Yosun tonu|苔藓色调|苔蘚色調
+Nightfall|Tombée de la nuit|Crepuscolo|夕闇|해질녘|Anoitecer|Сумерки|Akşam karanlığı|夜幕|夜幕
+First Light|Première lueur|Prima luce|夜明け|첫 햇살|Primeira luz|Первый свет|İlk ışık|破晓|破曉
+Skip Bleach|Sans blanchiment|Salto della sbianca|銀残し|블리치 바이패스|Sem branqueamento|Пропуск отбеливания|Ağartmasız|留银|留銀
+Chalk Soft|Craie douce|Gesso tenue|チョークソフト|초크 소프트|Giz suave|Мягкий мел|Yumuşak tebeşir|柔和粉笔|柔和粉筆
+Hard Snap|Punch net|Contrasto deciso|ハードスナップ|하드 스냅|Contraste marcante|Жёсткий контраст|Sert vuruş|强烈对比|強烈對比
+Low Key|Low key|Low key|ローキー|로우 키|Low key|Лоу-кей|Düşük ton|低调|低調
+High Key|High key|High key|ハイキー|하이 키|High key|Хай-кей|Yüksek ton|高调|高調
+Matte|Mat|Opaco|マット|매트|Fosco|Матовый|Mat|哑光|霧面
+Jade Contrast|Contraste jade|Contrasto giada|ジェードコントラスト|제이드 대비|Contraste jade|Нефритовый контраст|Yeşim kontrast|翡翠对比|翡翠對比
+Lilac Haze|Brume lilas|Foschia lilla|ライラックヘイズ|라일락 헤이즈|Névoa lilás|Сиреневая дымка|Leylak pusu|丁香薄雾|丁香薄霧
+Dune Wash|Voile de dune|Velo di duna|デューンウォッシュ|듄 워시|Véu de duna|Песчаная дымка|Kum tülü|沙丘淡彩|沙丘淡彩
+Glacier Bright|Glacier lumineux|Ghiacciaio luminoso|グレイシャーブライト|빙하 브라이트|Geleira brilhante|Яркий ледник|Parlak buzul|冰川亮调|冰川亮調
+Harvest|Moisson|Raccolto|ハーベスト|수확|Colheita|Урожай|Hasat|丰收|豐收
+Ink Shadow|Ombre d'encre|Ombra d'inchiostro|インクシャドウ|잉크 섀도|Sombra de tinta|Чернильная тень|Mürekkep gölge|墨影|墨影
+Newsprint|Papier journal|Carta di giornale|新聞紙|신문지|Papel jornal|Газетная бумага|Gazete kâğıdı|报纸|報紙
+Split Purple|Virage violet|Viraggio viola|スプリットパープル|스플릿 퍼플|Divisão roxa|Раздельный фиолетовый|Mor bölünmüş ton|紫色分离|紫色分離
+Split Green|Virage vert|Viraggio verde|スプリットグリーン|스플릿 그린|Divisão verde|Раздельный зелёный|Yeşil bölünmüş ton|绿色分离|綠色分離
+Red Lift|Rehaussement rouge|Sollevamento rosso|レッドリフト|레드 리프트|Realce vermelho|Подъём красного|Kırmızı yükseltme|红色提升|紅色提升
+Blue Lift|Rehaussement bleu|Sollevamento blu|ブルーリフト|블루 리프트|Realce azul|Подъём синего|Mavi yükseltme|蓝色提升|藍色提升
+Green Lift|Rehaussement vert|Sollevamento verde|グリーンリフト|그린 리프트|Realce verde|Подъём зелёного|Yeşil yükseltme|绿色提升|綠色提升
+Highlight Rolloff|Atténuation des hautes lumières|Attenuazione delle luci|ハイライトロールオフ|하이라이트 롤오프|Suavização dos realces|Мягкий спад светов|Vurgu yumuşatma|高光柔化|高光柔化
+Shadow Detail|Détails des ombres|Dettagli nelle ombre|シャドウディテール|그림자 디테일|Detalhes nas sombras|Детали в тенях|Gölge ayrıntısı|阴影细节|陰影細節
+Vibrance|Vibrance|Vividezza|自然な彩度|생동감|Vibração|Сочность|Canlılık|自然饱和度|自然飽和度
+Soft Contrast|Contraste doux|Contrasto morbido|ソフトコントラスト|부드러운 대비|Contraste suave|Мягкий контраст|Yumuşak kontrast|柔和对比|柔和對比
+Crisp Mids|Tons moyens nets|Mezzitoni nitidi|クリアな中間調|선명한 중간톤|Meios-tons nítidos|Чёткие полутона|Net orta tonlar|清晰中间调|清晰中間調
+Lift Blacks|Noirs relevés|Neri sollevati|黒を持ち上げる|블랙 올리기|Pretos elevados|Приподнятые чёрные|Siyahları yükselt|提亮黑色|提亮黑色
+Crush Blacks|Noirs écrasés|Neri schiacciati|黒をつぶす|블랙 누르기|Pretos esmagados|Глубокие чёрные|Siyahları ez|压暗黑色|壓暗黑色
+Half Stop Down|Moins un demi-diaph|Mezzo stop in meno|半段アンダー|반 스톱 낮춤|Meio stop abaixo|Минус пол-ступени|Yarım durak aşağı|降低半档|降低半檔
+Desaturate|Désaturer|Desatura|彩度を下げる|채도 낮추기|Dessaturar|Обесцветить|Doygunluğu azalt|降低饱和度|降低飽和度
+Brighten Mids|Éclaircir les tons moyens|Schiarisci i mezzitoni|中間調を明るく|중간톤 밝게|Clarear meios-tons|Осветлить полутона|Orta tonları aydınlat|提亮中间调|提亮中間調
+Cross Process|Traitement croisé|Sviluppo incrociato|クロスプロセス|크로스 프로세스|Processo cruzado|Кросс-процесс|Çapraz işlem|交叉冲印|交叉沖印
+Push Process|Développement poussé|Sviluppo tirato|増感現像|푸시 현상|Revelação puxada|Push-проявка|İtme banyosu|增感冲洗|增感沖洗
+Pull Process|Développement retenu|Sviluppo ridotto|減感現像|풀 현상|Revelação reduzida|Pull-проявка|Çekme banyosu|减感冲洗|減感沖洗
+Expired Stock|Pellicule périmée|Pellicola scaduta|期限切れフィルム|유통기한 지난 필름|Filme vencido|Просроченная плёнка|Süresi geçmiş film|过期胶片|過期膠片
+Tintype|Ferrotype|Ferrotipo|ティンタイプ|틴타입|Ferrótipo|Ферротипия|Tenekeli baskı|锡版照相|錫版照相
+Cyanotype|Cyanotype|Cianotipia|サイアノタイプ|시아노타입|Cianotipia|Цианотипия|Siyanotip|蓝晒|藍曬
+Night Print|Tirage nocturne|Stampa notturna|ナイトプリント|나이트 프린트|Cópia noturna|Ночной отпечаток|Gece baskısı|夜间冲印|夜間沖印
+Tungsten|Tungstène|Tungsteno|タングステン|텅스텐|Tungstênio|Вольфрам|Tungsten|钨丝灯|鎢絲燈
+Candlelit|Aux chandelles|A lume di candela|キャンドルライト|촛불|À luz de velas|При свечах|Mum ışığı|烛光|燭光
+Honey Glow|Lueur de miel|Bagliore di miele|ハニーグロウ|허니 글로우|Brilho de mel|Медовое сияние|Bal ışıltısı|蜂蜜光晕|蜂蜜光暈
+Terracotta|Terre cuite|Terracotta|テラコッタ|테라코타|Terracota|Терракота|Terakota|陶土色|陶土色
+Peach Lift|Rehaussement pêche|Tocco pesca|ピーチリフト|피치 리프트|Realce pêssego|Персиковый подъём|Şeftali dokunuş|蜜桃提亮|蜜桃提亮
+Late Sun|Soleil couchant|Sole tardo|夕日|늦은 햇살|Sol da tarde|Позднее солнце|Akşam güneşi|夕阳|夕陽
+Rust Shadows|Ombres rouille|Ombre ruggine|ラストシャドウ|녹빛 그림자|Sombras ferrugem|Ржавые тени|Pas rengi gölgeler|锈色阴影|鏽色陰影
+Overcast|Ciel couvert|Nuvoloso|曇天|흐린 하늘|Nublado|Пасмурно|Kapalı hava|阴天|陰天
+Steel Blue|Bleu acier|Blu acciaio|スチールブルー|스틸 블루|Azul-aço|Стальной синий|Çelik mavisi|钢蓝|鋼藍
+Moonlit|Clair de lune|Chiaro di luna|月明かり|달빛|Luar|Лунный свет|Ay ışığı|月光|月光
+Mint Air|Air mentholé|Aria di menta|ミントエア|민트 에어|Ar de menta|Мятный воздух|Nane havası|薄荷清风|薄荷清風
+Deep Water|Eau profonde|Acque profonde|ディープウォーター|깊은 물|Águas profundas|Глубокая вода|Derin su|深水|深水
+Frost Highlights|Hautes lumières givrées|Luci gelide|フロストハイライト|서리 하이라이트|Realces gélidos|Морозные света|Buzlu vurgular|霜冻高光|霜凍高光
+Slate Shade|Ombre ardoise|Ombra ardesia|スレートシェード|슬레이트 음영|Sombra ardósia|Сланцевая тень|Arduvaz gölgesi|石板灰影|石板灰影
+Red Cyan|Rouge et cyan|Rosso ciano|レッドシアン|레드 시안|Vermelho e ciano|Красный и голубой|Kırmızı camgöbeği|红青|紅青
+Pine Sky|Pin et ciel|Pino e cielo|パインスカイ|소나무 하늘|Pinheiro e céu|Сосна и небо|Çam ve gök|松与天|松與天
+Navy Blush|Marine et rose|Blu navy e rosa|ネイビーブラッシュ|네이비 블러시|Marinho e rosa|Тёмно-синий и розовый|Lacivert pembe|海军蓝与粉|海軍藍與粉
+Violet Gold|Violet et or|Viola e oro|バイオレットゴールド|바이올렛 골드|Violeta e dourado|Фиолетовый и золотой|Mor altın|紫金|紫金
+Teal Magenta|Sarcelle et magenta|Verde acqua e magenta|ティールマゼンタ|틸 마젠타|Azul-petróleo e magenta|Бирюза и пурпур|Deniz mavisi macenta|青品红|青洋紅
+Cocoa Cream|Cacao et crème|Cacao e panna|ココアクリーム|코코아 크림|Cacau e creme|Какао и сливки|Kakao krema|可可奶油|可可奶油
+Muted Split|Virage atténué|Viraggio tenue|ミュートスプリット|차분한 스플릿|Divisão suave|Приглушённое тонирование|Yumuşak bölünmüş ton|柔和分离色调|柔和分離色調
+Gaussian Blur|Flou gaussien|Sfocatura gaussiana|ガウスぼかし|가우시안 흐림|Desfoque gaussiano|Размытие по Гауссу|Gauss bulanıklığı|高斯模糊|高斯模糊
+Box Blur|Flou de zone|Sfocatura a riquadro|ボックスぼかし|박스 흐림|Desfoque de caixa|Прямоугольное размытие|Kutu bulanıklığı|方框模糊|方框模糊
+Directional Blur|Flou directionnel|Sfocatura direzionale|方向ぼかし|방향 흐림|Desfoque direcional|Направленное размытие|Yönlü bulanıklık|定向模糊|定向模糊
+Radial Blur|Flou radial|Sfocatura radiale|放射状ぼかし|방사형 흐림|Desfoque radial|Радиальное размытие|Dairesel bulanıklık|径向模糊|徑向模糊
+Sharpen|Netteté|Nitidezza|シャープ|선명하게|Nitidez|Резкость|Keskinleştir|锐化|銳利化
+Edge Detect|Détection des contours|Rilevamento bordi|エッジ検出|가장자리 감지|Detecção de bordas|Выделение краёв|Kenar algılama|边缘检测|邊緣偵測
+Emboss|Estampage|Rilievo|エンボス|엠보스|Relevo|Тиснение|Kabartma|浮雕|浮雕
+Invert|Inverser|Inverti|反転|반전|Inverter|Инверсия|Ters çevir|反相|負片
+Posterize|Postérisation|Posterizzazione|ポスタリゼーション|포스터화|Posterizar|Постеризация|Posterleştir|色调分离|色調分離
+Solarize|Solarisation|Solarizzazione|ソラリゼーション|솔라리제이션|Solarizar|Соляризация|Solarize|曝光过度|曝光過度
+Pixelate|Pixelisation|Pixelizzazione|モザイク|픽셀화|Pixelizar|Пикселизация|Pikselleştir|像素化|像素化
+Vignette|Vignettage|Vignettatura|周辺減光|비네트|Vinheta|Виньетка|Vinyet|暗角|暈影
+Film Grain|Grain de film|Grana della pellicola|フィルムグレイン|필름 그레인|Granulação de filme|Плёночное зерно|Film grenli|胶片颗粒|膠片顆粒
+Glow|Lueur|Bagliore|グロー|글로우|Brilho|Свечение|Parlama|辉光|光暈
+Chromatic Aberration|Aberration chromatique|Aberrazione cromatica|色収差|색수차|Aberração cromática|Хроматическая аберрация|Renk sapması|色差|色差
+Fisheye|Fisheye|Fisheye|魚眼|어안|Olho de peixe|Рыбий глаз|Balıkgözü|鱼眼|魚眼
+Wave|Vague|Onda|波形|물결|Onda|Волна|Dalga|波浪|波浪
+Mirror|Miroir|Specchio|ミラー|미러|Espelho|Зеркало|Ayna|镜像|鏡像
+Kaleidoscope|Kaléidoscope|Caleidoscopio|万華鏡|만화경|Caleidoscópio|Калейдоскоп|Kaleydoskop|万花筒|萬花筒
+Scanlines|Lignes de balayage|Linee di scansione|走査線|스캔라인|Linhas de varredura|Строки развёртки|Tarama çizgileri|扫描线|掃描線
+Signal Interference|Interférences|Interferenza di segnale|信号干渉|신호 간섭|Interferência de sinal|Помехи сигнала|Sinyal paraziti|信号干扰|訊號干擾
+Cartoon|Dessin animé|Cartone|カートゥーン|카툰|Desenho animado|Мультфильм|Çizgi film|卡通|卡通
+Pencil Sketch|Croquis au crayon|Schizzo a matita|鉛筆スケッチ|연필 스케치|Esboço a lápis|Карандашный набросок|Kurşun kalem eskiz|铅笔素描|鉛筆素描
+Rain|Pluie|Pioggia|雨|비|Chuva|Дождь|Yağmur|雨|雨
+Dust|Poussière|Polvere|ほこり|먼지|Poeira|Пыль|Toz|灰尘|灰塵
+Camera Shake|Tremblement de caméra|Tremolio della camera|手ぶれ|카메라 흔들림|Tremor de câmera|Дрожание камеры|Kamera sarsıntısı|镜头晃动|鏡頭晃動
+Tilt Shift|Tilt-shift|Tilt-shift|ティルトシフト|틸트 시프트|Tilt-shift|Тилт-шифт|Tilt-shift|移轴|移軸
+Spin Blur|Flou tournoyant|Sfocatura rotatoria|回転ぼかし|회전 흐림|Desfoque giratório|Размытие вращением|Dönme bulanıklığı|旋转模糊|旋轉模糊
+Lens Blur|Flou d'objectif|Sfocatura obiettivo|レンズぼかし|렌즈 흐림|Desfoque de lente|Размытие объектива|Lens bulanıklığı|镜头模糊|鏡頭模糊
+Median Soften|Adoucissement médian|Ammorbidimento mediano|メディアンで柔らかく|중앙값 부드럽게|Suavização mediana|Медианное смягчение|Medyan yumuşatma|中值柔化|中值柔化
+Soft Focus|Flou artistique|Fuoco morbido|ソフトフォーカス|소프트 포커스|Foco suave|Мягкий фокус|Yumuşak odak|柔焦|柔焦
+Diagonal Blur|Flou diagonal|Sfocatura diagonale|斜めぼかし|대각선 흐림|Desfoque diagonal|Диагональное размытие|Çapraz bulanıklık|对角模糊|對角模糊
+Ghost Trail|Traînée fantôme|Scia fantasma|ゴーストトレイル|잔상|Rastro fantasma|Призрачный шлейф|Hayalet iz|残影拖尾|殘影拖尾
+Halftone|Similigravure|Mezzetinte|ハーフトーン|하프톤|Meio-tom|Полутон|Yarım ton|半色调|半色調
+Duotone|Bichromie|Bicromia|デュオトーン|듀오톤|Duotone|Дуотон|Çift ton|双色调|雙色調
+Paint Wash|Lavis|Acquerellato|ペイントウォッシュ|페인트 워시|Aguada|Живописная размывка|Boya yıkama|水彩晕染|水彩暈染
+Thermal|Thermique|Termico|サーマル|열화상|Térmico|Тепловизор|Termal|热成像|熱成像
+Night Vision|Vision nocturne|Visione notturna|暗視|야간 투시|Visão noturna|Ночное видение|Gece görüşü|夜视|夜視
+Ink Outline|Contour à l'encre|Contorno a inchiostro|インクアウトライン|잉크 윤곽선|Contorno a tinta|Чернильный контур|Mürekkep hattı|墨水描边|墨水描邊
+Crosshatch|Hachures croisées|Tratteggio incrociato|クロスハッチ|크로스해치|Hachura cruzada|Перекрёстная штриховка|Çapraz tarama|交叉排线|交叉排線
+Swirl|Tourbillon|Vortice|渦巻き|소용돌이|Redemoinho|Завихрение|Girdap|漩涡|漩渦
+Ripple|Ondulation|Increspatura|波紋|잔물결|Ondulação|Рябь|Dalgacık|涟漪|漣漪
+Pinch|Pincement|Pizzico|ピンチ|오목|Pinçar|Сжатие|Sıkıştırma|收缩|收縮
+Slice Glitch|Glitch en tranches|Glitch a fette|スライスグリッチ|슬라이스 글리치|Glitch em fatias|Глитч срезами|Dilim bozulması|切片故障|切片故障
+Tile Repeat|Répétition en mosaïque|Ripetizione a tessere|タイル繰り返し|타일 반복|Repetição em ladrilhos|Повтор плиткой|Döşeme tekrarı|平铺重复|平鋪重複
+Polar Wrap|Enroulement polaire|Avvolgimento polare|極座標ラップ|극좌표 감싸기|Envolvimento polar|Полярное обёртывание|Kutupsal sarma|极坐标环绕|極座標環繞
+Heat Haze|Brume de chaleur|Foschia di calore|陽炎|아지랑이|Névoa de calor|Марево|Sıcak pus|热浪扭曲|熱浪扭曲
+Film Scratches|Rayures de film|Graffi della pellicola|フィルムの傷|필름 스크래치|Arranhões de filme|Царапины плёнки|Film çizikleri|胶片划痕|膠片刮痕
+Light Leak|Fuite de lumière|Infiltrazione di luce|光漏れ|빛 번짐|Vazamento de luz|Засветка|Işık sızıntısı|漏光|漏光
+Aperture Grille|Grille d'ouverture|Griglia di apertura|アパーチャーグリル|애퍼처 그릴|Grade de abertura|Апертурная решётка|Açıklık ızgarası|荫栅|蔭柵
+Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|Textura de papel|Текстура бумаги|Kâğıt dokusu|纸张纹理|紙張紋理
+Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
+Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
+Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Pitch Up|Hauteur plus aiguë|Tono più alto|ピッチアップ|피치 올리기|Tom acima|Выше тон|Perdeyi yükselt|升调|升調
+Pitch Down|Hauteur plus grave|Tono più basso|ピッチダウン|피치 내리기|Tom abaixo|Ниже тон|Perdeyi düşür|降调|降調
+Denoise|Débruitage|Riduzione rumore|ノイズ除去|노이즈 제거|Remover ruído|Шумоподавление|Gürültü giderme|降噪|降噪
+Voice Clean|Voix nette|Voce pulita|ボイスクリーン|음성 정리|Voz limpa|Чистый голос|Ses temizleme|人声净化|人聲淨化
+Bass|Graves|Bassi|低音|저음|Graves|Бас|Bas|低音|低音
+Treble|Aigus|Alti|高音|고음|Agudos|Высокие|Tiz|高音|高音
+Telephone|Téléphone|Telefono|電話|전화|Telefone|Телефон|Telefon|电话|電話
+Room|Pièce|Stanza|ルーム|룸|Sala|Комната|Oda|房间|房間
+Hall|Salle|Sala|ホール|홀|Salão|Зал|Salon|大厅|大廳
+Cathedral|Cathédrale|Cattedrale|大聖堂|대성당|Catedral|Собор|Katedral|大教堂|大教堂
+Plate|Plaque|Piastra|プレート|플레이트|Placa|Пластина|Plaka|板式|板式
+Robot|Robot|Robot|ロボット|로봇|Robô|Робот|Robot|机器人|機器人
+Tremolo|Trémolo|Tremolo|トレモロ|트레몰로|Tremolo|Тремоло|Tremolo|颤音|顫音
+Vibrato|Vibrato|Vibrato|ビブラート|비브라토|Vibrato|Вибрато|Vibrato|揉音|揉音
+Distortion|Distorsion|Distorsione|ディストーション|디스토션|Distorção|Дисторшн|Distorsiyon|失真|失真
+Compress|Compression|Compressione|コンプレッサー|컴프레서|Compressão|Компрессия|Sıkıştırma|压缩|壓縮
+Normalize|Normaliser|Normalizza|ノーマライズ|노멀라이즈|Normalizar|Нормализация|Normalleştir|标准化|正規化
+De-ess|De-esser|De-esser|ディエッサー|디에서|De-esser|Де-эссер|De-esser|齿音消除|齒音消除
+Octave Up|Octave au-dessus|Ottava sopra|オクターブ上|옥타브 위|Oitava acima|Октава вверх|Oktav yukarı|升八度|升八度
+Octave Down|Octave en dessous|Ottava sotto|オクターブ下|옥타브 아래|Oitava abaixo|Октава вниз|Oktav aşağı|降八度|降八度
+Double Voice|Voix doublée|Voce raddoppiata|ダブルボイス|더블 보이스|Voz dobrada|Двойной голос|Çift ses|双重人声|雙重人聲
+Jet Flange|Flanger jet|Flanger jet|ジェットフランジャー|제트 플랜저|Flanger jato|Реактивный флэнджер|Jet flanger|喷气镶边|噴射鑲邊
+Swirl Phase|Phaser tourbillonnant|Phaser vorticoso|スワールフェイザー|스월 페이저|Phaser rodopiante|Кружащий фэйзер|Girdap faz|漩涡相位|漩渦相位
+Bullhorn|Mégaphone|Megafono|拡声器|확성기|Megafone|Мегафон|Megafon|扩音器|擴音器
+Two Way Radio|Talkie-walkie|Ricetrasmittente|トランシーバー|무전기|Rádio comunicador|Рация|Telsiz|对讲机|對講機
+Warm Lows|Graves chauds|Bassi caldi|温かい低域|따뜻한 저음|Graves quentes|Тёплые низы|Sıcak baslar|温暖低频|溫暖低頻
+Presence Lift|Présence rehaussée|Presenza accentuata|プレゼンス強調|프레즌스 강조|Realce de presença|Подъём присутствия|Varlık artırma|临场感提升|臨場感提升
+Mid Scoop|Creux dans les médiums|Scavo delle medie|中域カット|중음 감소|Corte de médios|Провал середины|Orta frekans oyma|中频凹陷|中頻凹陷
+Bit Crush|Bitcrusher|Bitcrusher|ビットクラッシュ|비트 크러시|Bitcrusher|Биткрашер|Bit ezme|比特破碎|位元破碎
+Tape Warmth|Chaleur de bande|Calore del nastro|テープの温かみ|테이프 온기|Calor de fita|Тепло ленты|Bant sıcaklığı|磁带暖声|磁帶暖聲
+Crisp Detail|Détail net|Dettaglio nitido|クリアなディテール|선명한 디테일|Detalhe nítido|Чёткая детализация|Net ayrıntı|清脆细节|清脆細節
+Lofi Band|Bande lo-fi|Banda lo-fi|ローファイバンド|로파이 밴드|Faixa lo-fi|Лоу-фай полоса|Lo-fi bant|低保真频段|低傳真頻段
+Slapback|Slapback|Slapback|スラップバック|슬랩백|Slapback|Слэпбэк|Slapback|拍击回声|拍擊回聲
+Wide Stage|Scène large|Palco ampio|ワイドステージ|넓은 무대|Palco amplo|Широкая сцена|Geniş sahne|宽舞台|寬舞台
+Stereo Bloom|Épanouissement stéréo|Apertura stereo|ステレオブルーム|스테레오 블룸|Expansão estéreo|Стерео-расширение|Stereo açılım|立体声扩展|立體聲擴展
+Long Tail|Longue traîne|Coda lunga|ロングテール|긴 잔향|Cauda longa|Длинный хвост|Uzun kuyruk|长尾|長尾
+Tunnel|Tunnel|Tunnel|トンネル|터널|Túnel|Туннель|Tünel|隧道|隧道
+Small Booth|Petite cabine|Cabina piccola|小さなブース|작은 부스|Cabine pequena|Маленькая кабина|Küçük kabin|小隔间|小隔間
+Far Away|Au loin|Lontano|遠くから|먼 곳|Distante|Вдалеке|Uzakta|远处|遠處
+Noise Gate|Noise gate|Noise gate|ノイズゲート|노이즈 게이트|Noise gate|Нойз-гейт|Gürültü kapısı|噪声门|噪音閘門
+Hiss Cut|Suppression du souffle|Taglio del fruscio|ヒスカット|히스 제거|Corte de chiado|Удаление шипения|Tıslama kesme|嘶声消除|嘶聲消除
+Hum Remover|Suppression du ronflement|Rimozione del ronzio|ハム除去|험 제거|Remoção de zumbido|Удаление гула|Uğultu giderici|嗡声消除|嗡聲消除
+Rumble Cut|Coupe-grondement|Taglio del rombo|ランブルカット|럼블 제거|Corte de ronco|Удаление рокота|Gürleme kesme|隆隆声消除|隆隆聲消除
+Level Rider|Régulateur de niveau|Livellatore|レベルライダー|레벨 라이더|Controle de nível|Выравниватель уровня|Seviye dengeleyici|电平追踪|電平追蹤
+Peak Limiter|Limiteur de crêtes|Limitatore di picco|ピークリミッター|피크 리미터|Limitador de pico|Пиковый лимитер|Tepe sınırlayıcı|峰值限制器|峰值限制器
+Deep Denoise|Débruitage profond|Riduzione rumore profonda|ディープノイズ除去|강력 노이즈 제거|Remoção profunda de ruído|Глубокое шумоподавление|Derin gürültü giderme|深度降噪|深度降噪
+Wipe Left|Balayage vers la gauche|Tendina a sinistra|左へワイプ|왼쪽으로 닦아내기|Revelar para a esquerda|Шторка влево|Sola silme|向左擦除|向左擦除
+Wipe Right|Balayage vers la droite|Tendina a destra|右へワイプ|오른쪽으로 닦아내기|Revelar para a direita|Шторка вправо|Sağa silme|向右擦除|向右擦除
+Wipe Up|Balayage vers le haut|Tendina verso l'alto|上へワイプ|위로 닦아내기|Revelar para cima|Шторка вверх|Yukarı silme|向上擦除|向上擦除
+Wipe Down|Balayage vers le bas|Tendina verso il basso|下へワイプ|아래로 닦아내기|Revelar para baixo|Шторка вниз|Aşağı silme|向下擦除|向下擦除
+Slide Left|Glissement vers la gauche|Scorrimento a sinistra|左へスライド|왼쪽으로 밀기|Deslizar para a esquerda|Сдвиг влево|Sola kaydır|向左滑动|向左滑動
+Slide Right|Glissement vers la droite|Scorrimento a destra|右へスライド|오른쪽으로 밀기|Deslizar para a direita|Сдвиг вправо|Sağa kaydır|向右滑动|向右滑動
+Zoom|Zoom|Zoom|ズーム|줌|Zoom|Масштаб|Yakınlaştırma|缩放|縮放
+Iris|Iris|Iride|アイリス|아이리스|Íris|Диафрагма|İris|光圈|光圈
+Dissolve|Fondu|Dissolvenza|ディゾルブ|디졸브|Dissolver|Растворение|Çözülme|溶解|溶解
+Push Up|Poussée vers le haut|Spinta verso l'alto|上へプッシュ|위로 밀어내기|Empurrar para cima|Выталкивание вверх|Yukarı it|向上推|向上推
+Normal|Normal|Normale|通常|표준|Normal|Обычный|Normal|正常|正常
+Multiply|Produit|Moltiplica|乗算|곱하기|Multiplicação|Умножение|Çarp|正片叠底|色彩增值
+Screen|Superposition|Scolora|スクリーン|스크린|Tela|Экран|Ekran|滤色|濾色
+Overlay|Incrustation|Sovrapponi|オーバーレイ|오버레이|Sobrepor|Перекрытие|Bindirme|叠加|覆蓋
+Darken|Obscurcir|Scurisci|比較（暗）|어둡게 하기|Escurecer|Затемнение|Koyulaştır|变暗|變暗
+Lighten|Éclaircir|Schiarisci|比較（明）|밝게 하기|Clarear|Замена светлым|Açıklaştır|变亮|變亮
+Difference|Différence|Differenza|差の絶対値|차이|Diferença|Разница|Fark|差值|差異化
+Add|Addition|Aggiungi|加算|더하기|Adição|Сложение|Ekle|相加|增加
+Subtract|Soustraction|Sottrai|減算|빼기|Subtração|Вычитание|Çıkar|减去|減去
+Soft Light|Lumière tamisée|Luce soffusa|ソフトライト|소프트 라이트|Luz suave|Мягкий свет|Yumuşak ışık|柔光|柔光
+media|médias|media|メディア|미디어|mídia|медиа|medya|媒体|媒體
+effect previews|aperçus d'effets|anteprime degli effetti|エフェクトのプレビュー|효과 미리보기|prévias de efeitos|превью эффектов|efekt önizlemeleri|效果预览|效果預覽
+filmstrips|pellicules|filmstrip|フィルムストリップ|필름스트립|tiras de filme|раскадровки|film şeritleri|胶片条|膠片條
+waveforms|formes d'onde|forme d'onda|波形|파형|formas de onda|волновые формы|dalga biçimleri|波形|波形
+thumbnails|vignettes|miniature|サムネイル|썸네일|miniaturas|миниатюры|küçük resimler|缩略图|縮圖
+Uniform|Uniforme|Uniforme|一定|균일|Uniforme|Равномерно|Düzgün|匀速|等速
+Accelerate|Accélérer|Accelera|加速|가속|Acelerar|Ускорение|Hızlan|加速|加速
+Decelerate|Ralentir|Decelera|減速|감속|Desacelerar|Замедление|Yavaşla|减速|減速
+Valley|Creux|Valle|谷|골짜기|Vale|Впадина|Vadi|低谷|低谷
+Peak|Pic|Picco|山|정점|Pico|Пик|Tepe|高峰|高峰
+Pulse|Pulsation|Pulsazione|パルス|펄스|Pulso|Пульс|Nabız|脉冲|脈衝
+Slide left|Glisser à gauche|Scorri a sinistra|左へスライド|왼쪽으로 슬라이드|Deslizar para a esquerda|Сдвиг влево|Sola kaydır|向左滑入|向左滑入
+Slide right|Glisser à droite|Scorri a destra|右へスライド|오른쪽으로 슬라이드|Deslizar para a direita|Сдвиг вправо|Sağa kaydır|向右滑入|向右滑入
+Slide up|Glisser vers le haut|Scorri verso l'alto|上へスライド|위로 슬라이드|Deslizar para cima|Сдвиг вверх|Yukarı kaydır|向上滑入|向上滑入
+Slide down|Glisser vers le bas|Scorri verso il basso|下へスライド|아래로 슬라이드|Deslizar para baixo|Сдвиг вниз|Aşağı kaydır|向下滑入|向下滑入
+Spin in|Entrée en rotation|Entrata rotante|回転イン|회전하며 등장|Entrada girando|Появление с вращением|Dönerek giriş|旋转进入|旋轉進入
+Float|Flottement|Fluttuazione|浮遊|떠다니기|Flutuar|Парение|Süzülme|漂浮|漂浮
+Shake|Secousse|Scossa|シェイク|흔들기|Tremer|Тряска|Sarsıntı|抖动|抖動
 Ripple delete on selected track|Suppression avec décalage sur la piste sélectionnée|Elimina con riallineamento sulla traccia selezionata|選択トラックでリップル削除|선택한 트랙에서 리플 삭제|Excluir com ondulação na trilha selecionada|Удалить со сдвигом на выбранной дорожке|Seçili parçada kaydırarak sil|在所选轨道上波纹删除|在所選軌道上漣漪刪除
 Add track|Ajouter une piste|Aggiungi traccia|トラックを追加|트랙 추가|Adicionar trilha|Добавить дорожку|Parça ekle|添加轨道|新增軌道
 Fit timeline|Ajuster la timeline|Adatta timeline|タイムラインに合わせる|타임라인 맞춤|Ajustar linha do tempo|Вместить таймлайн|Zaman çizelgesini sığdır|适应时间线|符合時間軸

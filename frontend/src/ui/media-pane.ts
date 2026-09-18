@@ -7,6 +7,7 @@ import type { MediaKind } from "../engine/types";
 import { defaultTextStyle, defaultTransform, type Clip } from "../engine/types";
 import { transcribeClip } from "../engine/captions";
 import { t } from "../i18n";
+import { text } from "../i18n/text";
 import { icon } from "./icons";
 
 const TABS: Array<[string, string]> = [
@@ -200,7 +201,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const fxCard = (mode: string, kind: string, cat: string, id: string, label: string, visual: string) =>
     `<div class="effect-card fx-card" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
   const transitionName = (type: string) =>
-    type === "crossfade" ? t("trans.crossfade") : type === "dip" ? t("trans.dip") : type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    type === "crossfade" ? t("trans.crossfade") : type === "dip" ? t("trans.dip") : text(type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
   type CatalogueEntry = { id: string; name: string; category?: string; group?: string };
   void fetch("/api/catalogue")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
@@ -210,10 +211,10 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       fxGrid.insertAdjacentHTML(
         "beforeend",
         [
-          ...data.video.filter(grouped).map((v) => fxCard(v.category === "Color" ? "filter" : "effect", "video", v.group!, v.id, v.name, thumb("effect", v.id))),
+          ...data.video.filter(grouped).map((v) => fxCard(v.category === "Color" ? "filter" : "effect", "video", v.group!, v.id, text(v.name), thumb("effect", v.id))),
           ...MASKS.map(([shape, label]) => fxCard("effect", "mask", "Mask", shape, label, thumb("mask", shape))),
           ...CUTOUTS.map(([model, label]) => fxCard("effect", "cutout", "Cutout", model, label, thumb("source", "cutout"))),
-          ...data.audio.filter(grouped).map((a) => fxCard("effect", "audio", a.group!, a.id, a.name, glyph)),
+          ...data.audio.filter(grouped).map((a) => fxCard("effect", "audio", a.group!, a.id, text(a.name), glyph)),
         ].join(""),
       );
       transGrid.insertAdjacentHTML(
