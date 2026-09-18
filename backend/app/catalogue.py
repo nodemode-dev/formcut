@@ -84,6 +84,10 @@ VIDEO_EFFECTS = [
     "invert", "posterize", "threshold", "solarize", "pixelate", "vignette", "grain",
     "glow", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "scanlines",
     "interference", "cartoon", "pencil", "rain", "dust", "camera-shake",
+    "tilt-shift", "spin-blur", "lens-blur", "median-soften", "soft-focus", "diagonal-blur", "ghost-trail",
+    "halftone", "duotone", "paint-wash", "thermal", "night-vision", "ink-outline", "crosshatch",
+    "swirl", "ripple", "pinch", "slice-glitch", "tile-repeat", "polar-wrap", "heat-haze",
+    "film-scratches", "light-leak", "aperture-grille", "paper-texture", "snowfall", "bokeh-spots", "chroma-noise",
 ]
 
 AUDIO_CHAINS = {
@@ -140,10 +144,10 @@ AUDIO_CHAINS = {
 TRANSITIONS = ["crossfade", "dip", "wipe-left", "wipe-right", "wipe-up", "wipe-down", "slide-left", "slide-right", "zoom", "iris", "dissolve", "push-up"]
 
 EFFECT_GROUPS = {
-    "Blur": ["gaussian", "box", "directional-blur", "radial-blur", "glow"],
-    "Stylize": ["sharpen", "edge", "emboss", "posterize", "threshold", "solarize", "invert", "cartoon", "pencil"],
-    "Distort": ["pixelate", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "camera-shake"],
-    "Texture": ["vignette", "grain", "scanlines", "interference", "rain", "dust"],
+    "Blur": ["gaussian", "box", "directional-blur", "radial-blur", "glow", "tilt-shift", "spin-blur", "lens-blur", "median-soften", "soft-focus", "diagonal-blur", "ghost-trail"],
+    "Stylize": ["sharpen", "edge", "emboss", "posterize", "threshold", "solarize", "invert", "cartoon", "pencil", "halftone", "duotone", "paint-wash", "thermal", "night-vision", "ink-outline", "crosshatch"],
+    "Distort": ["pixelate", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "camera-shake", "swirl", "ripple", "pinch", "slice-glitch", "tile-repeat", "polar-wrap", "heat-haze"],
+    "Texture": ["vignette", "grain", "scanlines", "interference", "rain", "dust", "film-scratches", "light-leak", "aperture-grille", "paper-texture", "snowfall", "bokeh-spots", "chroma-noise"],
 }
 FILTER_GROUPS = {
     "Adjust": ["exposure", "contrast", "saturation", "vibrance", "highlight-rolloff", "shadow-detail", "low-key", "high-key", "soft-contrast", "crisp-mids", "lift-blacks", "crush-blacks", "half-stop-down", "desaturate", "brighten-mids"],
@@ -180,7 +184,7 @@ def label(key: str) -> str:
 
 @router.get("")
 def catalogue() -> dict:
-    parameters = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}}
+    parameters = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}, "tilt-shift": {"radius": 3}, "lens-blur": {"radius": 3}, "median-soften": {"radius": 3}, "soft-focus": {"radius": 3}, "diagonal-blur": {"size": 12}, "ghost-trail": {"size": 12}, "halftone": {"size": 12}, "crosshatch": {"size": 12}, "ripple": {"size": 12}, "slice-glitch": {"size": 12}, "heat-haze": {"size": 12}, "chroma-noise": {"strength": 0.15}}
     return {
         "video": [{"id": k, "name": label(k), "category": "Color", "group": group_of(k, FILTER_GROUPS), "parameters": GRADES[k]} for k in GRADES]
         + [{"id": k, "name": label(k), "category": "Effects", "group": group_of(k, EFFECT_GROUPS), "parameters": parameters.get(k, {})} for k in VIDEO_EFFECTS],
