@@ -206,6 +206,7 @@
   "kf.title": "Keyframes",
   "kf.lanes": "Spuren",
   "kf.graph": "Kurve",
+  "kf.curves": "Geglättete Kurven",
   "kf.property": "Eigenschaft für die Kurve",
   "kf.hint": "Klicken zum Hinzufügen, ziehen zum Verschieben, Alt-Klick zum Entfernen, Doppelklick ändert die Glättung",
   "kf.empty": "Wähle einen Clip, um seine Keyframes zu sehen",

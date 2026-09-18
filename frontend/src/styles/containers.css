@@ -163,6 +163,9 @@
 .kfb-graph { display: block; color: var(--cue); cursor: crosshair; }
 .kfb-graph .kfb-guide { stroke: var(--edge-strong); stroke-width: 1; }
 .kfb-graph .kfb-curve { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.kfb-graph .kfb-curve.is-linear { stroke-dasharray: 4 3; }
+.kfb-bar .kfb-curved { width: 26px; height: 18px; flex: none; }
+.kfb-bar .kfb-curved svg { width: 12px; height: 12px; }
 .kfb-graph .kfb-handle { fill: currentColor; cursor: move; }
 .kfb-graph .kfb-handle[data-interp="hold"] { fill: var(--tag-audio); }
 @media (prefers-reduced-motion: reduce) { .kfb-toggle svg { transition: none; } }

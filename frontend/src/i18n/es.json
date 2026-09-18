@@ -206,6 +206,7 @@
   "kf.title": "Fotogramas clave",
   "kf.lanes": "Pistas",
   "kf.graph": "Curva",
+  "kf.curves": "Curvas suavizadas",
   "kf.property": "Propiedad de la curva",
   "kf.hint": "Clic en una pista para añadir, arrastra para mover, alt-clic para quitar, doble clic para cambiar la suavización",
   "kf.empty": "Selecciona un clip para ver sus fotogramas clave",

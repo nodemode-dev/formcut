@@ -206,6 +206,7 @@
   "kf.title": "Keyframes",
   "kf.lanes": "Lanes",
   "kf.graph": "Curve",
+  "kf.curves": "Eased curves",
   "kf.property": "Property for the curve",
   "kf.hint": "Click a lane to add, drag to move, alt-click to remove, double-click to change easing",
   "kf.empty": "Select a clip to see its keyframes",

@@ -34,7 +34,24 @@ interface Block {
   handles: SVGGElement;
   mode: Mode;
   prop: KeyframeProp;
+  curved: boolean;
 }
+
+const CURVE_STORE = "formcut.kfCurves";
+const readCurved = (): boolean => {
+  try {
+    return localStorage.getItem(CURVE_STORE) !== "off";
+  } catch {
+    return true;
+  }
+};
+const writeCurved = (on: boolean): void => {
+  try {
+    localStorage.setItem(CURVE_STORE, on ? "on" : "off");
+  } catch {
+    return;
+  }
+};
 
 function patch<E extends Element, T>(parent: Element, items: Array<readonly [string, T]>, make: () => E, update: (node: E, item: T) => void): void {
   const existing = new Map<string, E>();
@@ -114,13 +131,21 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     const animated = clips.map((clip) => ({ clip, points: propPoints(clip, block.prop) })).filter((entry) => entry.points.length > 0);
     patch(block.curves, animated.map((entry) => [entry.clip.id, entry] as const), () => svgNode("path", "kfb-curve"), (path, { clip, points }) => {
       const span = clip.duration * px;
-      const step = Math.max(2, span / 480);
       let d = "";
-      for (let x = 0; x <= span + 0.01; x += step) {
-        const value = samplePoints(points, Math.min(clip.duration, x / px)) ?? points[0].v;
-        d += `${d ? "L" : "M"}${(clip.start * px + x).toFixed(1)} ${yOf(value).toFixed(1)}`;
+      if (block.curved) {
+        const step = Math.max(2, span / 480);
+        for (let x = 0; x <= span + 0.01; x += step) {
+          const value = samplePoints(points, Math.min(clip.duration, x / px)) ?? points[0].v;
+          d += `${d ? "L" : "M"}${(clip.start * px + x).toFixed(1)} ${yOf(value).toFixed(1)}`;
+        }
+      } else {
+        const sorted = [...points].sort((a, b) => a.t - b.t);
+        d = `M${(clip.start * px).toFixed(1)} ${yOf(sorted[0].v).toFixed(1)}`;
+        for (const point of sorted) d += `L${((clip.start + point.t) * px).toFixed(1)} ${yOf(point.v).toFixed(1)}`;
+        d += `L${((clip.start + clip.duration) * px).toFixed(1)} ${yOf(sorted[sorted.length - 1].v).toFixed(1)}`;
       }
       setAttr(path, "d", d);
+      path.classList.toggle("is-linear", !block.curved);
     });
     const marks = animated.flatMap(({ clip, points }) => points.map((point) => [`${clip.id}|${point.t.toFixed(4)}`, { clip, point }] as const));
     patch(block.handles, marks, () => svgNode("path", "kfb-handle"), (handle, { clip, point }) => {
@@ -203,9 +228,21 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       for (const other of block.head.querySelectorAll<HTMLElement>("[data-mode]")) other.classList.toggle("is-active", other === button);
       const graphMode = block.mode === "graph";
       block.select.hidden = !graphMode;
+      const curvedButton = block.head.querySelector<HTMLButtonElement>("[data-curved]")!;
+      curvedButton.hidden = !graphMode;
+      curvedButton.setAttribute("aria-pressed", String(block.curved));
+      curvedButton.classList.toggle("is-active", block.curved);
       block.labels.hidden = graphMode;
       block.rows.hidden = graphMode;
       block.graph.toggleAttribute("hidden", !graphMode);
+      paint(block);
+    });
+    block.head.querySelector<HTMLButtonElement>("[data-curved]")!.addEventListener("click", (event) => {
+      block.curved = !block.curved;
+      writeCurved(block.curved);
+      const button = event.currentTarget as HTMLButtonElement;
+      button.setAttribute("aria-pressed", String(block.curved));
+      button.classList.toggle("is-active", block.curved);
       paint(block);
     });
     block.select.addEventListener("change", () => {
@@ -296,7 +333,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     toggle.title = t("kf.title");
     toggle.setAttribute("aria-label", t("kf.title"));
     toggle.setAttribute("aria-expanded", "false");
-    toggle.innerHTML = icon("chevD");
+    toggle.innerHTML = icon("diamond");
     const head = document.createElement("div");
     head.className = "kfb-head";
     head.hidden = true;
@@ -307,6 +344,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
           <button type="button" data-mode="graph" title="${t("kf.graph")}" aria-label="${t("kf.graph")}">${icon("curve")}</button>
         </div>
         <select class="mini-select" aria-label="${t("kf.property")}" hidden>${KEYFRAME_PROPS.map((prop) => `<option value="${prop}">${label(prop)}</option>`).join("")}</select>
+        <button type="button" class="iconbtn kfb-curved" data-curved title="${t("kf.curves")}" aria-label="${t("kf.curves")}" aria-pressed="true" hidden>${icon("activity")}</button>
       </div>
       <div class="kfb-labels">${KEYFRAME_PROPS.map((prop) => `<span>${label(prop)}</span>`).join("")}</div>`;
     const body = document.createElement("div");
@@ -333,6 +371,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       rows: body.querySelector<HTMLElement>(".kfb-rows")!,
       mode: "lanes",
       prop: "scale",
+      curved: readCurved(),
     };
     wire(block);
     return block;
