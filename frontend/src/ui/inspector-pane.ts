@@ -22,9 +22,12 @@ function selectedTransform(engine: ProjectEngine): ClipTransform {
   return { ...base, ...sampledTransform(found.clip, local) };
 }
 
+const SLIDE: Record<string, [number, number, number]> = { scale: [0, 400, 1], posX: [-100, 100, 0.5], posY: [-100, 100, 0.5], rotation: [-180, 180, 0.5] };
+
 function propRow(label: string, key: string, value: number, unit: string): string {
+  const [min, max, step] = SLIDE[key] ?? [0, 100, 1];
   return `
-    <div class="prop-row">
+    <div class="prop-row has-slide">
       <span>${label}</span>
       <span class="num-field"><input data-key="${key}" value="${value}" /><span class="unit">${unit}</span></span>
       <span class="prop-aux">
@@ -32,6 +35,7 @@ function propRow(label: string, key: string, value: number, unit: string): strin
         <button class="iconbtn kf-btn" data-kf="${key}" title="${t("kf.at")}">${icon("diamond")}</button>
         <button class="iconbtn" data-kf-step="1" data-kf-prop="${key}" title="${t("kf.next")}">${icon("chevR")}</button>
       </span>
+      <input class="prop-slide" type="range" data-slide="${key}" min="${min}" max="${max}" step="${step}" value="${value}" aria-label="${label}" />
     </div>`;
 }
 
@@ -256,6 +260,10 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   for (const input of el.querySelectorAll<HTMLInputElement>("input[data-key]")) {
     inputs.set(input.dataset.key!, input);
   }
+  const sliders = new Map<string, HTMLInputElement>();
+  for (const slider of el.querySelectorAll<HTMLInputElement>("input[data-slide]")) {
+    sliders.set(slider.dataset.slide!, slider);
+  }
 
   const patchSelected = (patch: Partial<ClipTransform>) => {
     const clipId = engine.snapshot.selectedClipId;
@@ -286,8 +294,19 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     patchText({ align: next });
   });
 
+  el.addEventListener("input", (ev) => {
+    const slider = ev.target as HTMLInputElement;
+    const key = slider.dataset.slide;
+    if (!key) return;
+    const value = Number(slider.value);
+    if (Number.isNaN(value)) return;
+    const field = inputs.get(key);
+    if (field && field.value !== slider.value) field.value = slider.value;
+    patchSelected({ [key]: value });
+  });
   el.addEventListener("change", (ev) => {
     const input = ev.target as HTMLInputElement;
+    if (input.dataset.slide) return;
     if (input.dataset.xkey) {
       const key = input.dataset.xkey;
       if (key === "content") patchText({ content: input.value });
@@ -452,6 +471,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       if (key === "keySim" || key === "keyBlend" || key.startsWith("mask")) continue;
       const next = String(t[key as keyof ClipTransform]);
       if (document.activeElement !== input && input.value !== next) input.value = next;
+      const slider = sliders.get(key);
+      if (slider && document.activeElement !== slider && slider.value !== next) slider.value = next;
     }
     const id = engine.snapshot.selectedClipId;
     const clip = id ? engine.findClip(id)?.clip : undefined;
