@@ -3,7 +3,8 @@
 import { env, pipeline } from "@huggingface/transformers";
 
 env.allowLocalModels = false;
-env.useBrowserCache = true;
+env.useBrowserCache = false;
+env.remoteHost = `${self.location.origin}/api/models/hub/`;
 
 interface Chunk {
   text: string;

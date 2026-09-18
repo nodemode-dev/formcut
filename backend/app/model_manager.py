@@ -6,6 +6,7 @@ import threading
 
 import httpx
 from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from . import jobs
 from .paths import DATA_DIR, MODELS_DIR
@@ -113,12 +114,63 @@ def prepare(report, cancelled, fetch: bool) -> dict:
             raise
         except Exception as error:
             results.append({"model": model, "ready": False, "error": str(error)})
-    return {"adopted": adopted, "downloads": results}
+    hub = []
+    for model, paths in (HUB_PREFETCH.items() if fetch else ()):
+        for path in paths:
+            if cancelled():
+                raise InterruptedError("Cancelled")
+            try:
+                hub.append({"file": f"{model}/{path}", "ready": hub_fetch(model, path) is not None})
+            except Exception as error:
+                hub.append({"file": f"{model}/{path}", "ready": False, "error": str(error)})
+    return {"adopted": adopted, "downloads": results, "hub": hub}
 
 
 def auto_download() -> dict:
     fetch = os.environ.get("FORMCUT_MODELS_AUTO", "1") != "0"
     return jobs.submit("model-setup", lambda _id, report, cancelled: prepare(report, cancelled, fetch))
+
+
+HUB = ROOT / "hub"
+HUB_MODELS = {"Xenova/whisper-tiny.en", "onnx-community/whisper-tiny"}
+HUB_PREFETCH = {"Xenova/whisper-tiny.en": ("config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx")}
+_hub_lock = threading.Lock()
+
+
+def hub_fetch(model: str, path: str):
+    parts = path.split("/")
+    if model not in HUB_MODELS or any(part in ("", ".", "..") or "\\" in part for part in parts):
+        return None
+    target = HUB.joinpath(*model.split("/"), *parts)
+    with _hub_lock:
+        if target.is_file():
+            return target
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_name(target.name + ".download")
+        try:
+            with httpx.stream("GET", f"https://huggingface.co/{model}/resolve/main/{path}", follow_redirects=True, timeout=120) as response:
+                if response.status_code == 404:
+                    return None
+                response.raise_for_status()
+                written = 0
+                with temporary.open("wb") as out:
+                    for chunk in response.iter_bytes(1024 * 1024):
+                        written += len(chunk)
+                        if written > 1_000_000_000:
+                            raise ValueError("Model file exceeds the download limit")
+                        out.write(chunk)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return target
+
+
+@router.get("/hub/{owner}/{name}/resolve/{revision}/{path:path}")
+def hub_file(owner: str, name: str, revision: str, path: str):
+    target = hub_fetch(f"{owner}/{name}", path) if revision == "main" else None
+    if target is None:
+        raise HTTPException(404, "No such model file")
+    return FileResponse(target)
 
 
 @router.post("/{model}/import", status_code=201)
