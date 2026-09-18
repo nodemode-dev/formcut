@@ -12,7 +12,9 @@ Expressions support t, duration, value, pi, arithmetic and sin/cos/tan/abs/min/m
 
 Open Studio > Local models to download or import the object/person segmentation models and Kokoro speech files. Downloads are explicit and cancellable. Object cutout uses U2NetP; person cutout uses U2Net human segmentation. In Creator > Cutout choose the model, set threshold and softness, then Enable cutout. Choose Restore or Erase and paint on preview. Strokes are saved in source coordinates. Remove last stroke or remove cutout to reverse edits.
 
-For speech, first run `setup/setup_local_ai` on macOS or Linux, or `setup/setup_local_ai.bat` on Windows. This creates an external Python environment in the data directory. Install the Kokoro model and voices through Studio. Studio > Local speech generates audio into the bin and timeline. Text > Speak uses the same local engine for the selected title. The historical ElevenLabs API remains for compatibility, but those controls use Kokoro.
+The launcher (`./formcut`, `formcut.bat`) installs the speech runtime after the main install, idempotently, into an external Python environment in the data directory; `setup/setup_local_ai` or `setup/setup_local_ai.bat` re-runs that step alone. Install the Kokoro model and voices through Studio. Studio > Local speech generates audio into the bin and timeline. Text > Speak uses the same local engine for the selected title. The historical ElevenLabs API remains for compatibility, but those controls use Kokoro.
+
+Studio > Stock media searches Pexels for video or photos with orientation, size and (for photos) colour filters and pages the results. Each card can add the item to the media bin, place it on a new track at the playhead, download the imported file, or open its Pexels page; the photographer credit and page URL are stored with the import.
 
 Templates are full timeline documents. Studio > Templates can save the current document, export/import .fctemplate files, and bind each named media slot to available media. Duration fitting adjusts source rate. LUTs, shaders and imported fonts are embedded and remapped on import. Source footage is represented by slots, not embedded. Filled templates create an unsaved independent project.
 
@@ -56,7 +58,15 @@ Under the timeline, a lane per animatable property shows a diamond per keyframe.
 Click empty lane to add one holding the value the clip already has, drag to move
 it frame-snapped, alt-click to remove, double-click to cycle its easing. The
 curve view shows one property as value over time with points draggable in both
-axes, drawn with the renderer's own sampler, so the line is the animation.
+axes, drawn with the renderer's own sampler, so the line is the animation. Its
+eased-curves toggle (on by default) switches between that sampled line and
+dashed straight segments between the keyframes. In the inspector, the scale,
+position and rotation rows also carry a slider under the number field.
+
+Track heights drag from a grip on the bottom edge of each track head (double
+click resets). A work area on the ruler, created by a double press or with B
+and N at the playhead, has a grip at each end; playback starts inside it and
+loops back to its start, and double-clicking the bar clears it.
 
 ## Home screen
 

@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.53.3-ffae2b" alt="version v0.53.3" />
+  <img src="https://img.shields.io/badge/version-v0.54.0-ffae2b" alt="version v0.54.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -22,7 +22,8 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 - **One renderer for preview and export.** The same decode, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Playback streams JPEG frames paced to the wall clock; a paused or scrubbed frame is lossless PNG from the same renderer.
 - **Effect catalogue, browsable and real**: 74 colour grades, 55 visual effects, 48 audio chains, 12 transitions, shape masks, LUT (`.cube`) and custom WGSL shader inputs. Every card's thumbnail is rendered by the engine through that effect, not a stock picture.
 - **Editing surface**: multi-timeline, multi-track, drag and drop from the media bin, trim, blade, split, ripple delete, detach audio, cross-track moves, clip-edge snapping, undo and redo, and a draggable playhead that snaps to edges and lands on frames.
-- **Per-property keyframes** with linear and hold interpolation, sampled on the canvas and expressed as piecewise time expressions in export, plus motion tracking that writes keyframes from a clicked subject.
+- **Per-property keyframes** with linear and hold interpolation, sampled on the canvas and expressed as piecewise time expressions in export, plus motion tracking that writes keyframes from a clicked subject. Each track opens its own lanes or a curve graph with an eased-curves toggle, the inspector's transform rows carry value sliders, track heights drag from the head, and a work area on the ruler with in and out grips loops playback the way an After Effects preview does.
+- **Stock media in Studio**: Pexels video and photo search with orientation, size and colour filters, paged results, and per card add to media, place on a new track at the playhead, download, or open the source page. Attribution is shown and stored with every import.
 - **Local AI, on your hardware**: captions by Whisper in the browser, its model files kept in `models/` and served by the engine, speech by Kokoro through a separate local runtime, subject and person cutout by U2Net. The models download in the background on first start into `models/` at the repository root (the data directory in the packaged app), Whisper's English model included, and the Studio panel can still install, import or retry the cutout and speech models by hand.
 - **Export**: MP4 (H.264 + AAC) and WebM (VP9 + Opus) at three quality ladders, as a cancellable job with progress.
 - **Templates**: a project saved as a template with named media slots, exported and imported as a file, filled by binding slots to media.
@@ -65,10 +66,12 @@ One command covers everything. `formcut` sequences the three scripts in `setup/`
 | Engine | http://127.0.0.1:8040 | FastAPI, REST + streamed frames + JSON-RPC |
 | Preview build | http://localhost:3041 | `npm run preview` of the built interface |
 
-### Optional extras
+### Local speech runtime
+
+`./formcut` and `formcut.bat` install the Kokoro speech runtime after the main install on every boot (idempotent, never gates the boot). To re-run it alone:
 
 ```shell
-setup/setup_local_ai   # local speech runtime (macOS and Linux)
+setup/setup_local_ai   # macOS and Linux; setup\setup_local_ai.bat on Windows
 ```
 
 ## Configuration
