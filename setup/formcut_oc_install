@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# formcut macOS/Linux installation. Idempotent: safe to run on every boot.
+# Lives in setup/; resolves the repo root itself, so it works from anywhere.
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' frontend/package.json | head -1)"
+
+echo "==========================================="
+echo "formcut v${VERSION} - Installation"
+echo "==========================================="
+echo ""
+
+# ffmpeg is a hard requirement and stays external, so say so before the long steps.
+for tool in ffmpeg ffprobe; do
+  command -v "$tool" >/dev/null 2>&1 || echo "WARNING: $tool is not on PATH. Import, preview and export need it."
+done
+
+echo ">> Setting up the engine..."
+chmod +x backend/oc_install backend/boot_backend 2>/dev/null || true
+(cd backend && ./oc_install)
+
+echo ""
+echo ">> Setting up the interface..."
+chmod +x frontend/oc_install frontend/boot_frontend 2>/dev/null || true
+(cd frontend && ./oc_install)
+
+if [ ! -f .env ] && [ -f example.env ]; then
+  cp example.env .env
+  echo ""
+  echo ">> Created .env from example.env. Keys go there; it is ignored by git."
+fi
+
+chmod +x formcut setup/formcut_banner setup/formcut_boot setup/formcut_oc_install setup/setup_local_ai 2>/dev/null || true
+
+echo ""
+echo "==========================================="
+echo "Installation complete"
+echo "==========================================="
+echo ""
+echo "Next steps:"
+echo "  1. Add any keys to .env (PEXELS_API_KEY, ELEVENLABS_API_KEY); both are optional"
+echo "  2. Run: ./formcut"
+echo ""
+echo "Optional extras:"
+echo "  - setup/setup_local_ai   local speech runtime, then install the voice model in Studio"
+echo "  - Captions fetch their model in the browser on first use; nothing else reaches the network"
+echo ""

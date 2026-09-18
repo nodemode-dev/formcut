@@ -1,0 +1,11 @@
+The demo project expects four files in this folder, kept out of git because they
+are large and their rights belong to their owner:
+
+  input-clip-example.mp4   a video clip
+  model-drop-MV.mp4        a longer video with audio
+  a-sample.wav             an audio sample
+  effect-example-image.jpg a still used for effect thumbnails
+
+Drop your own files with these names, or point FORMCUT_DEMO_DIR at a folder that
+has them. Without them the demo button reports what is missing and effect
+thumbnails fall back to a generated image.

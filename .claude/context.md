@@ -1,0 +1,13 @@
+Read ../CLAUDE.md first, then ../.docs/wiki/Home.md for the subsystem map and the
+contracts between parts. Licences are in ../.docs/LICENSES.md. Development
+records (plan, build notes, reasoning logs) live in the planning sidecar, not in
+this repository. This file is a pointer, not an installed skill.
+
+## Skills in this repository
+
+`skills/formcut-skillset/` is the working knowledge of this codebase: a master
+SKILL.md, six sub-skills under `sub-skills/`, and reference maps under each
+sub-skill's `references/` folder derived from the tree rather than written from
+memory. It validates clean against the skill format contract. Regenerate its
+reference maps when the module or route inventory changes, and bump its
+`formcut.version` metadata to the version it describes.

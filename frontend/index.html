@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>formcut</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#101013" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <script>
+      // Pre-paint appearance. Runs before the first paint and before any module
+      // loads, so a stored profile or accent is never visible as a change. The
+      // derived accent values were computed when the accent was chosen, so this
+      // applies them verbatim rather than repeating that arithmetic here.
+      (function () {
+        try {
+          var raw = localStorage.getItem("formcut.appearance");
+          if (!raw) return;
+          var saved = JSON.parse(raw);
+          if (saved && typeof saved.theme === "string") document.documentElement.dataset.theme = saved.theme;
+          if (saved && saved.derived) {
+            for (var name in saved.derived) document.documentElement.style.setProperty(name, saved.derived[name]);
+          }
+        } catch (error) {
+          // A blocked store leaves the default profile in place, which is fine.
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

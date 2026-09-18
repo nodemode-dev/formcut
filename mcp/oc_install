@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Environment for the formcut MCP server. Separate from the engine's, because
+# the MCP SDK pins a newer starlette than the engine's FastAPI accepts and the
+# two run as different processes anyway.
+set -e
+cd "$(dirname "$0")"
+python3 -m venv .venv
+.venv/bin/pip install -q --upgrade pip
+.venv/bin/pip install -q -r requirements.txt
+echo "formcut MCP server ready. Register it with:"
+echo "  command: $(pwd)/.venv/bin/python"
+echo "  args:    [\"$(pwd)/formcut_mcp.py\"]"

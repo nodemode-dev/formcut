@@ -1,0 +1,12 @@
+{
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [{ "name": "binaries/formcut-engine", "sidecar": true }]
+    }
+  ]
+}

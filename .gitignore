@@ -1,0 +1,37 @@
+# dependencies and build output
+node_modules/
+dist/
+build/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+src-tauri/target/
+src-tauri/binaries/*
+!src-tauri/binaries/.gitignore
+src-tauri/gen/
+backend/dist/
+backend/build/
+backend/.venv-package/
+backend/*.spec
+
+# local data, secrets and caches
+.env
+.env.*
+!example.env
+backend/data/
+data/
+*.log
+
+# local media: the demo assets are expected here but never committed
+examples/demo/*
+!examples/demo/.gitkeep
+
+# editor and platform noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+mcp/.venv/

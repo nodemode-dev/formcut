@@ -1,0 +1,11 @@
+fastapi==0.115.*
+uvicorn[standard]==0.30.*
+python-multipart==0.0.*
+httpx==0.28.*
+yt-dlp==2026.*
+opencv-python-headless==4.12.0.88
+Pillow==11.*
+numpy>=2.0.2,<2.3
+wgpu==0.31.1
+onnxruntime==1.23.2
+grpcio>=1.70,<2

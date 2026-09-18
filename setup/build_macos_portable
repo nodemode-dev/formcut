@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Portable formcut folder for macOS: same shape as the Linux build; run on a
+# real Mac (UNTESTED-HERE: this sandbox has no macOS). ffmpeg/ffprobe and
+# yt-dlp remain tier-1 PATH tools, checked at launch, never bundled.
+set -euo pipefail
+cd "$(dirname "$0")"
+OUT=formcut-portable
+[ ! -d "$OUT/engine/portable" ] || { echo "Move the existing portable folder before rebuilding to preserve its data."; exit 1; }
+rm -rf "$OUT" backend/build backend/dist backend/*.spec
+(cd frontend && npm ci --no-audit --no-fund >/dev/null && npm run build >/dev/null)
+python3 -m venv backend/.venv-portable
+backend/.venv-portable/bin/pip install -q --upgrade pip
+backend/.venv-portable/bin/pip install -q -r backend/requirements_macos.txt pyinstaller
+(cd backend && .venv-portable/bin/python prepare_cv.py)
+(cd backend && .venv-portable/bin/python freeze.py)
+mkdir -p "$OUT"
+cp -r backend/dist/formcut-engine "$OUT/engine"
+mkdir -p "$OUT/engine/portable"
+cat > "$OUT/formcut.command" <<'LAUNCH'
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || {
+  osascript -e 'display alert "formcut needs ffmpeg and ffprobe on PATH"'; exit 1; }
+LOG="$(mktemp)"
+"$HERE/engine/formcut-engine" >"$LOG" 2>&1 &
+ENGINE=$!
+trap 'kill $ENGINE 2>/dev/null' EXIT INT TERM
+PORT=""
+for _ in $(seq 1 100); do
+  PORT="$(sed -n 's/.*Uvicorn running on http:\/\/127\.0\.0\.1:\([0-9]*\).*/\1/p' "$LOG" | head -1)"
+  [ -n "$PORT" ] && break
+  sleep 0.1
+done
+[ -n "$PORT" ] || { echo "engine did not start"; cat "$LOG"; exit 1; }
+open "http://127.0.0.1:$PORT"
+wait $ENGINE
+LAUNCH
+chmod +x "$OUT/formcut.command"
+rm -rf backend/.venv-portable backend/build backend/*.spec
+echo "portable folder ready: $OUT"

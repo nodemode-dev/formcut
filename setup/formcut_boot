@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# formcut boot: the engine and the interface dev server, from the repo root.
+# Lives in setup/; resolves the repo root itself.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' frontend/package.json | head -1)"
+
+echo "==================================================="
+echo "  formcut v${VERSION} - Boot"
+echo "==================================================="
+
+if [ ! -f backend/app/main.py ]; then
+  echo "Error: backend/app/main.py not found under $ROOT"
+  exit 1
+fi
+if [ ! -d backend/venv ]; then
+  echo "Error: the engine is not installed. Run setup/formcut_oc_install"
+  exit 1
+fi
+if [ ! -d frontend/node_modules ]; then
+  echo "Error: the interface is not installed. Run setup/formcut_oc_install"
+  exit 1
+fi
+
+# Keys and paths reach the engine through the environment, never the interface.
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+else
+  echo ""
+  echo "No .env found. Copy example.env to .env for keys and paths; both are optional."
+fi
+
+echo ""
+echo "Booting the engine..."
+( cd backend && ./boot_backend ) &
+BACKEND_PID=$!
+
+sleep 2
+
+echo ""
+echo "Booting the interface..."
+( cd frontend && ./boot_frontend ) &
+FRONTEND_PID=$!
+
+echo ""
+echo "==========================================="
+echo "    Services running:"
+echo "    - Engine:    http://127.0.0.1:8040"
+echo "    - Interface: http://localhost:3040"
+echo "==========================================="
+echo ""
+echo "Press Ctrl+C to stop both"
+
+trap 'kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit' INT TERM
+wait

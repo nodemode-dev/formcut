@@ -1,0 +1,66 @@
+:root {
+  color-scheme: dark;
+
+  --page: #151517;
+  --well: #19191b;
+  --panel: #212123;
+  --raised: #2b2b2e;
+  --field: #323235;
+  --field-hover: #3b3b3e;
+  --field-active: #46464a;
+
+  --line: rgb(255 255 255 / 0.1);
+  --line-strong: rgb(255 255 255 / 0.2);
+
+  --fg: #f5f5f7;
+  --fg-muted: #a1a1a6;
+  --fg-dim: #6e6e73;
+
+  --accent: #cbf53f;
+  --accent-hover: #d9ff63;
+  --accent-soft: rgb(203 245 63 / 0.2);
+  --on-accent: #15220a;
+  --danger: #ff453a;
+  --danger-soft: rgb(255 69 58 / 0.14);
+
+  --kind-video: #3373d1;
+  --kind-video-well: #142238;
+  --kind-audio: #d3a616;
+  --kind-audio-well: #302810;
+  --kind-image: #9f63d6;
+  --kind-image-well: #2a1e34;
+  --kind-text: #cf5a99;
+  --kind-text-well: #321c29;
+  --kind-filter: #6d63e8;
+  --kind-filter-well: #23204a;
+  --clip-ink: #ffffff;
+  --clip-chip: rgb(0 0 0 / 0.35);
+
+  --lane: #1a1a1c;
+  --lane-alt: #1e1e20;
+  --ruler: #171719;
+  --playhead: #ff453a;
+  --stage: #000000;
+  --scrim: rgb(0 0 0 / 0.55);
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+
+  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Mono", ui-monospace, monospace;
+
+  --z-base: 0;
+  --z-clip: 10;
+  --z-playhead: 20;
+  --z-handles: 30;
+  --z-dropdown: 40;
+  --z-overlay: 50;
+  --z-toast: 60;
+}

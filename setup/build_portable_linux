@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Builds a self-contained portable formcut folder for Linux: PyInstaller
+# onedir engine + built frontend + a launcher that parses the engine's bound
+# port and opens the browser. ffmpeg/ffprobe and yt-dlp stay tier-1 PATH
+# tools by policy and are checked, never bundled.
+set -euo pipefail
+cd "$(dirname "$0")"
+OUT=formcut-portable
+[ ! -d "$OUT/engine/portable" ] || { echo "Move the existing portable folder before rebuilding to preserve its data."; exit 1; }
+rm -rf "$OUT" backend/build backend/dist backend/*.spec
+
+echo "[1/4] frontend"
+(cd frontend && npm ci --no-audit --no-fund >/dev/null && npm run build >/dev/null)
+
+echo "[2/4] engine venv + pyinstaller"
+python3 -m venv backend/.venv-portable
+backend/.venv-portable/bin/pip install -q --upgrade pip
+backend/.venv-portable/bin/pip install -q -r backend/requirements.txt pyinstaller
+
+echo "[3/4] freeze"
+(cd backend && .venv-portable/bin/python prepare_cv.py)
+(cd backend && .venv-portable/bin/python freeze.py)
+
+echo "[4/4] assemble"
+mkdir -p "$OUT"
+cp -r backend/dist/formcut-engine "$OUT/engine"
+mkdir -p "$OUT/engine/portable"
+cat > "$OUT/formcut" <<'LAUNCH'
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || {
+  echo "formcut needs ffmpeg and ffprobe on PATH"; exit 1; }
+LOG="$(mktemp)"
+"$HERE/engine/formcut-engine" >"$LOG" 2>&1 &
+ENGINE=$!
+trap 'kill $ENGINE 2>/dev/null' EXIT INT TERM
+PORT=""
+for _ in $(seq 1 100); do
+  PORT="$(sed -n 's/.*Uvicorn running on http:\/\/127\.0\.0\.1:\([0-9]*\).*/\1/p' "$LOG" | head -1)"
+  [ -n "$PORT" ] && break
+  sleep 0.1
+done
+[ -n "$PORT" ] || { echo "engine did not start"; cat "$LOG"; exit 1; }
+echo "formcut running at http://127.0.0.1:$PORT"
+[ "${FORMCUT_NO_BROWSER:-0}" = "1" ] || xdg-open "http://127.0.0.1:$PORT" >/dev/null 2>&1 || true
+wait $ENGINE
+LAUNCH
+chmod +x "$OUT/formcut"
+cat > "$OUT/README.txt" <<'TXT'
+formcut portable (Linux)
+Run ./formcut  (needs ffmpeg + ffprobe on PATH; yt-dlp on PATH enables URL import).
+Everything else is inside this folder; nothing installs.
+TXT
+rm -rf backend/.venv-portable backend/build backend/*.spec
+echo "portable folder ready: $OUT"

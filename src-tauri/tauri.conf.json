@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "formcut",
+  "version": "0.52.1",
+  "identifier": "app.formcut.desktop",
+  "build": {
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.icns", "icons/icon.ico", "icons/icon.png"],
+    "externalBin": ["binaries/formcut-engine"],
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+fastapi==0.115.*
+uvicorn[standard]==0.30.*
+python-multipart==0.0.*
+httpx
+yt-dlp
+opencv-python-headless
+Pillow==11.*
+-r requirements.txt

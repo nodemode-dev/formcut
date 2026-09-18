@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# formcut_banner - boot banner for formcut.
+# Self-contained: no figlet, no network, pure bash and printf.
+#
+#   setup/formcut_banner           print the banner
+#   FORMCUT_VERSION=v0.52.1 setup/formcut_banner
+#
+# Environment:
+#   NO_COLOR=1                     force monochrome (no-color.org convention)
+#   FORMCUT_BANNER=0               suppress the banner entirely
+#   FORMCUT_BANNER_COLOR=203;245;63    override the RGB accent (default formcut lime #cbf53f)
+#   FORMCUT_BANNER_CLEAR=1         clear the screen before painting
+#   FORMCUT_VERSION=v0.52.1        version string shown under the wordmark
+
+[ "${FORMCUT_BANNER:-1}" = "0" ] && exit 0
+
+# --- terminal width -----------------------------------------------------------
+cols="${COLUMNS:-0}"
+if [ "$cols" -le 0 ] 2>/dev/null; then
+  cols="$(tput cols 2>/dev/null || echo 80)"
+fi
+case "$cols" in ''|*[!0-9]*) cols=80 ;; esac
+
+# --- colour capability --------------------------------------------------------
+ACCENT=""
+DIM=""
+RESET=""
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
+  rgb="${FORMCUT_BANNER_COLOR:-203;245;63}"
+  case "${COLORTERM:-}" in
+    truecolor|24bit)
+      ACCENT=$'\033[38;2;'"$rgb"'m'
+      DIM=$'\033[38;2;115;115;115m'
+      ;;
+    *)
+      depth="$(tput colors 2>/dev/null || echo 8)"
+      if [ "$depth" -ge 256 ] 2>/dev/null; then
+        ACCENT=$'\033[38;5;191m'
+        DIM=$'\033[38;5;244m'
+      else
+        ACCENT=$'\033[33m'
+        DIM=$'\033[90m'
+      fi
+      ;;
+  esac
+  RESET=$'\033[0m'
+fi
+
+# --- art ----------------------------------------------------------------------
+art_wide() {
+cat <<'ART'
+ .<d88t.                                                      
+d88"   °°                                               ___   
+888                                                     888   
+888888 .d88b.  888d888 88888b.d88b.  .d8888b8 88   888  888888
+888   d88""88b 888P"   888 "888 "88b d881"    888  888  888   
+888   888  888 888     888  888  888 888      888  888  888   
+888   Y88..88P 888     888  888  888 Y881.    Y88..888  Y88.  
+888    "Y88P"  888     888  888  888 "Y8888P  "Y88888   "Y88B> 
+ART
+}
+
+art_mid() {
+cat <<'ART'
+  __                                 _
+ / _| ___  _ __ _ __ ___   ___ _   _| |_
+| |_ / _ \| '__| '_ ` _ \ / __| | | | __|
+|  _| (_) | |  | | | | | | (__| |_| | |_
+|_|  \___/|_|  |_| |_| |_|\___|\__,_|\__|
+ART
+}
+
+art_small() {
+cat <<'ART'
+  _
+_|__ ._._ _  _  _|_
+ |(_)| | | |(_|_||_
+ART
+}
+
+W_WIDE=56
+W_MID=41
+W_SMALL=19
+
+if   [ "$cols" -ge "$W_WIDE"  ]; then art=art_wide;  width=$W_WIDE
+elif [ "$cols" -ge "$W_MID"   ]; then art=art_mid;   width=$W_MID
+elif [ "$cols" -ge "$W_SMALL" ]; then art=art_small; width=$W_SMALL
+else art=""; width=7   # bare "formcut" wordmark
+fi
+
+pad=$(( (cols - width) / 2 ))
+[ "$pad" -lt 0 ] && pad=0
+indent=""
+[ "$pad" -gt 0 ] && indent="$(printf '%*s' "$pad" '')"
+
+[ "${FORMCUT_BANNER_CLEAR:-0}" = "1" ] && [ -t 1 ] && printf '\033[2J\033[H'
+
+printf '\n'
+
+if [ -n "$art" ]; then
+  # Colour per line so nothing bleeds if the paint is interrupted.
+  "$art" | while IFS= read -r line; do
+    printf '%s%s%s%s\n' "$indent" "$ACCENT" "$line" "$RESET"
+  done
+else
+  printf '%s%s%s%s\n' "$indent" "$ACCENT" "formcut" "$RESET"
+fi
+
+# --- subtitle -----------------------------------------------------------------
+ver="${FORMCUT_VERSION:-}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -z "$ver" ] && [ -r "$ROOT/frontend/package.json" ]; then
+  ver="v$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/frontend/package.json" | head -1)"
+fi
+
+# The dot is only safe on a UTF-8 locale; elsewhere ${#sub} counts bytes and the
+# centring drifts, so fall back to a pure-ASCII separator.
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+  *UTF-8*|*utf8*|*UTF8*|*utf-8*) SEP="·" ;;
+  *)                             SEP="|" ;;
+esac
+
+if [ "$cols" -ge 44 ]; then
+  sub="local-first video editor"
+elif [ "$cols" -ge 20 ]; then
+  sub="video editor"
+else
+  sub=""
+fi
+
+if [ -n "$ver" ]; then
+  if [ -n "$sub" ] && [ $(( ${#sub} + ${#ver} + 5 )) -le "$cols" ]; then
+    sub="$sub  $SEP  $ver"
+  else
+    sub="$ver"
+  fi
+fi
+
+sublen=${#sub}
+subpad=$(( (cols - sublen) / 2 ))
+[ "$subpad" -lt 0 ] && subpad=0
+subindent=""
+[ "$subpad" -gt 0 ] && subindent="$(printf '%*s' "$subpad" '')"
+
+rulewidth=$width
+[ "$rulewidth" -gt "$cols" ] && rulewidth=$cols
+rule="$(printf '%*s' "$rulewidth" '' | tr ' ' '-')"
+
+printf '%s%s%s%s\n' "$indent" "$DIM" "$rule" "$RESET"
+[ -n "$sub" ] && printf '%s%s%s%s\n' "$subindent" "$DIM" "$sub" "$RESET"
+printf '\n'
