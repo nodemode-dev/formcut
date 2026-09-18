@@ -29,7 +29,11 @@ export function trackControls(header: HTMLElement, index: number, engine: Projec
     const key = button.dataset.trackAction!;
     button.disabled = key === "remove" && engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks.length < 2;
     const active = Boolean(track[key as "locked" | "hidden" | "muted"]);
-    button.classList.toggle("is-accent", active);
+    if (key === "hidden" || key === "muted") {
+      const glyph = key === "hidden" ? (active ? "eyeOff" : "eye") : (active ? "mute" : "speaker");
+      if (button.dataset.glyph !== glyph) { button.dataset.glyph = glyph; button.innerHTML = icon(glyph); }
+      button.classList.toggle("is-off", active);
+    } else button.classList.toggle("is-accent", active);
     if (key !== "remove") button.setAttribute("aria-pressed", String(active));
   }
 }

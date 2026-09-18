@@ -1,4 +1,5 @@
 import { trackControls } from "./track-controls";
+import { installTrackHeightGrip } from "./track-height";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 
@@ -25,7 +26,9 @@ export function reconcileTimelineStructure(root: HTMLElement, engine: ProjectEng
     grid.append(header, lane); lanes.push(lane);
   }
   tracks.forEach((track, index) => {
-    const name = lanes[index].previousElementSibling?.querySelector(".name");
+    const header = lanes[index].previousElementSibling as HTMLElement;
+    if (!header.querySelector(".track-grip")) installTrackHeightGrip(header, lanes[index], index);
+    const name = header.querySelector(".name");
     trackControls(lanes[index].previousElementSibling as HTMLElement, index, engine);
     if (name && name.textContent !== track.name) name.textContent = track.name;
   });
