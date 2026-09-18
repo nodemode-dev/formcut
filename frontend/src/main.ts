@@ -12,8 +12,6 @@ import "./styles/app.css";
 import "./styles/themes.css";
 import "./styles/containers.css";
 import "./styles/settings.css";
-import "./engine/effects/blur";
-import "./engine/effects/stylize";
 import { ProjectEngine } from "./engine/project";
 import { MediaBin } from "./engine/media";
 import { newProject, saveProject } from "./engine/persistence";

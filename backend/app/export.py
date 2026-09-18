@@ -99,21 +99,6 @@ def kf_points(clip: ExportClip, prop: str) -> list[tuple[float, float, str]]:
     return pts
 
 
-def kf_sample(points: list[tuple[float, float, str]], local: float) -> float | None:
-    if not points:
-        return None
-    if local <= points[0][0]:
-        return points[0][1]
-    if local >= points[-1][0]:
-        return points[-1][1]
-    for (t0, v0, interp), (t1, v1, _i1) in zip(points, points[1:]):
-        if t0 <= local < t1:
-            if interp == "hold" or t1 == t0:
-                return v0
-            return v0 + (v1 - v0) * (local - t0) / (t1 - t0)
-    return points[-1][1]
-
-
 def _progress(p: str, interp: str) -> str:
     """Ease the normalized progress expression; mirrors the stage sampler."""
     if interp == "easeIn":

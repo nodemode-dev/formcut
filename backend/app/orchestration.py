@@ -20,7 +20,7 @@ import time
 import uuid
 from collections import deque
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -149,7 +149,3 @@ async def events(request: Request, since: float = 0.0) -> StreamingResponse:
 
     return StreamingResponse(body(), media_type="text/event-stream",
                              headers={"cache-control": "no-store", "x-accel-buffering": "no"})
-
-
-def session_from_header(value: str | None = Header(default=None, alias="x-formcut-session")) -> str | None:
-    return value
