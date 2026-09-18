@@ -11,4 +11,5 @@ chmod +x setup/formcut_banner setup/formcut_oc_install setup/formcut_boot 2>/dev
 bash setup/formcut_banner || true
 
 setup/formcut_oc_install
+bash setup/setup_local_ai || echo "Local speech runtime not installed; captions and editing still work. Re-run setup/setup_local_ai later."
 exec setup/formcut_boot

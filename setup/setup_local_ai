@@ -1,4 +1,6 @@
 #!/bin/sh
 set -eu
-cd "$(dirname "$0")/backend"
-exec python3 setup_local_ai.py
+cd "$(dirname "$0")/../backend"
+PY=python3
+[ -x venv/bin/python ] && PY=venv/bin/python
+exec "$PY" setup_local_ai.py

@@ -52,9 +52,9 @@ echo Next steps:
 echo   1. Add any keys to .env (PEXELS_API_KEY, ELEVENLABS_API_KEY); both are optional
 echo   2. Run: formcut.bat
 echo.
-echo Optional extras:
-echo   - setup\setup_local_ai.bat   local speech runtime, then install the voice model in Studio
-echo   - Captions fetch their model in the browser on first use
+echo Also:
+echo   - formcut.bat installs the local speech runtime on first boot (setup\setup_local_ai.bat); the Kokoro voice model downloads from Studio
+echo   - Caption and cutout models download into models\ on first engine start; after that nothing reaches the network
 echo.
 endlocal
 exit /b 0

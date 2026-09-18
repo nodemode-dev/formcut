@@ -15,5 +15,8 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
+call "%ROOT%setup\setup_local_ai.bat"
+if %ERRORLEVEL% NEQ 0 echo Local speech runtime not installed; captions and editing still work. Re-run setup\setup_local_ai.bat later.
+
 call "%ROOT%setup\formcut_boot.bat"
 endlocal
