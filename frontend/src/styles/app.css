@@ -150,9 +150,9 @@ input, select { font: inherit; color: inherit; }
   content: "";
   position: absolute; inset: 0;
   background:
-    radial-gradient(120% 90% at 30% 20%, rgb(210 190 140 / 0.5), transparent 60%),
-    radial-gradient(100% 80% at 75% 75%, rgb(90 110 80 / 0.55), transparent 65%),
-    linear-gradient(160deg, #6a6250, #2e2c26);
+    radial-gradient(120% 90% at 30% 20%, color-mix(in srgb, var(--cue) 35%, transparent), transparent 60%),
+    radial-gradient(100% 80% at 75% 75%, color-mix(in srgb, var(--tag-audio) 40%, transparent), transparent 65%),
+    linear-gradient(160deg, var(--control-press), var(--inset));
 }
 .effect-thumb[data-fx="box"]::after { filter: blur(0.5px) saturate(0.9); }
 .effect-thumb[data-fx="gaussian"]::after { filter: blur(2.5px); }
@@ -244,7 +244,7 @@ input, select { font: inherit; color: inherit; }
   color: var(--tag-ink);
   font-size: 8cqh;
   font-weight: 700;
-  text-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
+  text-shadow: 0 1px 6px var(--veil);
   text-align: center;
   padding: 0 var(--sp-4);
 }
@@ -439,15 +439,15 @@ input, select { font: inherit; color: inherit; }
 .clip.k-video { background: var(--tag-video); }
 .clip.k-video .body {
   background:
-    repeating-linear-gradient(to right, transparent 0 2px, rgb(0 0 0 / 0.45) 2px 4px),
-    linear-gradient(120deg, #5c6d5a 0%, #384038 40%, #23282c 100%);
+    repeating-linear-gradient(to right, transparent 0 2px, var(--veil) 2px 4px),
+    linear-gradient(120deg, color-mix(in srgb, var(--tag-video) 30%, var(--tag-video-shade)) 0%, var(--tag-video-shade) 40%, var(--track-bed) 100%);
   background-color: var(--tag-video-shade);
 }
 .clip.k-audio { background: var(--tag-audio); }
 .clip.k-audio .body {
   background-color: var(--tag-audio-shade);
   background-image: repeating-linear-gradient(to right,
-    transparent 0 2px, rgb(250 214 158 / 0.7) 2px 3px, transparent 3px 6px);
+    transparent 0 2px, color-mix(in srgb, var(--tag-audio) 70%, transparent) 2px 3px, transparent 3px 6px);
   background-size: 100% 46%;
   background-position: center;
   background-repeat: no-repeat;
@@ -555,7 +555,7 @@ input, select { font: inherit; color: inherit; }
   border-radius: var(--radius-m);
   padding: 10px 18px;
   font-size: 13px;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.45);
+  box-shadow: 0 6px 24px var(--veil);
 }
 
 .dropdown {
@@ -565,7 +565,7 @@ input, select { font: inherit; color: inherit; }
   border: 1px solid var(--edge-strong);
   border-radius: var(--radius-m);
   padding: var(--sp-1);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 0.5);
+  box-shadow: 0 8px 28px var(--veil);
   z-index: var(--z-dropdown);
 }
 .dropdown-item {
