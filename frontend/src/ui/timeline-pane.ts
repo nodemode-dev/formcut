@@ -6,7 +6,7 @@ import { icon } from "./icons";
 import { t } from "../i18n";
 import { reconcileTimelineStructure } from "./timeline-structure";
 import { paintClipBody } from "./clip-visuals";
-import { buildKeyframeLanes } from "./keyframe-lanes";
+import { installTrackKeyframes } from "./track-keyframes";
 
 let PX_PER_SEC = 90;
 const HEAD_W = 208;
@@ -440,8 +440,6 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   control("act-add-track")?.addEventListener("click", () => engine.dispatch("track.add", {}));
   scroller.addEventListener("pointercancel", () => { drag = null; reconcile(); });
   reconcile();
-  // The lane area lives under the timeline and is appended once: it renders its
-  // own contents from the engine and never rebuilds the tracks above it.
-  el.append(buildKeyframeLanes(engine, PX_PER_SEC));
+  installTrackKeyframes(el, engine, lanes);
   return el;
 }

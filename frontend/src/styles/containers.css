@@ -124,52 +124,60 @@
 
 @media (max-width: 768px) { .pane-divider { display: none; } }
 
-/* --- keyframe lanes and curve editor -------------------------------------- */
+/* --- keyframes under each track ------------------------------------------- */
 
-.kf-area {
-  flex: 0 0 auto;
+.kfb-toggle svg { transition: transform 120ms ease; }
+.kfb-toggle[aria-expanded="true"] { color: var(--cue); }
+.kfb-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.kfb-head {
+  position: sticky; left: 0;
+  z-index: var(--z-sticky);
   display: flex; flex-direction: column;
-  border-top: 1px solid var(--line);
-  background: var(--well);
-  max-height: 40%;
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  background: var(--inset);
+  border-bottom: 1px solid var(--edge);
 }
-.kf-head {
-  display: flex; align-items: center; gap: var(--sp-2);
-  padding: var(--sp-1) var(--sp-3);
-  border-bottom: 1px solid var(--line);
-  font-size: 11px; color: var(--fg-muted);
-}
-.kf-title { font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-.kf-head .spacer { flex: 1; }
-.kf-hint { color: var(--fg-dim); }
-.kf-modes > button { display: flex; align-items: center; gap: 4px; font-size: 11px; }
-.kf-body { position: relative; flex: 1; min-height: 88px; overflow: auto; padding: var(--sp-1) var(--sp-3) var(--sp-2); }
-.kf-empty { color: var(--fg-dim); font-size: 12.5px; padding: var(--sp-2) 0; }
-
-.kf-lanes { position: relative; }
-.kf-row { position: absolute; left: 0; right: 0; height: 22px; display: flex; align-items: center; gap: var(--sp-2); }
-.kf-row-label { width: 74px; flex: 0 0 auto; font-size: 11px; color: var(--fg-muted); }
-.kf-row.is-current .kf-row-label { color: var(--fg); }
-.kf-track {
-  position: relative; flex: 1; height: 16px;
-  background: var(--field);
-  border-radius: var(--radius-s);
-  cursor: copy;
-}
-.kf-row.is-current .kf-track { background: var(--field-hover); }
-.kf-dot {
-  position: absolute; top: 50%;
-  width: 14px; height: 14px; margin: -7px 0 0 -7px;
-  display: grid; place-items: center;
-  color: var(--accent);
-  cursor: ew-resize;
+.kfb-bar { height: 22px; display: flex; align-items: center; gap: var(--sp-1); }
+.kfb-modes > button { width: 26px; height: 18px; padding: 0; display: grid; place-items: center; }
+.kfb-modes svg { width: 12px; height: 12px; }
+.kfb-bar .mini-select { flex: 1; min-width: 0; height: 18px; font-size: 11px; }
+.kfb-labels > span { display: flex; align-items: center; height: 22px; font-size: 11px; color: var(--ink-soft); }
+.kfb-body {
+  position: relative;
+  background: var(--track-bed-alt);
+  border-bottom: 1px solid var(--edge);
+  user-select: none;
   touch-action: none;
 }
-.kf-dot[data-interp="hold"] { color: var(--kind-audio); }
-.kf-dot[data-interp="ease"], .kf-dot[data-interp="easeIn"], .kf-dot[data-interp="easeOut"] { color: var(--kind-image); }
-.kf-dot svg { width: 10px; height: 10px; }
-
-.kf-graph { display: block; width: 100%; height: 132px; color: var(--accent); cursor: crosshair; touch-action: none; }
+.kfb-spans { position: relative; height: 22px; }
+.kfb-span {
+  position: absolute; top: 5px; height: 12px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--control);
+  color: var(--ink-faint);
+  font-size: 10px; line-height: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kfb-row { position: relative; height: 22px; cursor: copy; }
+.kfb-row:nth-child(odd) { background: var(--track-bed); }
+.kfb-dot {
+  position: absolute; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px; padding: 0;
+  display: grid; place-items: center;
+  border: 0; background: none;
+  color: var(--cue);
+  cursor: ew-resize;
+}
+.kfb-dot svg { width: 10px; height: 10px; }
+.kfb-dot[data-interp="hold"] { color: var(--tag-audio); }
+.kfb-dot[data-interp="ease"], .kfb-dot[data-interp="easeIn"], .kfb-dot[data-interp="easeOut"] { color: var(--tag-image); }
+.kfb-graph { display: block; color: var(--cue); cursor: crosshair; }
+.kfb-graph .kfb-guide { stroke: var(--edge-strong); stroke-width: 1; }
+.kfb-graph .kfb-curve { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.kfb-graph .kfb-handle { fill: currentColor; cursor: move; }
+.kfb-graph .kfb-handle[data-interp="hold"] { fill: var(--tag-audio); }
+@media (prefers-reduced-motion: reduce) { .kfb-toggle svg { transition: none; } }
 
 /* --- provider panels ------------------------------------------------------ */
 
