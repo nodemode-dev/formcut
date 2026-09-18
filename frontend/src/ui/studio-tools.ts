@@ -30,6 +30,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         <div class="stock-row stock-filters"><label>Orientation <select data-stock-orientation><option value="">Any</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option><option value="square">Square</option></select></label><label>Size <select data-stock-size><option value="">Any</option><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label><label data-stock-color-row>Colour <select data-stock-color><option value="">Any</option><option value="red">Red</option><option value="orange">Orange</option><option value="yellow">Yellow</option><option value="green">Green</option><option value="turquoise">Turquoise</option><option value="blue">Blue</option><option value="violet">Violet</option><option value="pink">Pink</option><option value="brown">Brown</option><option value="black">Black</option><option value="gray">Gray</option><option value="white">White</option></select></label></div>
         <p class="stock-note" data-stock-note></p>
       </div></div>
+      <div class="panel-section"><div class="panel-section-head"><span>Import from a link</span><small>yt-dlp, any site it supports</small></div><div class="panel-rows"><div class="stock-row"><input data-stock-url type="url" placeholder="Paste a video link" aria-label="Video link"><button class="tool-chip" data-stock-url-go>${icon("download")}Import URL</button></div><p class="stock-note" data-stock-url-note></p></div></div>
       <div class="panel-section stock-results"><div class="panel-section-head"><span>Results</span><small data-stock-page></small></div><div class="card-grid stock-grid" data-stock-grid></div><div class="stock-row stock-pager"><button class="tool-chip" data-stock-prev disabled>${icon("chevL")}Previous</button><button class="tool-chip" data-stock-next disabled>Next${icon("chevR")}</button></div></div>
     </section>
     <section data-view="templates" class="set-view" hidden>
@@ -193,6 +194,19 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   for (const name of ["stock-orientation", "stock-size", "stock-color"]) q<HTMLSelectElement>(name).addEventListener("change", () => void stock.search(1));
   q("stock-prev").addEventListener("click", () => { if (stock.page > 1) void stock.search(stock.page - 1); });
   q("stock-next").addEventListener("click", () => void stock.search(stock.page + 1));
+  const urlNote = (message: string) => { const node = q<HTMLElement>("stock-url-note"); if (node.textContent !== message) node.textContent = message; };
+  q("stock-url-go").addEventListener("click", () => void run(async () => {
+    const url = q("stock-url").value.trim(); if (!url) return;
+    urlNote(text("Downloading"));
+    const started = await api<{ job_id: string }>("/api/stock/url", { url });
+    const poll = async (): Promise<void> => {
+      const status = await api<{ status: string; error?: string; media?: { name: string } }>(`/api/stock/url/${started.job_id}`, undefined, "GET");
+      if (status.status === "done") { q("stock-url").value = ""; await bin.load(); urlNote(`${text("Imported")}: ${status.media?.name ?? ""}`); return; }
+      if (status.status === "error") { urlNote(`${text("Import failed")}: ${status.error ?? "?"}`); return; }
+      window.setTimeout(() => void poll(), 800);
+    };
+    await poll();
+  }));
   stockGrid.addEventListener("click", event => {
     const button = (event.target as HTMLElement).closest<HTMLElement>("[data-stock-act]");
     const card = (event.target as HTMLElement).closest<HTMLElement>("[data-stock]");
@@ -230,6 +244,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     }
   };
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });
+  document.addEventListener("formcut:studio", event => {
+    const page = (event as CustomEvent<{ page?: string }>).detail?.page;
+    if (page && modal.querySelector(`[data-view="${page}"]`)) activePage = page;
+    say(""); modal.hidden = false; void run(showPage); q("close").focus();
+  });
   q("close").addEventListener("click", () => { modal.hidden = true; opener.focus(); });
   modal.addEventListener("keydown", event => { if (event.key === "Escape") { modal.hidden = true; opener.focus(); } });
   for (const button of modal.querySelectorAll<HTMLElement>("[data-page]")) button.addEventListener("click", () => { activePage = button.dataset.page!; say(""); void run(showPage); });

@@ -717,7 +717,6 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   border-radius: var(--radius-s);
 }
 
-.stock-panel { width: min(560px, 92vw); }
 .stock-attrib {
   margin-left: var(--sp-3);
   color: var(--ink-faint);
