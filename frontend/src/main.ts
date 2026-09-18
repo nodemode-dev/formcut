@@ -75,5 +75,6 @@ installEditorActions(engine, bin);
 installWorkspaceLayout();
 installAccordions(workspace);
 app.append(buildStartScreen(engine, bin));
+localizeElement(document.body);
 void bin.load();
 Object.defineProperty(window, "formcut", { value: { engine, bin, actions } });

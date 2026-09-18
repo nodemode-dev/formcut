@@ -1,5 +1,5 @@
 import { effectParameters } from "./effect-parameters";
-import { localizeElement } from "../i18n/text";
+import { localizeElement, text as phrase } from "../i18n/text";
 import type { ProjectEngine } from "../engine/project";
 import type { Clip, KeyframeProp } from "../engine/types";
 import { SPEED_PRESETS } from "../engine/timing";
@@ -27,7 +27,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
   const selected = () => engine.snapshot.selectedClipId ? engine.findClip(engine.snapshot.selectedClipId)?.clip : undefined;
   const query = <T extends HTMLElement = HTMLInputElement>(key: string) => root.querySelector<T>(`[data-${key}]`)!;
   const patch = (values: Partial<Clip>, clipId = selected()?.id) => { if (!clipId) throw new Error("Select a clip first"); engine.dispatch("clip.creator", { clipId, patch: values }); };
-  const show = (text: string) => { if (status.textContent !== text) status.textContent = text; };
+  const show = (message: string) => { const next = phrase(message); if (status.textContent !== next) status.textContent = next; };
   const safe = async (operation: () => unknown) => { try { await operation(); show(""); } catch (error) { show(error instanceof Error ? error.message : String(error)); } };
   const points = root.querySelector<HTMLElement>(".speed-points")!;
   const pointRows: HTMLElement[] = [];

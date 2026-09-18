@@ -1,4 +1,5 @@
 import { fileMenu } from "./file-menu";
+import { text } from "../i18n/text";
 import { escapeHtml } from "./safe-text";
 import type { ProjectEngine } from "../engine/project";
 import { listProjects, newProject, openProject, saveProject } from "../engine/persistence";
@@ -37,7 +38,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   const title = el.querySelector<HTMLElement>('[data-ref="title"]')!;
   const titleInput = el.querySelector<HTMLInputElement>('[data-ref="title-input"]')!;
   engine.subscribe((state) => {
-    const next = state.saved ? "saved" : "edited";
+    const next = text(state.saved ? "saved" : "edited");
     if (saved.textContent !== next) saved.textContent = next;
     if (title.textContent !== state.title) title.textContent = state.title;
   });

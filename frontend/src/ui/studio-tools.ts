@@ -1,4 +1,4 @@
-import { localizeElement } from "../i18n/text";
+import { localizeElement, text } from "../i18n/text";
 import { t } from "../i18n";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
@@ -85,12 +85,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       let row = modelRows.get(model.id);
       if (!row) {
         row = document.createElement("div"); row.className = "studio-model";
-        const name = document.createElement("strong"); name.textContent = model.name;
+        const name = document.createElement("strong"); name.textContent = text(model.name);
         const status = document.createElement("span"); status.dataset.ready = "";
-        const download = document.createElement("button"); download.className = "tool-chip"; download.textContent = "Download";
+        const download = document.createElement("button"); download.className = "tool-chip"; download.textContent = text("Download");
         download.addEventListener("click", () => void run(async () => { await job(`/api/models/${model.id}/download`); await refreshModels(); say(model.id === "local-speech" ? t("models.readyspeech") : t("models.ready")); }));
         const files = document.createElement("span"); files.textContent = model.files.join(", ");
-        const importer = document.createElement("input"); importer.type = "file"; importer.setAttribute("aria-label", `Import ${model.name}`);
+        const importer = document.createElement("input"); importer.type = "file"; importer.setAttribute("aria-label", text(`Import ${model.name}`));
         importer.addEventListener("change", () => void run(async () => { if (!importer.files?.[0]) return; const body = new FormData(); body.append("file", importer.files[0]); await api(`/api/models/${model.id}/import`, body); await refreshModels(); }));
         row.append(name, status, download, files, importer); modelRows.set(model.id, row); q("model-list").append(row);
         if (model.id === "local-speech") { const note = document.createElement("span"); note.className = "text-add-hint"; note.textContent = t("models.speechsetup"); row.append(note); }

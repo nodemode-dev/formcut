@@ -1,5 +1,104 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
 const rows = `Media|Médias|Media|メディア|미디어|Mídia|Медиа|Medya|媒体|媒體
+Video effects|Effets vidéo|Effetti video|動画エフェクト|비디오 효과|Efeitos de vídeo|Видеоэффекты|Video efektleri|视频效果|影片效果
+Audio effects|Effets audio|Effetti audio|オーディオエフェクト|오디오 효과|Efeitos de áudio|Аудиоэффекты|Ses efektleri|音频效果|音訊效果
+Blur|Flou|Sfocatura|ぼかし|흐림|Desfoque|Размытие|Bulanıklık|模糊|模糊
+Stylize|Stylisation|Stilizzazione|スタイライズ|스타일화|Estilização|Стилизация|Stilize|风格化|風格化
+Distort|Déformation|Distorsione|ゆがみ|왜곡|Distorção|Искажение|Bozulma|扭曲|扭曲
+Texture|Texture|Texture|テクスチャ|텍스처|Textura|Текстура|Doku|纹理|紋理
+Cutout|Détourage|Scontorno|切り抜き|오려내기|Recorte|Вырезание|Dekupe|抠像|去背
+Tone|Tonalité|Tono|トーン|톤|Tom|Тон|Ton|音色|音色
+Space|Espace|Spazio|空間|공간|Espaço|Пространство|Mekân|空间|空間
+Clean|Nettoyage|Pulizia|クリーンアップ|정리|Limpeza|Очистка|Temizleme|清理|清理
+Film|Film|Pellicola|フィルム|필름|Filme|Плёнка|Film|胶片|膠片
+Warm|Chaud|Caldo|暖色|따뜻한 톤|Quente|Тёплые|Sıcak|暖色|暖色
+Cool|Froid|Freddo|寒色|차가운 톤|Frio|Холодные|Soğuk|冷色|冷色
+Split|Virage partiel|Viraggio diviso|スプリットトーン|스플릿 톤|Tonalização dividida|Раздельное тонирование|Bölünmüş ton|分离色调|分離色調
+Basic|Base|Base|基本|기본|Básico|Основное|Temel|基础|基本
+Animation|Animation|Animazione|アニメーション|애니메이션|Animação|Анимация|Animasyon|动画|動畫
+Adjust|Réglages|Regolazioni|調整|조정|Ajustar|Настройка|Ayarlar|调整|調整
+Focus preview|Mettre l'aperçu en avant|Anteprima in primo piano|プレビューに集中|미리보기 집중|Focar na pré-visualização|Фокус на предпросмотре|Önizlemeye odaklan|专注预览|專注預覽
+Panels|Panneaux|Pannelli|パネル|패널|Painéis|Панели|Paneller|面板|面板
+Studio|Studio|Studio|スタジオ|스튜디오|Estúdio|Студия|Stüdyo|工作室|工作室
+saved|enregistré|salvato|保存済み|저장됨|salvo|сохранено|kaydedildi|已保存|已儲存
+edited|modifié|modificato|編集済み|수정됨|editado|изменено|düzenlendi|已编辑|已編輯
+Start|Début|Inizio|先頭へ|처음으로|Início|В начало|Başa git|跳到开头|跳到開頭
+Previous frame|Image précédente|Fotogramma precedente|前のフレーム|이전 프레임|Quadro anterior|Предыдущий кадр|Önceki kare|上一帧|上一格
+Play or pause|Lecture ou pause|Riproduci o pausa|再生/一時停止|재생 또는 일시정지|Reproduzir ou pausar|Воспроизведение или пауза|Oynat veya duraklat|播放或暂停|播放或暫停
+Next frame|Image suivante|Fotogramma successivo|次のフレーム|다음 프레임|Próximo quadro|Следующий кадр|Sonraki kare|下一帧|下一格
+End|Fin|Fine|末尾へ|끝으로|Fim|В конец|Sona git|跳到结尾|跳到結尾
+Video preview|Aperçu vidéo|Anteprima video|動画プレビュー|비디오 미리보기|Pré-visualização do vídeo|Предпросмотр видео|Video önizlemesi|视频预览|影片預覽
+Preview resolution|Résolution de l'aperçu|Risoluzione dell'anteprima|プレビュー解像度|미리보기 해상도|Resolução da pré-visualização|Разрешение предпросмотра|Önizleme çözünürlüğü|预览分辨率|預覽解析度
+Remove track|Supprimer la piste|Rimuovi traccia|トラックを削除|트랙 삭제|Remover trilha|Удалить дорожку|Parçayı kaldır|删除轨道|刪除軌道
+Lock track|Verrouiller la piste|Blocca traccia|トラックをロック|트랙 잠금|Bloquear trilha|Заблокировать дорожку|Parçayı kilitle|锁定轨道|鎖定軌道
+Hide track|Masquer la piste|Nascondi traccia|トラックを非表示|트랙 숨기기|Ocultar trilha|Скрыть дорожку|Parçayı gizle|隐藏轨道|隱藏軌道
+Mute track|Couper le son de la piste|Silenzia traccia|トラックをミュート|트랙 음소거|Silenciar trilha|Заглушить дорожку|Parçanın sesini kapat|静音轨道|靜音軌道
+Double-click to rename track|Double-cliquez pour renommer la piste|Doppio clic per rinominare la traccia|ダブルクリックでトラック名を変更|두 번 클릭하여 트랙 이름 바꾸기|Clique duas vezes para renomear a trilha|Дважды щёлкните, чтобы переименовать дорожку|Yeniden adlandırmak için çift tıklayın|双击以重命名轨道|按兩下以重新命名軌道
+Scrub playhead|Déplacer la tête de lecture|Trascina la testina|再生ヘッドをドラッグ|재생 헤드 이동|Arrastar o cursor de reprodução|Перемещение указателя воспроизведения|Oynatma kafasını sürükle|拖动播放头|拖曳播放頭
+Timeline height|Hauteur de la timeline|Altezza della timeline|タイムラインの高さ|타임라인 높이|Altura da linha do tempo|Высота таймлайна|Zaman çizelgesi yüksekliği|时间线高度|時間軸高度
+Resize selected clip nw|Redimensionner le clip sélectionné (coin supérieur gauche)|Ridimensiona la clip selezionata (angolo in alto a sinistra)|選択したクリップのサイズを変更（左上）|선택한 클립 크기 조정(왼쪽 위)|Redimensionar o clipe selecionado (canto superior esquerdo)|Изменить размер выбранного клипа (левый верхний угол)|Seçili klibi yeniden boyutlandır (sol üst)|调整所选片段大小（左上）|調整所選片段大小（左上）
+Resize selected clip n|Redimensionner le clip sélectionné (bord supérieur)|Ridimensiona la clip selezionata (lato superiore)|選択したクリップのサイズを変更（上）|선택한 클립 크기 조정(위)|Redimensionar o clipe selecionado (borda superior)|Изменить размер выбранного клипа (верхний край)|Seçili klibi yeniden boyutlandır (üst)|调整所选片段大小（上）|調整所選片段大小（上）
+Resize selected clip ne|Redimensionner le clip sélectionné (coin supérieur droit)|Ridimensiona la clip selezionata (angolo in alto a destra)|選択したクリップのサイズを変更（右上）|선택한 클립 크기 조정(오른쪽 위)|Redimensionar o clipe selecionado (canto superior direito)|Изменить размер выбранного клипа (правый верхний угол)|Seçili klibi yeniden boyutlandır (sağ üst)|调整所选片段大小（右上）|調整所選片段大小（右上）
+Resize selected clip e|Redimensionner le clip sélectionné (bord droit)|Ridimensiona la clip selezionata (lato destro)|選択したクリップのサイズを変更（右）|선택한 클립 크기 조정(오른쪽)|Redimensionar o clipe selecionado (borda direita)|Изменить размер выбранного клипа (правый край)|Seçili klibi yeniden boyutlandır (sağ)|调整所选片段大小（右）|調整所選片段大小（右）
+Resize selected clip se|Redimensionner le clip sélectionné (coin inférieur droit)|Ridimensiona la clip selezionata (angolo in basso a destra)|選択したクリップのサイズを変更（右下）|선택한 클립 크기 조정(오른쪽 아래)|Redimensionar o clipe selecionado (canto inferior direito)|Изменить размер выбранного клипа (правый нижний угол)|Seçili klibi yeniden boyutlandır (sağ alt)|调整所选片段大小（右下）|調整所選片段大小（右下）
+Resize selected clip s|Redimensionner le clip sélectionné (bord inférieur)|Ridimensiona la clip selezionata (lato inferiore)|選択したクリップのサイズを変更（下）|선택한 클립 크기 조정(아래)|Redimensionar o clipe selecionado (borda inferior)|Изменить размер выбранного клипа (нижний край)|Seçili klibi yeniden boyutlandır (alt)|调整所选片段大小（下）|調整所選片段大小（下）
+Resize selected clip sw|Redimensionner le clip sélectionné (coin inférieur gauche)|Ridimensiona la clip selezionata (angolo in basso a sinistra)|選択したクリップのサイズを変更（左下）|선택한 클립 크기 조정(왼쪽 아래)|Redimensionar o clipe selecionado (canto inferior esquerdo)|Изменить размер выбранного клипа (левый нижний угол)|Seçili klibi yeniden boyutlandır (sol alt)|调整所选片段大小（左下）|調整所選片段大小（左下）
+Resize selected clip w|Redimensionner le clip sélectionné (bord gauche)|Ridimensiona la clip selezionata (lato sinistro)|選択したクリップのサイズを変更（左）|선택한 클립 크기 조정(왼쪽)|Redimensionar o clipe selecionado (borda esquerda)|Изменить размер выбранного клипа (левый край)|Seçili klibi yeniden boyutlandır (sol)|调整所选片段大小（左）|調整所選片段大小（左）
+Rotate selected clip|Faire pivoter le clip sélectionné|Ruota la clip selezionata|選択したクリップを回転|선택한 클립 회전|Girar o clipe selecionado|Повернуть выбранный клип|Seçili klibi döndür|旋转所选片段|旋轉所選片段
+Move selected clip|Déplacer le clip sélectionné|Sposta la clip selezionata|選択したクリップを移動|선택한 클립 이동|Mover o clipe selecionado|Переместить выбранный клип|Seçili klibi taşı|移动所选片段|移動所選片段
+Media panel|Panneau Médias|Pannello Media|メディアパネル|미디어 패널|Painel de mídia|Панель медиа|Medya paneli|媒体面板|媒體面板
+Inspector panel|Panneau Inspecteur|Pannello Ispettore|インスペクターパネル|인스펙터 패널|Painel do inspetor|Панель инспектора|Denetçi paneli|检查器面板|檢閱器面板
+Timeline panel|Panneau Timeline|Pannello Timeline|タイムラインパネル|타임라인 패널|Painel da linha do tempo|Панель таймлайна|Zaman çizelgesi paneli|时间线面板|時間軸面板
+Reset layout|Réinitialiser la disposition|Ripristina layout|レイアウトをリセット|레이아웃 초기화|Redefinir layout|Сбросить макет|Düzeni sıfırla|重置布局|重設版面配置
+Short timeline|Timeline basse|Timeline bassa|タイムライン（低）|낮은 타임라인|Linha do tempo baixa|Низкий таймлайн|Kısa zaman çizelgesi|矮时间线|矮時間軸
+Medium timeline|Timeline moyenne|Timeline media|タイムライン（中）|중간 타임라인|Linha do tempo média|Средний таймлайн|Orta zaman çizelgesi|中等时间线|中等時間軸
+Tall timeline|Timeline haute|Timeline alta|タイムライン（高）|높은 타임라인|Linha do tempo alta|Высокий таймлайн|Uzun zaman çizelgesi|高时间线|高時間軸
+Undo|Annuler|Annulla|元に戻す|실행 취소|Desfazer|Отменить|Geri al|撤销|復原
+Redo|Rétablir|Ripeti|やり直し|다시 실행|Refazer|Повторить|Yinele|重做|取消復原
+Copy clip|Copier le clip|Copia clip|クリップをコピー|클립 복사|Copiar clipe|Копировать клип|Klibi kopyala|复制片段|複製片段
+Paste clip|Coller le clip|Incolla clip|クリップを貼り付け|클립 붙여넣기|Colar clipe|Вставить клип|Klibi yapıştır|粘贴片段|貼上片段
+Duplicate clip|Dupliquer le clip|Duplica clip|クリップを複製|클립 복제|Duplicar clipe|Дублировать клип|Klibi çoğalt|创建片段副本|再製片段
+Split at playhead|Scinder à la tête de lecture|Dividi alla testina|再生ヘッドで分割|재생 헤드에서 분할|Dividir no cursor de reprodução|Разделить по указателю|Oynatma kafasında böl|在播放头处拆分|在播放頭處分割
+Detach audio|Détacher l'audio|Separa l'audio|オーディオを分離|오디오 분리|Separar áudio|Отделить звук|Sesi ayır|分离音频|分離音訊
+Delete clip|Supprimer le clip|Elimina clip|クリップを削除|클립 삭제|Excluir clipe|Удалить клип|Klibi sil|删除片段|刪除片段
+Fullscreen|Plein écran|Schermo intero|全画面表示|전체 화면|Tela cheia|Полноэкранный режим|Tam ekran|全屏|全螢幕
+Add point at playhead|Ajouter un point à la tête de lecture|Aggiungi punto alla testina|再生ヘッドにポイントを追加|재생 헤드에 점 추가|Adicionar ponto no cursor de reprodução|Добавить точку у указателя|Oynatma kafasına nokta ekle|在播放头处添加点|在播放頭處新增點
+Preset|Préréglage|Preset|プリセット|프리셋|Predefinição|Пресет|Hazır ayar|预设|預設集
+Select a clip to edit its tools|Sélectionnez un clip pour modifier ses outils|Seleziona una clip per modificarne gli strumenti|クリップを選択してツールを編集|클립을 선택하여 도구를 편집하세요|Selecione um clipe para editar suas ferramentas|Выберите клип, чтобы изменить его инструменты|Araçlarını düzenlemek için bir klip seçin|选择一个片段以编辑其工具|選取片段以編輯其工具
+Creator tool|Outil de création|Strumento creativo|クリエイターツール|크리에이터 도구|Ferramenta de criação|Инструмент автора|Oluşturma aracı|创作工具|創作工具
+Motion|Mouvement|Movimento|モーション|모션|Movimento|Движение|Hareket|运动|動態
+Seconds|Secondes|Secondi|秒|초|Segundos|Секунды|Saniye|秒|秒
+Chroma key|Incrustation chromatique|Chroma key|クロマキー|크로마 키|Chroma key|Хромакей|Kroma anahtarı|色度键|色度鍵
+Remove last stroke|Supprimer le dernier trait|Rimuovi l'ultimo tratto|最後のストロークを削除|마지막 획 제거|Remover o último traço|Удалить последний штрих|Son fırça darbesini kaldır|移除最后一笔|移除最後一筆
+Model|Modèle|Modello|モデル|모델|Modelo|Модель|Model|模型|模型
+Threshold|Seuil|Soglia|しきい値|임계값|Limiar|Порог|Eşik|阈值|閾值
+Edge softness|Douceur des bords|Morbidezza dei bordi|エッジの柔らかさ|가장자리 부드러움|Suavidade da borda|Мягкость края|Kenar yumuşaklığı|边缘柔和度|邊緣柔和度
+Brush|Pinceau|Pennello|ブラシ|브러시|Pincel|Кисть|Fırça|画笔|筆刷
+Brush radius|Rayon du pinceau|Raggio del pennello|ブラシの半径|브러시 반경|Raio do pincel|Радиус кисти|Fırça yarıçapı|画笔半径|筆刷半徑
+Paint on the preview. Brush edits use source coordinates and are saved with the clip.|Peignez sur l'aperçu. Les retouches au pinceau utilisent les coordonnées de la source et sont enregistrées avec le clip.|Dipingi sull'anteprima. Le modifiche con il pennello usano le coordinate della sorgente e vengono salvate con la clip.|プレビュー上で描画します。ブラシの編集はソースの座標を使用し、クリップと一緒に保存されます。|미리보기에 칠하세요. 브러시 편집은 원본 좌표를 사용하며 클립과 함께 저장됩니다.|Pinte na pré-visualização. As edições com pincel usam as coordenadas da origem e são salvas com o clipe.|Рисуйте на предпросмотре. Правки кистью используют координаты исходника и сохраняются вместе с клипом.|Önizlemenin üzerine boyayın. Fırça düzenlemeleri kaynak koordinatlarını kullanır ve klip ile birlikte kaydedilir.|在预览上绘制。画笔编辑使用源坐标，并随片段一起保存。|在預覽上繪製。筆刷編輯使用來源座標，並隨片段一起儲存。
+Mute clip|Couper le son du clip|Silenzia clip|クリップをミュート|클립 음소거|Silenciar clipe|Заглушить клип|Klibin sesini kapat|静音片段|靜音片段
+Processor|Processeur|Processore|プロセッサー|프로세서|Processador|Обработка|İşlemci|处理器|處理器
+Effect|Effet|Effetto|エフェクト|효과|Efeito|Эффект|Efekt|效果|效果
+Remove active timeline|Supprimer la timeline active|Rimuovi la timeline attiva|アクティブなタイムラインを削除|활성 타임라인 삭제|Remover a linha do tempo ativa|Удалить активный таймлайн|Etkin zaman çizelgesini kaldır|删除当前时间线|刪除目前的時間軸
+Studio tools|Outils du studio|Strumenti dello studio|スタジオツール|스튜디오 도구|Ferramentas do estúdio|Инструменты студии|Stüdyo araçları|工作室工具|工作室工具
+Timeline structure|Structure de la timeline|Struttura della timeline|タイムラインの構成|타임라인 구조|Estrutura da linha do tempo|Структура таймлайна|Zaman çizelgesi yapısı|时间线结构|時間軸結構
+Frame rate|Fréquence d'images|Frequenza fotogrammi|フレームレート|프레임 속도|Taxa de quadros|Частота кадров|Kare hızı|帧率|影格速率
+Name|Nom|Nome|名前|이름|Nome|Имя|Ad|名称|名稱
+Active timeline|Timeline active|Timeline attiva|アクティブなタイムライン|활성 타임라인|Linha do tempo ativa|Активный таймлайн|Etkin zaman çizelgesi|当前时间线|目前的時間軸
+All settings and structure changes support Undo.|Tous les réglages et changements de structure peuvent être annulés.|Tutte le impostazioni e le modifiche alla struttura si possono annullare.|すべての設定と構成の変更は元に戻せます。|모든 설정 및 구조 변경은 실행 취소할 수 있습니다.|Todas as configurações e mudanças de estrutura podem ser desfeitas.|Все изменения настроек и структуры можно отменить.|Tüm ayar ve yapı değişiklikleri geri alınabilir.|所有设置和结构更改均可撤销。|所有設定和結構變更皆可復原。
+Save current project as template|Enregistrer le projet actuel comme modèle|Salva il progetto attuale come modello|現在のプロジェクトをテンプレートとして保存|현재 프로젝트를 템플릿으로 저장|Salvar o projeto atual como modelo|Сохранить текущий проект как шаблон|Geçerli projeyi şablon olarak kaydet|将当前项目另存为模板|將目前的專案另存為範本
+Reusable timeline templates|Modèles de timeline réutilisables|Modelli di timeline riutilizzabili|再利用できるタイムラインテンプレート|재사용 가능한 타임라인 템플릿|Modelos de linha do tempo reutilizáveis|Шаблоны таймлайна для повторного использования|Yeniden kullanılabilir zaman çizelgesi şablonları|可重复使用的时间线模板|可重複使用的時間軸範本
+Template name|Nom du modèle|Nome del modello|テンプレート名|템플릿 이름|Nome do modelo|Название шаблона|Şablon adı|模板名称|範本名稱
+Import template|Importer un modèle|Importa modello|テンプレートを読み込み|템플릿 가져오기|Importar modelo|Импортировать шаблон|Şablonu içe aktar|导入模板|匯入範本
+Generate and add to timeline|Générer et ajouter à la timeline|Genera e aggiungi alla timeline|生成してタイムラインに追加|생성하여 타임라인에 추가|Gerar e adicionar à linha do tempo|Создать и добавить на таймлайн|Oluştur ve zaman çizelgesine ekle|生成并添加到时间线|產生並加入時間軸
+Text to speak|Texte à prononcer|Testo da pronunciare|読み上げるテキスト|읽을 텍스트|Texto para falar|Текст для озвучивания|Seslendirilecek metin|要朗读的文本|要朗讀的文字
+Download|Télécharger|Scarica|ダウンロード|다운로드|Baixar|Скачать|İndir|下载|下載
+Object cutout (U2Net small)|Détourage d'objet (U2Net small)|Scontorno oggetti (U2Net small)|物体の切り抜き（U2Net small）|개체 오려내기(U2Net small)|Recorte de objeto (U2Net small)|Вырезание объекта (U2Net small)|Nesne dekupesi (U2Net small)|物体抠像（U2Net small）|物體去背（U2Net small）
+Person cutout (U2Net)|Détourage de personne (U2Net)|Scontorno persone (U2Net)|人物の切り抜き（U2Net）|인물 오려내기(U2Net)|Recorte de pessoa (U2Net)|Вырезание человека (U2Net)|Kişi dekupesi (U2Net)|人像抠像（U2Net）|人像去背（U2Net）
+Kokoro local speech|Synthèse vocale locale Kokoro|Sintesi vocale locale Kokoro|Kokoro ローカル音声合成|Kokoro 로컬 음성 합성|Fala local Kokoro|Локальный синтез речи Kokoro|Kokoro yerel konuşma|Kokoro 本地语音|Kokoro 本機語音
+Import Object cutout (U2Net small)|Importer le détourage d'objet (U2Net small)|Importa scontorno oggetti (U2Net small)|物体の切り抜き（U2Net small）を読み込み|개체 오려내기(U2Net small) 가져오기|Importar recorte de objeto (U2Net small)|Импортировать вырезание объекта (U2Net small)|Nesne dekupesini içe aktar (U2Net small)|导入物体抠像（U2Net small）|匯入物體去背（U2Net small）
+Import Person cutout (U2Net)|Importer le détourage de personne (U2Net)|Importa scontorno persone (U2Net)|人物の切り抜き（U2Net）を読み込み|인물 오려내기(U2Net) 가져오기|Importar recorte de pessoa (U2Net)|Импортировать вырезание человека (U2Net)|Kişi dekupesini içe aktar (U2Net)|导入人像抠像（U2Net）|匯入人像去背（U2Net）
+Import Kokoro local speech|Importer la synthèse vocale locale Kokoro|Importa sintesi vocale locale Kokoro|Kokoro ローカル音声合成を読み込み|Kokoro 로컬 음성 합성 가져오기|Importar fala local Kokoro|Импортировать локальный синтез речи Kokoro|Kokoro yerel konuşmayı içe aktar|导入 Kokoro 本地语音|匯入 Kokoro 本機語音
 Ripple delete on selected track|Suppression avec décalage sur la piste sélectionnée|Elimina con riallineamento sulla traccia selezionata|選択トラックでリップル削除|선택한 트랙에서 리플 삭제|Excluir com ondulação na trilha selecionada|Удалить со сдвигом на выбранной дорожке|Seçili parçada kaydırarak sil|在所选轨道上波纹删除|在所選軌道上漣漪刪除
 Add track|Ajouter une piste|Aggiungi traccia|トラックを追加|트랙 추가|Adicionar trilha|Добавить дорожку|Parça ekle|添加轨道|新增軌道
 Fit timeline|Ajuster la timeline|Adatta timeline|タイムラインに合わせる|타임라인 맞춤|Ajustar linha do tempo|Вместить таймлайн|Zaman çizelgesini sığdır|适应时间线|符合時間軸
