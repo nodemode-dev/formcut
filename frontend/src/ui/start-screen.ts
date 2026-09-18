@@ -54,6 +54,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   el.innerHTML = `
     <aside class="home-rail">
       <div class="start-brand">${icon("logo")}<span>formcut</span></div>
+      <p class="home-title">${t("home.library")}</p>
       <nav class="home-nav" data-ref="nav">
         ${VIEWS.map(([id, label, glyph], index) => `<button class="home-tab${index === 0 ? " is-active" : ""}" data-view="${id}">${icon(glyph)}<span>${t(label)}</span></button>`).join("")}
       </nav>
@@ -67,6 +68,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     <main class="home-main">
       <header class="home-head">
         <strong data-ref="title">${t("home.projects")}</strong>
+        <span class="home-count" data-ref="count"></span>
         <input class="home-search" data-ref="search" type="search" placeholder="${t("home.search")}" hidden />
         <span class="spacer"></span>
         <div class="home-actions" data-ref="actions"></div>
@@ -89,6 +91,10 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   };
   const say = (text: string) => {
     status.textContent = text;
+  };
+  const count = (n: number, unit: string) => {
+    const label = n ? `${n} ${unit}` : "";
+    if (q("count").textContent !== label) q("count").textContent = label;
   };
 
   const chip = (label: string, handler: (button: HTMLButtonElement) => void, glyph?: string) => {
@@ -129,6 +135,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     } catch {
       say(t("home.offline"));
     }
+    count(projects.length, t("home.projects").toLowerCase());
     if (!projects.length) {
       const note = document.createElement("p");
       note.className = "panel-note";
@@ -172,6 +179,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
 
     const term = search.value.trim().toLowerCase();
     const shown = media.filter((item) => (kind === "all" || item.kind === kind) && (!term || item.name.toLowerCase().includes(term)));
+    count(shown.length, t("home.items"));
     if (!shown.length) {
       const note = document.createElement("p");
       note.className = "panel-note";
@@ -319,6 +327,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     search.hidden = view !== "media";
     actions.replaceChildren();
     say("");
+    count(0, "");
     if (view === "projects") {
       const fresh = chip(t("start.new"), () => {
         newProject(engine);

@@ -614,7 +614,9 @@ running|en cours|in corso|実行中|실행 중|em execução|выполняет�
 finished|terminé|completato|完了|완료|concluído|завершено|tamamlandı|已完成|已完成
 cancelled|annulé|annullato|キャンセル済み|취소됨|cancelado|отменено|iptal edildi|已取消|已取消
 failed|échec|non riuscito|失敗|실패|falhou|ошибка|başarısız|失败|失敗
-queued|en attente|in coda|待機中|대기 중|na fila|в очереди|kuyrukta|排队中|排隊中`;
+queued|en attente|in coda|待機中|대기 중|na fila|в очереди|kuyrukta|排队中|排隊中
+Library|Bibliothèque|Libreria|ライブラリ|라이브러리|Biblioteca|Библиотека|Kitaplık|媒体库|媒體庫
+items|éléments|elementi|件|개|itens|элементов|öğe|项|項`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

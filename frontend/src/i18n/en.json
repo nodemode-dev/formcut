@@ -265,6 +265,8 @@
   "home.used": "used",
   "home.reclaimable": "reclaimable",
   "home.free": "free on disk",
+  "home.library": "Library",
+  "home.items": "items",
   "home.derived": "rebuildable",
   "set.connections": "Connections",
   "conn.sessions": "Orchestrators",
