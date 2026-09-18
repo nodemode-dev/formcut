@@ -5,6 +5,7 @@ import { defaultTextStyle, defaultTransform, type ClipTransform } from "../engin
 import { icon } from "./icons";
 import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
+import { text } from "../i18n/text";
 import { sampledTransform } from "../engine/keyframes";
 
 const BLEND_MODES = ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"];
@@ -141,7 +142,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${propRow(t("row.opacity"), "opacity", sel.opacity, "%")}
         <div class="prop-row">
           <span>${t("row.mode")}</span>
-          <button class="wide-select" data-ref="blend"><span data-ref="blend-label">${sel.blendMode}</span>${icon("chevD")}</button>
+          <button class="wide-select" data-ref="blend" aria-haspopup="menu" aria-expanded="false"><span data-ref="blend-label" data-mode="${sel.blendMode}">${sel.blendMode}</span>${icon("chevD")}</button>
           <span class="prop-aux"></span>
         </div>
         <div class="prop-row">
@@ -313,12 +314,20 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const on = flip.classList.toggle("is-on");
     patchSelected({ flipH: on });
   });
+  const blendMenu = document.createElement("div"); blendMenu.className = "dropdown"; blendMenu.hidden = true; blendMenu.setAttribute("role", "menu");
+  for (const mode of BLEND_MODES) {
+    const item = document.createElement("button"); item.className = "dropdown-item"; item.dataset.mode = mode; item.textContent = text(mode); item.setAttribute("role", "menuitemradio");
+    item.addEventListener("click", () => { blendMenu.hidden = true; blendBtn.setAttribute("aria-expanded", "false"); blendLabel.dataset.mode = mode; blendLabel.textContent = text(mode); patchSelected({ blendMode: mode }); });
+    blendMenu.append(item);
+  }
+  document.body.append(blendMenu);
   blendBtn.addEventListener("click", () => {
-    const current = blendLabel.textContent ?? "Normal";
-    const next = BLEND_MODES[(BLEND_MODES.indexOf(current) + 1) % BLEND_MODES.length];
-    blendLabel.textContent = next;
-    patchSelected({ blendMode: next });
+    const box = blendBtn.getBoundingClientRect(); blendMenu.style.left = `${box.left}px`; blendMenu.style.top = `${box.bottom + 4}px`; blendMenu.style.minWidth = `${box.width}px`;
+    for (const item of blendMenu.querySelectorAll<HTMLElement>("[data-mode]")) item.setAttribute("aria-pressed", String(item.dataset.mode === (blendLabel.dataset.mode ?? "Normal")));
+    blendMenu.hidden = !blendMenu.hidden; blendBtn.setAttribute("aria-expanded", String(!blendMenu.hidden));
   });
+  document.addEventListener("pointerdown", (event) => { if (!blendMenu.hidden && !blendMenu.contains(event.target as Node) && !blendBtn.contains(event.target as Node)) { blendMenu.hidden = true; blendBtn.setAttribute("aria-expanded", "false"); } }, true);
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !blendMenu.hidden) { blendMenu.hidden = true; blendBtn.setAttribute("aria-expanded", "false"); } });
 
   el.querySelector('[data-ref="mute"]')!.addEventListener("click", () => {
     const state = engine.snapshot;
@@ -493,7 +502,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       if (alignLabel.textContent !== ts.align) alignLabel.textContent = ts.align;
     }
     flip.classList.toggle("is-on", t.flipH);
-    if (blendLabel.textContent !== t.blendMode) blendLabel.textContent = t.blendMode;
+    const blendMode = t.blendMode ?? "Normal";
+    if (blendLabel.dataset.mode !== blendMode) { blendLabel.dataset.mode = blendMode; blendLabel.textContent = text(blendMode); }
   };
   engine.subscribe((_state, changed) => {
     if (changed === "clip-selection" || changed === "clips") refill();

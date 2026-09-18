@@ -97,7 +97,7 @@ export function installWorkspaceLayout(): void {
   document.body.append(menu);
   focus.title = "Focus preview"; focus.addEventListener("click", () => { settings.focus = !settings.focus; apply(); });
   panels.title = "Panels"; panels.addEventListener("click", () => { const box = panels.getBoundingClientRect(); menu.style.right = "12px"; menu.style.top = `${box.bottom}px`; menu.hidden = !menu.hidden; });
-  document.addEventListener("pointerdown", event => { if (!menu.contains(event.target as Node) && !panels.contains(event.target as Node) && !menu.hidden) menu.hidden = true; });
+  document.addEventListener("pointerdown", event => { if (!menu.contains(event.target as Node) && !panels.contains(event.target as Node) && !menu.hidden) menu.hidden = true; }, true);
   document.addEventListener("keydown", event => { if (event.key === "Escape") { menu.hidden = true; if (settings.focus) { settings.focus = false; apply(); } } });
   const size = workspace.querySelector<HTMLButtonElement>(".tl-tabs .select-chip");
   if (size) {
@@ -114,7 +114,7 @@ export function installWorkspaceLayout(): void {
       for (const item of heights.querySelectorAll<HTMLElement>("[data-height]")) item.setAttribute("aria-pressed", String(Number(item.dataset.height) === settings.height));
       heights.hidden = !heights.hidden; size.setAttribute("aria-expanded", String(!heights.hidden));
     });
-    document.addEventListener("pointerdown", event => { if (!heights.hidden && !heights.contains(event.target as Node) && !size.contains(event.target as Node)) { heights.hidden = true; size.setAttribute("aria-expanded", "false"); } });
+    document.addEventListener("pointerdown", event => { if (!heights.hidden && !heights.contains(event.target as Node) && !size.contains(event.target as Node)) { heights.hidden = true; size.setAttribute("aria-expanded", "false"); } }, true);
     document.addEventListener("keydown", event => { if (event.key === "Escape" && !heights.hidden) { heights.hidden = true; size.setAttribute("aria-expanded", "false"); } });
   }
   // --- dividers -------------------------------------------------------------

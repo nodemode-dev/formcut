@@ -18,7 +18,6 @@ Basic|Base|Base|基本|기본|Básico|Основное|Temel|基础|基本
 Animation|Animation|Animazione|アニメーション|애니메이션|Animação|Анимация|Animasyon|动画|動畫
 Adjust|Réglages|Regolazioni|調整|조정|Ajustar|Настройка|Ayarlar|调整|調整
 Focus preview|Mettre l'aperçu en avant|Anteprima in primo piano|プレビューに集中|미리보기 집중|Focar na pré-visualização|Фокус на предпросмотре|Önizlemeye odaklan|专注预览|專注預覽
-Panels|Panneaux|Pannelli|パネル|패널|Painéis|Панели|Paneller|面板|面板
 Studio|Studio|Studio|スタジオ|스튜디오|Estúdio|Студия|Stüdyo|工作室|工作室
 saved|enregistré|salvato|保存済み|저장됨|salvo|сохранено|kaydedildi|已保存|已儲存
 edited|modifié|modificato|編集済み|수정됨|editado|изменено|düzenlendi|已编辑|已編輯
@@ -58,8 +57,6 @@ Redo|Rétablir|Ripeti|やり直し|다시 실행|Refazer|Повторить|Yine
 Copy clip|Copier le clip|Copia clip|クリップをコピー|클립 복사|Copiar clipe|Копировать клип|Klibi kopyala|复制片段|複製片段
 Paste clip|Coller le clip|Incolla clip|クリップを貼り付け|클립 붙여넣기|Colar clipe|Вставить клип|Klibi yapıştır|粘贴片段|貼上片段
 Duplicate clip|Dupliquer le clip|Duplica clip|クリップを複製|클립 복제|Duplicar clipe|Дублировать клип|Klibi çoğalt|创建片段副本|再製片段
-Split at playhead|Scinder à la tête de lecture|Dividi alla testina|再生ヘッドで分割|재생 헤드에서 분할|Dividir no cursor de reprodução|Разделить по указателю|Oynatma kafasında böl|在播放头处拆分|在播放頭處分割
-Detach audio|Détacher l'audio|Separa l'audio|オーディオを分離|오디오 분리|Separar áudio|Отделить звук|Sesi ayır|分离音频|分離音訊
 Delete clip|Supprimer le clip|Elimina clip|クリップを削除|클립 삭제|Excluir clipe|Удалить клип|Klibi sil|删除片段|刪除片段
 Fullscreen|Plein écran|Schermo intero|全画面表示|전체 화면|Tela cheia|Полноэкранный режим|Tam ekran|全屏|全螢幕
 Add point at playhead|Ajouter un point à la tête de lecture|Aggiungi punto alla testina|再生ヘッドにポイントを追加|재생 헤드에 점 추가|Adicionar ponto no cursor de reprodução|Добавить точку у указателя|Oynatma kafasına nokta ekle|在播放头处添加点|在播放頭處新增點
@@ -92,7 +89,6 @@ Template name|Nom du modèle|Nome del modello|テンプレート名|템플릿 �
 Import template|Importer un modèle|Importa modello|テンプレートを読み込み|템플릿 가져오기|Importar modelo|Импортировать шаблон|Şablonu içe aktar|导入模板|匯入範本
 Generate and add to timeline|Générer et ajouter à la timeline|Genera e aggiungi alla timeline|生成してタイムラインに追加|생성하여 타임라인에 추가|Gerar e adicionar à linha do tempo|Создать и добавить на таймлайн|Oluştur ve zaman çizelgesine ekle|生成并添加到时间线|產生並加入時間軸
 Text to speak|Texte à prononcer|Testo da pronunciare|読み上げるテキスト|읽을 텍스트|Texto para falar|Текст для озвучивания|Seslendirilecek metin|要朗读的文本|要朗讀的文字
-Download|Télécharger|Scarica|ダウンロード|다운로드|Baixar|Скачать|İndir|下载|下載
 Object cutout (U2Net small)|Détourage d'objet (U2Net small)|Scontorno oggetti (U2Net small)|物体の切り抜き（U2Net small）|개체 오려내기(U2Net small)|Recorte de objeto (U2Net small)|Вырезание объекта (U2Net small)|Nesne dekupesi (U2Net small)|物体抠像（U2Net small）|物體去背（U2Net small）
 Person cutout (U2Net)|Détourage de personne (U2Net)|Scontorno persone (U2Net)|人物の切り抜き（U2Net）|인물 오려내기(U2Net)|Recorte de pessoa (U2Net)|Вырезание человека (U2Net)|Kişi dekupesi (U2Net)|人像抠像（U2Net）|人像去背（U2Net）
 Kokoro local speech|Synthèse vocale locale Kokoro|Sintesi vocale locale Kokoro|Kokoro ローカル音声合成|Kokoro 로컬 음성 합성|Fala local Kokoro|Локальный синтез речи Kokoro|Kokoro yerel konuşma|Kokoro 本地语音|Kokoro 本機語音
@@ -338,10 +334,11 @@ Removed|Retiré|Rimosso|削除|제거됨|Removido|Удалено|Kaldırıldı|�
 This effect needs a clip with sound|Cet effet nécessite un clip avec du son|Questo effetto richiede una clip con audio|このエフェクトには音声のあるクリップが必要です|이 효과에는 소리가 있는 클립이 필요합니다|Este efeito precisa de um clipe com som|Этому эффекту нужен клип со звуком|Bu efekt sesli bir klip gerektirir|此效果需要带声音的片段|此效果需要有聲音的片段
 Mask added, adjust it in the inspector|Masque ajouté, ajustez-le dans l'inspecteur|Maschera aggiunta, regolala nell'ispettore|マスクを追加しました。インスペクターで調整してください|마스크를 추가했습니다. 인스펙터에서 조정하세요|Máscara adicionada, ajuste-a no inspetor|Маска добавлена, настройте её в инспекторе|Maske eklendi, denetçiden ayarlayın|已添加蒙版，请在检查器中调整|已新增遮罩，請在檢視器中調整
 Cutout needs a video or image clip|La découpe nécessite un clip vidéo ou image|Lo scontorno richiede una clip video o immagine|切り抜きには動画または画像クリップが必要です|오려내기에는 비디오 또는 이미지 클립이 필요합니다|O recorte precisa de um clipe de vídeo ou imagem|Для вырезания нужен видео- или фотоклип|Kesme için video veya görsel klip gerekir|抠像需要视频或图像片段|去背需要影片或影像片段
-Install the model in Studio, Local models|Installez le modèle dans Studio, Local models|Installa il modello in Studio, Local models|Studio の Local models でモデルをインストールしてください|Studio의 Local models에서 모델을 설치하세요|Instale o modelo em Studio, Local models|Установите модель в Studio, Local models|Modeli Studio, Local models bölümünden yükleyin|请在 Studio 的 Local models 中安装模型|請在 Studio 的 Local models 中安裝模型
+Install the model in Studio, Local models|Installez le modèle dans Studio, Modèles locaux|Installa il modello in Studio, Modelli locali|スタジオの「ローカルモデル」でモデルをインストールしてください|스튜디오의 로컬 모델에서 모델을 설치하세요|Instale o modelo em Estúdio, Modelos locais|Установите модель в разделе Студия, Локальные модели|Modeli Stüdyo, Yerel modeller bölümünden yükleyin|请在工作室的本地模型中安装模型|請在工作室的本機模型中安裝模型
 Could not apply this effect|Impossible d'appliquer cet effet|Impossibile applicare questo effetto|このエフェクトを適用できませんでした|이 효과를 적용할 수 없습니다|Não foi possível aplicar este efeito|Не удалось применить этот эффект|Bu efekt uygulanamadı|无法应用此效果|無法套用此效果
 Effects are unavailable until the engine responds|Les effets sont indisponibles jusqu'à la réponse du moteur|Gli effetti non sono disponibili finché il motore non risponde|エンジンが応答するまでエフェクトは利用できません|엔진이 응답할 때까지 효과를 사용할 수 없습니다|Os efeitos ficam indisponíveis até o motor responder|Эффекты недоступны, пока движок не ответит|Motor yanıt verene kadar efektler kullanılamaz|引擎响应前无法使用效果|引擎回應前無法使用效果
-Download Kokoro under Local models first|Téléchargez d'abord Kokoro dans Local models|Scarica prima Kokoro in Local models|まず Local models で Kokoro をダウンロードしてください|먼저 Local models에서 Kokoro를 다운로드하세요|Baixe o Kokoro em Local models primeiro|Сначала загрузите Kokoro в Local models|Önce Local models bölümünden Kokoro'yu indirin|请先在 Local models 中下载 Kokoro|請先在 Local models 中下載 Kokoro
+Download Kokoro under Local models first|Téléchargez d'abord Kokoro dans Modèles locaux|Scarica prima Kokoro in Modelli locali|まず「ローカルモデル」で Kokoro をダウンロードしてください|먼저 로컬 모델에서 Kokoro를 다운로드하세요|Baixe o Kokoro em Modelos locais primeiro|Сначала загрузите Kokoro в разделе Локальные модели|Önce Yerel modeller bölümünden Kokoro'yu indirin|请先在本地模型中下载 Kokoro|請先在本機模型中下載 Kokoro
+System default|Par défaut du système|Predefinito di sistema|システムの既定|시스템 기본값|Padrão do sistema|Системный по умолчанию|Sistem varsayılanı|系统默认|系統預設
 Also run setup_local_ai to install the speech runtime|Exécutez aussi setup_local_ai pour installer le moteur vocal|Esegui anche setup_local_ai per installare il motore vocale|音声ランタイムをインストールするため setup_local_ai も実行してください|음성 런타임을 설치하려면 setup_local_ai도 실행하세요|Execute também setup_local_ai para instalar o motor de voz|Также запустите setup_local_ai, чтобы установить речевой движок|Konuşma çalışma zamanını kurmak için setup_local_ai dosyasını da çalıştırın|还需运行 setup_local_ai 安装语音运行时|還需執行 setup_local_ai 安裝語音執行環境
 Model ready|Modèle prêt|Modello pronto|モデルの準備ができました|모델 준비 완료|Modelo pronto|Модель готова|Model hazır|模型已就绪|模型已就緒
 Model files ready. Speech also needs setup_local_ai|Fichiers du modèle prêts. La voix nécessite aussi setup_local_ai|File del modello pronti. La voce richiede anche setup_local_ai|モデルファイルの準備完了。音声には setup_local_ai も必要です|모델 파일 준비 완료. 음성에는 setup_local_ai도 필요합니다|Arquivos do modelo prontos. A voz também precisa de setup_local_ai|Файлы модели готовы. Для речи также нужен setup_local_ai|Model dosyaları hazır. Konuşma için setup_local_ai de gerekir|模型文件已就绪。语音还需 setup_local_ai|模型檔案已就緒。語音還需 setup_local_ai

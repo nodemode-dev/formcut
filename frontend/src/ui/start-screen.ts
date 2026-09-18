@@ -349,7 +349,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       return;
     }
     if (view === "models") {
-      void renderList("/api/models", (entry) => `${String(entry.id)} · ${entry.ready ? t("home.ready") : t("home.missing")}`, "home.nomodels");
+      void renderList("/api/models", (entry) => `${text(String(entry.name ?? entry.id))} · ${entry.ready ? t("home.ready") : t("home.missing")}`, "home.nomodels");
       return;
     }
     void renderStorage();
