@@ -1,4 +1,5 @@
 import { installWorkspaceLayout } from "./ui/workspace-layout";
+import { installAccordions } from "./ui/accordion";
 import { installEditorActions } from "./ui/editor-actions";
 import "./engine/local-transport";
 import { localizeElement } from "./i18n/text";
@@ -74,6 +75,7 @@ const settingsButton = titlebar.querySelector<HTMLElement>('[data-ref="settings"
 if (settingsButton) installSettingsPopout(engine, bin, settingsButton);
 installEditorActions(engine, bin);
 installWorkspaceLayout();
+installAccordions(workspace);
 app.append(buildStartScreen(engine, bin));
 void bin.load();
 Object.defineProperty(window, "formcut", { value: { engine, bin, actions } });

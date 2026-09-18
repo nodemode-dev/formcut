@@ -27,6 +27,17 @@
   color: var(--fg-muted);
 }
 .section-head svg { color: var(--fg-dim); }
+.section-head:has(> .acc-toggle), .cat-group:has(> .acc-toggle) { cursor: pointer; user-select: none; }
+.section-head > .acc-toggle, .cat-group > .acc-toggle { margin-left: auto; flex: none; color: var(--ink-faint); }
+.cat-group > .acc-toggle { width: 20px; height: 20px; }
+.acc-toggle:hover { color: var(--ink); }
+.acc-toggle svg { transition: transform 120ms ease; }
+.acc-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.section[data-collapsed="true"] { padding-bottom: 0; }
+.section[data-collapsed="true"] > .section-head { margin-bottom: 0; border-bottom-color: transparent; }
+.section[data-collapsed="true"] > :not(.section-head) { display: none; }
+.cat-item[data-group-collapsed="true"] { display: none; }
+@media (prefers-reduced-motion: reduce) { .acc-toggle svg { transition: none; } }
 /* Everything that is not the head band sits inside the container's padding. */
 .section > *:not(.section-head) { margin-left: var(--sp-3); margin-right: var(--sp-3); }
 
