@@ -15,7 +15,7 @@ def hexed(h, s, l):
     return "#%02x%02x%02x" % tuple(round(v * 255) for v in (r, g, b))
 
 DARK = [
-    ("formcut-dark","formcut Dark",240,4,"dark","#cbf53f"),("high-contrast","High Contrast",0,0,"hard","#ffffff"),
+    ("formcut-dark","formcut Dark",188,12,"dark","#ffae2b"),("high-contrast","High Contrast",0,0,"hard","#ffffff"),
     ("obsidian","Obsidian",220,8,"deep","#7dd3fc"),("graphite","Graphite",210,6,"dark","#67e8f9"),
     ("mono-ink","Mono Ink",0,0,"dark","#e5e5e5"),("github-dark","GitHub Dark",215,12,"dark","#58a6ff"),
     ("slate","Slate",215,14,"dark","#94a3b8"),("rose-noir","Rose Noir",345,18,"deep","#fda4af"),
@@ -42,15 +42,17 @@ def values(hue, sat, kind, accent):
     ss = min(sat, 18 if light else 12)
     page, well, panel, raised, field, hover, active = (hexed(hue, ss, l) for l in ladder)
     fg, muted, dim = (hexed(hue, min(sat, 12 if light else 8), l) for l in text)
+    ah, al, asat = colorsys.rgb_to_hls(*(int(accent.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)))
     return dict(
         light=light, page=page, well=well, panel=panel, raised=raised, field=field, hover=hover, active=active,
         fg=fg, muted=muted, dim=dim, accent=accent,
+        accent_hover=hexed(ah * 360, asat * 100, min(100, max(0, al * 100 + (-8 if light else 10)))),
         line="rgb(0 0 0 / 0.12)" if light else ("rgb(255 255 255 / 0.32)" if kind == "hard" else "rgb(255 255 255 / 0.1)"),
         strong="rgb(0 0 0 / 0.22)" if light else ("rgb(255 255 255 / 0.5)" if kind == "hard" else "rgb(255 255 255 / 0.2)"),
-        lane=hexed(hue, ss, ladder[0] + (-3 if light else 2)), lane_alt=hexed(hue, ss, ladder[0] + (-6 if light else 4)),
+        lane=hexed(hue, ss, ladder[0] + (-3 if light else 3)), lane_alt=hexed(hue, ss, ladder[0] + (-6 if light else 4)),
         ruler=hexed(hue, ss, ladder[0] - 1), stage="#1b1b1f" if light else "#000000",
         scrim="rgb(40 38 32 / 0.35)" if light else "rgb(0 0 0 / 0.55)",
-        on_accent="#15220a" if accent.lower() == "#cbf53f" else ("#ffffff" if light else "#0b1220"),
+        on_accent="#ffffff" if light else hexed(ah * 360, min(asat * 100, 70), 9),
         accent_rgb=" ".join(str(int(accent.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 4)),
     )
 
@@ -70,27 +72,27 @@ for spec in DARK + LIGHT:
     v = values(hue, sat, kind, accent)
     out.append(f''':root[data-theme="{theme_id}"] {{
   color-scheme: {"light" if v["light"] else "dark"};
-  --page: {v["page"]};
-  --well: {v["well"]};
-  --panel: {v["panel"]};
-  --raised: {v["raised"]};
-  --field: {v["field"]};
-  --field-hover: {v["hover"]};
-  --field-active: {v["active"]};
-  --line: {v["line"]};
-  --line-strong: {v["strong"]};
-  --fg: {v["fg"]};
-  --fg-muted: {v["muted"]};
-  --fg-dim: {v["dim"]};
-  --accent: {v["accent"]};
-  --accent-hover: {v["accent"]};
-  --accent-soft: rgb({v["accent_rgb"]} / 0.22);
-  --on-accent: {v["on_accent"]};
-  --lane: {v["lane"]};
-  --lane-alt: {v["lane_alt"]};
-  --ruler: {v["ruler"]};
-  --stage: {v["stage"]};
-  --scrim: {v["scrim"]};
+  --ground: {v["page"]};
+  --inset: {v["well"]};
+  --pane: {v["panel"]};
+  --float: {v["raised"]};
+  --control: {v["field"]};
+  --control-hover: {v["hover"]};
+  --control-press: {v["active"]};
+  --edge: {v["line"]};
+  --edge-strong: {v["strong"]};
+  --ink: {v["fg"]};
+  --ink-soft: {v["muted"]};
+  --ink-faint: {v["dim"]};
+  --cue: {v["accent"]};
+  --cue-hover: {v["accent_hover"]};
+  --cue-wash: rgb({v["accent_rgb"]} / 0.22);
+  --on-cue: {v["on_accent"]};
+  --track-bed: {v["lane"]};
+  --track-bed-alt: {v["lane_alt"]};
+  --timescale: {v["ruler"]};
+  --screen: {v["stage"]};
+  --veil: {v["scrim"]};
 }}
 ''')
     previews.append(f'''.theme-swatch[data-theme-preview="{theme_id}"] {{ background: {v["page"]}; }}
