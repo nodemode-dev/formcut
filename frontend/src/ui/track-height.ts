@@ -32,8 +32,14 @@ export function trackHeight(index: number): number {
 export function installTrackHeightGrip(header: HTMLElement, lane: HTMLElement, index: number): void {
   const apply = (height: number) => {
     const value = `${height}px`;
-    if (header.style.getPropertyValue("--track-h") !== value) header.style.setProperty("--track-h", value);
-    if (lane.style.getPropertyValue("--track-h") !== value) lane.style.setProperty("--track-h", value);
+    const targets = [header, lane];
+    const kfHead = lane.nextElementSibling;
+    if (kfHead instanceof HTMLElement && kfHead.classList.contains("kfb-head")) {
+      targets.push(kfHead);
+      if (kfHead.nextElementSibling instanceof HTMLElement && kfHead.nextElementSibling.classList.contains("kfb-body")) targets.push(kfHead.nextElementSibling);
+    }
+    for (const node of targets) if (node.style.getPropertyValue("--track-h") !== value) node.style.setProperty("--track-h", value);
+    lane.dispatchEvent(new CustomEvent("formcut:track-height", { bubbles: true, detail: { height } }));
   };
   apply(trackHeight(index));
   const grip = document.createElement("div");

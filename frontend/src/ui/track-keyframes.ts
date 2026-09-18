@@ -6,6 +6,11 @@ import { icon } from "./icons";
 
 const ROW = 22;
 const GRAPH_H = ROW * KEYFRAME_PROPS.length;
+const graphHeight = (body: HTMLElement): number => {
+  const track = parseFloat(body.style.getPropertyValue("--track-h"));
+  const row = Number.isFinite(track) && track > 0 ? Math.min(44, Math.max(18, track * 0.393)) : ROW;
+  return Math.round(row * KEYFRAME_PROPS.length);
+};
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RANGE: Record<KeyframeProp, [number, number]> = {
   posX: [-100, 100],
@@ -119,8 +124,10 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
   const paintGraph = (block: Block, clips: Clip[], px: number) => {
     const width = Math.max(1, parseFloat(block.body.style.width) || block.lane.offsetWidth);
     setAttr(block.graph, "width", String(width));
+    const height = graphHeight(block.body);
+    if (block.graph.getAttribute("height") !== String(height)) setAttr(block.graph, "height", String(height));
     const [low, high] = RANGE[block.prop];
-    const yOf = (value: number) => 4 + (1 - (value - low) / (high - low)) * (GRAPH_H - 8);
+    const yOf = (value: number) => 4 + (1 - (value - low) / (high - low)) * (height - 8);
     patch(block.guides, [low, (low + high) / 2, high].map((value, i) => [`g${i}`, value] as const), () => svgNode("line", "kfb-guide"), (line, value) => {
       const y = String(Math.round(yOf(value)) + 0.5);
       setAttr(line, "x1", "0");
@@ -284,7 +291,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       const [low, high] = RANGE[block.prop];
       const valueAt = (clientY: number) => {
         const box = block.graph.getBoundingClientRect();
-        const fraction = 1 - (clientY - box.top - 4) / (GRAPH_H - 8);
+        const fraction = 1 - (clientY - box.top - 4) / (graphHeight(block.body) - 8);
         return Math.round(Math.max(low, Math.min(high, low + fraction * (high - low))) * 10) / 10;
       };
       const handle = target.closest(".kfb-handle");
@@ -364,6 +371,8 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     select.value = "scale";
     lane.previousElementSibling?.append(toggle);
     lane.after(head, body);
+    const trackHeight = lane.style.getPropertyValue("--track-h");
+    if (trackHeight) { head.style.setProperty("--track-h", trackHeight); body.style.setProperty("--track-h", trackHeight); }
     const block: Block = {
       lane, toggle, head, body, select, graph, guides, curves, handles,
       labels: head.querySelector<HTMLElement>(".kfb-labels")!,
@@ -406,5 +415,9 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       paint(block);
     }
   }).observe(root, { attributes: true, attributeFilter: ["data-scale"] });
+  root.addEventListener("formcut:track-height", (event) => {
+    const block = blocks.get(event.target as HTMLElement);
+    if (block && block.mode === "graph" && !block.body.hidden) paint(block);
+  });
   sync();
 }
