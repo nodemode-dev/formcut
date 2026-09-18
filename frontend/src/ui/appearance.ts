@@ -71,10 +71,10 @@ export function derive(hex: string): Record<string, string> {
   const hover = `#${[lift(r), lift(g), lift(b)].map((value) => value.toString(16).padStart(2, "0")).join("")}`;
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   return {
-    "--accent": hex,
-    "--accent-hover": hover,
-    "--accent-soft": `rgb(${r} ${g} ${b} / 0.22)`,
-    "--on-accent": luminance > 0.55 ? "#101014" : "#ffffff",
+    "--cue": hex,
+    "--cue-hover": hover,
+    "--cue-wash": `rgb(${r} ${g} ${b} / 0.22)`,
+    "--on-cue": luminance > 0.55 ? "#101014" : "#ffffff",
   };
 }
 
@@ -123,11 +123,12 @@ function paint(themeId: string): void {
 
 function paintAccent(accent: string | null, derived: Record<string, string> | null): void {
   const style = document.documentElement.style;
-  const values = accent ? (derived ?? derive(accent)) : null;
-  for (const name of ["--accent", "--accent-hover", "--accent-soft", "--on-accent"]) {
+  const values = accent ? (derived && derived["--cue"] ? derived : derive(accent)) : null;
+  for (const name of ["--cue", "--cue-hover", "--cue-wash", "--on-cue"]) {
     if (values) style.setProperty(name, values[name]);
     else style.removeProperty(name);
   }
+  for (const legacy of ["--accent", "--accent-hover", "--accent-soft", "--on-accent"]) style.removeProperty(legacy);
 }
 
 // Applying a behaviour profile keeps the stored choice as the behaviour, while
