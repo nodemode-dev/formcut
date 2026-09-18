@@ -11,6 +11,32 @@
 - Dividers between panes are absolutely positioned over the grid gaps, not grid
   tracks, so the template stays the three panes it always was. Sizes are pixels
   clamped to a 240 px floor and 45 percent of the workspace.
+- The timeline chip opens a menu of three heights, 25, 42 and 65 percent of the
+  workspace; the row divider sets any height from 15 to 80 percent.
+
+## Stacking and scroll
+
+- One z-scale in `styles/tokens.css`, in steps of 100: base, clips, handles,
+  ruler, playhead, sticky heads, dropdowns, overlays, toasts. No other file
+  writes a z-index number.
+- The ruler and its corner cell stick to the top and the track heads to the
+  left, so they stay put while the lanes scroll under them.
+- The playhead lives inside the grid in content coordinates, so it scrolls with
+  the lanes and needs no scroll listener to follow them.
+
+## Keyframes
+
+- `ui/track-keyframes.ts` opens a block under a track from the toggle in its
+  head: a sticky head cell with the property labels and a body cell on the
+  timeline's own axis, so diamonds share the clips' time scale and scroll.
+  The body shows lanes or curves.
+- Zoom reaches the block through the `data-scale` attribute, which the module
+  watches; the timeline pane only installs it.
+- Drags listen on the window, because each dispatch repaints the diamonds and
+  a captured element can be replaced mid-drag. A click on a lane adds a key,
+  Alt-click removes one and a double-click cycles its easing.
+- Rows are separated by inset box shadows rather than borders, so no row or
+  diamond moves by a pixel.
 
 ## Drawing
 

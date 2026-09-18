@@ -1,6 +1,6 @@
 # Engine map
 
-Derived from the tree at v0.52.1, not from memory. Regenerate by listing
+Derived from the tree at v0.53.2, not from memory. Regenerate by listing
 `backend/app` and reading each module's router prefix and decorators.
 
 ## Modules that serve routes
@@ -10,17 +10,20 @@ Derived from the tree at v0.52.1, not from memory. Regenerate by listing
 | assets.py | 122 | /api/assets | 3 |
 | automation.py | 205 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
-| catalogue.py | 123 | /api/catalogue | 1 |
+| catalogue.py | 194 | /api/catalogue | 1 |
 | clip_visuals.py | 131 | /api/media | 2 |
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 96 | /api/catalogue/preview | 1 |
-| export.py | 552 | /api/export | 3 |
+| export.py | 537 | /api/export | 3 |
+| fonts.py | 49 | /api/assets | 1 |
 | jobs.py | 96 | /api/jobs | 3 |
 | local_speech.py | 92 | /api/speech | 2 |
+| main.py | 60 | /api/health | 1 |
 | media.py | 254 | /api/media | 8 |
-| model_manager.py | 96 | /api/models | 3 |
-| orchestration.py | 155 | /api/orchestration | 4 |
+| model_manager.py | 196 | /api/models | 4 |
+| orchestration.py | 151 | /api/orchestration | 4 |
 | presets.py | 121 | /api/presets | 5 |
+| project_tracking.py | 63 | /api/track | 1 |
 | projects.py | 58 | /api/projects | 5 |
 | providers.py | 150 | /api/providers | 4 |
 | render_api.py | 142 | /api/render | 6 |
