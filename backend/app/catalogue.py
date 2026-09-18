@@ -1,3 +1,7 @@
+import hashlib
+import sys
+from pathlib import Path
+
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/catalogue", tags=["catalogue"])
@@ -182,6 +186,17 @@ def label(key: str) -> str:
     return NAMES.get(key) or key.replace("-", " ").replace("_", " ").title()
 
 
+def _preview_version() -> str:
+    try:
+        source = b"".join(Path(__file__).with_name(name).read_bytes() for name in ("catalogue.py", "effect_previews.py", "pixel_effects.py", "renderer.py"))
+    except OSError:
+        source = str(Path(sys.executable).stat().st_mtime_ns).encode()
+    return hashlib.sha1(source).hexdigest()[:12]
+
+
+PREVIEW_VERSION = _preview_version()
+
+
 @router.get("")
 def catalogue() -> dict:
     parameters = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}, "tilt-shift": {"radius": 3}, "lens-blur": {"radius": 3}, "median-soften": {"radius": 3}, "soft-focus": {"radius": 3}, "diagonal-blur": {"size": 12}, "ghost-trail": {"size": 12}, "halftone": {"size": 12}, "crosshatch": {"size": 12}, "ripple": {"size": 12}, "slice-glitch": {"size": 12}, "heat-haze": {"size": 12}, "chroma-noise": {"strength": 0.15}}
@@ -191,4 +206,5 @@ def catalogue() -> dict:
         "audio": [{"id": k, "name": label(k), "group": group_of(k, AUDIO_GROUPS)} for k in AUDIO_CHAINS],
         "transitions": TRANSITIONS,
         "blendModes": ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"],
+        "previewVersion": PREVIEW_VERSION,
     }

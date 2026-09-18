@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from PIL import Image, ImageOps
 
-from .catalogue import GRADES, TRANSITIONS, VIDEO_EFFECTS
+from .catalogue import GRADES, PREVIEW_VERSION, TRANSITIONS, VIDEO_EFFECTS
 from .demo import demo_dir
 from .paths import DATA_DIR
 from .pixel_effects import apply_effects
@@ -82,7 +82,7 @@ def render(kind: str, item: str) -> np.ndarray:
 def preview(kind: str, item: str) -> Response:
     if not known(kind, item):
         raise HTTPException(404, "Unknown preview")
-    path = CACHE / f"v1-{kind}-{item}.png"
+    path = CACHE / f"{PREVIEW_VERSION}-{kind}-{item}.png"
     if path.is_file():
         data = path.read_bytes()
     else:

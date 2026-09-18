@@ -196,8 +196,9 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       if (option.textContent !== track.name) option.textContent = track.name;
     });
   };
+  let previewVersion = "";
   const thumb = (kind: string, id: string) =>
-    `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/${kind}/${encodeURIComponent(id)}" alt="" loading="lazy" draggable="false" /></div>`;
+    `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/${kind}/${encodeURIComponent(id)}?v=${previewVersion}" alt="" loading="lazy" draggable="false" /></div>`;
   const fxCard = (mode: string, kind: string, cat: string, id: string, label: string, visual: string) =>
     `<div class="effect-card fx-card" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
   const transitionName = (type: string) =>
@@ -205,7 +206,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   type CatalogueEntry = { id: string; name: string; category?: string; group?: string };
   void fetch("/api/catalogue")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
-    .then((data: { video: CatalogueEntry[]; audio: CatalogueEntry[]; transitions: string[] }) => {
+    .then((data: { video: CatalogueEntry[]; audio: CatalogueEntry[]; transitions: string[]; previewVersion?: string }) => {
+      previewVersion = data.previewVersion ?? "";
       const grouped = (entry: CatalogueEntry) => entry.group !== undefined && entry.group !== "Other";
       const glyph = `<div class="effect-thumb has-glyph">${icon("speaker")}</div>`;
       fxGrid.insertAdjacentHTML(
