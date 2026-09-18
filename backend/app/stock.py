@@ -81,6 +81,14 @@ class SearchBody(BaseModel):
     kind: str = "video"
     page: int = 1
     per_page: int = 24
+    orientation: str = ""
+    size: str = ""
+    color: str = ""
+    locale: str = ""
+
+
+_ORIENTATIONS = ("landscape", "portrait", "square")
+_SIZES = ("large", "medium", "small")
 
 
 @router.post("/search")
@@ -99,6 +107,14 @@ def pexels_search(body: SearchBody) -> dict[str, Any]:
     }
     if query:
         params["query"] = query
+        if body.orientation in _ORIENTATIONS:
+            params["orientation"] = body.orientation
+        if body.size in _SIZES:
+            params["size"] = body.size
+        if body.color and body.kind == "photo":
+            params["color"] = body.color.strip()[:12]
+        if body.locale:
+            params["locale"] = body.locale.strip()[:8]
     try:
         resp = httpx.get(f"{_pexels_base()}{ep}", params=params,
                          headers={"Authorization": key}, timeout=30.0)
