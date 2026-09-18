@@ -7,13 +7,14 @@
 - [Creator workflow](Creator-workflow)
 - [Automation](Automation)
 - [Packaging](Packaging)
+- [Translation](Translation)
+- [Mobile notes](Mobile-notes)
+- [Licences](Licences)
 
 **In the repository**
 
 - [README](https://github.com/nodemode-ai/formcut/blob/main/README.md)
 - [Contributing](https://github.com/nodemode-ai/formcut/blob/main/CLAUDE.md)
-- [Licences](https://github.com/nodemode-ai/formcut/blob/main/.docs/LICENSES.md)
-- [Mobile notes](https://github.com/nodemode-ai/formcut/blob/main/.docs/MOBILE.md)
 - [example.env](https://github.com/nodemode-ai/formcut/blob/main/example.env)
 
 ---

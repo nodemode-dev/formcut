@@ -20,7 +20,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 ## Highlights
 
 - **One renderer for preview and export.** The same decode, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Playback streams JPEG frames paced to the wall clock; a paused or scrubbed frame is lossless PNG from the same renderer.
-- **Effect catalogue, browsable and real**: 39 colour grades, 27 visual effects, 20 audio chains, 12 transitions, shape masks, LUT (`.cube`) and custom WGSL shader inputs. Every card's thumbnail is rendered by the engine through that effect, not a stock picture.
+- **Effect catalogue, browsable and real**: 74 colour grades, 55 visual effects, 48 audio chains, 12 transitions, shape masks, LUT (`.cube`) and custom WGSL shader inputs. Every card's thumbnail is rendered by the engine through that effect, not a stock picture.
 - **Editing surface**: multi-timeline, multi-track, drag and drop from the media bin, trim, blade, split, ripple delete, detach audio, cross-track moves, clip-edge snapping, undo and redo, and a draggable playhead that snaps to edges and lands on frames.
 - **Per-property keyframes** with linear and hold interpolation, sampled on the canvas and expressed as piecewise time expressions in export, plus motion tracking that writes keyframes from a clicked subject.
 - **Local AI, on your hardware**: captions by Whisper in the browser, its model files kept in `models/` and served by the engine, speech by Kokoro through a separate local runtime, subject and person cutout by U2Net. The models download in the background on first start into `models/` at the repository root (the data directory in the packaged app), Whisper's English model included, and the Studio panel can still install, import or retry the cutout and speech models by hand.
@@ -32,7 +32,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
   stream for operations and job progress; the app shows who is connected and can cancel their renders
 - **MCP server**: 14 workflow tools over stdio in `mcp/`, so an agent can import media, build a project, render it
   and collect the file without touching the interface
-- **Interface**: 12 languages from one key table, 171 keys, inline `currentColor` icons on a 24-unit grid, a token-driven dark theme, a usable phone layout, and hidden but functional scrollbars.
+- **Interface**: 12 languages covering every string, catalogue names included (281 keys and a 616-row phrase table), inline `currentColor` icons on a 24-unit grid, a token-driven dark theme, a usable phone layout, and hidden but functional scrollbars.
 - **Desktop and portable**: a Tauri 2 shell that boots the engine on an ephemeral port and recovers the bound port from its log, plus frozen portable builds for macOS, Windows and Linux.
 - **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, and the only outbound traffic is the model downloads (in the background on first start, or on first use with `FORMCUT_MODELS_AUTO=0`), the ONNX runtime that captions load from the jsDelivr CDN, and the stock and hosted-speech providers you supply keys for.
 
@@ -136,7 +136,7 @@ examples/  LUT and shader examples, plus the ignored demo media folder
 .github/   publish-wiki.yml (mirrors .docs/wiki to the GitHub wiki)
 ```
 
-Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut/wiki); the editable source sits in [`.docs/wiki/`](.docs/wiki/Home.md) and is published by a GitHub Action on every push to `main`. Licences for assets and dependencies are in [`.docs/LICENSES.md`](.docs/LICENSES.md); the mobile surface is described in [`.docs/MOBILE.md`](.docs/MOBILE.md).
+Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut/wiki); the editable source sits in [`.docs/wiki/`](.docs/wiki/Home.md) and is published by a GitHub Action on every push to `main`. Licences for assets and dependencies are in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md); the mobile surface is described in [`.docs/wiki/Mobile-notes.md`](.docs/wiki/Mobile-notes.md), and how every string reaches all 12 languages in [`.docs/wiki/Translation.md`](.docs/wiki/Translation.md).
 
 ## MCP server
 
@@ -191,4 +191,4 @@ Under active development. Every version is a commit, and each one's record lives
 
 ## Licence
 
-Apache 2.0, in [`LICENSE`](LICENSE). Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/LICENSES.md`](.docs/LICENSES.md).
+Apache 2.0, in [`LICENSE`](LICENSE). Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md).

@@ -24,4 +24,4 @@ There is no automatic migration from older `backend/data` installations. To reta
 
 `FORMCUT_DIST` points to a built frontend only. `FORMCUT_FONT_PATH` selects a fallback text font. `FORMCUT_AI_PYTHON` selects an external speech interpreter; otherwise setup_local_ai creates one under the data root. Never point a frozen speech subprocess at the frozen engine itself.
 
-Onefile and onedir builds are platform-specific. A Linux freeze is not a macOS app, Windows installer or mobile build. Android/iOS need a mobile engine, not the desktop sidecar configuration; see .docs/MOBILE.md.
+Onefile and onedir builds are platform-specific. A Linux freeze is not a macOS app, Windows installer or mobile build. Android/iOS need a mobile engine, not the desktop sidecar configuration; see [Mobile notes](Mobile-notes.md).

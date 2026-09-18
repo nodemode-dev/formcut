@@ -43,4 +43,4 @@ The phased plan, the per-version build notes and the reasoning logs for every
 area live in the planning sidecar beside this repository, not in it, so the
 repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
 the project skills under `.claude/skills/` and code. Licences for assets and
-dependencies are in `.docs/LICENSES.md`.
+dependencies are in `.docs/wiki/Licences.md`.

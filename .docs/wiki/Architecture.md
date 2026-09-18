@@ -55,7 +55,7 @@ the launchers export before starting. `.env` is ignored by git.
   virtualenv because the MCP SDK and the engine's FastAPI disagree on starlette.
 - `frontend/src/engine/audio-playback.ts` schedules the decoded mix and acts as
   the transport's clock source; `frontend/src/ui/clip-visuals.ts`,
-  `keyframe-lanes.ts`, `settings-popout.ts` and `appearance.ts` are the
+  `track-keyframes.ts`, `accordion.ts`, `settings-popout.ts` and `appearance.ts` are the
   interface modules added over the same period.
 - `.claude/skills/formcut-skillset/` describes this codebase for local
   development, generated from the tree rather than written from memory.
