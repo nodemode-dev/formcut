@@ -83,12 +83,12 @@ input, select { font: inherit; color: inherit; }
 .pane-timeline { grid-column: 1 / -1; }
 
 .pane-tabs {
-  display: flex; align-items: center; gap: 2px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
   padding: var(--sp-2) var(--sp-3);
-  min-width: 0; overflow-x: auto;
+  min-width: 0;
 }
 .pane-tabs > .pane-tab { flex: 0 0 auto; }
-.pane-tabs > .select-chip { position: sticky; right: 0; flex: 0 0 auto; background: var(--pane); }
+.pane-tabs > .select-chip { flex: 0 0 auto; margin-left: auto; }
 .pane-tab {
   padding: 6px 12px;
   border-radius: var(--radius-s);
