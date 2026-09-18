@@ -15,7 +15,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const tab = (page: string, glyph: string, label: string, active = false) => `<button class="set-tab${active ? " is-active" : ""}" data-page="${page}">${icon(glyph)}<span>${label}</span></button>`;
   modal.innerHTML = `<div class="set-pair studio-pair">
     <nav class="set-rail" aria-label="Studio"><div class="set-rail-head"><strong>Studio</strong></div>
-      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", "Stock media")}${tab("templates", "template", "Timeline templates")}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
+      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("templates", "template", "Timeline templates")}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
     <header class="set-head"><strong data-page-title>Project</strong><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></header>
@@ -26,12 +26,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     </section>
     <section data-view="stock" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Pexels</span><small><a class="stock-attrib" href="https://www.pexels.com" target="_blank" rel="noreferrer">Photos and videos provided by Pexels</a></small></div><div class="panel-rows">
-        <div class="stock-row"><div class="seg" data-stock-kind><button class="is-active" data-val="video">${icon("video")}Video</button><button data-val="photo">${icon("image")}Photos</button></div><input data-stock-q type="search" placeholder="Search Pexels" aria-label="Search Pexels"><button class="tool-chip is-primary" data-stock-go>${icon("search")}Search</button></div>
+        <div class="stock-row"><div class="seg" data-stock-kind><button class="is-active" data-val="video">${icon("video")}${t("stock.video")}</button><button data-val="photo">${icon("image")}${t("stock.photos")}</button></div><input data-stock-q type="search" placeholder="Search Pexels" aria-label="Search Pexels"><button class="tool-chip is-primary" data-stock-go>${icon("search")}${t("stock.search")}</button></div>
         <div class="stock-row stock-filters"><label>Orientation <select data-stock-orientation><option value="">Any</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option><option value="square">Square</option></select></label><label>Size <select data-stock-size><option value="">Any</option><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label><label data-stock-color-row>Colour <select data-stock-color><option value="">Any</option><option value="red">Red</option><option value="orange">Orange</option><option value="yellow">Yellow</option><option value="green">Green</option><option value="turquoise">Turquoise</option><option value="blue">Blue</option><option value="violet">Violet</option><option value="pink">Pink</option><option value="brown">Brown</option><option value="black">Black</option><option value="gray">Gray</option><option value="white">White</option></select></label></div>
         <p class="stock-note" data-stock-note></p>
       </div></div>
-      <div class="panel-section"><div class="panel-section-head"><span>Import from a link</span><small>yt-dlp, any site it supports</small></div><div class="panel-rows"><div class="stock-row"><input data-stock-url type="url" placeholder="Paste a video link" aria-label="Video link"><button class="tool-chip" data-stock-url-go>${icon("download")}Import URL</button></div><p class="stock-note" data-stock-url-note></p></div></div>
-      <div class="panel-section stock-results"><div class="panel-section-head"><span>Results</span><small data-stock-page></small></div><div class="card-grid stock-grid" data-stock-grid></div><div class="stock-row stock-pager"><button class="tool-chip" data-stock-prev disabled>${icon("chevL")}Previous</button><button class="tool-chip" data-stock-next disabled>Next${icon("chevR")}</button></div></div>
+      <div class="panel-section"><div class="panel-section-head"><span>Import from a link</span><small>yt-dlp, any site it supports</small></div><div class="panel-rows"><div class="stock-row"><input data-stock-url type="url" placeholder="Paste a video link" aria-label="Video link"><button class="tool-chip" data-stock-url-go>${icon("download")}${t("stock.urlgo")}</button></div><p class="stock-note" data-stock-url-note></p></div></div>
+      <div class="panel-section stock-results"><div class="panel-section-head"><span>Results</span><small data-stock-page></small></div><div class="card-grid stock-grid" data-stock-grid></div><div class="stock-row stock-pager"><button class="tool-chip" data-stock-prev disabled>${icon("chevL")}${t("stock.prev")}</button><button class="tool-chip" data-stock-next disabled>${t("stock.next")}${icon("chevR")}</button></div></div>
     </section>
     <section data-view="templates" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Reusable timeline templates</span></div><div class="panel-rows"><label>Name <input data-template-name placeholder="Template name"></label><label>Import template <input type="file" accept=".fctemplate,.json" data-template-import></label><div class="studio-actions"><button class="tool-chip is-primary" data-template-save>${icon("download")}Save current project as template</button></div><div data-template-list></div></div></div>
@@ -135,7 +135,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     items: new Map<string, StockItem>(),
     async search(page: number) {
       stock.page = page;
-      stockNote(text("Searching Pexels"));
+      stockNote(t("stock.searching"));
       try {
         const data = await api<{ items: StockItem[]; page: number; has_next: boolean }>("/api/stock/search", {
           query: q("stock-q").value, kind: stock.kind, page, per_page: 24,
@@ -169,16 +169,16 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         q<HTMLButtonElement>("stock-prev").disabled = page <= 1;
         q<HTMLButtonElement>("stock-next").disabled = !data.has_next;
         const pageLabel = `${text("Page")} ${page}`; if (q<HTMLElement>("stock-page").textContent !== pageLabel) q<HTMLElement>("stock-page").textContent = pageLabel;
-        stockNote(items.length ? "" : text("No results"));
+        stockNote(items.length ? "" : t("stock.noresults"));
       } catch (error) {
         stockNote(error instanceof Error ? error.message : String(error));
       }
     },
     async import(item: StockItem) {
-      stockNote(text("Importing"));
+      stockNote(t("stock.importing"));
       const media = await api<{ id: string; name: string; duration: number; kind: string }>("/api/stock/import", { url: item.full, kind: item.type, name: item.alt || item.credit || "pexels", credit: item.credit, page_url: item.page_url });
       await bin.load();
-      stockNote(`${text("Imported")}: ${media.name}`);
+      stockNote(`${t("stock.imported")}: ${media.name}`);
       return media;
     },
   };
@@ -197,12 +197,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const urlNote = (message: string) => { const node = q<HTMLElement>("stock-url-note"); if (node.textContent !== message) node.textContent = message; };
   q("stock-url-go").addEventListener("click", () => void run(async () => {
     const url = q("stock-url").value.trim(); if (!url) return;
-    urlNote(text("Downloading"));
+    urlNote(t("stock.downloading"));
     const started = await api<{ job_id: string }>("/api/stock/url", { url });
     const poll = async (): Promise<void> => {
       const status = await api<{ status: string; error?: string; media?: { name: string } }>(`/api/stock/url/${started.job_id}`, undefined, "GET");
-      if (status.status === "done") { q("stock-url").value = ""; await bin.load(); urlNote(`${text("Imported")}: ${status.media?.name ?? ""}`); return; }
-      if (status.status === "error") { urlNote(`${text("Import failed")}: ${status.error ?? "?"}`); return; }
+      if (status.status === "done") { q("stock-url").value = ""; await bin.load(); urlNote(`${t("stock.imported")}: ${status.media?.name ?? ""}`); return; }
+      if (status.status === "error") { urlNote(`${t("stock.importfail")}: ${status.error ?? "?"}`); return; }
       window.setTimeout(() => void poll(), 800);
     };
     await poll();
