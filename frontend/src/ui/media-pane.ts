@@ -198,7 +198,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   };
   let previewVersion = "";
   const thumb = (kind: string, id: string) =>
-    `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/${kind}/${encodeURIComponent(id)}?v=${previewVersion}" alt="" loading="lazy" draggable="false" /></div>`;
+    `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/${kind}/${encodeURIComponent(id)}?v=${previewVersion}" alt="" loading="eager" fetchpriority="low" decoding="async" draggable="false" /></div>`;
   const fxCard = (mode: string, kind: string, cat: string, id: string, label: string, visual: string) =>
     `<div class="effect-card fx-card" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
   const transitionName = (type: string) =>
