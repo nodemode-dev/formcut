@@ -34,7 +34,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
   and collect the file without touching the interface
 - **Interface**: 12 languages covering every string, catalogue names included (281 keys and a 616-row phrase table), inline `currentColor` icons on a 24-unit grid, a token-driven dark theme, a usable phone layout, and hidden but functional scrollbars.
 - **Desktop and portable**: a Tauri 2 shell that boots the engine on an ephemeral port and recovers the bound port from its log, plus frozen portable builds for macOS, Windows and Linux.
-- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, and the only outbound traffic is the model downloads (in the background on first start, or on first use with `FORMCUT_MODELS_AUTO=0`), the ONNX runtime that captions load from the jsDelivr CDN, and the stock and hosted-speech providers you supply keys for.
+- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, and the only outbound traffic is the model downloads (in the background on first start, or on first use with `FORMCUT_MODELS_AUTO=0`), which include both caption models, and the stock and hosted-speech providers you supply keys for. The captions runtime ships with the app.
 
 ## Quick Start
 

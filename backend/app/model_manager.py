@@ -133,7 +133,7 @@ def auto_download() -> dict:
 
 HUB = ROOT / "hub"
 HUB_MODELS = {"Xenova/whisper-tiny.en", "onnx-community/whisper-tiny"}
-HUB_PREFETCH = {"Xenova/whisper-tiny.en": ("config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx")}
+HUB_PREFETCH = {model: ("config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx") for model in ("Xenova/whisper-tiny.en", "onnx-community/whisper-tiny")}
 _hub_lock = threading.Lock()
 
 

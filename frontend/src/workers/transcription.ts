@@ -1,10 +1,14 @@
 // Transcription worker: english whisper-tiny at q8, chunk timestamps, and a
 // hallucination filter because tiny models loop phrases on silence.
 import { env, pipeline } from "@huggingface/transformers";
+import ortRuntime from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url";
+import ortBinary from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url";
 
 env.allowLocalModels = false;
 env.useBrowserCache = false;
 env.remoteHost = `${self.location.origin}/api/models/hub/`;
+const wasmFlags = env.backends.onnx?.wasm;
+if (wasmFlags) wasmFlags.wasmPaths = { mjs: ortRuntime, wasm: ortBinary };
 
 interface Chunk {
   text: string;
