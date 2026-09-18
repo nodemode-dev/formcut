@@ -126,8 +126,9 @@ input, select { font: inherit; color: inherit; }
   color: var(--ink-faint);
   margin-bottom: var(--sp-3);
 }
+.search-field > svg { flex: none; }
 .search-field input {
-  flex: 1; background: none; border: 0; outline: none; color: var(--ink);
+  flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--ink);
 }
 .search-field input::placeholder { color: var(--ink-faint); }
 .card-grid {
