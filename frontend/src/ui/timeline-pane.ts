@@ -41,7 +41,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     el.dataset.scale = String(PX_PER_SEC);
   reconcile();
     scroller.scrollLeft = Math.max(0, engine.snapshot.playhead * PX_PER_SEC - scroller.clientWidth / 2);
-    playhead.style.left = `${HEAD_W + engine.snapshot.playhead * PX_PER_SEC - scroller.scrollLeft}px`;
+    playhead.style.left = `${HEAD_W + engine.snapshot.playhead * PX_PER_SEC}px`;
   };
   const ruler = Array.from({ length: Math.ceil(spanSec / 2) }, (_, i) => {
     const t = i * 2;
@@ -95,8 +95,8 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
           <div class="lane" style="width:${laneW}px">${t.clips.map((c) => clipHtml(c, s.selectedClipId)).join("")}</div>`,
           )
           .join("")}
+        <div class="playhead" data-ref="playhead" style="left:${HEAD_W + s.playhead * PX_PER_SEC}px"><button class="playhead-grab" data-ref="playhead-grab" aria-label="Scrub playhead"></button></div>
       </div>
-      <div class="playhead" data-ref="playhead" style="left:${HEAD_W + s.playhead * PX_PER_SEC}px"><button class="playhead-grab" data-ref="playhead-grab" aria-label="Scrub playhead"></button></div>
     </div>`;
 
   const playhead = el.querySelector<HTMLElement>('[data-ref="playhead"]')!;
@@ -249,12 +249,9 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     if (changed === "clips" || changed === "timeline" || changed === "project") reconcile();
     if (changed === "clip-selection") syncSelection();
     if (changed !== "playhead") return;
-    playhead.style.left = `${HEAD_W + state.playhead * PX_PER_SEC - scroller.scrollLeft}px`;
+    playhead.style.left = `${HEAD_W + state.playhead * PX_PER_SEC}px`;
     const next = formatTimecode(state.playhead, state.fps);
     if (tc.textContent !== next) tc.textContent = next;
-  });
-  scroller.addEventListener("scroll", () => {
-    playhead.style.left = `${HEAD_W + engine.snapshot.playhead * PX_PER_SEC - scroller.scrollLeft}px`;
   });
 
   let tool: "select" | "blade" = "select";

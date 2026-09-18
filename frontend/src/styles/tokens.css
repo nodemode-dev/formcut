@@ -57,10 +57,12 @@
   --font-mono: "SF Mono", "Cascadia Mono", ui-monospace, monospace;
 
   --z-base: 0;
-  --z-clip: 10;
-  --z-playhead: 20;
-  --z-handles: 30;
-  --z-dropdown: 40;
-  --z-overlay: 50;
-  --z-toast: 60;
+  --z-clip: 100;
+  --z-handles: 200;
+  --z-ruler: 300;
+  --z-playhead: 400;
+  --z-sticky: 500;
+  --z-dropdown: 600;
+  --z-overlay: 700;
+  --z-toast: 800;
 }
