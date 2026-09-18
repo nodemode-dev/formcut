@@ -142,6 +142,7 @@
 .kfb-modes svg { width: 12px; height: 12px; }
 .kfb-bar .mini-select { flex: 1; min-width: 0; height: 18px; font-size: 11px; }
 .kfb-labels > span { display: flex; align-items: center; height: 22px; font-size: 11px; color: var(--ink-soft); }
+.kfb-labels > span + span { box-shadow: inset 0 1px 0 var(--edge); }
 .kfb-body {
   position: relative;
   background: var(--track-bed-alt);
@@ -161,6 +162,7 @@
 }
 .kfb-row { position: relative; height: 22px; cursor: copy; }
 .kfb-row:nth-child(odd) { background: var(--track-bed); }
+.kfb-row + .kfb-row { box-shadow: inset 0 1px 0 var(--edge); }
 .kfb-dot {
   position: absolute; top: 50%;
   width: 14px; height: 14px; margin: -7px 0 0 -7px; padding: 0;
