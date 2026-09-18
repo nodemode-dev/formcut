@@ -155,8 +155,12 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
         gray = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY)[:, :, None]
         return np.float32([0.07, 0.09, 0.24]) * (1 - gray) + np.float32([1.0, 0.68, 0.17]) * gray
     if effect == "paint-wash":
-        small = cv2.resize(np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8), (max(1, w // 4), max(1, h // 4)), interpolation=cv2.INTER_AREA)
-        return cv2.resize(cv2.stylization(small, sigma_s=20, sigma_r=0.4), (w, h), interpolation=cv2.INTER_CUBIC).astype(np.float32) / 255
+        factor = max(1, round(min(w, h) / 360))
+        small = cv2.resize(np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8), (max(1, w // factor), max(1, h // factor)), interpolation=cv2.INTER_AREA)
+        smooth = cv2.resize(cv2.edgePreservingFilter(small, flags=cv2.RECURS_FILTER, sigma_s=60, sigma_r=0.45), (w, h), interpolation=cv2.INTER_CUBIC).astype(np.float32) / 255
+        gray = cv2.cvtColor(smooth, cv2.COLOR_RGB2GRAY)[:, :, None]
+        canvas = cv2.GaussianBlur(np.random.default_rng(29).random((h, w)).astype(np.float32), (0, 0), 1.5)[:, :, None]
+        return (gray + (smooth - gray) * 1.25) * (0.93 + 0.14 * canvas)
     if effect == "thermal":
         gray = np.round(np.clip(cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY), 0, 1) * 255).astype(np.uint8)
         return cv2.cvtColor(cv2.applyColorMap(gray, cv2.COLORMAP_INFERNO), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
