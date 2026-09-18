@@ -253,7 +253,7 @@ input, select { font: inherit; color: inherit; }
 .transport {
   display: flex; align-items: center; gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3) var(--sp-3);
-  flex-wrap: nowrap; min-width: 0;
+  flex-wrap: wrap; row-gap: var(--sp-1); min-width: 0;
 }
 .transport > .tc-field, .transport > .transport-btns, .transport > .select-chip { flex: 0 0 auto; }
 .transport > .tc-total { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
