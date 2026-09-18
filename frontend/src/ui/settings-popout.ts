@@ -14,10 +14,10 @@ import { api } from "../engine/api";
 const PAGES = [
   ["project", "set.project", "sliders"],
   ["playback", "set.playback", "play"],
-  ["appearance", "set.appearance", "pip"],
-  ["providers", "set.providers", "speak"],
-  ["connections", "set.connections", "curve"],
-  ["advanced", "set.advanced", "help"],
+  ["appearance", "set.appearance", "palette"],
+  ["providers", "set.providers", "key"],
+  ["connections", "set.connections", "link"],
+  ["advanced", "set.advanced", "box"],
 ] as const;
 
 export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, opener: HTMLElement): void {
