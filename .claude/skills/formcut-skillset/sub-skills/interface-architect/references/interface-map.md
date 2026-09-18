@@ -2,7 +2,7 @@
 
 Contents: modules, engine commands, emitted names, tokens, stylesheet order.
 
-Derived from `frontend/src` at v0.54.2.
+Derived from `frontend/src` at v0.54.3.
 
 ## Contents
 
@@ -54,8 +54,8 @@ Derived from `frontend/src` at v0.54.2.
 - `ui/title-speech.ts` (53L)
 - `ui/titlebar.ts` (238L)
 - `ui/track-controls.ts` (39L)
-- `ui/track-height.ts` (73L)
-- `ui/track-keyframes.ts` (410L)
+- `ui/track-height.ts` (79L)
+- `ui/track-keyframes.ts` (423L)
 - `ui/tracking.ts` (38L)
 - `ui/work-area.ts` (134L)
 - `ui/workspace-layout.ts` (181L)

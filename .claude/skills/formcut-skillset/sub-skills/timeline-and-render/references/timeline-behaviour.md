@@ -61,8 +61,12 @@
 - Each track head and its lane read one custom property, `--track-h`, written
   by `ui/track-height.ts` from a grip on the head's bottom edge: 32 to 240 px,
   default 56, double-click resets, persisted per track index in
-  `formcut.trackHeights`. The keyframe block under a track is not part of that
-  height; it has its own rows.
+  `formcut.trackHeights`. The keyframe block under a track follows it since
+  v0.54.3: its head and body carry the same `--track-h`, derive `--kfb-row`
+  (22 px at 56, clamped 18 to 44), and the grip's `formcut:track-height` event
+  repaints an open graph. Custom properties do not resolve to pixels through
+  `getComputedStyle`, so the graph height is computed from `--track-h` in TS
+  with the same formula.
 - Hidden and muted heads swap glyphs (`eye` to `eyeOff`, `speaker` to `mute`)
   and take `.is-off`; locked keeps `.is-accent`. The override lives under
   `.track-head .iconbtn` because that rule sits later in `app.css` at equal
