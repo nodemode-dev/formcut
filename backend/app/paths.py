@@ -18,3 +18,15 @@ def data_root() -> Path:
 
 
 DATA_DIR = data_root()
+
+
+def models_root() -> Path:
+    configured = os.environ.get("FORMCUT_MODELS_DIR")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    if getattr(sys, "frozen", False):
+        return DATA_DIR / "models"
+    return Path(__file__).resolve().parents[2] / "models"
+
+
+MODELS_DIR = models_root()

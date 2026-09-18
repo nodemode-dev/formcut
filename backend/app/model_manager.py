@@ -1,15 +1,18 @@
 import hashlib
 import json
+import os
+import shutil
 import threading
 
 import httpx
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from . import jobs
-from .paths import DATA_DIR
+from .paths import DATA_DIR, MODELS_DIR
 
 router = APIRouter(prefix="/api/models", tags=["models"])
-ROOT = DATA_DIR / "models"
+ROOT = MODELS_DIR
+LEGACY = DATA_DIR / "models"
 MODELS = {
     "object-cutout": {"name": "Object cutout (U2Net small)", "license": "Apache-2.0", "files": {"u2netp.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"}},
     "person-cutout": {"name": "Person cutout (U2Net)", "license": "Apache-2.0", "files": {"u2net_human_seg.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx"}},
@@ -19,6 +22,7 @@ MODELS = {
     }},
 }
 _lock = threading.RLock()
+_downloading: set[str] = set()
 
 
 def ready(model: str) -> bool:
@@ -27,7 +31,7 @@ def ready(model: str) -> bool:
 
 @router.get("")
 def list_models():
-    return [{"id": key, "name": spec["name"], "license": spec["license"], "ready": ready(key), "files": list(spec["files"])} for key, spec in MODELS.items()]
+    return [{"id": key, "name": spec["name"], "license": spec["license"], "ready": ready(key), "downloading": key in _downloading, "files": list(spec["files"])} for key, spec in MODELS.items()]
 
 
 def download(model: str, report, cancelled):
@@ -66,11 +70,55 @@ def download(model: str, report, cancelled):
     return {"model": model, "ready": ready(model)}
 
 
+def _tracked(model: str, report, cancelled):
+    _downloading.add(model)
+    try:
+        return download(model, report, cancelled)
+    finally:
+        _downloading.discard(model)
+
+
 @router.post("/{model}/download", status_code=202)
 def start_download(model: str):
     if model not in MODELS:
         raise HTTPException(404, "Unknown model")
-    return jobs.submit("model-download", lambda _id, report, cancelled: download(model, report, cancelled))
+    return jobs.submit("model-download", lambda _id, report, cancelled: _tracked(model, report, cancelled))
+
+
+def adopt_legacy() -> list[str]:
+    moved: list[str] = []
+    if not LEGACY.is_dir() or LEGACY.resolve() == ROOT.resolve():
+        return moved
+    ROOT.mkdir(parents=True, exist_ok=True)
+    for spec in MODELS.values():
+        for name in spec["files"]:
+            for candidate in (name, name + ".json"):
+                source, target = LEGACY / candidate, ROOT / candidate
+                if source.is_file() and not target.exists():
+                    shutil.move(str(source), str(target))
+                    moved.append(candidate)
+    return moved
+
+
+def prepare(report, cancelled, fetch: bool) -> dict:
+    adopted = adopt_legacy()
+    missing = [model for model in MODELS if not ready(model)] if fetch else []
+    results = []
+    for i, model in enumerate(missing):
+        if cancelled():
+            raise InterruptedError("Cancelled")
+        try:
+            results.append(_tracked(model, lambda fraction, i=i: report((i + fraction) / len(missing)), cancelled))
+        except InterruptedError:
+            raise
+        except Exception as error:
+            results.append({"model": model, "ready": False, "error": str(error)})
+    return {"adopted": adopted, "downloads": results}
+
+
+def auto_download() -> dict:
+    fetch = os.environ.get("FORMCUT_MODELS_AUTO", "1") != "0"
+    return jobs.submit("model-setup", lambda _id, report, cancelled: prepare(report, cancelled, fetch))
 
 
 @router.post("/{model}/import", status_code=201)

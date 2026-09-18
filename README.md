@@ -23,7 +23,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 - **Effect catalogue, browsable and real**: 39 colour grades, 27 visual effects, 20 audio chains, 12 transitions, shape masks, LUT (`.cube`) and custom WGSL shader inputs. Every card's thumbnail is rendered by the engine through that effect, not a stock picture.
 - **Editing surface**: multi-timeline, multi-track, drag and drop from the media bin, trim, blade, split, ripple delete, detach audio, cross-track moves, clip-edge snapping, undo and redo, and a draggable playhead that snaps to edges and lands on frames.
 - **Per-property keyframes** with linear and hold interpolation, sampled on the canvas and expressed as piecewise time expressions in export, plus motion tracking that writes keyframes from a clicked subject.
-- **Local AI, on your hardware**: captions by Whisper in the browser (model downloads once), speech by Kokoro through a separate local runtime, subject and person cutout by U2Net, each installed from inside the app with explicit, cancellable downloads.
+- **Local AI, on your hardware**: captions by Whisper in the browser (model downloads once), speech by Kokoro through a separate local runtime, subject and person cutout by U2Net. The engine's models download in the background on first start into `models/` at the repository root (the data directory in the packaged app), and the Studio panel can still install, import or retry them by hand.
 - **Export**: MP4 (H.264 + AAC) and WebM (VP9 + Opus) at three quality ladders, as a cancellable job with progress.
 - **Templates**: a project saved as a template with named media slots, exported and imported as a file, filled by binding slots to media.
 - **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, with 15 methods, optimistic concurrency on
@@ -34,7 +34,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
   and collect the file without touching the interface
 - **Interface**: 12 languages from one key table, 171 keys, inline `currentColor` icons on a 24-unit grid, a token-driven dark theme, a usable phone layout, and hidden but functional scrollbars.
 - **Desktop and portable**: a Tauri 2 shell that boots the engine on an ephemeral port and recovers the bound port from its log, plus frozen portable builds for macOS, Windows and Linux.
-- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, and the only outbound traffic is the optional caption model download and the stock and hosted-speech providers you supply keys for.
+- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, and the only outbound traffic is the model downloads on first start (none with `FORMCUT_MODELS_AUTO=0`), the caption model download, and the stock and hosted-speech providers you supply keys for.
 
 ## Quick Start
 
@@ -79,7 +79,9 @@ Everything lives in `.env` beside the launcher, never committed. The template is
 |---|---|
 | `PEXELS_API_KEY` | Stock media search; a key set in Settings, AI providers overrides it and needs no restart |
 | `ELEVENLABS_API_KEY` | Hosted speech; local speech needs no key. Also settable in Settings, AI providers |
-| `FORMCUT_DATA_DIR` | Where media, projects, templates, models and renders live; defaults to the platform data directory |
+| `FORMCUT_DATA_DIR` | Where media, projects, templates and renders live; defaults to the platform data directory |
+| `FORMCUT_MODELS_DIR` | Where AI models live; defaults to `models/` at the repository root, or the data directory's `models` folder in the packaged app |
+| `FORMCUT_MODELS_AUTO` | `0` stops missing models downloading in the background at engine start; they can still be installed from the Studio panel |
 | `FORMCUT_DEMO_DIR` | Demo media folder, if not `examples/demo` |
 | `FORMCUT_FONT_PATH` | Fallback font for rendered text |
 | `FORMCUT_PORT` | Engine port; `0` picks a free one, which the desktop and portable builds use |
@@ -122,7 +124,7 @@ backend/   Python FastAPI engine
 ├── app/clip_visuals.py    audio peaks and filmstrips for the timeline
 ├── app/storage.py         data directory usage, split into rebuildable and precious
 ├── app/local_speech.py    Kokoro runtime gate and worker
-├── app/model_manager.py   explicit, cancellable model installs
+├── app/model_manager.py   model installs: background on first start, cancellable, adopts old installs
 ├── app/templates.py       template save, fill, export, import
 └── app/store.py           atomic project writes with revision checks
 

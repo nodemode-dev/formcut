@@ -22,6 +22,8 @@ backend/*.spec
 !example.env
 backend/data/
 data/
+models/*
+!models/.gitkeep
 *.log
 
 # local media: the demo assets are expected here but never committed

@@ -31,6 +31,13 @@ async def _remember_loop() -> None:
 
     remember_loop(asyncio.get_running_loop())
 
+
+@app.on_event("startup")
+async def _prepare_models() -> None:
+    from .model_manager import auto_download
+
+    auto_download()
+
 app.add_middleware(LocalOnly)
 app.include_router(projects_router)
 app.include_router(media_router)
