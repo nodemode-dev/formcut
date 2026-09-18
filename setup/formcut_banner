@@ -8,7 +8,7 @@
 # Environment:
 #   NO_COLOR=1                     force monochrome (no-color.org convention)
 #   FORMCUT_BANNER=0               suppress the banner entirely
-#   FORMCUT_BANNER_COLOR=203;245;63    override the RGB accent (default formcut lime #cbf53f)
+#   FORMCUT_BANNER_COLOR=255;174;43    override the RGB accent (default formcut amber #ffae2b)
 #   FORMCUT_BANNER_CLEAR=1         clear the screen before painting
 #   FORMCUT_VERSION=v0.52.1        version string shown under the wordmark
 
@@ -26,7 +26,7 @@ ACCENT=""
 DIM=""
 RESET=""
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
-  rgb="${FORMCUT_BANNER_COLOR:-203;245;63}"
+  rgb="${FORMCUT_BANNER_COLOR:-255;174;43}"
   case "${COLORTERM:-}" in
     truecolor|24bit)
       ACCENT=$'\033[38;2;'"$rgb"'m'

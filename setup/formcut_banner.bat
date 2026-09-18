@@ -11,7 +11,7 @@ set "ROOT=%~dp0.."
 set "ACCENT=" & set "DIM=" & set "RESET="
 if not defined NO_COLOR (
     for /F "delims=" %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
-    set "ACCENT=!ESC![38;2;203;245;63m"
+    set "ACCENT=!ESC![38;2;255;174;43m"
     set "DIM=!ESC![38;2;115;115;115m"
     set "RESET=!ESC![0m"
 )
