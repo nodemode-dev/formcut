@@ -44,7 +44,7 @@ export const PROFILES: Profile[] = [
   { id: "dove-grey", label: "Dove Grey", light: true },
 ];
 
-export const ACCENTS = ["#cbf53f", "#f97316", "#ef4444", "#ec4899", "#a855f7", "#6366f1", "#3b82f6", "#22d3ee", "#14b8a6", "#22c55e", "#eab308", "#f5f5f7"];
+export const ACCENTS = ["#ffae2b", "#f97316", "#ef4444", "#ec4899", "#a855f7", "#6366f1", "#3b82f6", "#22d3ee", "#14b8a6", "#22c55e", "#eab308", "#f5f5f7"];
 
 const STORE = "formcut.appearance";
 const PALETTES = PROFILES.filter((profile) => !profile.behaviour).map((profile) => profile.id);
