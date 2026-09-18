@@ -31,7 +31,7 @@ export const icons: Record<string, string> = {
   minus: wrap('<path d="M3.5 8h9"/>'),
   fullscreen: wrap('<path d="M6 2.5H2.5V6M10 2.5h3.5V6M6 13.5H2.5V10M10 13.5h3.5V10"/>'),
   layout: wrap('<rect x="2" y="2.5" width="12" height="11" rx="1.6"/><path d="M2 7h12M7.5 7v6.5"/>'),
-  sliders: wrap('<path d="M3 5h10M3 11h10"/><circle cx="6" cy="5" r="1.6" fill="var(--panel)"/><circle cx="10" cy="11" r="1.6" fill="var(--panel)"/>'),
+  sliders: wrap('<path d="M3 5h10M3 11h10"/><circle cx="6" cy="5" r="1.6" fill="var(--pane)"/><circle cx="10" cy="11" r="1.6" fill="var(--pane)"/>'),
   pip: wrap('<rect x="2" y="3" width="12" height="10" rx="1.6"/><rect x="8" y="7.5" width="4.5" height="3.5" rx="0.8" fill="currentColor" stroke="none"/>'),
   menuLines: wrap('<path d="M3.5 5h9M3.5 8h9M3.5 11h9"/>'),
   lock: wrap('<rect x="4" y="7" width="8" height="6.5" rx="1.4"/><path d="M5.6 7V5.4a2.4 2.4 0 0 1 4.8 0V7"/>'),
