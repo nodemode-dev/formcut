@@ -42,6 +42,41 @@ GRADES = {
     "highlight-rolloff": {"gamma": 0.8, "contrast": 0.9},
     "shadow-detail": {"gamma": 0.7, "lift": 0.025},
     "vibrance": {"vibrance": 0.6},
+    "soft-contrast": {"contrast": 0.82},
+    "crisp-mids": {"contrast": 1.25, "gamma": 0.9},
+    "lift-blacks": {"shadows_r": 0.2, "shadows_g": 0.2, "shadows_b": 0.2},
+    "crush-blacks": {"lift": -0.05, "contrast": 1.1},
+    "half-stop-down": {"exposure": -0.5},
+    "desaturate": {"saturation": 0.55},
+    "brighten-mids": {"gamma": 0.85},
+    "cross-process": {"shadows_b": 0.12, "highlights_r": 0.08, "highlights_g": 0.1, "contrast": 1.2, "saturation": 1.15},
+    "push-process": {"contrast": 1.35, "saturation": 1.1, "exposure": 0.15, "lift": -0.02},
+    "pull-process": {"contrast": 0.8, "saturation": 0.85, "lift": 0.05, "exposure": -0.1},
+    "expired-stock": {"temperature": 0.1, "tint": -0.06, "lift": 0.1, "saturation": 0.75, "shadows_g": 0.14, "highlights_r": 0.08, "contrast": 0.85},
+    "tintype": {"saturation": 0, "sepia": 0.45, "contrast": 1.35, "exposure": -0.15},
+    "cyanotype": {"saturation": 0, "temperature": -0.35, "tint": -0.05, "contrast": 1.1, "lift": 0.03},
+    "night-print": {"exposure": -0.35, "contrast": 1.25, "temperature": -0.1, "saturation": 0.8},
+    "tungsten": {"temperature": 0.38, "tint": -0.03, "contrast": 1.05},
+    "candlelit": {"temperature": 0.3, "exposure": -0.25, "contrast": 1.15, "saturation": 1.1},
+    "honey-glow": {"temperature": 0.18, "highlights_r": 0.06, "highlights_g": 0.04, "lift": 0.04},
+    "terracotta": {"temperature": 0.3, "tint": 0.14, "saturation": 1.2, "shadows_r": 0.08, "contrast": 1.08},
+    "peach-lift": {"temperature": 0.12, "tint": 0.07, "lift": 0.06, "contrast": 0.92},
+    "late-sun": {"temperature": 0.36, "exposure": 0.15, "highlights_r": 0.1, "highlights_g": 0.06, "saturation": 1.15, "contrast": 1.15},
+    "rust-shadows": {"shadows_r": 0.22, "shadows_g": 0.09, "contrast": 1.12, "temperature": 0.04},
+    "overcast": {"temperature": -0.12, "saturation": 0.75, "contrast": 0.88, "lift": 0.03},
+    "steel-blue": {"temperature": -0.22, "saturation": 0.7, "contrast": 1.2},
+    "moonlit": {"temperature": -0.25, "exposure": -0.45, "saturation": 0.55, "lift": 0.02},
+    "mint-air": {"tint": -0.2, "temperature": -0.08, "lift": 0.03, "saturation": 0.9},
+    "deep-water": {"temperature": -0.28, "tint": -0.06, "exposure": -0.2, "shadows_b": 0.1},
+    "frost-highlights": {"highlights_b": 0.2, "highlights_g": 0.08, "temperature": -0.1, "exposure": 0.12},
+    "slate-shade": {"shadows_b": 0.16, "shadows_g": 0.06, "saturation": 0.6, "contrast": 1.12, "lift": 0.04, "temperature": -0.05},
+    "red-cyan": {"shadows_r": 0.22, "highlights_g": 0.12, "highlights_b": 0.18},
+    "pine-sky": {"shadows_g": 0.2, "shadows_b": 0.04, "highlights_b": 0.2, "highlights_g": 0.04},
+    "navy-blush": {"shadows_b": 0.24, "highlights_r": 0.18, "highlights_b": 0.08},
+    "violet-gold": {"shadows_r": 0.14, "shadows_b": 0.22, "highlights_r": 0.16, "highlights_g": 0.14},
+    "teal-magenta": {"shadows_g": 0.16, "shadows_b": 0.16, "highlights_r": 0.16, "highlights_b": 0.16},
+    "cocoa-cream": {"shadows_r": 0.18, "shadows_g": 0.1, "highlights_r": 0.08, "highlights_g": 0.08, "highlights_b": 0.06, "saturation": 0.45, "contrast": 0.95},
+    "muted-split": {"saturation": 0.2, "shadows_b": 0.18, "highlights_r": 0.16, "highlights_g": 0.1},
 }
 
 VIDEO_EFFECTS = [
@@ -83,11 +118,11 @@ EFFECT_GROUPS = {
     "Texture": ["vignette", "grain", "scanlines", "interference", "rain", "dust"],
 }
 FILTER_GROUPS = {
-    "Adjust": ["exposure", "contrast", "saturation", "vibrance", "highlight-rolloff", "shadow-detail", "low-key", "high-key"],
-    "Film": ["faded", "matte", "pastel", "paper", "bleach", "punch", "silver", "noir", "monochrome", "sepia"],
-    "Warm": ["warmth", "copper", "amber-highlights", "sunrise", "autumn", "sand", "rose", "red-lift"],
-    "Cool": ["cooling", "cyan-shadows", "midnight", "arctic", "emerald", "forest", "lavender", "blue-lift", "green-lift"],
-    "Split": ["teal-amber", "split-purple", "split-green"],
+    "Adjust": ["exposure", "contrast", "saturation", "vibrance", "highlight-rolloff", "shadow-detail", "low-key", "high-key", "soft-contrast", "crisp-mids", "lift-blacks", "crush-blacks", "half-stop-down", "desaturate", "brighten-mids"],
+    "Film": ["faded", "matte", "pastel", "paper", "bleach", "punch", "silver", "noir", "monochrome", "sepia", "cross-process", "push-process", "pull-process", "expired-stock", "tintype", "cyanotype", "night-print"],
+    "Warm": ["warmth", "copper", "amber-highlights", "sunrise", "autumn", "sand", "rose", "red-lift", "tungsten", "candlelit", "honey-glow", "terracotta", "peach-lift", "late-sun", "rust-shadows"],
+    "Cool": ["cooling", "cyan-shadows", "midnight", "arctic", "emerald", "forest", "lavender", "blue-lift", "green-lift", "overcast", "steel-blue", "moonlit", "mint-air", "deep-water", "frost-highlights", "slate-shade"],
+    "Split": ["teal-amber", "split-purple", "split-green", "red-cyan", "pine-sky", "navy-blush", "violet-gold", "teal-magenta", "cocoa-cream", "muted-split"],
 }
 AUDIO_GROUPS = {
     "Voice": ["pitch_up", "pitch_down", "robot", "telephone", "radio", "vibrato", "tremolo"],
@@ -104,6 +139,10 @@ def group_of(key: str, groups: dict) -> str:
 NAMES = {
     "gaussian": "Gaussian Blur", "box": "Box Blur", "edge": "Edge Detect", "chromatic": "Chromatic Aberration",
     "grain": "Film Grain", "interference": "Signal Interference", "pencil": "Pencil Sketch", "de-ess": "De-ess",
+    "silver": "Halide Mono", "copper": "Burnished", "rose": "Blush Lift", "forest": "Moss Tint",
+    "midnight": "Nightfall", "sunrise": "First Light", "bleach": "Skip Bleach", "pastel": "Chalk Soft",
+    "punch": "Hard Snap", "emerald": "Jade Contrast", "lavender": "Lilac Haze", "sand": "Dune Wash",
+    "arctic": "Glacier Bright", "autumn": "Harvest", "noir": "Ink Shadow", "paper": "Newsprint",
 }
 
 
