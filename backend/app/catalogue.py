@@ -107,6 +107,34 @@ AUDIO_CHAINS = {
     "compress": "acompressor=threshold=0.12:ratio=4:attack=10:release=150",
     "normalize": "loudnorm=I=-16:TP=-1.5:LRA=11",
     "de-ess": "deesser=i=0.5:m=0.5:f=0.5",
+    "octave-up": "aresample=48000,asetrate=96000,aresample=48000,atempo=0.5",
+    "octave-down": "aresample=48000,asetrate=24000,aresample=48000,atempo=2.0",
+    "double-voice": "chorus=0.6:0.9:50|60:0.4|0.32:0.25|0.4:2|2.3",
+    "jet-flange": "flanger=delay=2:depth=4:regen=40:speed=0.4",
+    "swirl-phase": "aphaser=in_gain=0.6:out_gain=0.8:delay=3:decay=0.5:speed=0.6",
+    "bullhorn": "highpass=f=600,lowpass=f=3200,acompressor=threshold=0.08:ratio=6,asoftclip=type=atan:threshold=0.5",
+    "two-way-radio": "highpass=f=500,lowpass=f=2800,acrusher=bits=8:mode=log:aa=1,acompressor=threshold=0.1:ratio=5",
+    "warm-lows": "lowshelf=g=5:f=180,highshelf=g=-2:f=6000",
+    "presence-lift": "equalizer=f=3000:t=q:w=1.2:g=5",
+    "mid-scoop": "equalizer=f=800:t=q:w=0.8:g=-7",
+    "bit-crush": "volume=0.125,aformat=sample_fmts=u8,aformat=sample_fmts=flt,volume=8",
+    "tape-warmth": "asoftclip=type=sin:threshold=0.7,lowpass=f=12000",
+    "crisp-detail": "crystalizer=i=2",
+    "lofi-band": "highpass=f=150,lowpass=f=3500,acrusher=bits=10:mode=log:aa=1",
+    "slapback": "aecho=0.8:0.6:120:0.45",
+    "wide-stage": "haas=left_delay=2.05:right_delay=10",
+    "stereo-bloom": "stereowiden=delay=20:feedback=0.3:crossfeed=0.3:drymix=0.8",
+    "long-tail": "aecho=0.8:0.8:400|800|1200:0.5|0.35|0.2",
+    "tunnel": "aecho=0.8:0.85:60|120|180|240:0.6|0.45|0.3|0.2,lowpass=f=5000",
+    "small-booth": "aecho=0.8:0.6:8|14|21:0.3|0.2|0.1,lowpass=f=6000",
+    "far-away": "highpass=f=200,lowpass=f=2500,aecho=0.8:0.6:180|340:0.35|0.25,volume=0.6",
+    "noise-gate": "agate=threshold=0.1:ratio=6:attack=5:release=120:range=0.05",
+    "hiss-cut": "lowpass=f=9000,afftdn=nf=-30:nt=w",
+    "hum-remover": "bandreject=f=50:width_type=q:w=4,bandreject=f=60:width_type=q:w=4,bandreject=f=100:width_type=q:w=4,bandreject=f=120:width_type=q:w=4",
+    "rumble-cut": "highpass=f=80:poles=2",
+    "level-rider": "dynaudnorm=f=100:g=5:p=0.9:m=8",
+    "peak-limiter": "alimiter=limit=0.8:attack=5:release=50",
+    "deep-denoise": "afftdn=nf=-35:nr=20:tn=1",
 }
 
 TRANSITIONS = ["crossfade", "dip", "wipe-left", "wipe-right", "wipe-up", "wipe-down", "slide-left", "slide-right", "zoom", "iris", "dissolve", "push-up"]
@@ -125,10 +153,10 @@ FILTER_GROUPS = {
     "Split": ["teal-amber", "split-purple", "split-green", "red-cyan", "pine-sky", "navy-blush", "violet-gold", "teal-magenta", "cocoa-cream", "muted-split"],
 }
 AUDIO_GROUPS = {
-    "Voice": ["pitch_up", "pitch_down", "robot", "telephone", "radio", "vibrato", "tremolo"],
-    "Tone": ["bass", "treble", "distortion"],
-    "Space": ["echo", "room", "hall", "cathedral", "plate"],
-    "Clean": ["denoise", "voice-clean", "de-ess", "compress", "normalize"],
+    "Voice": ["pitch_up", "pitch_down", "robot", "telephone", "radio", "vibrato", "tremolo", "octave-up", "octave-down", "double-voice", "jet-flange", "swirl-phase", "bullhorn", "two-way-radio"],
+    "Tone": ["bass", "treble", "distortion", "warm-lows", "presence-lift", "mid-scoop", "bit-crush", "tape-warmth", "crisp-detail", "lofi-band"],
+    "Space": ["echo", "room", "hall", "cathedral", "plate", "slapback", "wide-stage", "stereo-bloom", "long-tail", "tunnel", "small-booth", "far-away"],
+    "Clean": ["denoise", "voice-clean", "de-ess", "compress", "normalize", "noise-gate", "hiss-cut", "hum-remover", "rumble-cut", "level-rider", "peak-limiter", "deep-denoise"],
 }
 
 
