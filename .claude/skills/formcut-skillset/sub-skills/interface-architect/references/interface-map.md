@@ -2,7 +2,7 @@
 
 Contents: modules, engine commands, emitted names, tokens, stylesheet order.
 
-Derived from `frontend/src` at v0.54.1.
+Derived from `frontend/src` at v0.54.2.
 
 ## Contents
 
@@ -60,9 +60,9 @@ Derived from `frontend/src` at v0.54.1.
 - `ui/work-area.ts` (134L)
 - `ui/workspace-layout.ts` (181L)
 - `workers/transcription.ts` (84L)
-- `i18n/de.json` (286L)
-- `i18n/en.json` (286L)
-- `i18n/es.json` (286L)
+- `i18n/de.json` (284L)
+- `i18n/en.json` (284L)
+- `i18n/es.json` (284L)
 - `i18n/index.ts` (52L)
 - `i18n/language-pack.ts` (629L)
 - `i18n/text.ts` (29L)
