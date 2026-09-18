@@ -11,6 +11,7 @@ regenerate; do not hand-tune a single value in the output.
 import colorsys, pathlib, sys
 import colorsys, pathlib, sys
 def hexed(h, s, l):
+    l = max(0, min(100, l))
     r, g, b = colorsys.hls_to_rgb(h / 360.0, l / 100.0, s / 100.0)
     return "#%02x%02x%02x" % tuple(round(v * 255) for v in (r, g, b))
 

@@ -50,7 +50,7 @@
   --on-cue: #171717;
   --track-bed: #080808;
   --track-bed-alt: #0a0a0a;
-  --timescale: #-3-3-3;
+  --timescale: #000000;
   --screen: #000000;
   --veil: rgb(0 0 0 / 0.55);
 }
@@ -375,7 +375,7 @@
   --on-cue: #072713;
   --track-bed: #070907;
   --track-bed-alt: #090b09;
-  --timescale: #-2-3-2;
+  --timescale: #000000;
   --screen: #000000;
   --veil: rgb(0 0 0 / 0.55);
 }
