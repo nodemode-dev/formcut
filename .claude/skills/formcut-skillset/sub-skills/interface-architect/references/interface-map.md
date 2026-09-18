@@ -2,7 +2,7 @@
 
 Contents: modules, engine commands, emitted names, tokens, stylesheet order.
 
-Derived from `frontend/src` at v0.53.2.
+Derived from `frontend/src` at v0.53.3.
 
 ## Contents
 
@@ -41,7 +41,7 @@ Derived from `frontend/src` at v0.53.2.
 - `ui/icons-lucide.ts` (28L)
 - `ui/icons.ts` (50L)
 - `ui/inspector-pane.ts` (521L)
-- `ui/media-pane.ts` (802L)
+- `ui/media-pane.ts` (804L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (68L)
 - `ui/render-preview.ts` (194L)
@@ -57,7 +57,7 @@ Derived from `frontend/src` at v0.53.2.
 - `ui/track-keyframes.ts` (371L)
 - `ui/tracking.ts` (38L)
 - `ui/workspace-layout.ts` (181L)
-- `workers/transcription.ts` (80L)
+- `workers/transcription.ts` (84L)
 - `i18n/de.json` (283L)
 - `i18n/en.json` (283L)
 - `i18n/es.json` (283L)
@@ -65,7 +65,7 @@ Derived from `frontend/src` at v0.53.2.
 - `i18n/language-pack.ts` (626L)
 - `i18n/text.ts` (29L)
 - `styles/app.css` (847L)
-- `styles/containers.css` (298L)
+- `styles/containers.css` (284L)
 - `styles/creator.css` (65L)
 - `styles/settings.css` (122L)
 - `styles/themes.css` (856L)
