@@ -18,33 +18,35 @@ export function installWorkspaceLayout(): void {
   try { settings = { ...settings, ...JSON.parse(localStorage.getItem("formcut.layout") || "{}") }; } catch { /* defaults */ }
   const menu = document.createElement("div"); menu.className = "dropdown"; menu.hidden = true;
   const options = new Map<string, HTMLButtonElement>();
-  // A divider sits on the gap between two panes, so its position is read from
-  // the panes themselves rather than recomputed from the settings.
+  const sideOf = (key: "left" | "right") => {
+    const pane: "media" | "inspector" = (key === "left") !== settings.swap ? "media" : "inspector";
+    return { pane, width: pane === "media" ? ("left" as const) : ("right" as const), sign: key === "left" ? 1 : -1 };
+  };
   const placeDividers = () => {
     const box = workspace.getBoundingClientRect();
     const paneOf = (name: string) => workspace.querySelector<HTMLElement>(`.pane-${name}`);
-    const edge = (node: HTMLElement | null, side: "right" | "left") => {
-      if (!node) return null;
-      const rect = node.getBoundingClientRect();
-      return (side === "right" ? rect.right : rect.left) - box.left;
-    };
     const hide = (key: string, hidden: boolean) => {
       const handle = dividers.get(key);
       if (handle) handle.hidden = hidden;
     };
-    const media = paneOf(settings.swap ? "inspector" : "media");
-    const inspector = paneOf(settings.swap ? "media" : "inspector");
-    const timeline = paneOf("timeline");
-    const left = dividers.get("left"), right = dividers.get("right"), row = dividers.get("row");
     const showSides = !settings.focus;
-    hide("left", !showSides || !settings.media);
-    hide("right", !showSides || !settings.inspector);
+    hide("left", !showSides || !settings[sideOf("left").pane]);
+    hide("right", !showSides || !settings[sideOf("right").pane]);
     hide("row", !showSides || !settings.timeline);
-    if (left && !left.hidden) left.style.left = `${(edge(media, "right") ?? 0) + 1}px`;
-    if (right && !right.hidden) right.style.left = `${(edge(inspector, "left") ?? 0) - 7}px`;
+    for (const key of ["left", "right"] as const) {
+      const handle = dividers.get(key), pane = paneOf(sideOf(key).pane);
+      if (!handle || handle.hidden || !pane) continue;
+      const rect = pane.getBoundingClientRect();
+      handle.style.left = `${(key === "left" ? rect.right + 1 : rect.left - 7) - box.left}px`;
+      handle.style.top = `${rect.top - box.top}px`;
+      handle.style.height = `${rect.height}px`;
+    }
+    const row = dividers.get("row"), timeline = paneOf("timeline");
     if (row && !row.hidden && timeline) {
       const rect = timeline.getBoundingClientRect();
-      row.style.top = `${(settings.timelineTop ? rect.bottom : rect.top) - box.top - 7}px`;
+      row.style.top = `${(settings.timelineTop ? rect.bottom : rect.top - 7) - box.top}px`;
+      row.style.left = `${rect.left - box.left}px`;
+      row.style.width = `${rect.width}px`;
     }
   };
   const apply = () => {
@@ -54,17 +56,18 @@ export function installWorkspaceLayout(): void {
     const widest = Math.max(MIN_SIDE, Math.round(room * 0.45));
     settings.left = Math.min(widest, Math.max(MIN_SIDE, Math.round(settings.left)));
     settings.right = Math.min(widest, Math.max(MIN_SIDE, Math.round(settings.right)));
-    const leftTrack = settings.media ? `${settings.left}px` : "";
-    const rightTrack = settings.inspector ? `${settings.right}px` : "";
-    const tracks = settings.swap ? [rightTrack, "minmax(240px, 1fr)", leftTrack] : [leftTrack, "minmax(240px, 1fr)", rightTrack];
-    workspace.style.gridTemplateColumns = settings.focus ? "minmax(0, 1fr)" : tracks.filter(Boolean).join(" ");
-    workspace.style.gridTemplateRows = settings.focus || !settings.timeline
+    const order: Array<"media" | "preview" | "inspector"> = settings.swap ? ["inspector", "preview", "media"] : ["media", "preview", "inspector"];
+    const slots = order.filter((name) => name === "preview" || (!settings.focus && settings[name]));
+    const columns = slots.map((name) => (name === "preview" ? "minmax(240px, 1fr)" : `${name === "media" ? settings.left : settings.right}px`));
+    const band = settings.timeline && !settings.focus ? `"${slots.map(() => "timeline").join(" ")}"` : "";
+    const panes = `"${slots.join(" ")}"`;
+    workspace.style.gridTemplateColumns = settings.focus ? "minmax(0, 1fr)" : columns.join(" ");
+    workspace.style.gridTemplateAreas = !band ? panes : settings.timelineTop ? `${band} ${panes}` : `${panes} ${band}`;
+    workspace.style.gridTemplateRows = !band
       ? "minmax(0, 1fr)"
       : settings.timelineTop
         ? `minmax(180px, ${settings.height}%) minmax(0, 1fr)`
         : `minmax(0, 1fr) minmax(180px, ${settings.height}%)`;
-    // Slot moves are grid placement, not DOM moves: nothing is re-parented, so
-    // no pane is rebuilt and nothing loses focus or scroll when slots change.
     workspace.dataset.swap = String(settings.swap);
     workspace.dataset.timelineTop = String(settings.timelineTop);
     placeDividers();
@@ -112,8 +115,7 @@ export function installWorkspaceLayout(): void {
     handle.setAttribute("aria-label", t(key === "row" ? "layout.divider.timeline" : key === "left" ? "layout.divider.media" : "layout.divider.inspector"));
     const nudge = (amount: number) => {
       if (key === "row") settings.height = Math.min(80, Math.max(15, settings.height + amount));
-      else if (key === "left") settings.left += amount * 8;
-      else settings.right -= amount * 8;
+      else { const side = sideOf(key); settings[side.width] += side.sign * amount * 8; }
       apply();
     };
     handle.addEventListener("keydown", (event) => {
@@ -138,10 +140,9 @@ export function installWorkspaceLayout(): void {
         if (key === "row") {
           const delta = (settings.timelineTop ? moveEvent.clientY - startY : startY - moveEvent.clientY) / box.height * 100;
           settings.height = Math.min(80, Math.max(15, Math.round(fromHeight + delta)));
-        } else if ((key === "left") !== settings.swap) {
-          settings.left = Math.round(fromLeft + (moveEvent.clientX - startX));
         } else {
-          settings.right = Math.round(fromRight - (moveEvent.clientX - startX));
+          const side = sideOf(key);
+          settings[side.width] = Math.round((side.width === "left" ? fromLeft : fromRight) + side.sign * (moveEvent.clientX - startX));
         }
         apply();
       };

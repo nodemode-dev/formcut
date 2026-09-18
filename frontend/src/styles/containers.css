@@ -13,6 +13,7 @@
   border-radius: var(--radius-m);
   padding: 0 0 var(--sp-2);
   overflow: hidden;
+  flex: none;
 }
 .section-head {
   padding: var(--sp-2) var(--sp-3);
@@ -91,7 +92,11 @@
 
 /* --- pane dividers -------------------------------------------------------- */
 
-.workspace { position: relative; }
+.workspace { position: relative; grid-template-areas: "media preview inspector" "timeline timeline timeline"; }
+.pane-media { grid-area: media; }
+.pane-preview { grid-area: preview; }
+.pane-inspector { grid-area: inspector; }
+.pane-timeline { grid-area: timeline; }
 .pane-divider {
   position: absolute;
   z-index: var(--z-handles);
@@ -100,19 +105,11 @@
   transition: background 120ms ease;
   touch-action: none;
 }
-.pane-divider.is-vertical { top: 0; bottom: 0; width: 7px; cursor: col-resize; }
-.pane-divider.is-horizontal { left: 0; right: 0; height: 7px; cursor: row-resize; }
+.pane-divider.is-vertical { width: 7px; cursor: col-resize; }
+.pane-divider.is-horizontal { height: 7px; cursor: row-resize; }
 .pane-divider:hover, .pane-divider.is-dragging { background: var(--accent-soft); }
 .pane-divider:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--accent-soft); }
 .pane-divider[hidden] { display: none; }
-
-/* Slot moves are grid placement: the panes stay where they are in the DOM. */
-.workspace[data-swap="true"] .pane-media { grid-column: 3; }
-.workspace[data-swap="true"] .pane-inspector { grid-column: 1; }
-.workspace[data-timeline-top="true"] .pane-timeline { grid-row: 1; }
-.workspace[data-timeline-top="true"] .pane-media,
-.workspace[data-timeline-top="true"] .pane-preview,
-.workspace[data-timeline-top="true"] .pane-inspector { grid-row: 2; }
 
 @media (max-width: 768px) { .pane-divider { display: none; } }
 
