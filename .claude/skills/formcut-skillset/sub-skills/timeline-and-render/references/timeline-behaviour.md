@@ -55,3 +55,28 @@
 - Audio: 12.5 s of continuous playback, worst drift 22 ms, ratio 1.000.
 - Full demo export at 1080p: 160.4 s.
 - 4K HEVC real-time playback: decode bound here, unverified on multi-core.
+
+## Track heights, track state and the work area (v0.54.0)
+
+- Each track head and its lane read one custom property, `--track-h`, written
+  by `ui/track-height.ts` from a grip on the head's bottom edge: 32 to 240 px,
+  default 56, double-click resets, persisted per track index in
+  `formcut.trackHeights`. The keyframe block under a track is not part of that
+  height; it has its own rows.
+- Hidden and muted heads swap glyphs (`eye` to `eyeOff`, `speaker` to `mute`)
+  and take `.is-off`; locked keeps `.is-accent`. The override lives under
+  `.track-head .iconbtn` because that rule sits later in `app.css` at equal
+  specificity and used to silence both states: a track could be hidden with
+  nothing on the head to say so.
+- The work area (`ui/work-area.ts`) is a bar along the bottom of the ruler
+  with a grip at each end. A double press on the ruler creates one around that
+  point (detected on the pane in the capture phase, because the first press
+  scrubs the playhead under the cursor and the second lands on the playhead
+  grab, not the ruler), B and N set in and out at the playhead, the bar drags
+  as a whole, double-click on it clears it. It is engine state outside the
+  document (`engine.workArea`, `setWorkArea`): `play()` starts inside it and
+  wraps to its start at its end. Persisted per project id in
+  `formcut.workArea`.
+- The keyframe graph's curves toggle (`formcut.kfCurves`, default on) draws
+  the sampled eased path when on and dashed straight segments between the
+  keyframes when off; the disclosure on each head shows a diamond.

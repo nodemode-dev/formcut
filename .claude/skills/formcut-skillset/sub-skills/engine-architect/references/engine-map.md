@@ -1,6 +1,6 @@
 # Engine map
 
-Derived from the tree at v0.53.3, not from memory. Regenerate by listing
+Derived from the tree at v0.54.0, not from memory. Regenerate by listing
 `backend/app` and reading each module's router prefix and decorators.
 
 ## Modules that serve routes
@@ -28,7 +28,7 @@ Derived from the tree at v0.53.3, not from memory. Regenerate by listing
 | providers.py | 150 | /api/providers | 4 |
 | render_api.py | 142 | /api/render | 6 |
 | render_stream.py | 71 | /api/render | 1 |
-| stock.py | 243 | /api/stock | 5 |
+| stock.py | 259 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
 | templates.py | 164 | /api/templates | 7 |
 | track.py | 96 | /api/track | 1 |
