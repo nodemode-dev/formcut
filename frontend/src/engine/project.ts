@@ -530,9 +530,18 @@ export class ProjectEngine {
     this.clockSource = source ?? undefined;
   }
 
+  workArea: { start: number; end: number } | null = null;
+
+  setWorkArea(area: { start: number; end: number } | null) {
+    this.workArea = area && area.end - area.start > 0.05 ? { start: Math.max(0, area.start), end: area.end } : null;
+    this.emit("transport");
+  }
+
   play() {
     if (this.state.playing) return;
     this.state.playing = true;
+    const area = this.workArea;
+    if (area && (this.state.playhead < area.start || this.state.playhead >= area.end)) this.state.playhead = area.start;
     this.lastTick = performance.now();
     const tick = (now: number) => {
       if (!this.state.playing) return;
@@ -540,7 +549,9 @@ export class ProjectEngine {
       this.lastTick = now;
       const external = this.clockSource?.() ?? null;
       this.state.playhead = external === null ? this.state.playhead + dt : external;
-      if (this.state.playhead >= this.state.duration) {
+      if (this.workArea && external === null && this.state.playhead >= this.workArea.end) {
+        this.state.playhead = this.workArea.start;
+      } else if (this.state.playhead >= this.state.duration) {
         this.state.playhead = this.state.duration;
         this.pause();
       }

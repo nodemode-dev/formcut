@@ -407,6 +407,22 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   color: var(--ink-faint);
 }
 .tl-ruler .tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--edge); padding: 6px 0 0 5px; }
+.work-area {
+  position: absolute; bottom: 0; height: 8px;
+  background: var(--cue-wash);
+  border-top: 1px solid var(--cue);
+  cursor: grab;
+  z-index: var(--z-handles);
+}
+.work-area.is-dragging { cursor: grabbing; }
+.work-grip {
+  position: absolute; top: -3px; width: 8px; height: 14px;
+  background: var(--cue);
+  border-radius: 2px;
+  cursor: ew-resize;
+}
+.work-grip[data-edge="start"] { left: -4px; }
+.work-grip[data-edge="end"] { right: -4px; }
 .track-head {
   position: sticky; left: 0;
   display: flex; align-items: center; gap: var(--sp-1);

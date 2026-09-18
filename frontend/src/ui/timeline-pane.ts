@@ -7,6 +7,7 @@ import { t } from "../i18n";
 import { reconcileTimelineStructure } from "./timeline-structure";
 import { paintClipBody } from "./clip-visuals";
 import { installTrackKeyframes } from "./track-keyframes";
+import { installWorkArea } from "./work-area";
 
 let PX_PER_SEC = 90;
 const HEAD_W = 208;
@@ -441,5 +442,6 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   scroller.addEventListener("pointercancel", () => { drag = null; reconcile(); });
   reconcile();
   installTrackKeyframes(el, engine, lanes);
+  installWorkArea(el, engine, rulerEl);
   return el;
 }
