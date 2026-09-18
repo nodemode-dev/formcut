@@ -32,7 +32,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     <div class="pane-tabs" data-ref="tabs">
       ${TABS.map(([key, label]) => `<button class="pane-tab${key === "Effects" ? " is-active" : ""}" data-tab="${key}">${t(label)}</button>`).join("")}
       <span class="spacer"></span>
-      <button class="select-chip">${icon("grid")}${icon("chevD")}</button>
+      <button class="select-chip">${icon("grid")}</button>
     </div>
     <div class="media-body" data-view="effects">
       <nav class="media-cats" data-ref="cats">

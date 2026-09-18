@@ -53,7 +53,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       <div class="seg" data-ref="group">
         <button class="is-active" data-group="video">Video</button><button data-group="audio">Audio</button><button data-group="effects">Effects</button>
       </div>
-      <button class="select-chip" data-ref="show-all" title="${t("insp.showall")}" aria-pressed="false">${icon("sliders")}${icon("chevD")}</button>
+      <button class="select-chip" data-ref="show-all" title="${t("insp.showall")}" aria-pressed="false">${icon("sliders")}</button>
     </div>
     <div class="inspector-subtabs">
       <div class="seg" data-ref="subtabs">

@@ -100,7 +100,23 @@ export function installWorkspaceLayout(): void {
   document.addEventListener("pointerdown", event => { if (!menu.contains(event.target as Node) && !panels.contains(event.target as Node) && !menu.hidden) menu.hidden = true; });
   document.addEventListener("keydown", event => { if (event.key === "Escape") { menu.hidden = true; if (settings.focus) { settings.focus = false; apply(); } } });
   const size = workspace.querySelector<HTMLButtonElement>(".tl-tabs .select-chip");
-  if (size) { size.title = "Change timeline height"; size.addEventListener("click", () => { settings.height = settings.height === 42 ? 65 : settings.height === 65 ? 25 : 42; apply(); }); }
+  if (size) {
+    const heights = document.createElement("div"); heights.className = "dropdown"; heights.hidden = true; heights.setAttribute("role", "menu");
+    for (const [label, value] of [["Short timeline", 25], ["Medium timeline", 42], ["Tall timeline", 65]] as const) {
+      const item = document.createElement("button"); item.className = "dropdown-item"; item.textContent = label; item.dataset.height = String(value); item.setAttribute("role", "menuitemradio");
+      item.addEventListener("click", () => { settings.height = value; heights.hidden = true; size.setAttribute("aria-expanded", "false"); apply(); });
+      heights.append(item);
+    }
+    document.body.append(heights);
+    size.title = "Timeline height"; size.setAttribute("aria-haspopup", "menu"); size.setAttribute("aria-expanded", "false");
+    size.addEventListener("click", () => {
+      const box = size.getBoundingClientRect(); heights.style.left = `${box.left}px`; heights.style.top = `${box.bottom + 4}px`;
+      for (const item of heights.querySelectorAll<HTMLElement>("[data-height]")) item.setAttribute("aria-pressed", String(Number(item.dataset.height) === settings.height));
+      heights.hidden = !heights.hidden; size.setAttribute("aria-expanded", String(!heights.hidden));
+    });
+    document.addEventListener("pointerdown", event => { if (!heights.hidden && !heights.contains(event.target as Node) && !size.contains(event.target as Node)) { heights.hidden = true; size.setAttribute("aria-expanded", "false"); } });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !heights.hidden) { heights.hidden = true; size.setAttribute("aria-expanded", "false"); } });
+  }
   // --- dividers -------------------------------------------------------------
   // Absolutely positioned over the grid gaps rather than added as grid tracks,
   // so the template stays the three panes it always was and a divider cannot
