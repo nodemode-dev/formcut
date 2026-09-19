@@ -474,9 +474,8 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
 
   el.querySelector('[data-ref="act-split"]')!.addEventListener("click", () => {
     const state = engine.snapshot;
-    if (state.selectedClipId) {
-      engine.dispatch("clip.split", { clipId: state.selectedClipId, time: state.playhead });
-    }
+    const ids = state.selection.length ? state.selection : state.selectedClipId ? [state.selectedClipId] : [];
+    if (ids.length) engine.dispatch("clips.split", { clipIds: ids, time: state.playhead });
   });
   el.querySelector('[data-ref="act-delete"]')!.addEventListener("click", () => {
     const state = engine.snapshot;

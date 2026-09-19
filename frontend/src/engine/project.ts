@@ -113,6 +113,26 @@ export class ProjectEngine {
     return { undo: this.undoStack.length, redo: this.redoStack.length, bytes };
   }
 
+  /** Cuts one clip at a clip-relative offset; the shared tail math for clip.split and clips.split. */
+  private splitOne(clip: import("./types").Clip, trackIndex: number, offset: number): import("./types").Clip {
+    const tail = {
+      ...structuredClone(clip),
+      sourceIn: sourceTime(clip, offset),
+      speedCurve: shiftedCurve(clip, offset, clip.duration - offset),
+      keyframes: retimedKeys(clip.keyframes, offset, clip.duration - offset),
+      transitionIn: undefined,
+      fadeIn: 0,
+      id: `${clip.id}s${(Date.now() + Math.floor(Math.random() * 997)) % 100000}`,
+      start: Math.round((clip.start + offset) * 100) / 100,
+      duration: Math.round((clip.duration - offset) * 100) / 100,
+    };
+    clip.duration = Math.round(offset * 100) / 100;
+    clip.fadeOut = 0;
+    const clips = this.state.timelines[this.state.activeTimeline].tracks[trackIndex].clips;
+    clips.splice(clips.indexOf(clip) + 1, 0, tail);
+    return tail;
+  }
+
   findClip(clipId: string): { clip: import("./types").Clip; trackIndex: number } | null {
     const timeline = this.state.timelines[this.state.activeTimeline];
     for (const [trackIndex, track] of timeline.tracks.entries()) {
@@ -383,29 +403,38 @@ export class ProjectEngine {
         const p = payload as { clipId: string; time: number };
         const found = this.findClip(p.clipId);
         if (!found) break;
-        const { clip, trackIndex } = found;
-        const offset = Math.round((p.time - clip.start) * 100) / 100;
-        if (offset < 0.1 || offset > clip.duration - 0.1) break;
+        const offset = Math.round((p.time - found.clip.start) * 100) / 100;
+        if (offset < 0.1 || offset > found.clip.duration - 0.1) break;
         this.pushHistory();
-        const tail = {
-          ...structuredClone(clip),
-          sourceIn: sourceTime(clip, offset),
-          speedCurve: shiftedCurve(clip, offset, clip.duration - offset),
-          keyframes: retimedKeys(clip.keyframes, offset, clip.duration - offset),
-          transitionIn: undefined,
-          fadeIn: 0,
-          id: `${clip.id}s${Date.now() % 100000}`,
-          start: Math.round((clip.start + offset) * 100) / 100,
-          duration: Math.round((clip.duration - offset) * 100) / 100,
-        };
-        clip.duration = Math.round(offset * 100) / 100;
-        clip.fadeOut = 0;
-        const clips = s.timelines[s.activeTimeline].tracks[trackIndex].clips;
-        clips.splice(clips.indexOf(clip) + 1, 0, tail);
+        const tail = this.splitOne(found.clip, found.trackIndex, offset);
         s.selectedClipId = tail.id;
         s.selection = [tail.id];
         s.saved = false;
         this.emit("clips");
+        break;
+      }
+      case "clips.split": {
+        const p = payload as { clipIds: string[]; time: number };
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const cuttable = p.clipIds
+          .map((id) => this.findClip(id))
+          .filter((m): m is NonNullable<typeof m> => {
+            if (!m || tracks[m.trackIndex].locked) return false;
+            const offset = Math.round((p.time - m.clip.start) * 100) / 100;
+            return offset >= 0.1 && offset <= m.clip.duration - 0.1;
+          });
+        if (!cuttable.length) break;
+        this.pushHistory();
+        const tails: string[] = [];
+        for (const m of cuttable) {
+          const offset = Math.round((p.time - m.clip.start) * 100) / 100;
+          tails.push(this.splitOne(m.clip, m.trackIndex, offset).id);
+        }
+        s.selection = tails;
+        s.selectedClipId = tails[tails.length - 1];
+        s.saved = false;
+        this.emit("clips");
+        this.emit("clip-selection");
         break;
       }
       case "clip.remove": {

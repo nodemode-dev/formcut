@@ -47,7 +47,7 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
   const actions: Array<[string, () => unknown]> = [
     ["Undo", () => engine.dispatch("history.undo")], ["Redo", () => engine.dispatch("history.redo")],
     ["Copy clip", copy], ["Paste clip", paste], ["Duplicate clip", duplicate],
-    ["Split at playhead", () => { const f = selection(); if (f) engine.dispatch("clip.split", { clipId: f.clip.id, time: engine.snapshot.playhead }); }],
+    ["Split at playhead", () => { const ids = selectedSet(); if (ids.length) engine.dispatch("clips.split", { clipIds: ids, time: engine.snapshot.playhead }); }],
     ["Detach audio", detach], ["Delete clip", () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); }],
   ];
   const bindMenu = (button: HTMLButtonElement, entries: Array<[string, () => unknown]>) => {
@@ -68,6 +68,22 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
     const modifier = event.metaKey || event.ctrlKey;
     const key = event.key.toLowerCase();
     if (modifier && ["c", "v", "d"].includes(key)) { event.preventDefault(); ({ c: copy, v: paste, d: duplicate })[key as "c" | "v" | "d"](); }
+    const underPlayhead = (): string[] => {
+      const s = engine.snapshot;
+      const tracks = s.timelines[s.activeTimeline].tracks;
+      return tracks.filter((track) => !track.locked).flatMap((track) => track.clips.filter((c) => s.playhead > c.start && s.playhead < c.start + c.duration).map((c) => c.id));
+    };
+    if (modifier && key === "b") {
+      event.preventDefault();
+      engine.dispatch("clips.split", { clipIds: underPlayhead(), time: engine.snapshot.playhead });
+      return;
+    }
+    if (!modifier && key === "s") {
+      event.preventDefault();
+      const ids = selectedSet();
+      engine.dispatch("clips.split", { clipIds: ids.length ? ids : underPlayhead().slice(0, 1), time: engine.snapshot.playhead });
+      return;
+    }
     if (!modifier && [" ", "k", "j", "l", "arrowleft", "arrowright", "home", "end"].includes(key)) {
       event.preventDefault();
       if (key === " " || key === "k") engine.dispatch("transport.toggle");
