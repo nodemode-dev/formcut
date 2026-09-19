@@ -490,5 +490,6 @@
   "tl.add": "Añadir línea de tiempo",
   "tl.remove": "Quitar esta línea de tiempo",
   "Back half a second": "Retroceder medio segundo",
-  "Forward half a second": "Avanzar medio segundo"
+  "Forward half a second": "Avanzar medio segundo",
+  "layout.mode": "Modo de interfaz"
 }

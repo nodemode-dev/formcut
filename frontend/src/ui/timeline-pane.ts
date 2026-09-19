@@ -68,7 +68,6 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       <button class="iconbtn" title="${t('tool.split')}" data-ref="act-split" data-feature="act.split" data-label="${t('tool.split')}">${icon("split")}</button>
       <button class="iconbtn" title="${t('tool.detach')}" data-ref="act-detach" data-feature="act.detach" data-label="${t('tool.detach')}">${icon("detach")}</button>
       <button class="iconbtn" title="${t('tool.ripple')}" data-ref="act-ripple" data-feature="act.ripple" data-label="${t('tool.ripple')}">${icon("ripple")}</button>
-      <button class="iconbtn" title="${t('tool.delete')}" data-ref="act-delete" data-feature="act.delete" data-label="${t('tool.delete')}">${icon("trash")}</button>
       <span class="divider"></span>
       <button class="iconbtn is-accent" title="${t('tool.snap')}" data-ref="snap" data-feature="snap" data-label="${t('tool.snap')}">${icon("magnet")}</button>
       <span class="divider"></span>
@@ -480,7 +479,9 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     const ids = state.selection.length ? state.selection : state.selectedClipId ? [state.selectedClipId] : [];
     if (ids.length) engine.dispatch("clips.split", { clipIds: ids, time: state.playhead });
   });
-  el.querySelector('[data-ref="act-delete"]')!.addEventListener("click", () => {
+  // The clip trash left the toolbar with the redesign; Delete, the Edit menu and
+  // the Easy tray all still remove a clip, so the binding is kept optional here.
+  el.querySelector('[data-ref="act-delete"]')?.addEventListener("click", () => {
     const state = engine.snapshot;
     if (state.selection.length > 1) engine.dispatch("clips.remove", state.selection);
     else if (state.selectedClipId) engine.dispatch("clip.remove", state.selectedClipId);

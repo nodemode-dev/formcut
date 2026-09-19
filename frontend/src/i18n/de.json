@@ -490,5 +490,6 @@
   "tl.add": "Zeitleiste hinzufügen",
   "tl.remove": "Diese Zeitleiste entfernen",
   "Back half a second": "Eine halbe Sekunde zurück",
-  "Forward half a second": "Eine halbe Sekunde vor"
+  "Forward half a second": "Eine halbe Sekunde vor",
+  "layout.mode": "Oberflächenmodus"
 }

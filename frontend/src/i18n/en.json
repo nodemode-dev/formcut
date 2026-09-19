@@ -490,5 +490,6 @@
   "tl.add": "Add timeline",
   "tl.remove": "Remove this timeline",
   "Back half a second": "Back half a second",
-  "Forward half a second": "Forward half a second"
+  "Forward half a second": "Forward half a second",
+  "layout.mode": "Interface mode"
 }

@@ -10,8 +10,13 @@ import { icon } from "./icons";
 export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const inspector = buildCreatorPanel(engine);
   document.querySelector(".inspector-body")!.append(inspector);
-  const opener = document.createElement("button"); opener.className = "tool-chip"; opener.textContent = "Studio"; opener.dataset.feature = "titlebar.studio";
-  document.querySelector(".titlebar-right")!.prepend(opener);
+  // Studio belongs with File, Edit and View: it opens a window of its own, like
+  // they do, rather than sitting among the view controls on the right.
+  const opener = document.createElement("button");
+  opener.className = "menu-item";
+  opener.textContent = text("Studio");
+  opener.dataset.feature = "titlebar.studio";
+  document.querySelector(".titlebar-left")!.append(opener);
   const modal = document.createElement("div"); modal.className = "set-scrim studio-modal"; modal.hidden = true;
   const tab = (page: string, glyph: string, label: string, active = false) => `<button class="set-tab${active ? " is-active" : ""}" data-page="${page}">${icon(glyph)}<span>${label}</span></button>`;
   modal.innerHTML = `<div class="set-pair studio-pair">

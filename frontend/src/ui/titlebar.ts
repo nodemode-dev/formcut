@@ -34,7 +34,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     <div class="titlebar-right">
       <button class="iconbtn" title="${t('layout.focus')}" data-ref="focus-preview" data-feature="titlebar.focus">${icon("pip")}</button>
       <button class="iconbtn" title="${t('layout.panels')}" data-ref="panels" data-feature="titlebar.panels">${icon("sliders")}</button>
-      <button class="tool-chip mode-chip" data-ref="mode" data-feature="titlebar.mode" aria-expanded="false">${icon("layout")}<span data-ref="mode-name"></span></button>
+      <button class="iconbtn mode-chip" data-ref="mode" data-feature="titlebar.mode" aria-expanded="false" aria-label="${t("layout.mode")}">${icon("layout")}<span class="sr-only" data-ref="mode-name"></span></button>
       <button class="iconbtn" title="${t('set.title')}" data-ref="settings" data-feature="titlebar.settings">${icon("settings")}</button>
       <button class="btn-export" data-ref="export" data-feature="titlebar.export">${icon("export")}${t("btn.export")}</button>
     </div>`;
@@ -51,6 +51,10 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   const paintMode = (profile: InterfaceProfile) => {
     const name = profile.id === "easy" ? t("mode.easy") : profile.id === "advanced" ? t("mode.advanced") : profile.name;
     if (modeName.textContent !== name) modeName.textContent = name;
+    // The chip shows only its icon now, so the mode's name lives in the tooltip
+    // and the accessible label rather than beside it.
+    const label = `${t("layout.mode")}: ${name}`;
+    if (modeChip.title !== label) { modeChip.title = label; modeChip.setAttribute("aria-label", label); }
   };
   paintMode(activeProfile());
   onInterfaceMode(paintMode);
