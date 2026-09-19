@@ -93,3 +93,7 @@ Replaying an unchanged range is served from cache, an edit re-renders only its o
 
 ### v0.59.0
 A thirteen-control colour panel, imported LUTs as library looks with intensity, keyframes on effect parameters and volume, linear and inverted masks, In/Out/Combo animations that survive trimming, audio strength sliders, and tape-style pitch.
+
+
+### v0.60.0
+Remove background in Easy with four modes, and an export sheet offering codec, size, 10-bit and a live size estimate.

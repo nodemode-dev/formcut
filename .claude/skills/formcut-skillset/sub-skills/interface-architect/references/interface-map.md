@@ -141,3 +141,7 @@ The inspector's text section gains eleven rows for the full title style, all on 
 ## v0.59.0 delta
 
 Types gain `ColourPanel` with `COLOUR_NEUTRAL`, `ValueKey` for effect and volume keys, `ClipAnimations` with `IN_ANIMATIONS` and `COMBO_ANIMATIONS`, `lutIntensity`, `pitchFollowsSpeed`, and the linear mask shape with `angle` and `invert`. `clip.creator` may patch `colour`, `pitchFollowsSpeed`, `lutIntensity`, `volumeKeys` and `animations`.
+
+## v0.60.0 delta
+
+The inspector gains an Easy `section.removebg` with Off, Automatic, Brush and Chroma key plus feather and brush sliders and job progress, writing the same cutout and key fields Advanced writes. The export sheet gains codec choices filled from `/api/render/status`, size presets, a 10-bit toggle and a live estimate from `/api/render/estimate` that refreshes on open and on every option change; `exportProject` carries codec, tenBit, size and rate.

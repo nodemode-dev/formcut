@@ -79,3 +79,7 @@ Preview frames are cached by content and rendered ahead; per-clip audio is cache
 
 ### v0.59.0
 A colour panel runs ahead of the effect stack; effect parameters, volume and animation slots are sampled per frame; pixel-measured parameters scale with the decoded resolution so preview and export agree.
+
+
+### v0.60.0
+Mattes are computed once into a cache and only read at render time; encoders are confirmed by encoding rather than by listing; export size estimates come from a model fitted to real output.
