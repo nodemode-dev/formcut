@@ -72,6 +72,7 @@
   "row.reverse.preparing": "Wird vorbereitet",
   "row.reverse.failed": "Konnte nicht vorbereitet werden",
   "row.crop": "Zuschneiden",
+  "row.flipv": "Vertikal spiegeln",
   "fx.parameters": "Parameter",
   "fx.reset": "Auf Standard zurücksetzen",
   "param.exposure": "Belichtung",

@@ -671,7 +671,8 @@ Pieces must continue the same source range|Les segments doivent prolonger la mê
 Reverse|Inverser|Inverti|逆再生|역재생|Inverter|Реверс|Ters çevir|倒放|倒放
 Preparing|Préparation|Preparazione|準備中|준비 중|Preparando|Подготовка|Hazırlanıyor|准备中|準備中
 Could not prepare|Préparation impossible|Preparazione non riuscita|準備できませんでした|준비할 수 없습니다|Não foi possível preparar|Не удалось подготовить|Hazırlanamadı|无法准备|無法準備
-Crop|Recadrer|Ritaglia|クロップ|자르기|Cortar|Кадрировать|Kırp|裁剪|裁切`;
+Crop|Recadrer|Ritaglia|クロップ|자르기|Cortar|Кадрировать|Kırp|裁剪|裁切
+Flip vertical|Miroir vertical|Capovolgi in verticale|上下反転|상하 반전|Inverter na vertical|Отразить по вертикали|Dikey çevir|垂直翻转|垂直翻轉`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

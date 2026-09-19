@@ -166,6 +166,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span></span>
           <button class="toggle${sel.flipH ? " is-on" : ""}" data-ref="flip" aria-label="Flip horizontal"></button>
         </div>
+        <div class="prop-row" data-feature="row.flipv">
+          <span>${t("row.flipv")}</span>
+          <span></span>
+          <button class="toggle${sel.flipV ? " is-on" : ""}" data-ref="flipv" aria-label="Flip vertical"></button>
+        </div>
       </div>
       <div class="section" data-section="track" data-feature="section.track">
         <div class="section-head">${t("sec.track")} ${icon("chevD")}</div>
@@ -344,6 +349,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   flip.addEventListener("click", () => {
     const on = flip.classList.toggle("is-on");
     patchSelected({ flipH: on });
+  });
+  const flipV = el.querySelector<HTMLElement>('[data-ref="flipv"]')!;
+  flipV.addEventListener("click", () => {
+    const on = flipV.classList.toggle("is-on");
+    patchSelected({ flipV: on });
   });
   const blendMenu = document.createElement("div"); blendMenu.className = "dropdown"; blendMenu.hidden = true; blendMenu.setAttribute("role", "menu");
   for (const mode of BLEND_MODES) {
@@ -572,6 +582,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       if (alignLabel.textContent !== ts.align) alignLabel.textContent = ts.align;
     }
     flip.classList.toggle("is-on", t.flipH);
+    flipV.classList.toggle("is-on", Boolean(t.flipV));
     const blendMode = t.blendMode ?? "Normal";
     if (blendLabel.dataset.mode !== blendMode) { blendLabel.dataset.mode = blendMode; blendLabel.textContent = text(blendMode); }
   };

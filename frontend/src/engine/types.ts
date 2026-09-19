@@ -106,6 +106,7 @@ export interface ClipTransform {
   opacity: number;
   blendMode: string;
   flipH: boolean;
+  flipV?: boolean;
 }
 
 export interface ProjectState {
@@ -137,5 +138,6 @@ export function defaultTransform(): ClipTransform {
     opacity: 100,
     blendMode: "Normal",
     flipH: false,
+    flipV: false,
   };
 }

@@ -17,7 +17,7 @@ from .render_document import flatten, validate_document
 from .timing import fade_at, property_at, source_time
 
 LEGACY = {"fc.gaussian-blur": "gaussian", "fc.box-blur": "box", "fc.motion-blur": "directional-blur", "fc.mono": "monochrome", "fc.invert": "invert", "fc.warm": "warmth", "fc.cool": "cooling", "fc.vignette-pop": "vignette"}
-DEFAULTS = {"scale": 100, "posX": 0, "posY": 0, "rotation": 0, "width": 100, "height": 100, "opacity": 100, "blendMode": "Normal", "flipH": False}
+DEFAULTS = {"scale": 100, "posX": 0, "posY": 0, "rotation": 0, "width": 100, "height": 100, "opacity": 100, "blendMode": "Normal", "flipH": False, "flipV": False}
 
 
 def crop_box(clip: dict) -> tuple[float, float, float, float] | None:
@@ -245,7 +245,7 @@ class FrameRenderer:
             h, w = image.shape[:2]
             fit = min(self.width / w, self.height / h)
             sx = fit * transform["scale"] / 100 * transform["width"] / 100 * (-1 if transform["flipH"] else 1)
-            sy = fit * transform["scale"] / 100 * transform["height"] / 100
+            sy = fit * transform["scale"] / 100 * transform["height"] / 100 * (-1 if transform.get("flipV") else 1)
             angle = math.radians(transform["rotation"])
             c, s = math.cos(angle), math.sin(angle)
             a, b, d, e = c * sx, -s * sy, s * sx, c * sy

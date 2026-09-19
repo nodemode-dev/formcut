@@ -72,6 +72,7 @@
   "row.reverse.preparing": "Preparing",
   "row.reverse.failed": "Could not prepare",
   "row.crop": "Crop",
+  "row.flipv": "Flip vertical",
   "fx.parameters": "Parameters",
   "fx.reset": "Reset to default",
   "param.exposure": "Exposure",
