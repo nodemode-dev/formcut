@@ -45,6 +45,7 @@ def download(model: str, report, cancelled):
             path = ROOT / name
             if path.is_file():
                 continue
+            url = source_for(model, name, url)
             temporary = path.with_suffix(path.suffix + ".download")
             digest = hashlib.sha256()
             try:
@@ -64,6 +65,14 @@ def download(model: str, report, cancelled):
                             report((i + (written / length if length else 0.5)) / len(entries))
                 if temporary.stat().st_size < 1024:
                     raise ValueError("Model download is incomplete")
+                expected = PINNED.get(name)
+                if expected and digest.hexdigest() != expected:
+                    # P8: a file that does not match its pin never lands. It is
+                    # deleted and named, so a bad mirror cannot poison the cache.
+                    temporary.unlink(missing_ok=True)
+                    raise ValueError(
+                        f"Checksum mismatch for {name}: expected {expected[:16]}..., got {digest.hexdigest()[:16]}..."
+                    )
                 temporary.replace(path)
                 path.with_suffix(path.suffix + ".json").write_text(json.dumps({"url": url, "sha256": digest.hexdigest(), "license": MODELS[model]["license"]}))
             finally:
@@ -200,3 +209,51 @@ def import_model(model: str, file: UploadFile):
     finally:
         temporary.unlink(missing_ok=True)
     return {"model": model, "ready": ready(model)}
+
+
+# P8: pinned SHA-256 per file. A name absent here is unpinned and recorded on
+# first download instead, so a pin can be added from a verified machine later.
+PINNED: dict[str, str] = {}
+
+SOURCES_FILE = ROOT / "sources.json"
+
+
+def _sources() -> dict:
+    if SOURCES_FILE.is_file():
+        try:
+            return json.loads(SOURCES_FILE.read_text())
+        except ValueError:
+            return {}
+    return {}
+
+
+def source_for(model: str, name: str, default: str) -> str:
+    """The URL to fetch a model file from: upstream, a mirror, or a custom URL."""
+    chosen = _sources().get(model) or {}
+    if isinstance(chosen, dict):
+        if chosen.get("mode") == "custom" and chosen.get("url"):
+            # A custom source is the exact URL the user gave; only a mirror is
+            # treated as a base that the file name is appended to.
+            return str(chosen["url"])
+        if chosen.get("mode") == "mirror" and chosen.get("url"):
+            return f"{str(chosen['url']).rstrip('/')}/{name}"
+    return default
+
+
+def set_source(model: str, mode: str, url: str | None) -> dict:
+    """Record where a model should be fetched from."""
+    if model not in MODELS:
+        raise ValueError("Unknown model")
+    if mode not in ("upstream", "mirror", "custom"):
+        raise ValueError("Unknown source mode")
+    if mode != "upstream" and not url:
+        raise ValueError("A mirror or custom source needs a URL")
+    ROOT.mkdir(parents=True, exist_ok=True)
+    data = _sources()
+    data[model] = {"mode": mode, "url": url}
+    SOURCES_FILE.write_text(json.dumps(data, indent=2))
+    return data[model]
+
+
+def pin_for(name: str) -> str | None:
+    return PINNED.get(name)

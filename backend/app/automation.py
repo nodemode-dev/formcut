@@ -205,6 +205,52 @@ def apply_edit(project: dict, command: dict):
             still["transform"] = copy.deepcopy(clip["transform"])
         track["clips"].extend([still, tail])
         return {"stillId": still["id"], "tailId": tail["id"]}
+    elif operation == "clip.detach":
+        if not located:
+            raise ValueError("Clip not found")
+        _, clip = located
+        audio = copy.deepcopy(clip)
+        audio.update(id=uuid.uuid4().hex, kind="audio", mediaId=str(command["mediaId"]),
+                     label=str(command.get("label", clip.get("label", "Audio"))), muted=False, detachedFrom=clip["id"])
+        for key in ("effects", "effectId", "cutout", "shaderId", "lutId", "colour", "crop"):
+            audio.pop(key, None)
+        target = next((t for t in timeline["tracks"] if "audio" in str(t.get("name", "")).lower() and not t.get("locked")), None)
+        if target is None:
+            target = {"id": uuid.uuid4().hex, "name": "Audio", "clips": []}
+            timeline["tracks"].append(target)
+        target["clips"].append(audio)
+        clip["muted"] = True
+        return {"audioId": audio["id"]}
+    elif operation == "clip.ripple-delete":
+        if not located:
+            raise ValueError("Clip not found")
+        track, clip = located
+        span = clip["duration"]
+        at = clip["start"]
+        track["clips"].remove(clip)
+        for other in track["clips"]:
+            if other["start"] >= at:
+                other["start"] = round(max(0.0, other["start"] - span) * 100) / 100
+    elif operation == "clip.speed-curve":
+        if not located:
+            raise ValueError("Clip not found")
+        _, clip = located
+        points = command.get("points")
+        if points is None:
+            clip.pop("speedCurve", None)
+        else:
+            if not isinstance(points, list) or not points:
+                raise ValueError("A speed curve needs points")
+            clip["speedCurve"] = [{"t": float(p["t"]), "speed": float(p["speed"])} for p in points]
+    elif operation == "clip.animations":
+        if not located:
+            raise ValueError("Clip not found")
+        _, clip = located
+        slots = command.get("animations")
+        if slots is None:
+            clip.pop("animations", None)
+        else:
+            clip["animations"] = slots
     elif operation == "clip.reattach":
         if not located:
             raise ValueError("Clip not found")
@@ -281,7 +327,7 @@ def dispatch(method: str, params: dict):
         return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
                 "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "clip.reattach", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed", "crop", "colour", "animations", "volumeKeys", "lutIntensity", "pitchFollowsSpeed", "key", "mask", "fadeIn", "fadeOut", "label"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "clip.reattach", "clip.detach", "clip.ripple-delete", "clip.speed-curve", "clip.animations", "track.add", "track.remove", "timeline.add", "project.settings"]}
     if method == "catalogue":
         return catalogue()
     if method == "project.list":

@@ -1,3 +1,4 @@
+import os
 import ipaddress
 from urllib.parse import urlsplit
 
@@ -11,6 +12,11 @@ def loopback(value: str) -> bool:
         return ipaddress.ip_address(value).is_loopback
     except ValueError:
         return False
+
+
+def remote_token() -> str:
+    """The token that allows non-loopback access; empty means remote is off."""
+    return os.environ.get("FORMCUT_REMOTE_TOKEN", "").strip()
 
 
 class LocalOnly:
@@ -27,6 +33,10 @@ class LocalOnly:
             origin = headers.get("origin")
             origin_host = urlsplit(origin).hostname if origin else None
             allowed = loopback(client) and loopback(host) and (origin_host is None or loopback(origin_host))
+            if not allowed and remote_token():
+                # P11: remote access is off unless a token is set in the engine,
+                # and then every request must present it. Loopback is untouched.
+                allowed = headers.get("x-formcut-token") == remote_token()
         except ValueError:
             allowed = False
         if scope["type"] == "http" and scope.get("method") in ("POST", "PUT", "PATCH", "DELETE") and scope.get("path", "").startswith("/api/"):

@@ -1,9 +1,13 @@
+import logging
 import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+from .paths import DATA_DIR
 
 from .features import router as features_router
 from .security import LocalOnly
@@ -56,3 +60,62 @@ def health() -> dict:
 _dist = Path(os.environ.get("FORMCUT_DIST", ""))
 if os.environ.get("FORMCUT_DIST") and _dist.is_dir():
     app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")
+
+# P9: one log per run, the last ten kept, and a system-information summary that
+# never carries a provider key.
+LOGS = DATA_DIR / "logs"
+
+
+def _start_log() -> Path:
+    import datetime
+    LOGS.mkdir(parents=True, exist_ok=True)
+    existing = sorted(LOGS.glob("engine-*.log"))
+    for old in existing[:-9]:
+        old.unlink(missing_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = LOGS / f"engine-{stamp}.log"
+    handler = logging.FileHandler(path, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger("formcut").info("engine %s starting", APP_VERSION)
+    return path
+
+
+RUN_LOG = _start_log()
+
+SECRET_HINTS = ("key", "token", "secret", "password", "authorization")
+
+
+@app.get("/api/diagnostics")
+def diagnostics() -> dict:
+    """Version, platform, encoders and models present; never a provider key."""
+    import platform
+    from .encoders import status as encoder_status
+    from .model_manager import MODELS, ready
+    from . import gpu
+    environment = {
+        name: ("set" if value else "unset")
+        for name, value in os.environ.items()
+        if name.startswith("FORMCUT_") and any(hint in name.lower() for hint in SECRET_HINTS)
+    }
+    return {
+        "version": APP_VERSION,
+        "platform": {"system": platform.system(), "release": platform.release(), "machine": platform.machine(),
+                     "python": platform.python_version()},
+        "gpu": gpu.status(),
+        "encoders": encoder_status()["containers"],
+        "models": {name: ready(name) for name in MODELS},
+        "dataDir": str(DATA_DIR),
+        "log": str(RUN_LOG),
+        "logs": [p.name for p in sorted(LOGS.glob("engine-*.log"))],
+        # Secret-shaped settings are reported as set or unset only; their values
+        # never leave the engine, so a copied report can be pasted into an issue.
+        "secrets": environment,
+    }
+
+
+@app.get("/api/diagnostics/log")
+def diagnostics_log() -> Response:
+    text = RUN_LOG.read_text(encoding="utf-8", errors="replace") if RUN_LOG.is_file() else ""
+    return Response(text[-200000:], media_type="text/plain; charset=utf-8")
