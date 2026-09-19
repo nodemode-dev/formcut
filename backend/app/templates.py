@@ -18,8 +18,34 @@ ROOT = DATA_DIR / "templates"
 _lock = threading.RLock()
 
 
+def poster_frame(project: dict, at: float | None) -> str | None:
+    """P4: a rendered frame stored with the template, for the poster gallery."""
+    import base64 as _b64
+    import io as _io
+
+    from PIL import Image
+
+    from .renderer import FrameRenderer
+    try:
+        renderer = FrameRenderer(project, 480)
+    except Exception:
+        return None
+    try:
+        moment = at if at is not None else min(1.0, float(project.get("duration", 1)) / 3)
+        pixels = renderer.frame(max(0.0, moment))
+        buffer = _io.BytesIO()
+        Image.fromarray(pixels).convert("RGB").save(buffer, format="JPEG", quality=72)
+        return _b64.b64encode(buffer.getvalue()).decode()
+    except Exception:
+        # A template must still save when its poster cannot be drawn.
+        return None
+    finally:
+        renderer.close()
+
+
 class TemplateInput(BaseModel):
     name: str = Field(min_length=1, max_length=100)
+    poster_time: float | None = None
     project: dict
     media_ids: list[str] | None = None
 
@@ -81,6 +107,10 @@ def create(body: TemplateInput):
                 clip.pop("mediaId", None)
     item = {"formcut_template": 1, "id": uuid.uuid4().hex, "name": body.name, "project": project, "slots": list(slots.values())}
     item["assets"] = gather(project)
+    # The poster is drawn from the project as it arrived: by this point the slot
+    # clips have had their media removed, so rendering `project` would draw a
+    # hole where the person's footage goes.
+    item["poster"] = poster_frame(body.project, body.poster_time)
     ROOT.mkdir(parents=True, exist_ok=True)
     with _lock:
         (ROOT / (item["id"] + ".json")).write_text(json.dumps(item))
