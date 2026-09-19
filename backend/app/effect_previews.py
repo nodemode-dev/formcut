@@ -22,6 +22,9 @@ _base: np.ndarray | None = None
 
 
 def known(kind: str, item: str) -> bool:
+    if kind == "look":
+        from .assets import ROOT
+        return (ROOT / (item + ".cube")).is_file()
     if kind == "title":
         from .presets import TITLE_STYLE_IDS
         return item in TITLE_STYLE_IDS
@@ -69,6 +72,10 @@ def title_style_preview(item: str) -> np.ndarray:
 
 
 def render(kind: str, item: str) -> np.ndarray:
+    if kind == "look":
+        from .assets import apply_lut
+        dark = np.zeros_like(base_image()); dark[:, :, :3] = 28
+        return over(apply_lut(base_image(), item), dark)
     if kind == "title":
         return title_style_preview(item)
     image = base_image()

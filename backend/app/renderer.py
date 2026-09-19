@@ -14,7 +14,7 @@ from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
 from .pixel_effects import apply_effects, apply_colour_panel, COLOUR_PANEL
 from .render_document import flatten, validate_document
-from .timing import fade_at, property_at, source_time
+from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
 
 LEGACY = {"fc.gaussian-blur": "gaussian", "fc.box-blur": "box", "fc.motion-blur": "directional-blur", "fc.mono": "monochrome", "fc.invert": "invert", "fc.warm": "warmth", "fc.cool": "cooling", "fc.vignette-pop": "vignette"}
 DEFAULTS = {"scale": 100, "posX": 0, "posY": 0, "rotation": 0, "width": 100, "height": 100, "opacity": 100, "blendMode": "Normal", "flipH": False, "flipV": False}
@@ -314,26 +314,30 @@ class FrameRenderer:
             local = time - clip["start"]
             if clip.get("trackHidden") or clip["kind"] == "audio" or local < 0 or local >= clip["duration"] + clip.get("extendOut", 0):
                 continue
-            effects = list(clip.get("effects") or [])
+            effects = [dict(entry) for entry in (clip.get("effects") or [])]
+            for entry in effects:
+                if entry.get("keys"):
+                    # K3: keyed parameters resolve per frame before the stack runs
+                    entry["params"] = effect_params_at(entry, local)
             if clip.get("effectId"):
                 effects.insert(0, {"id": LEGACY.get(clip["effectId"], clip["effectId"]), "amount": 1})
             if clip["kind"] == "filter":
                 canvas = apply_effects(canvas, effects, local)
                 continue
             if clip["kind"] == "image" and not clip.get("shaderId") and all(entry["id"] in GRADES for entry in effects):
-                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"), crop_box(clip), repr(clip.get("colour")))
+                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"), clip.get("lutIntensity", 1), crop_box(clip), repr(clip.get("colour")))
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
                     still = apply_colour_panel(still, clip.get("colour"))
                     still = apply_effects(still, effects, 0) if effects else still
-                    self.prepared[key] = apply_lut(still, clip["lutId"]) if clip.get("lutId") else still
+                    self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
             else:
                 image = self.text_frame(clip) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
                 image = apply_colour_panel(image, clip.get("colour"))
                 image = apply_effects(image, effects, local) if effects else image
                 if clip.get("lutId"):
-                    image = apply_lut(image, clip["lutId"])
+                    image = apply_lut(image, clip["lutId"], float(clip.get("lutIntensity", 1)))
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             image = self.mask_frame(image, clip)
@@ -343,6 +347,13 @@ class FrameRenderer:
                 expression = (clip.get("expressions") or {}).get(prop)
                 if expression:
                     transform[prop] = evaluate(expression, local, clip["duration"], transform[prop])
+            # K6: animation slots layer on top of the sampled transform
+            motion = animation_at(clip, local)
+            transform["scale"] *= motion["scale"]
+            transform["opacity"] *= motion["opacity"]
+            transform["posX"] += motion["posX"]
+            transform["posY"] += motion["posY"]
+            transform["rotation"] += motion["rotation"]
             h, w = image.shape[:2]
             fit = min(self.width / w, self.height / h)
             sx = fit * transform["scale"] / 100 * transform["width"] / 100 * (-1 if transform["flipH"] else 1)

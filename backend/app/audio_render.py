@@ -8,7 +8,7 @@ import numpy as np
 from .catalogue import AUDIO_CHAINS, AUDIO_PARAMS, audio_chain
 from .media import MEDIA_DIR, _ffprobe, reversed_path
 from .render_document import flatten
-from .timing import fade_at, source_delta, source_time
+from .timing import fade_at, source_delta, source_time, volume_at
 
 RATE = 48000
 
@@ -147,4 +147,7 @@ def clip_envelope(clip: dict, count: int) -> np.ndarray:
     times = np.linspace(0, duration, max(2, math.ceil(duration * 200)))
     envelope = np.array([fade_at(clip, t) for t in times])
     gain = np.interp(np.arange(count) / RATE, times, envelope)
-    return gain * max(0, min(4, float(clip.get("volume", 1))))
+    # K4: volume may be keyed; the live mix writes the same curve as automation.
+    volumes = np.array([volume_at(clip, t) for t in times])
+    level = np.clip(np.interp(np.arange(count) / RATE, times, volumes), 0, 4)
+    return gain * level

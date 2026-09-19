@@ -94,6 +94,9 @@ export interface Clip {
   extendOut?: number;
   colour?: ColourPanel;
   pitchFollowsSpeed?: boolean;
+  lutIntensity?: number;
+  volumeKeys?: ValueKey[];
+  animations?: ClipAnimations;
   reversed?: boolean;
   detachedFrom?: string;
   crop?: { left?: number; top?: number; right?: number; bottom?: number };
@@ -120,6 +123,23 @@ export interface Timeline {
   height?: number;
   fps?: number;
   tracks: Track[];
+}
+
+/** K3 and K4: a keyed value point, the same easing modes as transform keys. */
+export interface ValueKey {
+  t: number;
+  value: number;
+  interp?: KeyframeInterp;
+}
+
+/** K6: animation slots stored by preset name, rescaled when a clip is trimmed. */
+export const IN_ANIMATIONS = ["fade", "zoom-in", "zoom-out", "slide-up", "slide-down", "slide-left", "slide-right", "spin", "pop"] as const;
+export const COMBO_ANIMATIONS = ["pulse", "shake", "sway", "float", "bounce", "drift", "swing"] as const;
+
+export interface ClipAnimations {
+  in?: { preset: string; seconds: number };
+  out?: { preset: string; seconds: number };
+  combo?: { preset: string };
 }
 
 /** K1: the colour panel. Every field neutral at its default; absent means off. */

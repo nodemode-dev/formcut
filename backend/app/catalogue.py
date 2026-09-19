@@ -1,3 +1,4 @@
+import json
 import hashlib
 import sys
 from pathlib import Path
@@ -308,3 +309,18 @@ def audio_chain(effect_id: str, params: dict | None) -> str:
         threshold=max(0.02, 0.35 - 0.33 * abs(unit)),
         gain=12.0 * unit,
     )
+
+
+def imported_looks() -> list[dict]:
+    """K2: every imported .cube, offered as a library look under Filters."""
+    from .assets import ROOT
+    out = []
+    if ROOT.is_dir():
+        for record in sorted(ROOT.glob("*.json")):
+            try:
+                item = json.loads(record.read_text())
+            except ValueError:
+                continue
+            if item.get("kind") == "lut":
+                out.append({"id": item["id"], "name": item.get("name", "Look"), "group": "Imported"})
+    return out

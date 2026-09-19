@@ -56,7 +56,7 @@ def load_cube(asset_id: str):
     return parse_cube(asset_path(asset_id, ".cube").read_text())
 
 
-def apply_lut(image: np.ndarray, asset_id: str) -> np.ndarray:
+def apply_lut(image: np.ndarray, asset_id: str, intensity: float = 1.0) -> np.ndarray:
     table, low, high = load_cube(asset_id)
     n = len(table)
     coords = np.clip((image[:, :, :3] / 255 - low) / (high - low), 0, 1) * (n - 1)
@@ -71,7 +71,11 @@ def apply_lut(image: np.ndarray, asset_id: str) -> np.ndarray:
                 weight = np.prod([fraction[:, :, i] if flag else 1 - fraction[:, :, i] for i, flag in enumerate((r, g, b))], axis=0)
                 rgb += table[indices[2], indices[1], indices[0]] * weight[:, :, None]
     out = image.copy()
-    out[:, :, :3] = np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8)
+    graded = np.clip(rgb, 0, 1) * 255
+    amount = max(0.0, min(1.0, float(intensity)))
+    if amount < 1.0:
+        graded = image[:, :, :3].astype(np.float64) * (1 - amount) + graded * amount
+    out[:, :, :3] = np.round(graded).astype(np.uint8)
     return out
 
 
@@ -94,7 +98,8 @@ def upload_lut(file: UploadFile) -> dict:
         raise HTTPException(422, str(exc)) from exc
     ROOT.mkdir(parents=True, exist_ok=True)
     asset_id = uuid.uuid4().hex
-    item = {"id": asset_id, "name": file.filename or "Color LUT", "kind": "lut"}
+    name = (file.filename or "Color LUT").rsplit(".", 1)[0][:60] or "Color LUT"
+    item = {"id": asset_id, "name": name, "kind": "lut", "look": True}
     (ROOT / (asset_id + ".cube")).write_text(text)
     (ROOT / (asset_id + ".json")).write_text(json.dumps(item))
     return item

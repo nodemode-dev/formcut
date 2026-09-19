@@ -59,6 +59,24 @@ def clip_values(clip):
             number(entry.get('amount', 1), 'processor amount', 0, 1)
             for key, value in (entry.get('params') or {}).items():
                 number(value, key, -100, 100)
+            keys = entry.get('keys') or {}
+            if not isinstance(keys, dict) or len(keys) > 16:
+                raise ValueError('Invalid parameter keys')
+            for name, points in keys.items():
+                if not isinstance(points, list) or len(points) > 200:
+                    raise ValueError('Invalid parameter keys')
+                for point in points:
+                    number(point.get('t'), name + ' key time', 0, 86400)
+                    number(point.get('value'), name + ' key value', -100, 100)
+    for point in clip.get('volumeKeys') or []:
+        number(point.get('t'), 'volume key time', 0, 86400)
+        number(point.get('value'), 'volume key value', 0, 4)
+    animations = clip.get('animations') or {}
+    if animations:
+        for slot in ('in', 'out'):
+            entry = animations.get(slot)
+            if entry is not None:
+                number(entry.get('seconds', 1), slot + ' animation seconds', 0.05, 86400)
     transition = clip.get('transitionIn')
     if transition:
         if transition.get('type') not in TRANSITIONS:
