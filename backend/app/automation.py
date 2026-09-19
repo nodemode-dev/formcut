@@ -179,6 +179,32 @@ def apply_edit(project: dict, command: dict):
         first["fadeOut"] = last.get("fadeOut", 0)
         gone = {c["id"] for c in ordered[1:]}
         tracks[track_index]["clips"] = [c for c in tracks[track_index]["clips"] if c["id"] not in gone]
+    elif operation == "clip.freeze-insert":
+        if not located:
+            raise ValueError("Clip not found")
+        track, clip = located
+        hold = max(0.1, float(command.get("hold", 3)))
+        at = float(command["time"])
+        offset = at - clip["start"]
+        if not 0.1 <= offset <= clip["duration"] - 0.1:
+            raise ValueError("Place the time inside the clip")
+        tail = copy.deepcopy(clip)
+        tail.update(id=uuid.uuid4().hex, start=clip["start"] + offset + hold, duration=clip["duration"] - offset, sourceIn=source_time(clip, offset), fadeIn=0)
+        tail.pop("transitionIn", None)
+        if clip.get("speedCurve"):
+            tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [{"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset]
+        tail["keyframes"] = [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])]
+        clip["duration"] = offset
+        clip["fadeOut"] = 0
+        cut = clip["start"] + clip["duration"]
+        for other in track["clips"]:
+            if other is not clip and other["start"] >= cut - 0.005:
+                other["start"] = round((other["start"] + hold) * 100) / 100
+        still = {"id": uuid.uuid4().hex, "kind": "image", "label": str(command.get("label", "Freeze frame")), "mediaId": str(command["mediaId"]), "start": cut, "duration": hold}
+        if clip.get("transform"):
+            still["transform"] = copy.deepcopy(clip["transform"])
+        track["clips"].extend([still, tail])
+        return {"stillId": still["id"], "tailId": tail["id"]}
     elif operation == "clips.mute":
         tracks = timeline["tracks"]
         muted = bool(command["muted"])
@@ -240,7 +266,7 @@ def dispatch(method: str, params: dict):
         return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
                 "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "track.add", "track.remove", "timeline.add", "project.settings"]}
     if method == "catalogue":
         return catalogue()
     if method == "project.list":

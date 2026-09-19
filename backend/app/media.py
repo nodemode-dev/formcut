@@ -172,6 +172,37 @@ def get_file(media_id: str) -> FileResponse:
     return FileResponse(matches[0], media_type=media_type, filename=item["name"])
 
 
+class FreezeBody(BaseModel):
+    time: float
+
+
+@router.post("/{media_id}/freeze", status_code=201)
+def freeze_frame(media_id: str, body: FreezeBody) -> dict:
+    record = _find(media_id)
+    if record["kind"] != "video":
+        raise HTTPException(status_code=400, detail="only video media has frames to freeze")
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="media file missing")
+    at = float(body.time)
+    if not 0 <= at <= 86400:
+        raise HTTPException(status_code=422, detail="Invalid frame time")
+    out = MEDIA_DIR / f"freeze_{uuid.uuid4().hex}.png"
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(matches[0]),
+             "-frames:v", "1", str(out)],
+            capture_output=True, text=True, timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    if proc.returncode != 0 or not out.exists() or out.stat().st_size == 0:
+        out.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail="No frame at that time")
+    base = Path(record["name"]).stem
+    return ingest_path(out, f"{base} frame {at:.2f}s.png", extra={"source": "freeze", "from": media_id, "at": at})
+
+
 @router.post("/{media_id}/detach", status_code=201)
 def detach_audio(media_id: str) -> dict:
     record = _find(media_id)

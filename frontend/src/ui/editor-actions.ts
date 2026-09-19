@@ -3,6 +3,7 @@ import type { MediaBin } from "../engine/media";
 import type { Clip } from "../engine/types";
 import { api } from "../engine/api";
 import { rejoinEligibility } from "../engine/creator-commands";
+import { sourceTime } from "../engine/timing";
 import { t } from "../i18n";
 
 export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void {
@@ -38,6 +39,18 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
     });
     engine.dispatch("clips.add", { entries });
   };
+  const freeze = async () => {
+    const s = engine.snapshot;
+    const found = s.selectedClipId ? engine.findClip(s.selectedClipId) : null;
+    const source = found?.clip;
+    if (!source || source.kind !== "video" || !source.mediaId) throw new Error("Select a video clip first");
+    const at = s.playhead;
+    if (at <= source.start + 0.1 || at >= source.start + source.duration - 0.1) throw new Error("Place the playhead inside the clip");
+    const item = await api(`/api/media/${source.mediaId}/freeze`, { time: sourceTime(source, at - source.start) });
+    await bin.load();
+    if (!engine.findClip(source.id)) return;
+    engine.dispatch("clip.freeze-insert", { clipId: source.id, time: at, mediaId: item.id, label: item.name, hold: 3 });
+  };
   const detach = async () => {
     const found = selection(); if (!found?.clip.mediaId || found.clip.kind !== "video") return;
     const source = found.clip;
@@ -54,6 +67,7 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
       const verdict = rejoinEligibility(engine.snapshot, selectedSet());
       return verdict.ok ? null : t(verdict.reason);
     }],
+    ["Freeze frame", () => void freeze().catch(error => window.alert(error.message))],
     ["Detach audio", detach], ["Delete clip", () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); }],
   ];
   const bindMenu = (button: HTMLButtonElement, entries: Array<[string, () => unknown, (() => string | null)?]>) => {
@@ -94,6 +108,11 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
       event.preventDefault();
       const ids = selectedSet();
       engine.dispatch("clips.split", { clipIds: ids.length ? ids : underPlayhead().slice(0, 1), time: engine.snapshot.playhead });
+      return;
+    }
+    if (!modifier && key === "f") {
+      event.preventDefault();
+      void freeze().catch(error => window.alert(error instanceof Error ? error.message : String(error)));
       return;
     }
     if (!modifier && [" ", "k", "j", "l", "arrowleft", "arrowright", "home", "end"].includes(key)) {

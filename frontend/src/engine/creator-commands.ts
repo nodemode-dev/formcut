@@ -1,8 +1,8 @@
 import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
-import { SPEED_PRESETS, speedPoints, sourceTime } from "./timing";
+import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.ripple-delete", "clip.rejoin", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
+export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
 
 /** Whether the given clips form a rejoinable chain; the reason key names why not. */
 export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
@@ -57,6 +57,45 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
   }
   const clip = timeline.tracks.flatMap(t => t.clips).find(c => c.id === p.clipId);
   if (command.startsWith("clip.") && !clip) throw new Error("Select a clip first");
+  if (command === "clip.freeze-insert") {
+    const source = clip!;
+    const track = timeline.tracks.find((t) => t.clips.includes(source))!;
+    if (track.locked) throw new Error("The track is locked");
+    const hold = Math.max(0.1, Number(p.hold ?? 3));
+    const at = Number(p.time);
+    const offset = Math.round((at - source.start) * 100) / 100;
+    if (offset < 0.1 || offset > source.duration - 0.1) throw new Error("Place the playhead inside the clip");
+    const tail = {
+      ...structuredClone(source),
+      sourceIn: sourceTime(source, offset),
+      speedCurve: shiftedCurve(source, offset, source.duration - offset),
+      keyframes: retimedKeys(source.keyframes, offset, source.duration - offset),
+      transitionIn: undefined,
+      fadeIn: 0,
+      id: crypto.randomUUID(),
+      start: Math.round((source.start + offset + hold) * 100) / 100,
+      duration: Math.round((source.duration - offset) * 100) / 100,
+    };
+    source.duration = Math.round(offset * 100) / 100;
+    source.fadeOut = 0;
+    const cut = source.start + source.duration;
+    for (const other of track.clips) if (other !== source && other.start >= cut - 0.005) other.start = Math.round((other.start + hold) * 100) / 100;
+    const still: Clip = {
+      id: crypto.randomUUID(),
+      kind: "image",
+      label: String(p.label || "Freeze frame"),
+      mediaId: String(p.mediaId),
+      start: cut,
+      duration: hold,
+      transform: structuredClone(source.transform),
+    };
+    track.clips.splice(track.clips.indexOf(source) + 1, 0, tail);
+    track.clips.splice(track.clips.indexOf(source) + 1, 0, still);
+    state.selection = [still.id];
+    state.selectedClipId = still.id;
+    state.saved = false;
+    return;
+  }
   if (command === "clip.ripple-delete") {
     const item = clip!, track = timeline.tracks.find(track => track.clips.includes(item))!;
     const end = item.start + item.duration;
