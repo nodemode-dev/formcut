@@ -617,7 +617,20 @@ cancelled|annulé|annullato|キャンセル済み|취소됨|cancelado|отмен
 failed|échec|non riuscito|失敗|실패|falhou|ошибка|başarısız|失败|失敗
 queued|en attente|in coda|待機中|대기 중|na fila|в очереди|kuyrukta|排队中|排隊中
 Library|Bibliothèque|Libreria|ライブラリ|라이브러리|Biblioteca|Библиотека|Kitaplık|媒体库|媒體庫
-items|éléments|elementi|件|개|itens|элементов|öğe|项|項`;
+items|éléments|elementi|件|개|itens|элементов|öğe|项|項
+Interface mode|Mode d'interface|Modalità interfaccia|インターフェイスモード|인터페이스 모드|Modo de interface|Режим интерфейса|Arayüz modu|界面模式|介面模式
+Easy|Simple|Facile|かんたん|쉬움|Fácil|Простой|Kolay|简易|簡易
+Labelled tools, galleries and a magnetic main track|Outils étiquetés, galeries et piste principale magnétique|Strumenti con etichetta, gallerie e traccia principale magnetica|ラベル付きツール、ギャラリー、マグネットメイントラック|라벨이 있는 도구, 갤러리, 자석 메인 트랙|Ferramentas com rótulo, galerias e trilha principal magnética|Подписанные инструменты, галереи и магнитная главная дорожка|Etiketli araçlar, galeriler ve manyetik ana parça|带标签的工具、图库和磁性主轨道|帶標籤的工具、圖庫和磁性主軌道
+Every pane, tab, tool and setting, arranged as today|Tous les panneaux, onglets, outils et réglages, disposés comme aujourd'hui|Ogni pannello, scheda, strumento e impostazione, disposti come oggi|すべてのパネル、タブ、ツール、設定を現在の配置で|모든 패널, 탭, 도구, 설정을 지금 그대로|Todos os painéis, abas, ferramentas e ajustes, como hoje|Все панели, вкладки, инструменты и настройки как сейчас|Bugünkü düzende tüm paneller, sekmeler, araçlar ve ayarlar|所有面板、标签、工具和设置，保持现有布局|所有面板、分頁、工具和設定，保持現有配置
+Your profiles|Vos profils|I tuoi profili|あなたのプロファイル|내 프로필|Seus perfis|Ваши профили|Profilleriniz|你的配置|你的設定檔
+Customise|Personnaliser|Personalizza|カスタマイズ|사용자 지정|Personalizar|Настроить|Özelleştir|自定义|自訂
+Import profile|Importer un profil|Importa profilo|プロファイルを読み込む|프로필 가져오기|Importar perfil|Импортировать профиль|Profil içe aktar|导入配置|匯入設定檔
+Export profile|Exporter le profil|Esporta profilo|プロファイルを書き出す|프로필 내보내기|Exportar perfil|Экспортировать профиль|Profili dışa aktar|导出配置|匯出設定檔
+How do you want to edit?|Comment souhaitez-vous monter ?|Come vuoi montare?|どのように編集しますか？|어떻게 편집할까요?|Como você quer editar?|Как вы хотите монтировать?|Nasıl düzenlemek istersiniz?|你想如何编辑？|你想如何剪輯？
+Unknown ids skipped|Identifiants inconnus ignorés|Id sconosciuti ignorati|不明なIDをスキップしました|알 수 없는 ID 건너뜀|Ids desconhecidos ignorados|Неизвестные идентификаторы пропущены|Bilinmeyen kimlikler atlandı|已跳过未知 ID|已略過未知 ID
+Profile imported|Profil importé|Profilo importato|プロファイルを読み込みました|프로필을 가져왔습니다|Perfil importado|Профиль импортирован|Profil içe aktarıldı|配置已导入|設定檔已匯入
+Delete profile|Supprimer le profil|Elimina profilo|プロファイルを削除|프로필 삭제|Excluir perfil|Удалить профиль|Profili sil|删除配置|刪除設定檔
+Choose later in Settings|Modifiable plus tard dans Paramètres|Modificabile dopo nelle Impostazioni|設定で後から変更できます|설정에서 나중에 변경 가능|Mude depois em Configurações|Можно изменить позже в настройках|Daha sonra Ayarlar'dan değiştirin|稍后可在设置中更改|稍後可在設定中變更`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

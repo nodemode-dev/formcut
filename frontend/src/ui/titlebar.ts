@@ -6,6 +6,8 @@ import { listProjects, newProject, openProject, saveProject } from "../engine/pe
 import { exportProject } from "./export-job";
 import { icon } from "./icons";
 import { t } from "../i18n";
+import { buildModePanel } from "./mode-popout";
+import { activeProfile, onInterfaceMode, type InterfaceProfile } from "./interface-mode";
 
 export interface AppActions {
   save: () => void;
@@ -31,12 +33,38 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     <div class="titlebar-right">
       <button class="iconbtn" title="${t('layout.focus')}" data-ref="focus-preview" data-feature="titlebar.focus">${icon("pip")}</button>
       <button class="iconbtn" title="${t('layout.panels')}" data-ref="panels" data-feature="titlebar.panels">${icon("sliders")}</button>
+      <button class="tool-chip mode-chip" data-ref="mode" data-feature="titlebar.mode" aria-expanded="false">${icon("layout")}<span data-ref="mode-name"></span></button>
       <button class="iconbtn" title="${t('set.title')}" data-ref="settings" data-feature="titlebar.settings">${icon("settings")}</button>
       <button class="btn-export" data-ref="export" data-feature="titlebar.export">${icon("export")}${t("btn.export")}</button>
     </div>`;
   const saved = el.querySelector<HTMLElement>('[data-ref="saved"]')!;
   const title = el.querySelector<HTMLElement>('[data-ref="title"]')!;
   const titleInput = el.querySelector<HTMLInputElement>('[data-ref="title-input"]')!;
+  const modeChip = el.querySelector<HTMLButtonElement>('[data-ref="mode"]')!;
+  const modeName = el.querySelector<HTMLElement>('[data-ref="mode-name"]')!;
+  const modePopout = document.createElement("div");
+  modePopout.className = "mode-popout";
+  modePopout.hidden = true;
+  modePopout.append(buildModePanel());
+  el.append(modePopout);
+  const paintMode = (profile: InterfaceProfile) => {
+    const name = profile.id === "easy" ? t("mode.easy") : profile.id === "advanced" ? t("mode.advanced") : profile.name;
+    if (modeName.textContent !== name) modeName.textContent = name;
+  };
+  paintMode(activeProfile());
+  onInterfaceMode(paintMode);
+  const closeMode = () => { if (!modePopout.hidden) { modePopout.hidden = true; modeChip.setAttribute("aria-expanded", "false"); } };
+  modeChip.addEventListener("click", () => {
+    const open = modePopout.hidden;
+    modePopout.hidden = !open;
+    modeChip.setAttribute("aria-expanded", String(open));
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (modePopout.hidden) return;
+    const target = event.target as HTMLElement;
+    if (!modePopout.contains(target) && !modeChip.contains(target)) closeMode();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeMode(); });
   engine.subscribe((state) => {
     const next = text(state.saved ? "saved" : "edited");
     if (saved.textContent !== next) saved.textContent = next;

@@ -29,7 +29,7 @@
   "exportPresets": ["mp4:high", "mp4:medium", "mp4:small"],
   "features": {
     "menu.file": true, "menu.edit": true, "menu.view": false,
-    "titlebar.studio": true, "titlebar.focus": false, "titlebar.panels": false, "titlebar.settings": true, "titlebar.export": true,
+    "titlebar.studio": true, "titlebar.mode": true, "titlebar.focus": false, "titlebar.panels": false, "titlebar.settings": true, "titlebar.export": true,
     "tab.Media": true, "tab.Text": true, "tab.Transitions": true, "tab.Effects": true, "tab.Filters": true, "tab.Templates": true,
     "group.video": true, "group.audio": true, "group.effects": false, "insp.showall": false,
     "subtab.basic": true, "subtab.speed": true, "subtab.animation": true, "subtab.adjust": true,
@@ -39,6 +39,6 @@
     "tool.select": true, "tool.blade": false, "act.split": true, "act.detach": false, "act.ripple": false, "act.delete": true, "snap": true,
     "chip.captions": true, "chip.speak": true, "chip.detach": false, "act.addTrack": false, "zoom.fit": true, "zoom.out": true, "zoom.in": true,
     "tl.tabs": false, "tl.heights": true, "kf.toggle": false, "workarea": false,
-    "set.project": true, "set.playback": true, "set.appearance": true, "set.providers": true, "set.connections": false, "set.advanced": false
+    "set.project": true, "set.playback": true, "set.appearance": true, "set.interface": true, "set.providers": true, "set.connections": false, "set.advanced": false
   }
 }

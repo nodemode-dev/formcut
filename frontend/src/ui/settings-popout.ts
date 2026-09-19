@@ -10,11 +10,13 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
+import { buildModePanel } from "./mode-popout";
 
 const PAGES = [
   ["project", "set.project", "sliders"],
   ["playback", "set.playback", "play"],
   ["appearance", "set.appearance", "palette"],
+  ["interface", "mode.title", "layout"],
   ["providers", "set.providers", "key"],
   ["connections", "set.connections", "link"],
   ["advanced", "set.advanced", "box"],
@@ -390,6 +392,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
 
   // --- advanced --------------------------------------------------------------
   const advanced = view("advanced");
+  view("interface").append(buildModePanel());
   const keys = group(advanced, "set.keys", "set.keys.hint");
   const keysNote = document.createElement("p");
   keysNote.className = "panel-note";

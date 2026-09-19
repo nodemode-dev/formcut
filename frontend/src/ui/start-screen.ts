@@ -14,6 +14,7 @@ import { api } from "../engine/api";
 import { icon } from "./icons";
 import { LOCALE_NAMES, locale, setLocale, t } from "../i18n";
 import { text } from "../i18n/text";
+import { askInterfaceModeOnce } from "./mode-popout";
 
 interface MediaItem {
   id: string;
@@ -395,5 +396,6 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   });
 
   show();
+  askInterfaceModeOnce(el);
   return el;
 }
