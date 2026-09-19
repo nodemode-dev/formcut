@@ -73,6 +73,7 @@
   "row.reverse.failed": "Konnte nicht vorbereitet werden",
   "row.crop": "Zuschneiden",
   "row.flipv": "Vertikal spiegeln",
+  "reattach.no-partner": "Kein abgetrennter Ton gehört zu diesem Clip",
   "fx.parameters": "Parameter",
   "fx.reset": "Auf Standard zurücksetzen",
   "param.exposure": "Belichtung",

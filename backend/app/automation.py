@@ -205,6 +205,21 @@ def apply_edit(project: dict, command: dict):
             still["transform"] = copy.deepcopy(clip["transform"])
         track["clips"].extend([still, tail])
         return {"stillId": still["id"], "tailId": tail["id"]}
+    elif operation == "clip.reattach":
+        if not located:
+            raise ValueError("Clip not found")
+        _, picked = located
+        every = [(t, c) for t in timeline["tracks"] for c in t["clips"]]
+        if picked.get("detachedFrom"):
+            audio_spot = next(((t, c) for t, c in every if c is picked), None)
+            video_spot = next(((t, c) for t, c in every if c["id"] == picked["detachedFrom"]), None)
+        else:
+            video_spot = next(((t, c) for t, c in every if c is picked), None)
+            audio_spot = next(((t, c) for t, c in every if c.get("detachedFrom") == picked["id"]), None)
+        if not audio_spot or not video_spot:
+            raise ValueError("No detached sound belongs to this clip")
+        audio_spot[0]["clips"].remove(audio_spot[1])
+        video_spot[1].pop("muted", None)
     elif operation == "clips.mute":
         tracks = timeline["tracks"]
         muted = bool(command["muted"])
@@ -266,7 +281,7 @@ def dispatch(method: str, params: dict):
         return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
                 "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "clip.reattach", "track.add", "track.remove", "timeline.add", "project.settings"]}
     if method == "catalogue":
         return catalogue()
     if method == "project.list":

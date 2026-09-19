@@ -672,7 +672,8 @@ Reverse|Inverser|Inverti|逆再生|역재생|Inverter|Реверс|Ters çevir|�
 Preparing|Préparation|Preparazione|準備中|준비 중|Preparando|Подготовка|Hazırlanıyor|准备中|準備中
 Could not prepare|Préparation impossible|Preparazione non riuscita|準備できませんでした|준비할 수 없습니다|Não foi possível preparar|Не удалось подготовить|Hazırlanamadı|无法准备|無法準備
 Crop|Recadrer|Ritaglia|クロップ|자르기|Cortar|Кадрировать|Kırp|裁剪|裁切
-Flip vertical|Miroir vertical|Capovolgi in verticale|上下反転|상하 반전|Inverter na vertical|Отразить по вертикали|Dikey çevir|垂直翻转|垂直翻轉`;
+Flip vertical|Miroir vertical|Capovolgi in verticale|上下反転|상하 반전|Inverter na vertical|Отразить по вертикали|Dikey çevir|垂直翻转|垂直翻轉
+No detached sound belongs to this clip|Aucun son détaché n'appartient à ce clip|Nessun audio staccato appartiene a questa clip|このクリップに属する分離済み音声はありません|이 클립에 속한 분리된 소리가 없습니다|Nenhum som destacado pertence a este clipe|К этому клипу не относится отделённый звук|Bu klibe ait ayrılmış ses yok|没有属于此片段的分离音频|沒有屬於此片段的分離音訊`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

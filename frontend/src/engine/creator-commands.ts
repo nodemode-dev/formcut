@@ -2,7 +2,7 @@ import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
 import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
+export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
 
 /** Whether the given clips form a rejoinable chain; the reason key names why not. */
 export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
@@ -128,9 +128,30 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     const audio = structuredClone(clip!);
     audio.id = crypto.randomUUID(); audio.kind = "audio"; audio.mediaId = String(p.mediaId); audio.label = String(p.label);
     audio.muted = false; audio.effects = undefined; audio.effectId = undefined; audio.cutout = undefined; audio.shaderId = undefined; audio.lutId = undefined;
+    audio.detachedFrom = clip!.id;
     let target = timeline.tracks.find(t => /audio/i.test(t.name) && !t.locked);
     if (!target) { target = { id: crypto.randomUUID(), name: "Audio", clips: [] }; timeline.tracks.push(target); }
     target.clips.push(audio); clip!.muted = true;
+  } else if (command === "clip.reattach") {
+    const picked = clip!;
+    let audio: Clip | undefined;
+    let video: Clip | undefined;
+    if (picked.detachedFrom) {
+      audio = picked;
+      video = timeline.tracks.flatMap(t => t.clips).find(c => c.id === picked.detachedFrom);
+    } else {
+      video = picked;
+      audio = timeline.tracks.flatMap(t => t.clips).find(c => c.detachedFrom === picked.id);
+    }
+    if (!audio || !video) throw new Error("reattach.no-partner");
+    const home = timeline.tracks.find(t => t.clips.includes(audio!))!;
+    if (home.locked || timeline.tracks.find(t => t.clips.includes(video!))!.locked) throw new Error("rejoin.locked");
+    home.clips = home.clips.filter(c => c !== audio);
+    delete video.muted;
+    state.selection = [video.id];
+    state.selectedClipId = video.id;
+    state.saved = false;
+    return;
   } else if (command === "track.update") {
     const target = timeline.tracks[Number(p.index)]; if (!target) throw new Error("Track not found");
     const patch = p.patch as { name?: string; locked?: boolean; hidden?: boolean; muted?: boolean };

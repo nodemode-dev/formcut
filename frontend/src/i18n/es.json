@@ -73,6 +73,7 @@
   "row.reverse.failed": "No se pudo preparar",
   "row.crop": "Recortar",
   "row.flipv": "Voltear vertical",
+  "reattach.no-partner": "Ningún sonido separado pertenece a este clip",
   "fx.parameters": "Parámetros",
   "fx.reset": "Restablecer al valor inicial",
   "param.exposure": "Exposición",

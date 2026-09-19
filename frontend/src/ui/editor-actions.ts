@@ -68,7 +68,16 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
       return verdict.ok ? null : t(verdict.reason);
     }],
     ["Freeze frame", () => void freeze().catch(error => window.alert(error.message))],
-    ["Detach audio", detach], ["Delete clip", () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); }],
+    ["Detach audio", detach],
+    ["Reattach audio", () => { const id = engine.snapshot.selectedClipId; if (id) engine.dispatch("clip.reattach", { clipId: id }); }, () => {
+      const id = engine.snapshot.selectedClipId;
+      const found = id ? engine.findClip(id) : null;
+      if (!found) return t("rejoin.need-two");
+      const clips = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks.flatMap((track) => track.clips);
+      const paired = found.clip.detachedFrom ? clips.some((c) => c.id === found.clip.detachedFrom) : clips.some((c) => c.detachedFrom === found.clip.id);
+      return paired ? null : t("reattach.no-partner");
+    }],
+    ["Delete clip", () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); }],
   ];
   const bindMenu = (button: HTMLButtonElement, entries: Array<[string, () => unknown, (() => string | null)?]>) => {
     const menu = document.createElement("div"); menu.className = "dropdown"; menu.hidden = true;
