@@ -85,3 +85,7 @@ Split (S, Cmd+B), rejoin, freeze frame (F), reverse, crop with canvas grips, ver
 
 ### v0.57.0
 Full title styling in the inspector, double-click typing on the canvas, a ten-style gallery, presets that carry their font, and captions with model, placement, size, words per caption, cancel and typed lines.
+
+
+### v0.58.0
+Replaying an unchanged range is served from cache, an edit re-renders only its own span, and volume and fade changes are heard immediately during playback.

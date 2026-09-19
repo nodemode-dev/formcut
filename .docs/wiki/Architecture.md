@@ -71,3 +71,7 @@ Per-timeline formats resolve at `validate_document`; reversed intermediates cach
 
 ### v0.57.0
 Title styling is drawn entirely in `renderer.text_frame`; fonts install once by content hash; built-in title styles and their engine-rendered thumbnails live in `presets.py` and `effect_previews.py`.
+
+
+### v0.58.0
+Preview frames are cached by content and rendered ahead; per-clip audio is cached and mixed live in the interface against the audio clock; export renders on a bounded pool; hardware decode is probed by decoding. The GPU compositing path is still open.

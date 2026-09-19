@@ -133,3 +133,7 @@ Inspector rows: Reverse (`row.reverse`, job-polled with Preparing and Could not 
 ## v0.57.0 delta
 
 The inspector's text section gains eleven rows for the full title style, all on the `data-xkey` channel with per-property bounds; blanking a numeric row clears the property. Double-clicking a selected title on the canvas opens `.canvas-typing`, committing one `clip.text` patch per session. The Text tab gains the title style gallery (`/api/presets/titles`, thumbnails from `/api/catalogue/preview/title/{id}`), the caption sheet rows (model, words per caption, placement, size), a cancel chip, and the typed-captions box.
+
+## v0.58.0 delta
+
+`engine/live-mix.ts` adds `LiveMixer`: `warm` fetches each audible clip's processed buffer once from `/api/render/clip-audio`, `play` schedules one source per clip against the audio context clock with fades, volume and pan written as 50 Hz automation matching the export's gain law, and `retune` rewrites one clip's curve in place so a gain edit needs no render. Exposed as `window.formcut.liveMix`.
