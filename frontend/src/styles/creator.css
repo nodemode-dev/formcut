@@ -92,6 +92,11 @@
 .grip-left, .grip-right { cursor: ew-resize; }
 .grip-top, .grip-bottom { cursor: ns-resize; }
 .stage[data-crop="on"] .preview-selection { display: none; }
+.preview-guides { position: absolute; inset: 0; pointer-events: none; z-index: var(--z-handles); }
+.preview-guides[hidden] { display: none; }
+.guide-line { position: absolute; background: var(--guide); }
+.guide-line[data-axis="x"] { top: 0; bottom: 0; width: 1px; transform: translateX(-0.5px); }
+.guide-line[data-axis="y"] { left: 0; right: 0; height: 1px; transform: translateY(-0.5px); }
 
 .workspace[data-focus="true"] > .pane:not(.pane-preview) { display: none; }
 @media (min-width: 769px) {

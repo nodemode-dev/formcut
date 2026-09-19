@@ -87,6 +87,42 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     cropOverlay.addEventListener("pointerup", release, { once: true });
     cropOverlay.addEventListener("pointercancel", release, { once: true });
   });
+  const guides = document.createElement("div");
+  guides.className = "preview-guides";
+  guides.hidden = true;
+  guides.innerHTML = `<div class="guide-line" data-axis="x" hidden></div><div class="guide-line" data-axis="y" hidden></div>`;
+  stage.append(guides);
+  const guideX = guides.querySelector<HTMLElement>('[data-axis="x"]')!;
+  const guideY = guides.querySelector<HTMLElement>('[data-axis="y"]')!;
+  /** A clip's drawn box as stage fractions. */
+  const layerBox = (clip: import("../engine/types").Clip, state = engine.snapshot) => {
+    const media = clip.mediaId ? bin.find(clip.mediaId) : null;
+    const cb = cropBox(clip);
+    const w = (media?.width || state.width) * (1 - cb.left - cb.right), h = (media?.height || state.height) * (1 - cb.top - cb.bottom);
+    const fit = Math.min(state.width / w, state.height / h);
+    const tr = sampledTransform(clip, state.playhead - clip.start);
+    const fw = w * fit / state.width * tr.scale / 100 * tr.width / 100;
+    const fh = h * fit / state.height * tr.scale / 100 * tr.height / 100;
+    const cx = 0.5 + tr.posX / 100, cy = 0.5 + tr.posY / 100;
+    return { left: cx - fw / 2, cx, right: cx + fw / 2, top: cy - fh / 2, cy, bottom: cy + fh / 2, fw, fh };
+  };
+  /** Candidate guide positions per axis. */
+  const guideCandidates = (skipId: string) => {
+    const state = engine.snapshot;
+    const xs = [0, 1 / 3, 0.5, 2 / 3, 1], ys = [0, 1 / 3, 0.5, 2 / 3, 1];
+    for (const track of state.timelines[state.activeTimeline].tracks) {
+      if (track.hidden) continue;
+      for (const other of track.clips) {
+        if (other.id === skipId || other.kind === "audio" || other.kind === "filter") continue;
+        if (other.start > state.playhead || state.playhead > other.start + other.duration) continue;
+        const box = layerBox(other, state);
+        xs.push(box.left, box.cx, box.right);
+        ys.push(box.top, box.cy, box.bottom);
+      }
+    }
+    return { xs, ys };
+  };
+  const hideGuides = () => { guides.hidden = true; guideX.hidden = true; guideY.hidden = true; };
   let dragging = false;
   const draw = () => {
     const state = engine.snapshot, found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
@@ -119,20 +155,71 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     const token = engine.snapshot.timelines, before = structuredClone({ transform: found.clip.transform, keyframes: found.clip.keyframes });
     let changed = false;
     dragging = true; overlay.setPointerCapture(event.pointerId);
+    const candidates = guideCandidates(found.clip.id);
+    const startBox = layerBox(found.clip);
     const pointerMove = (next: PointerEvent) => {
       if (engine.snapshot.timelines !== token) return;
       const patch: Record<string, number> = {};
       const dx = (next.clientX - startX) / box.width * 100, dy = (next.clientY - startY) / box.height * 100;
-      if (handle === "move") { patch.posX = tr.posX + dx; patch.posY = tr.posY + dy; }
+      let lineX: number | null = null, lineY: number | null = null;
+      const limitX = 6 / box.width, limitY = 6 / box.height;
+      if (handle === "move") {
+        patch.posX = tr.posX + dx; patch.posY = tr.posY + dy;
+        if (!next.altKey) {
+          const cxNow = 0.5 + patch.posX / 100, cyNow = 0.5 + patch.posY / 100;
+          let bestX = limitX;
+          for (const candidate of candidates.xs) for (const edge of [cxNow - startBox.fw / 2, cxNow, cxNow + startBox.fw / 2]) {
+            const gap = candidate - edge;
+            if (Math.abs(gap) < Math.abs(bestX)) { bestX = gap; lineX = candidate; }
+          }
+          if (lineX !== null) patch.posX += bestX * 100;
+          let bestY = limitY;
+          for (const candidate of candidates.ys) for (const edge of [cyNow - startBox.fh / 2, cyNow, cyNow + startBox.fh / 2]) {
+            const gap = candidate - edge;
+            if (Math.abs(gap) < Math.abs(bestY)) { bestY = gap; lineY = candidate; }
+          }
+          if (lineY !== null) patch.posY += bestY * 100;
+          patch.posX = Math.round(patch.posX * 100) / 100 + 0;
+          patch.posY = Math.round(patch.posY * 100) / 100 + 0;
+        }
+      }
       else if (handle === "rotate") patch.rotation = tr.rotation + (Math.atan2(next.clientY - cy, next.clientX - cx) - angle) * 180 / Math.PI;
-      else if (handle.length === 2) patch.scale = Math.max(1, Math.min(2000, tr.scale * Math.hypot(next.clientX - cx, next.clientY - cy) / distance));
+      else if (handle.length === 2) {
+        patch.scale = Math.max(1, Math.min(2000, tr.scale * Math.hypot(next.clientX - cx, next.clientY - cy) / distance));
+        if (!next.altKey && startBox.fw > 0.001) {
+          const grow = patch.scale / tr.scale;
+          const half = { x: 0.5 + tr.posX / 100, y: 0.5 + tr.posY / 100 };
+          const movingX = handle.includes("w") ? half.x - startBox.fw / 2 * grow : half.x + startBox.fw / 2 * grow;
+          const movingY = handle.includes("n") ? half.y - startBox.fh / 2 * grow : half.y + startBox.fh / 2 * grow;
+          let best: { scale: number; lineX?: number; lineY?: number } | null = null;
+          for (const candidate of candidates.xs) {
+            if (Math.abs(candidate - movingX) < limitX) {
+              const wanted = Math.abs(candidate - half.x) * 2 / startBox.fw * tr.scale;
+              if (wanted >= 1 && wanted <= 2000) { best = { scale: wanted, lineX: candidate }; break; }
+            }
+          }
+          if (!best) for (const candidate of candidates.ys) {
+            if (Math.abs(candidate - movingY) < limitY) {
+              const wanted = Math.abs(candidate - half.y) * 2 / startBox.fh * tr.scale;
+              if (wanted >= 1 && wanted <= 2000) { best = { scale: wanted, lineY: candidate }; break; }
+            }
+          }
+          if (best) { patch.scale = Math.round(best.scale * 100) / 100; lineX = best.lineX ?? null; lineY = best.lineY ?? null; }
+        }
+      }
       else if (handle === "e" || handle === "w") patch.width = Math.max(1, tr.width + dx * (handle === "w" ? -1 : 1) * 2);
       else patch.height = Math.max(1, tr.height + dy * (handle === "n" ? -1 : 1) * 2);
+      guides.hidden = lineX === null && lineY === null;
+      guideX.hidden = lineX === null;
+      guideY.hidden = lineY === null;
+      if (lineX !== null) guideX.style.left = `${lineX * 100}%`;
+      if (lineY !== null) guideY.style.top = `${lineY * 100}%`;
       engine.previewTransform(found.clip.id, patch); changed = true; draw();
     };
     const finish = (commit: boolean) => {
       overlay.removeEventListener("pointermove", pointerMove); overlay.removeEventListener("pointerup", up); overlay.removeEventListener("pointercancel", cancel);
       dragging = false;
+      hideGuides();
       if (engine.snapshot.timelines === token && changed) {
         engine.finishTransform(found.clip.id, before, commit);
       }
