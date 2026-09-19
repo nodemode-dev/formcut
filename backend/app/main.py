@@ -16,7 +16,7 @@ from .presets import router as presets_router
 from .track import router as track_router
 from .tts import router as tts_router
 
-APP_VERSION = "0.58.0"
+APP_VERSION = "0.59.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
