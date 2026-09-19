@@ -144,7 +144,7 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
       if (key === "home" || key === "end") engine.dispatch(`transport.${key}`);
     }
   });
-  const toolbar = document.querySelector(".tl-toolbar")!;
+  const toolbar = document.querySelector(".pane-timeline") ?? document;
   const control = (ref: string) => toolbar.querySelector<HTMLButtonElement>(`[data-ref="${ref}"]`);
   control("act-ripple")?.addEventListener("click", () => { const found = selection(); if (found) engine.dispatch("clip.ripple-delete", { clipId: found.clip.id }); });
   control("act-detach")?.addEventListener("click", () => { void detach().catch(error => window.alert(error.message)); });

@@ -58,18 +58,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       </div>
       <button class="iconbtn" data-ref="tl-add" title="${t("tl.add")}">${icon("plus")}</button>
       <button class="iconbtn" data-ref="tl-remove" title="${t("tl.remove")}">${icon("trash")}</button>
-      <span class="spacer"></span>
       <button class="select-chip">${icon("layout")}${icon("chevD")}</button>
-    </div>
-    <div class="tl-toolbar">
-      <button class="iconbtn is-accent" title="${t('tool.select')}" data-ref="tool-select" data-feature="tool.select" data-label="${t('tool.select')}">${icon("pointer")}</button>
-      <button class="iconbtn" title="${t('tool.blade')}" data-ref="tool-blade" data-feature="tool.blade" data-label="${t('tool.blade')}">${icon("blade")}</button>
-      <span class="divider"></span>
-      <button class="iconbtn" title="${t('tool.split')}" data-ref="act-split" data-feature="act.split" data-label="${t('tool.split')}">${icon("split")}</button>
-      <button class="iconbtn" title="${t('tool.detach')}" data-ref="act-detach" data-feature="act.detach" data-label="${t('tool.detach')}">${icon("detach")}</button>
-      <button class="iconbtn" title="${t('tool.ripple')}" data-ref="act-ripple" data-feature="act.ripple" data-label="${t('tool.ripple')}">${icon("ripple")}</button>
-      <span class="divider"></span>
-      <button class="iconbtn is-accent" title="${t('tool.snap')}" data-ref="snap" data-feature="snap" data-label="${t('tool.snap')}">${icon("magnet")}</button>
       <span class="divider"></span>
       <button class="tool-chip" data-ref="chip-captions" data-feature="chip.captions">${icon("captions")}${t("chip.captions")}</button>
       <button class="tool-chip" data-ref="chip-speak" data-feature="chip.speak" disabled>${icon("speak")}${t("chip.speak")}</button>
@@ -83,7 +72,16 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     </div>
     <div class="tl-scroller" data-ref="scroller">
       <div class="tl-grid" data-ref="grid">
-        <div class="tl-corner"></div>
+        <div class="tl-corner tl-tools">
+      <button class="iconbtn is-accent" title="${t('tool.select')}" data-ref="tool-select" data-feature="tool.select" data-label="${t('tool.select')}">${icon("pointer")}</button>
+      <button class="iconbtn" title="${t('tool.blade')}" data-ref="tool-blade" data-feature="tool.blade" data-label="${t('tool.blade')}">${icon("blade")}</button>
+      <span class="divider"></span>
+      <button class="iconbtn" title="${t('tool.split')}" data-ref="act-split" data-feature="act.split" data-label="${t('tool.split')}">${icon("split")}</button>
+      <button class="iconbtn" title="${t('tool.detach')}" data-ref="act-detach" data-feature="act.detach" data-label="${t('tool.detach')}">${icon("detach")}</button>
+      <button class="iconbtn" title="${t('tool.ripple')}" data-ref="act-ripple" data-feature="act.ripple" data-label="${t('tool.ripple')}">${icon("ripple")}</button>
+      <span class="divider"></span>
+      <button class="iconbtn is-accent" title="${t('tool.snap')}" data-ref="snap" data-feature="snap" data-label="${t('tool.snap')}">${icon("magnet")}</button>
+        </div>
         <div class="tl-ruler" data-ref="ruler" style="width:${laneW}px">${ruler}</div>
         ${tl.tracks
           .map(
@@ -554,7 +552,9 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     });
     field.addEventListener("blur", () => finish(true));
   });
-  const toolbar = el.querySelector(".tl-toolbar")!;
+  // The tools and the timeline actions now live in two different rows, so the
+  // lookup is scoped to the pane rather than to the row that used to hold both.
+  const toolbar = el;
   const control = (ref: string) => toolbar.querySelector<HTMLButtonElement>(`[data-ref="${ref}"]`);
   control("zoom-in")?.addEventListener("click", () => zoom(1.4));
   control("zoom-out")?.addEventListener("click", () => zoom(1 / 1.4));

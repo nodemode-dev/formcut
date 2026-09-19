@@ -82,7 +82,7 @@ export function applyInterfaceProfile(root: ParentNode, profile: InterfaceProfil
       if (tab && tab.style.order !== String(index)) tab.style.order = String(index);
     });
   }
-  const toolbar = root.querySelector<HTMLElement>(".pane-timeline .tl-toolbar");
+  const toolbar = root.querySelector<HTMLElement>(".pane-timeline .tl-tools");
   if (toolbar) {
     const labels = profile.tools.labels ? "true" : "false";
     if (toolbar.dataset.labels !== labels) toolbar.dataset.labels = labels;

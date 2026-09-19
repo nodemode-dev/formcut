@@ -405,18 +405,25 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* The timeline header is tighter in the redesign: the tab row and the tool row
    give back about 43 css pixels between them, which is the 86 device pixels the
    diff measured, and every track moves up by the same amount. */
-.tl-tabs { display: flex; align-items: center; padding: 3px var(--sp-3) 0; gap: 2px; }
+.tl-tabs { display: flex; align-items: center; padding: 4px var(--sp-3); gap: 2px; }
+.tl-tabs .divider { width: 1px; height: 18px; background: var(--edge); margin: 0 var(--sp-2); }
+.tl-tabs .tl-tc { font-variant-numeric: tabular-nums; color: var(--ink-soft); margin: 0 var(--sp-2); }
 .tl-tab {
   padding: 4px 14px;
   border-radius: var(--radius-s) var(--radius-s) 0 0;
   color: var(--ink-soft);
 }
 .tl-tab.is-active { background: var(--float); color: var(--ink); }
-.tl-toolbar {
+/* The tool row is gone as a band of its own: the redesign puts the editing
+   tools in the black corner above the track heads, level with the ruler, and
+   everything else, the timeline actions and the zoom controls, on the tab row.
+   That is where the vertical space the diff measured comes from. */
+.tl-tools {
   display: flex; align-items: center; gap: var(--sp-1);
-  padding: 0 var(--sp-3);
-  min-height: 28px;
+  padding: 0 var(--sp-2);
+  background: var(--timescale);
 }
+.tl-tools .divider { width: 1px; height: 16px; background: var(--edge); margin: 0 2px; }
 .tl-toolbar .divider { width: 1px; height: 18px; background: var(--edge); margin: 0 var(--sp-1); }
 .tool-chip {
   display: flex; align-items: center; gap: 6px;
