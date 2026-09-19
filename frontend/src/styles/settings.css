@@ -189,3 +189,22 @@
 .format-rates .seg > button { min-width: 44px; min-height: 32px; }
 .format-actions { justify-content: flex-end; }
 .format-actions .tool-chip.is-primary { background: var(--cue); color: var(--on-cue); border-color: var(--cue); }
+.conflict-bar {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--pane); border: 1px solid var(--cue); border-radius: var(--radius-m);
+  box-shadow: 0 12px 32px var(--veil);
+  font-size: 12.5px; color: var(--ink);
+  z-index: var(--z-dropdown);
+}
+.conflict-bar[hidden] { display: none; }
+.restore-bar {
+  display: flex; align-items: center; gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--cue-wash); border: 1px solid var(--cue); border-radius: var(--radius-m);
+  font-size: 12.5px; color: var(--ink);
+}
+.restore-bar > span { flex: 1; }
+.restore-bar .tool-chip.is-primary { background: var(--cue); color: var(--on-cue); border-color: var(--cue); }

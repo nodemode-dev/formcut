@@ -9,7 +9,7 @@
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { loadDemoProject } from "../engine/demo";
-import { listProjects, newProject, openProject } from "../engine/persistence";
+import { listProjects, newProject, openProject, listJournals, restoreJournal, clearJournal } from "../engine/persistence";
 import { api } from "../engine/api";
 import { icon } from "./icons";
 import { LOCALE_NAMES, locale, setLocale, t } from "../i18n";
@@ -187,6 +187,25 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
         dismiss();
       })());
       grid.append(card);
+    }
+    const journals = await listJournals();
+    if (journals.length) {
+      const bar = document.createElement("div");
+      bar.className = "restore-bar";
+      bar.dataset.ref = "restore";
+      const newest = journals.sort((a, b) => b.written - a.written)[0];
+      bar.innerHTML = `<span>${t("save.recover")}: ${newest.title || t("start.new")}</span><button class="tool-chip is-primary" data-restore="${newest.key}">${t("save.restore")}</button><button class="tool-chip" data-discard="${newest.key}">${t("save.discard")}</button>`;
+      bar.querySelector("[data-restore]")!.addEventListener("click", () => void (async () => {
+        if (await restoreJournal(engine, newest.key)) {
+          void clearJournal(newest.key);
+          dismiss();
+        }
+      })());
+      bar.querySelector("[data-discard]")!.addEventListener("click", () => void (async () => {
+        await clearJournal(newest.key);
+        bar.remove();
+      })());
+      body.prepend(bar);
     }
   };
 

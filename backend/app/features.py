@@ -17,9 +17,10 @@ from .fonts import router as fonts
 from .demo import router as demo
 from .effect_previews import router as previews
 from .render_stream import router as playback
+from .recovery import router as recovery
 
 router = APIRouter()
 for module in (assets, automation, catalogue, jobs, speech, models, render, templates,
                project_tracking, fonts, demo, previews, playback,
-               clip_visuals, providers_router, storage, orchestration):
+               clip_visuals, providers_router, storage, orchestration, recovery):
     router.include_router(module)

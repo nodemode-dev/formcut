@@ -635,7 +635,16 @@ Choose a format|Choisir un format|Scegli un formato|フォーマットを選択|
 Vertical|Vertical|Verticale|縦|세로|Vertical|Вертикальный|Dikey|竖屏|直式
 Wide|Large|Largo|横|가로|Largo|Широкий|Geniş|横屏|橫式
 Square|Carré|Quadrato|正方形|정사각형|Quadrado|Квадрат|Kare|方形|方形
-Portrait|Portrait|Ritratto|ポートレート|세로 사진|Retrato|Портрет|Portre|肖像|肖像`;
+Portrait|Portrait|Ritratto|ポートレート|세로 사진|Retrato|Портрет|Portre|肖像|肖像
+Autosave|Enregistrement auto|Salvataggio automatico|自動保存|자동 저장|Salvamento automático|Автосохранение|Otomatik kaydet|自动保存|自動儲存
+Save quietly a moment after each change|Enregistre discrètement peu après chaque modification|Salva in silenzio poco dopo ogni modifica|変更のたびに少し後で自動保存します|변경 후 잠시 뒤 조용히 저장|Salva discretamente logo após cada mudança|Тихо сохраняет вскоре после каждого изменения|Her değişiklikten kısa süre sonra sessizce kaydeder|每次更改后稍候自动保存|每次變更後稍候自動儲存
+This project changed elsewhere|Ce projet a été modifié ailleurs|Questo progetto è cambiato altrove|このプロジェクトは別の場所で変更されました|이 프로젝트가 다른 곳에서 변경되었습니다|Este projeto foi alterado em outro lugar|Этот проект изменён в другом месте|Bu proje başka bir yerde değişti|此项目已在别处更改|此專案已在別處變更
+Reload|Recharger|Ricarica|再読み込み|다시 불러오기|Recarregar|Перезагрузить|Yeniden yükle|重新加载|重新載入
+Keep my copy|Garder ma copie|Mantieni la mia copia|自分のコピーを保持|내 사본 유지|Manter minha cópia|Оставить мою копию|Kopyamı koru|保留我的副本|保留我的副本
+Unsaved changes found|Modifications non enregistrées trouvées|Modifiche non salvate trovate|未保存の変更が見つかりました|저장되지 않은 변경 사항 발견|Alterações não salvas encontradas|Найдены несохранённые изменения|Kaydedilmemiş değişiklikler bulundu|发现未保存的更改|發現未儲存的變更
+Restore|Restaurer|Ripristina|復元|복원|Restaurar|Восстановить|Geri yükle|恢复|還原
+Discard|Ignorer|Scarta|破棄|버리기|Descartar|Отбросить|Vazgeç|丢弃|捨棄
+Saving|Enregistrement|Salvataggio|保存中|저장 중|Salvando|Сохранение|Kaydediliyor|保存中|儲存中`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

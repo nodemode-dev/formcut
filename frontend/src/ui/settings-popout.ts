@@ -11,6 +11,7 @@ import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
 import { buildModePanel } from "./mode-popout";
+import { autosaveEnabled, setAutosaveEnabled } from "../engine/persistence";
 
 const PAGES = [
   ["project", "set.project", "sliders"],
@@ -100,6 +101,12 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   row(size, "set.fps", fps);
   const commit = () => engine.dispatch("project.settings", { width: Number(width.value), height: Number(height.value), fps: Number(fps.value) });
   for (const field of [width, height, fps]) field.addEventListener("change", commit);
+  const saving = group(project, "save.autosave", "save.autosave.hint");
+  const autosaveBox = document.createElement("input");
+  autosaveBox.type = "checkbox";
+  autosaveBox.checked = autosaveEnabled();
+  autosaveBox.addEventListener("change", () => setAutosaveEnabled(autosaveBox.checked));
+  row(saving, "save.autosave", autosaveBox);
 
   // --- playback --------------------------------------------------------------
   const playback = view("playback");

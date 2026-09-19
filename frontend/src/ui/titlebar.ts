@@ -2,7 +2,7 @@ import { fileMenu } from "./file-menu";
 import { text } from "../i18n/text";
 import { escapeHtml } from "./safe-text";
 import type { ProjectEngine } from "../engine/project";
-import { listProjects, newProject, openProject, saveProject } from "../engine/persistence";
+import { listProjects, newProject, openProject, saveProject, installAutosave } from "../engine/persistence";
 import { exportProject } from "./export-job";
 import { icon } from "./icons";
 import { t } from "../i18n";
@@ -69,6 +69,21 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     const next = text(state.saved ? "saved" : "edited");
     if (saved.textContent !== next) saved.textContent = next;
     if (title.textContent !== state.title) title.textContent = state.title;
+  });
+  const conflictBar = document.createElement("div");
+  conflictBar.className = "conflict-bar";
+  conflictBar.hidden = true;
+  conflictBar.innerHTML = `<span>${t("save.conflict")}</span><button class="tool-chip" data-ref="conflict-reload">${t("save.reload")}</button><button class="tool-chip" data-ref="conflict-keep">${t("save.keep")}</button>`;
+  el.append(conflictBar);
+  conflictBar.querySelector('[data-ref="conflict-reload"]')!.addEventListener("click", () => {
+    conflictBar.hidden = true;
+    const id = engine.snapshot.projectId;
+    if (id) void openProject(engine, id);
+  });
+  conflictBar.querySelector('[data-ref="conflict-keep"]')!.addEventListener("click", () => { conflictBar.hidden = true; });
+  installAutosave(engine, (state) => {
+    if (state === "conflict") { if (conflictBar.hidden) conflictBar.hidden = false; return; }
+    if (state === "saving") { const label = text("Saving"); if (saved.textContent !== label) saved.textContent = label; }
   });
   title.addEventListener("click", () => {
     titleInput.value = engine.snapshot.title;
