@@ -113,3 +113,30 @@ def status() -> dict:
             for name, members in CONTAINERS.items()
         },
     }
+
+
+# X3: 10-bit is offered only where the encoder supports it; H.264 stays 8-bit
+# because the 10-bit profile is poorly supported by the players people use.
+TEN_BIT = {
+    "libx265": "yuv420p10le",
+    "libsvtav1": "yuv420p10le",
+    "libaom-av1": "yuv420p10le",
+    "libvpx-vp9": "yuv420p10le",
+    "hevc_videotoolbox": "p010le",
+    "hevc_nvenc": "p010le",
+    "hevc_qsv": "p010le",
+    "av1_nvenc": "p010le",
+    "av1_qsv": "p010le",
+}
+
+
+def pixel_format(encoder: str, ten_bit: bool) -> str:
+    """The pixel format to encode with; falls back to 8-bit where unsupported."""
+    if ten_bit and encoder in TEN_BIT:
+        return TEN_BIT[encoder]
+    return "yuv420p"
+
+
+def supports_ten_bit(codec: str) -> bool:
+    chosen = choose(codec)
+    return bool(chosen and chosen in TEN_BIT)

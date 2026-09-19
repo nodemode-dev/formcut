@@ -25,7 +25,7 @@ from .audio_render import processed_clip_audio, RATE
 from .media import MEDIA_DIR, reversed_path
 from .paths import DATA_DIR
 from .frame_cache import FrameCache, ReadAhead
-from .encoders import choose as choose_encoder, tier_flags, status as encoder_status
+from .encoders import choose as choose_encoder, tier_flags, status as encoder_status, pixel_format, supports_ten_bit
 from .matte_cache import matte_key, sample_times, store as matte_store, progress as matte_progress
 from . import jobs
 
@@ -42,6 +42,9 @@ class RenderInput(BaseModel):
     format: str = "mp4"
     quality: str = "high"
     codec: str | None = None
+    tenBit: bool = False
+    size: str | None = None
+    rate: str | None = None
 
 
 def checked(body: RenderInput) -> dict:
@@ -56,6 +59,8 @@ def capabilities():
     encoders = encoder_status()
     return {"compositor": gpu.status(), "shared_preview_export": True, "formats": ["mp4", "webm"],
             "frame_format": "png", "encoders": encoders,
+            "tenBit": {codec: supports_ten_bit(codec) for codec in ("h264", "hevc", "av1", "vp9")},
+            "sizes": list(SIZE_PRESETS), "rates": list(RATE_PRESETS),
             "codecs": encoders["containers"]}
 
 
@@ -167,7 +172,31 @@ def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) ->
         worker.close()
 
 
-def export_media(project: dict, job_id: str, report, cancelled, format: str, quality: str, codec_name: str | None = None) -> dict:
+SIZE_PRESETS = {"720p": 720, "1080p": 1080, "1440p": 1440, "2160p": 2160}
+# X4: rates stored as exact fractions; integer rates stay acceptable.
+RATE_PRESETS = {
+    "23.976": (24000, 1001), "24": (24, 1), "25": (25, 1), "29.97": (30000, 1001),
+    "30": (30, 1), "50": (50, 1), "59.94": (60000, 1001), "60": (60, 1),
+}
+
+
+def resize_for(project: dict, size: str | None) -> tuple[int, int]:
+    """A preset names the SHORT side; the timeline's aspect decides the rest."""
+    width, height = int(project["width"]), int(project["height"])
+    short = SIZE_PRESETS.get(size or "")
+    if not short:
+        return width, height
+    if width <= height:
+        out_w = short
+        out_h = max(2, round(short * height / width))
+    else:
+        out_h = short
+        out_w = max(2, round(short * width / height))
+    return out_w - (out_w % 2), out_h - (out_h % 2)
+
+
+def export_media(project: dict, job_id: str, report, cancelled, format: str, quality: str, codec_name: str | None = None,
+                 ten_bit: bool = False, size: str | None = None, rate: str | None = None) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     path = OUTPUTS / (job_id + "." + format)
     audio = OUTPUTS / (job_id + ".wav")
@@ -189,12 +218,16 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
         if not encoder:
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
+        pix = pixel_format(encoder, ten_bit)
+        out_w, out_h = resize_for(project, size)
+        num, den = RATE_PRESETS.get(rate or "", (0, 0))
+        out_rate = f"{num}/{den}" if num else str(fps)
         # `audio` is already the temporary wav path in this scope, so the audio
         # codec flags need their own name.
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags]
         count = math.ceil(project["duration"] * fps)
-        command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", *codec, "-pix_fmt", "yuv420p", "-t", str(project["duration"]), str(path)]
+        command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2", "-r", out_rate, *codec, "-pix_fmt", pix, "-t", str(project["duration"]), str(path)]
         with log.open("wb") as errors:
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=errors)
             # R5: render chunks on a bounded worker pool and feed the encoder in
@@ -224,7 +257,8 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
             process.wait(timeout=600)
         if process.returncode:
             raise ValueError(log.read_text(errors="replace")[-2000:])
-        return {"file": str(path), "name": "formcut-export." + format, "media_type": "video/mp4" if format == "mp4" else "video/webm", "frames": count, "width": renderer.width, "height": renderer.height, "codec": wanted, "encoder": encoder}
+        return {"file": str(path), "name": "formcut-export." + format, "media_type": "video/mp4" if format == "mp4" else "video/webm", "frames": count, "width": out_w, "height": out_h, "codec": wanted, "encoder": encoder,
+                "pixelFormat": pix, "rate": out_rate}
     except BaseException:
         if process and process.poll() is None:
             process.kill()
@@ -242,11 +276,15 @@ def export(body: RenderInput):
     project = checked(body)
     if body.format not in ("mp4", "webm") or body.quality not in ("high", "medium", "low"):
         raise HTTPException(422, "Unknown export format or quality")
+    if body.size is not None and body.size not in SIZE_PRESETS:
+        raise HTTPException(422, "Unknown export size")
+    if body.rate is not None and body.rate not in RATE_PRESETS:
+        raise HTTPException(422, "Unknown export rate")
     if body.codec is not None:
         allowed = encoder_status()["containers"].get(body.format, [])
         if body.codec not in allowed:
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
-    return jobs.submit("export", lambda job_id, report, cancelled: export_media(project, job_id, report, cancelled, body.format, body.quality, body.codec))
+    return jobs.submit("export", lambda job_id, report, cancelled: export_media(project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate))
 
 
 @router.post("/audio", status_code=202)
