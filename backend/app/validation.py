@@ -16,6 +16,29 @@ def clip_values(clip):
         value = (clip.get('crop') or {}).get(edge)
         if value is not None:
             number(value, 'crop ' + edge, 0, 0.45)
+    mask = clip.get('mask') or {}
+    if mask:
+        from .renderer import MASK_SHAPES
+        shape = mask.get('shape')
+        if shape not in set(MASK_SHAPES) | {'linear', 'path'}:
+            raise ValueError('Unknown mask shape')
+        if shape == 'path':
+            points = mask.get('points') or []
+            if not isinstance(points, list) or not 2 <= len(points) <= 400:
+                raise ValueError('A drawn mask needs between two and four hundred points')
+            for point in points:
+                for field, low, high in [('x', -2, 3), ('y', -2, 3), ('inX', -3, 3), ('inY', -3, 3), ('outX', -3, 3), ('outY', -3, 3)]:
+                    if point.get(field) is not None:
+                        number(point[field], 'path ' + field, low, high)
+        if mask.get('angle') is not None:
+            number(mask['angle'], 'mask angle', -360, 360)
+    for entry in clip.get('keyframes') or []:
+        handles = entry.get('handles')
+        if handles is not None:
+            if not isinstance(handles, list) or len(handles) != 4:
+                raise ValueError('An easing curve needs four handle values')
+            for value in handles:
+                number(value, 'easing handle', -5, 5)
     panel = clip.get('colour') or {}
     if panel:
         for name, low, high in [('temperature', 2000, 11000), ('tint', -100, 100), ('saturation', -100, 100),
@@ -43,7 +66,8 @@ def clip_values(clip):
         raise ValueError('Too many keyframes')
     for frame in frames:
         number(frame['t'], 'keyframe time', -86400, 86400)
-        if frame.get('interp', 'linear') not in ('linear', 'hold', 'ease', 'easeIn', 'easeOut'):
+        from .timing import EASINGS
+        if frame.get('interp', 'linear') not in set(EASINGS) | {'hold', 'bezier'}:
             raise ValueError('Unknown interpolation')
         for key, value in frame.get('props', {}).items():
             if key not in ('posX', 'posY', 'scale', 'rotation', 'opacity'):

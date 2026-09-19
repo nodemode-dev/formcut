@@ -27,15 +27,15 @@ export function easeProgress(p: number, interp: KeyframeInterp): number {
 export function propPoints(
   clip: Clip,
   prop: KeyframeProp,
-): Array<{ t: number; v: number; interp: KeyframeInterp }> {
+): Array<{ t: number; v: number; interp: KeyframeInterp; handles?: [number, number, number, number] }> {
   return (clip.keyframes ?? [])
     .filter((k) => k.props[prop] !== undefined)
-    .map((k) => ({ t: k.t, v: k.props[prop]!, interp: k.interp ?? "linear" }))
+    .map((k) => ({ t: k.t, v: k.props[prop]!, interp: k.interp ?? "linear", handles: k.handles }))
     .sort((a, b) => a.t - b.t);
 }
 
 export function samplePoints(
-  points: Array<{ t: number; v: number; interp: KeyframeInterp }>,
+  points: Array<{ t: number; v: number; interp: KeyframeInterp; handles?: [number, number, number, number] }>,
   local: number,
 ): number | undefined {
   if (points.length === 0) return undefined;

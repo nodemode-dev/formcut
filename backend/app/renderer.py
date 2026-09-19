@@ -98,6 +98,85 @@ def paint_text(draw, origin, content: str, font, fill, align: str, spacing: floa
             cursor += font.getlength(char) + tracking
 
 
+# Mask shapes (13 plus a drawn path). Each returns points in a unit square, so
+# one routine can scale, rotate and fill any of them; a drawn path carries its
+# own anchors and bezier handles instead.
+def _regular(sides: int, turn: float = -0.5) -> list[tuple[float, float]]:
+    return [(0.5 + 0.5 * math.cos(2 * math.pi * (i / sides + turn / sides)),
+             0.5 + 0.5 * math.sin(2 * math.pi * (i / sides + turn / sides))) for i in range(sides)]
+
+
+def _star(points: int, inner: float) -> list[tuple[float, float]]:
+    out = []
+    for i in range(points * 2):
+        radius = 0.5 if i % 2 == 0 else 0.5 * inner
+        angle = math.pi * i / points - math.pi / 2
+        out.append((0.5 + radius * math.cos(angle), 0.5 + radius * math.sin(angle)))
+    return out
+
+
+def _heart() -> list[tuple[float, float]]:
+    out = []
+    for i in range(72):
+        t = 2 * math.pi * i / 72
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        out.append((0.5 + x / 34.0, 0.5 - y / 34.0))
+    return out
+
+
+MASK_SHAPES = {
+    "rect": [(0, 0), (1, 0), (1, 1), (0, 1)],
+    "ellipse": [(0.5 + 0.5 * math.cos(2 * math.pi * i / 64), 0.5 + 0.5 * math.sin(2 * math.pi * i / 64)) for i in range(64)],
+    "triangle": _regular(3),
+    "diamond": [(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)],
+    "pentagon": _regular(5),
+    "hexagon": _regular(6),
+    "octagon": _regular(8),
+    "star": _star(5, 0.42),
+    "star6": _star(6, 0.55),
+    "heart": _heart(),
+    "cross": [(0.35, 0), (0.65, 0), (0.65, 0.35), (1, 0.35), (1, 0.65), (0.65, 0.65),
+              (0.65, 1), (0.35, 1), (0.35, 0.65), (0, 0.65), (0, 0.35), (0.35, 0.35)],
+    "arrow": [(0, 0.3), (0.6, 0.3), (0.6, 0.05), (1, 0.5), (0.6, 0.95), (0.6, 0.7), (0, 0.7)],
+    "chevron": [(0, 0.1), (0.45, 0.5), (0, 0.9), (0.25, 0.9), (0.7, 0.5), (0.25, 0.1)],
+    "trapezoid": [(0.2, 0), (0.8, 0), (1, 1), (0, 1)],
+}
+
+
+def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float]]:
+    """A drawn path: cubic segments between anchors, using each anchor's handles."""
+    usable = [p for p in points if isinstance(p, dict) and "x" in p and "y" in p]
+    if len(usable) < 2:
+        return []
+    out: list[tuple[float, float]] = []
+    for index, anchor in enumerate(usable):
+        nxt = usable[(index + 1) % len(usable)]
+        if index + 1 == len(usable):
+            # An open path is closed straight back to the start, so the fill is
+            # always a solid region rather than an outline.
+            pass
+        x0, y0 = float(anchor["x"]), float(anchor["y"])
+        x3, y3 = float(nxt["x"]), float(nxt["y"])
+        x1 = x0 + float(anchor.get("outX", 0.0))
+        y1 = y0 + float(anchor.get("outY", 0.0))
+        x2 = x3 + float(nxt.get("inX", 0.0))
+        y2 = y3 + float(nxt.get("inY", 0.0))
+        for step in range(steps):
+            t = step / steps
+            u = 1 - t
+            out.append((u ** 3 * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t ** 3 * x3,
+                        u ** 3 * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t ** 3 * y3))
+    return out
+
+
+def mask_polygon(mask: dict) -> list[tuple[float, float]]:
+    """Unit-square points for a mask, whichever kind it is."""
+    if mask.get("shape") == "path":
+        return _bezier_path(mask.get("points") or [])
+    return [tuple(p) for p in MASK_SHAPES.get(str(mask.get("shape")), MASK_SHAPES["rect"])]
+
+
 class FrameRenderer:
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
@@ -289,10 +368,25 @@ class FrameRenderer:
                 yy, xx = np.mgrid[:h, :w]
                 side = (xx - cx) * math.sin(angle) - (yy - cy) * math.cos(angle)
                 alpha = (side >= 0).astype(np.float32)
-            elif mask["shape"] == "ellipse":
-                cv2.ellipse(alpha, ((x0 + x1) // 2, (y0 + y1) // 2), (max(1, (x1 - x0) // 2), max(1, (y1 - y0) // 2)), 0, 0, 360, 1, -1)
             else:
-                cv2.rectangle(alpha, (x0, y0), (x1, y1), 1, -1)
+                # Every other shape, drawn path included, is a polygon in a unit
+                # square scaled into the mask's box and turned by its angle, so
+                # one routine covers all of them.
+                unit = mask_polygon(mask)
+                if unit:
+                    box_w, box_h = max(1, x1 - x0), max(1, y1 - y0)
+                    if mask["shape"] == "path":
+                        points = [(px * w, py * h) for px, py in unit]
+                        cx, cy = w / 2, h / 2
+                    else:
+                        points = [(x0 + px * box_w, y0 + py * box_h) for px, py in unit]
+                        cx, cy = x0 + box_w / 2, y0 + box_h / 2
+                    turn = math.radians(float(mask.get("angle", 0)))
+                    if turn:
+                        cos_a, sin_a = math.cos(turn), math.sin(turn)
+                        points = [(cx + (px - cx) * cos_a - (py - cy) * sin_a,
+                                   cy + (px - cx) * sin_a + (py - cy) * cos_a) for px, py in points]
+                    cv2.fillPoly(alpha, [np.array(points, np.int32)], 1)
             feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
             if feather > 0:
                 alpha = cv2.GaussianBlur(alpha, (0, 0), feather)

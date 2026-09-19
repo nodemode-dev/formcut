@@ -470,5 +470,21 @@
   "local.duration": "Längste zuerst",
   "local.inlibrary": "In deiner Bibliothek",
   "speech.addmodel": "Sprachmodell hinzufügen",
-  "speech.addhint": "ONNX-Modell und zugehörige Stimmendatei angeben"
+  "speech.addhint": "ONNX-Modell und zugehörige Stimmendatei angeben",
+  "mask.triangle": "Dreieck",
+  "mask.diamond": "Raute",
+  "mask.pentagon": "Fünfeck",
+  "mask.hexagon": "Sechseck",
+  "mask.octagon": "Achteck",
+  "mask.star": "Stern",
+  "mask.star6": "Sechszackiger Stern",
+  "mask.heart": "Herz",
+  "mask.cross": "Kreuz",
+  "mask.arrow": "Pfeil",
+  "mask.chevron": "Winkel",
+  "mask.trapezoid": "Trapez",
+  "mask.linear": "Linear",
+  "mask.path": "Gezeichneter Pfad",
+  "mask.pen": "Zeichenstift",
+  "row.maskangle": "Maskenwinkel"
 }

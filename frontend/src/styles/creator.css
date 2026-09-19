@@ -107,3 +107,14 @@
 .dropdown-item[aria-pressed="true"] { color: var(--cue); }
 .canvas-typing { position: absolute; z-index: var(--z-handles); padding: 2px 4px; border: 1px solid var(--cue); background: rgb(0 0 0 / 0.55); color: #fff; font-size: 16px; text-align: center; outline: none; }
 .canvas-typing[hidden] { display: none; }
+
+/* Pen tool: the path and its anchors sit over the stage in frame coordinates. */
+.preview-pen { position: absolute; inset: 0; z-index: var(--z-handles); }
+.preview-pen[hidden] { display: none; }
+.pen-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pen-fill { fill: var(--cue-wash); }
+.pen-line { fill: none; stroke: var(--cue); stroke-width: 0.4; vector-effect: non-scaling-stroke; }
+.pen-anchors { position: absolute; inset: 0; }
+.pen-anchor, .pen-handle { position: absolute; padding: 0; border: 1px solid var(--on-cue); transform: translate(-50%, -50%); cursor: grab; }
+.pen-anchor { width: 10px; height: 10px; background: var(--cue); border-radius: 2px; }
+.pen-handle { width: 8px; height: 8px; background: var(--guide); border-radius: 50%; }

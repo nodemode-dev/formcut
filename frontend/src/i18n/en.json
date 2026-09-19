@@ -470,5 +470,21 @@
   "local.duration": "Longest first",
   "local.inlibrary": "In your library",
   "speech.addmodel": "Add a speech model",
-  "speech.addhint": "Point at an ONNX voice model and its voices file"
+  "speech.addhint": "Point at an ONNX voice model and its voices file",
+  "mask.triangle": "Triangle",
+  "mask.diamond": "Diamond",
+  "mask.pentagon": "Pentagon",
+  "mask.hexagon": "Hexagon",
+  "mask.octagon": "Octagon",
+  "mask.star": "Star",
+  "mask.star6": "Six-point star",
+  "mask.heart": "Heart",
+  "mask.cross": "Cross",
+  "mask.arrow": "Arrow",
+  "mask.chevron": "Chevron",
+  "mask.trapezoid": "Trapezoid",
+  "mask.linear": "Linear",
+  "mask.path": "Drawn path",
+  "mask.pen": "Pen tool",
+  "row.maskangle": "Mask angle"
 }

@@ -32,13 +32,21 @@ export function defaultTextStyle(content = "Title"): TextStyle {
 export const KEYFRAME_PROPS = ["posX", "posY", "scale", "rotation", "opacity"] as const;
 export type KeyframeProp = (typeof KEYFRAME_PROPS)[number];
 
-export type KeyframeInterp = "linear" | "ease" | "easeIn" | "easeOut" | "hold";
-export const KEYFRAME_INTERPS: KeyframeInterp[] = ["linear", "ease", "easeIn", "easeOut", "hold"];
+export type KeyframeInterp = "linear" | "ease" | "easeIn" | "easeOut" | "easeInOut" | "smooth" | "snap" | "overshoot" | "anticipate" | "hold" | "bezier";
+export const KEYFRAME_INTERPS: KeyframeInterp[] = ["linear", "ease", "easeIn", "easeOut", "easeInOut", "smooth", "snap", "overshoot", "anticipate", "hold", "bezier"];
+
+/** Named easings are handle positions, so every preset is a curve you can drag. */
+export const EASING_HANDLES: Record<string, [number, number, number, number]> = {
+  linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], easeIn: [0.42, 0, 1, 1],
+  easeOut: [0, 0, 0.58, 1], easeInOut: [0.42, 0, 0.58, 1], smooth: [0.45, 0.05, 0.55, 0.95],
+  snap: [0.9, 0, 1, 0.4], overshoot: [0.34, 1.56, 0.64, 1], anticipate: [0.36, -0.36, 0.66, 1],
+};
 
 export interface Keyframe {
   t: number;
   props: Partial<Record<KeyframeProp, number>>;
   interp?: KeyframeInterp;
+  handles?: [number, number, number, number];
 }
 
 export interface ClipTransition {
@@ -46,8 +54,24 @@ export interface ClipTransition {
   duration: number;
 }
 
+/** Shapes a mask may take, plus a drawn path with its own anchors. */
+export const MASK_SHAPES = ["rect", "ellipse", "triangle", "diamond", "pentagon", "hexagon",
+  "octagon", "star", "star6", "heart", "cross", "arrow", "chevron", "trapezoid", "linear", "path"] as const;
+export type MaskShape = typeof MASK_SHAPES[number];
+
+/** One anchor of a drawn mask; handles are offsets from the anchor, 0..1 of the frame. */
+export interface MaskPoint {
+  x: number;
+  y: number;
+  inX?: number;
+  inY?: number;
+  outX?: number;
+  outY?: number;
+}
+
 export interface ClipMask {
-  shape: "rect" | "ellipse" | "linear";
+  shape: MaskShape;
+  points?: MaskPoint[];
   x: number;
   y: number;
   w: number;

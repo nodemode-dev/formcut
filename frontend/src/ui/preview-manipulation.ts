@@ -273,7 +273,139 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
   });
   typing.addEventListener("blur", () => endTyping(true));
 
-  engine.subscribe((_state, event) => { if (!dragging && ["clips", "timeline", "clip-selection", "playhead"].includes(event)) { draw(); drawCrop(); } });
+
+  // Pen tool: vector path editing on the preview. Click empty canvas to add an
+  // anchor, drag while placing to pull its handles, drag an anchor or a handle
+  // to reshape, Alt-click an anchor to remove it. Handles are mirrored while
+  // dragging so a curve stays smooth unless a handle is moved on its own.
+  const pen = document.createElement("div");
+  pen.className = "preview-pen";
+  pen.hidden = true;
+  pen.innerHTML = `<svg class="pen-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path class="pen-fill" d=""></path><path class="pen-line" d=""></path><g class="pen-handles"></g></svg>
+    <div class="pen-anchors"></div>`;
+  stage.append(pen);
+  const penActive = () => stage.dataset.pen === "on";
+  const maskOf = () => {
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    const mask = found?.clip.mask;
+    return mask && mask.shape === "path" ? { clip: found!.clip, mask } : null;
+  };
+  const writePoints = (points: import("../engine/types").MaskPoint[]) => {
+    const current = maskOf();
+    if (!current) return;
+    engine.dispatch("clip.mask", { clipId: current.clip.id, mask: { ...current.mask, points } });
+  };
+  const curveFor = (points: import("../engine/types").MaskPoint[]) => {
+    if (points.length < 2) return "";
+    let d = `M ${points[0].x * 100} ${points[0].y * 100}`;
+    for (let index = 0; index < points.length; index += 1) {
+      const a = points[index], b = points[(index + 1) % points.length];
+      d += ` C ${(a.x + (a.outX ?? 0)) * 100} ${(a.y + (a.outY ?? 0)) * 100},` +
+           ` ${(b.x + (b.inX ?? 0)) * 100} ${(b.y + (b.inY ?? 0)) * 100},` +
+           ` ${b.x * 100} ${b.y * 100}`;
+    }
+    return d + " Z";
+  };
+  const drawPen = () => {
+    const current = maskOf();
+    const on = penActive() && !!current;
+    pen.hidden = !on;
+    if (!on || !current) return;
+    const points = current.mask.points ?? [];
+    const d = curveFor(points);
+    pen.querySelector<SVGPathElement>(".pen-fill")!.setAttribute("d", d);
+    pen.querySelector<SVGPathElement>(".pen-line")!.setAttribute("d", d);
+    const anchors = pen.querySelector<HTMLElement>(".pen-anchors")!;
+    anchors.replaceChildren(...points.flatMap((point, index) => {
+      const nodes: HTMLElement[] = [];
+      const anchor = document.createElement("button");
+      anchor.className = "pen-anchor";
+      anchor.dataset.index = String(index);
+      anchor.style.left = `${point.x * 100}%`;
+      anchor.style.top = `${point.y * 100}%`;
+      nodes.push(anchor);
+      for (const side of ["in", "out"] as const) {
+        const dx = side === "in" ? point.inX ?? 0 : point.outX ?? 0;
+        const dy = side === "in" ? point.inY ?? 0 : point.outY ?? 0;
+        if (!dx && !dy) continue;
+        const handle = document.createElement("button");
+        handle.className = "pen-handle";
+        handle.dataset.index = String(index);
+        handle.dataset.side = side;
+        handle.style.left = `${(point.x + dx) * 100}%`;
+        handle.style.top = `${(point.y + dy) * 100}%`;
+        nodes.push(handle);
+      }
+      return nodes;
+    }));
+  };
+  const penPoint = (event: PointerEvent) => {
+    const box = pen.getBoundingClientRect();
+    return { x: (event.clientX - box.left) / box.width, y: (event.clientY - box.top) / box.height };
+  };
+  pen.addEventListener("pointerdown", (event) => {
+    const current = maskOf();
+    if (!current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const points = (current.mask.points ?? []).map((p) => ({ ...p }));
+    const target = (event.target as HTMLElement).closest<HTMLElement>(".pen-anchor, .pen-handle");
+    const at = penPoint(event);
+    let index: number;
+    let side: "in" | "out" | null = null;
+    if (target?.classList.contains("pen-handle")) {
+      index = Number(target.dataset.index);
+      side = target.dataset.side as "in" | "out";
+    } else if (target?.classList.contains("pen-anchor")) {
+      index = Number(target.dataset.index);
+      if (event.altKey && points.length > 2) {
+        points.splice(index, 1);
+        writePoints(points);
+        drawPen();
+        return;
+      }
+    } else {
+      // A new anchor lands where the click did; dragging from here pulls its
+      // handles, which is how a curve is drawn rather than a corner.
+      points.push({ x: at.x, y: at.y });
+      index = points.length - 1;
+      side = "out";
+    }
+    dragging = true;
+    pen.setPointerCapture(event.pointerId);
+    const move = (next: PointerEvent) => {
+      const now = penPoint(next);
+      const point = points[index];
+      if (!point) return;
+      if (side) {
+        const dx = now.x - point.x, dy = now.y - point.y;
+        if (side === "out") {
+          point.outX = dx; point.outY = dy;
+          if (!next.altKey) { point.inX = -dx; point.inY = -dy; }
+        } else {
+          point.inX = dx; point.inY = dy;
+          if (!next.altKey) { point.outX = -dx; point.outY = -dy; }
+        }
+      } else {
+        point.x = now.x; point.y = now.y;
+      }
+      writePoints(points);
+      drawPen();
+    };
+    const release = () => {
+      pen.removeEventListener("pointermove", move);
+      dragging = false;
+      writePoints(points);
+      drawPen();
+    };
+    pen.addEventListener("pointermove", move);
+    pen.addEventListener("pointerup", release, { once: true });
+    pen.addEventListener("pointercancel", release, { once: true });
+  });
+  stage.addEventListener("formcut:pen-mode", () => drawPen());
+  engine.subscribe((_state, event) => { if (!dragging && ["clips", "timeline", "clip-selection", "playhead"].includes(event)) { draw(); drawCrop(); drawPen(); } });
   stage.addEventListener("formcut:crop-mode", () => { drawCrop(); draw(); });
   document.addEventListener("change", event => { if ((event.target as HTMLElement).matches("[data-brush]")) draw(); });
   // A pane resize changes the stage box, so the overlays are redrawn from the

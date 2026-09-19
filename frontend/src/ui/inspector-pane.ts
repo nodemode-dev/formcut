@@ -1,7 +1,7 @@
 import { installFontTools } from "./font-tools";
 import { installTracking } from "./tracking";
 import type { ProjectEngine } from "../engine/project";
-import { defaultTextStyle, defaultTransform, type Clip, type ClipTransform } from "../engine/types";
+import { defaultTextStyle, defaultTransform, MASK_SHAPES, type Clip, type ClipTransform, type MaskShape } from "../engine/types";
 import { icon } from "./icons";
 import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
@@ -195,11 +195,16 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span>${t("row.maskshape")}</span>
           <select class="mini-select" data-ref="mask-shape">
             <option value="">${t("mask.none")}</option>
-            <option value="rect">${t("mask.rect")}</option>
-            <option value="ellipse">${t("mask.ellipse")}</option>
+            ${MASK_SHAPES.map((shape) => `<option value="${shape}">${t(`mask.${shape}`)}</option>`).join("")}
           </select>
           <span class="prop-aux"></span>
         </div>
+        <div class="prop-row" data-mask-pen hidden>
+          <span>${t("mask.pen")}</span>
+          <button class="toggle" data-ref="mask-draw" aria-label="${t("mask.pen")}"></button>
+          <span class="prop-aux" data-ref="mask-points"></span>
+        </div>
+        ${propRow(t("row.maskangle"), "maskA", 0, "°")}
         ${propRow(t("row.maskx"), "maskX", 10, "%")}
         ${propRow(t("row.masky"), "maskY", 10, "%")}
         ${propRow(t("row.maskw"), "maskW", 80, "%")}
@@ -427,6 +432,15 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     engine.dispatch("clip.mute", { clipId: found.clip.id, muted: !found.clip.muted });
   });
 
+  const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
+  drawToggle?.addEventListener("click", () => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (!stage) return;
+    const on = stage.dataset.pen === "on";
+    if (on) delete stage.dataset.pen; else stage.dataset.pen = "on";
+    drawToggle.classList.toggle("is-on", !on);
+    stage.dispatchEvent(new CustomEvent("formcut:pen-mode"));
+  });
   const reverseState = el.querySelector<HTMLElement>('[data-ref="reverse-state"]')!;
   el.querySelector('[data-ref="crop-mode"]')!.addEventListener("click", () => {
     const preview = document.querySelector<HTMLElement>(".stage");
@@ -527,16 +541,29 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   });
 
   const maskShape = el.querySelector<HTMLSelectElement>('[data-ref="mask-shape"]')!;
-  const MASK_FIELDS = ["maskX", "maskY", "maskW", "maskH", "maskF"] as const;
+  const MASK_FIELDS = ["maskX", "maskY", "maskW", "maskH", "maskF", "maskA"] as const;
+  const currentMaskPoints = () => {
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    return found?.clip.mask?.points ?? [
+      { x: 0.3, y: 0.3 }, { x: 0.7, y: 0.35 }, { x: 0.55, y: 0.72 },
+    ];
+  };
   const dispatchMask = () => {
     const state = engine.snapshot;
     if (!state.selectedClipId) return;
-    const shape = maskShape.value as "" | "rect" | "ellipse";
+    const shape = maskShape.value as "" | MaskShape;
     const num = (ref: string, fb: number) => Number(inputs.get(ref)?.value ?? fb) || fb;
     engine.dispatch("clip.mask", {
       clipId: state.selectedClipId,
       mask: shape
-        ? { shape, x: num("maskX", 10), y: num("maskY", 10), w: num("maskW", 80), h: num("maskH", 80), feather: num("maskF", 0) }
+        ? {
+            shape, x: num("maskX", 10), y: num("maskY", 10), w: num("maskW", 80), h: num("maskH", 80),
+            feather: num("maskF", 0), angle: num("maskA", 0),
+            // A drawn path keeps the anchors it already has; the pen tool on the
+            // canvas is what edits them.
+            ...(shape === "path" ? { points: currentMaskPoints() } : {}),
+          }
         : null,
     });
   };

@@ -470,5 +470,21 @@
   "local.duration": "Más largo primero",
   "local.inlibrary": "En tu biblioteca",
   "speech.addmodel": "Añadir un modelo de voz",
-  "speech.addhint": "Indica un modelo ONNX y su archivo de voces"
+  "speech.addhint": "Indica un modelo ONNX y su archivo de voces",
+  "mask.triangle": "Triángulo",
+  "mask.diamond": "Rombo",
+  "mask.pentagon": "Pentágono",
+  "mask.hexagon": "Hexágono",
+  "mask.octagon": "Octágono",
+  "mask.star": "Estrella",
+  "mask.star6": "Estrella de seis puntas",
+  "mask.heart": "Corazón",
+  "mask.cross": "Cruz",
+  "mask.arrow": "Flecha",
+  "mask.chevron": "Galón",
+  "mask.trapezoid": "Trapecio",
+  "mask.linear": "Lineal",
+  "mask.path": "Trazado",
+  "mask.pen": "Herramienta pluma",
+  "row.maskangle": "Ángulo de la máscara"
 }

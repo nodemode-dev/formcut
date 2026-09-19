@@ -45,17 +45,80 @@ def timeline_time(clip: dict, source: float) -> float:
     return (low + high) / 2
 
 
-def ease(p: float, mode: str) -> float:
+def cubic_bezier(p: float, x1: float, y1: float, x2: float, y2: float) -> float:
+    """The CSS cubic-bezier easing: solve x(t) = p, return y(t).
+
+    The named modes are shorthands for particular handle positions, so a curve
+    dragged in the graph editor and a preset behave the same way; solving is
+    Newton with a bisection fallback, because a curve with a near-flat segment
+    can defeat Newton on its own.
+    """
+    if p <= 0:
+        return 0.0
+    if p >= 1:
+        return 1.0
+
+    def curve(t: float, a: float, b: float) -> float:
+        return 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t ** 2 * b + t ** 3
+
+    def slope(t: float, a: float, b: float) -> float:
+        return 3 * (1 - t) ** 2 * a + 6 * (1 - t) * t * (b - a) + 3 * t ** 2 * (1 - b)
+
+    t = p
+    for _ in range(8):
+        error = curve(t, x1, x2) - p
+        if abs(error) < 1e-6:
+            return curve(t, y1, y2)
+        gradient = slope(t, x1, x2)
+        if abs(gradient) < 1e-6:
+            break
+        t -= error / gradient
+    low, high = 0.0, 1.0
+    t = p
+    for _ in range(32):
+        value = curve(t, x1, x2)
+        if abs(value - p) < 1e-6:
+            break
+        if value < p:
+            low = t
+        else:
+            high = t
+        t = (low + high) / 2
+    return curve(t, y1, y2)
+
+
+# Named modes are handle positions, so the graph editor can show every preset
+# as a curve the person can then drag.
+EASINGS: dict[str, tuple[float, float, float, float]] = {
+    "linear": (0.0, 0.0, 1.0, 1.0),
+    "ease": (0.25, 0.1, 0.25, 1.0),
+    "easeIn": (0.42, 0.0, 1.0, 1.0),
+    "easeOut": (0.0, 0.0, 0.58, 1.0),
+    "easeInOut": (0.42, 0.0, 0.58, 1.0),
+    "smooth": (0.45, 0.05, 0.55, 0.95),
+    "snap": (0.9, 0.0, 1.0, 0.4),
+    "overshoot": (0.34, 1.56, 0.64, 1.0),
+    "anticipate": (0.36, -0.36, 0.66, 1.0),
+}
+
+
+def ease(p: float, mode, handles=None) -> float:
+    """Eased progress. `mode` is a named easing or "bezier" with four handles."""
     p = max(0.0, min(1.0, p))
     if mode == "hold":
         return 0.0
-    if mode == "easeIn":
-        return p * p
-    if mode == "easeOut":
-        return 1 - (1 - p) ** 2
-    if mode == "ease":
-        return p * p * (3 - 2 * p)
-    return p
+    if handles is None and isinstance(mode, (list, tuple)) and len(mode) == 4:
+        handles = mode
+    if handles and len(handles) == 4:
+        try:
+            x1, y1, x2, y2 = (float(v) for v in handles)
+        except (TypeError, ValueError):
+            return p
+        return cubic_bezier(p, min(1.0, max(0.0, x1)), y1, min(1.0, max(0.0, x2)), y2)
+    curve = EASINGS.get(str(mode))
+    if not curve:
+        return p
+    return cubic_bezier(p, *curve)
 
 
 def property_at(clip: dict, prop: str, local: float, default: float) -> float:
@@ -66,7 +129,7 @@ def property_at(clip: dict, prop: str, local: float, default: float) -> float:
         return points[0]["props"][prop]
     for a, b in zip(points, points[1:]):
         if local < b["t"]:
-            p = ease((local - a["t"]) / max(1e-9, b["t"] - a["t"]), a.get("interp", "linear"))
+            p = ease((local - a["t"]) / max(1e-9, b["t"] - a["t"]), a.get("interp", "linear"), a.get("handles"))
             return a["props"][prop] + (b["props"][prop] - a["props"][prop]) * p
     return points[-1]["props"][prop]
 
@@ -97,7 +160,7 @@ def keyed_value(points, local: float, default: float) -> float:
         return float(usable[0]["value"])
     for a, b in zip(usable, usable[1:]):
         if local < b["t"]:
-            p = ease((local - a["t"]) / max(1e-9, b["t"] - a["t"]), a.get("interp", "linear"))
+            p = ease((local - a["t"]) / max(1e-9, b["t"] - a["t"]), a.get("interp", "linear"), a.get("handles"))
             return float(a["value"]) + (float(b["value"]) - float(a["value"])) * p
     return float(usable[-1]["value"])
 

@@ -1,3 +1,4 @@
+import { easeAt } from "../engine/timing";
 import { KEYFRAME_PROPS, type Clip, type KeyframeProp } from "../engine/types";
 import { propPoints, samplePoints, sampledTransform } from "../engine/keyframes";
 import type { ProjectEngine } from "../engine/project";
@@ -148,7 +149,22 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       } else {
         const sorted = [...points].sort((a, b) => a.t - b.t);
         d = `M${(clip.start * px).toFixed(1)} ${yOf(sorted[0].v).toFixed(1)}`;
-        for (const point of sorted) d += `L${((clip.start + point.t) * px).toFixed(1)} ${yOf(point.v).toFixed(1)}`;
+        // The lane used to join keyframes with straight lines whatever their
+        // easing, so an eased move looked exactly like a linear one. Each
+        // segment is now sampled through the same easing the renderer applies.
+        for (let index = 0; index < sorted.length; index += 1) {
+          const point = sorted[index];
+          const previous = sorted[index - 1];
+          if (!previous) { d += `L${((clip.start + point.t) * px).toFixed(1)} ${yOf(point.v).toFixed(1)}`; continue; }
+          const steps = Math.max(2, Math.min(48, Math.round((point.t - previous.t) * px / 6)));
+          for (let step = 1; step <= steps; step += 1) {
+            const progress = step / steps;
+            const eased = easeAt(progress, previous.interp, previous.handles);
+            const time = previous.t + (point.t - previous.t) * progress;
+            const value = previous.v + (point.v - previous.v) * eased;
+            d += `L${((clip.start + time) * px).toFixed(1)} ${yOf(value).toFixed(1)}`;
+          }
+        }
         d += `L${((clip.start + clip.duration) * px).toFixed(1)} ${yOf(sorted[sorted.length - 1].v).toFixed(1)}`;
       }
       setAttr(path, "d", d);

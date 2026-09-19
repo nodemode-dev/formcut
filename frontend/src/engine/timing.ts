@@ -1,3 +1,4 @@
+import { EASING_HANDLES } from "./types";
 import type { Clip, Keyframe } from "./types";
 
 export interface SpeedPoint { t: number; speed: number }
@@ -58,4 +59,38 @@ export function retimedKeys(keys: Keyframe[] | undefined, offset: number, durati
   if (!keys?.length) return undefined;
   void duration;
   return keys.map(k => ({ ...structuredClone(k), t: k.t - offset }));
+}
+
+
+/** The engine's easing, mirrored so the graph draws the curve that will render. */
+export function cubicBezier(p: number, x1: number, y1: number, x2: number, y2: number): number {
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  const curve = (t: number, a: number, b: number) => 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t ** 2 * b + t ** 3;
+  const slope = (t: number, a: number, b: number) => 3 * (1 - t) ** 2 * a + 6 * (1 - t) * t * (b - a) + 3 * t ** 2 * (1 - b);
+  let t = p;
+  for (let i = 0; i < 8; i += 1) {
+    const error = curve(t, x1, x2) - p;
+    if (Math.abs(error) < 1e-6) return curve(t, y1, y2);
+    const gradient = slope(t, x1, x2);
+    if (Math.abs(gradient) < 1e-6) break;
+    t -= error / gradient;
+  }
+  let low = 0, high = 1;
+  t = p;
+  for (let i = 0; i < 32; i += 1) {
+    const value = curve(t, x1, x2);
+    if (Math.abs(value - p) < 1e-6) break;
+    if (value < p) low = t; else high = t;
+    t = (low + high) / 2;
+  }
+  return curve(t, y1, y2);
+}
+
+export function easeAt(p: number, interp?: string, handles?: [number, number, number, number]): number {
+  const clamped = Math.max(0, Math.min(1, p));
+  if (interp === "hold") return 0;
+  const curve = handles && handles.length === 4 ? handles : EASING_HANDLES[interp ?? "linear"];
+  if (!curve) return clamped;
+  return cubicBezier(clamped, Math.min(1, Math.max(0, curve[0])), curve[1], Math.min(1, Math.max(0, curve[2])), curve[3]);
 }

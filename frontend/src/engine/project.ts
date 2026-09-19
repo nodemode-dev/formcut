@@ -1,3 +1,4 @@
+import { MASK_SHAPES } from "./types";
 import {
   defaultTextStyle,
   defaultTransform,
@@ -598,13 +599,26 @@ export class ProjectEngine {
         this.pushHistory();
         if (p.mask) {
           const cl = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+          // Every shape the renderer knows is accepted, including a drawn
+          // path with its own anchors; the old clamp collapsed anything that
+          // was not an ellipse into a rectangle.
+          const shape = MASK_SHAPES.includes(p.mask.shape) ? p.mask.shape : "rect";
           found.clip.mask = {
-            shape: p.mask.shape === "ellipse" ? "ellipse" : "rect",
+            shape,
             x: cl(p.mask.x, 0, 100),
             y: cl(p.mask.y, 0, 100),
             w: cl(p.mask.w, 1, 100),
             h: cl(p.mask.h, 1, 100),
             feather: cl(p.mask.feather, 0, 50),
+            angle: cl(p.mask.angle ?? 0, -360, 360),
+            ...(p.mask.invert ? { invert: true } : {}),
+            ...(shape === "path"
+              ? { points: (p.mask.points ?? []).slice(0, 400).map((point) => ({
+                  x: cl(point.x, -2, 3), y: cl(point.y, -2, 3),
+                  ...(point.inX || point.inY ? { inX: cl(point.inX ?? 0, -3, 3), inY: cl(point.inY ?? 0, -3, 3) } : {}),
+                  ...(point.outX || point.outY ? { outX: cl(point.outX ?? 0, -3, 3), outY: cl(point.outY ?? 0, -3, 3) } : {}),
+                })) }
+              : {}),
           };
         } else {
           found.clip.mask = undefined;
