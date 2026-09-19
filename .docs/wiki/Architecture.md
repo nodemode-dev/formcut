@@ -83,3 +83,7 @@ A colour panel runs ahead of the effect stack; effect parameters, volume and ani
 
 ### v0.60.0
 Mattes are computed once into a cache and only read at render time; encoders are confirmed by encoding rather than by listing; export size estimates come from a model fitted to real output.
+
+
+### v0.61.0
+Effects can be added as data packages with a filter allowlist; templates carry their own fonts, LUTs, shaders, fixed media and a poster; model downloads are pinned; the RPC surface covers every interface edit.

@@ -97,3 +97,7 @@ A thirteen-control colour panel, imported LUTs as library looks with intensity, 
 
 ### v0.60.0
 Remove background in Easy with four modes, and an export sheet offering codec, size, 10-bit and a live size estimate.
+
+
+### v0.61.0
+Import an effect package, open a template that brings its own music and fonts, follow the OS light or dark setting, and drop in a corrected translation without waiting for a release.

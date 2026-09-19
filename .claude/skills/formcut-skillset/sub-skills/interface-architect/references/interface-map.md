@@ -145,3 +145,7 @@ Types gain `ColourPanel` with `COLOUR_NEUTRAL`, `ValueKey` for effect and volume
 ## v0.60.0 delta
 
 The inspector gains an Easy `section.removebg` with Off, Automatic, Brush and Chroma key plus feather and brush sliders and job progress, writing the same cutout and key fields Advanced writes. The export sheet gains codec choices filled from `/api/render/status`, size presets, a 10-bit toggle and a live estimate from `/api/render/estimate` that refreshes on open and on every option change; `exportProject` carries codec, tenBit, size and rate.
+
+## v0.61.0 delta
+
+`ui/appearance.ts` gains `AUTOMATIC` with `resolveTheme` and an OS media-query watch; `index.html`'s pre-paint block resolves Automatic too, so following the OS is applied before the first paint. `i18n/index.ts` gains `loadExtraLocales`, merging locale files dropped into the data directory over the built-in strings and listing them by their own `language.name`.
