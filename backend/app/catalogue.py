@@ -172,6 +172,54 @@ def group_of(key: str, groups: dict) -> str:
     return next((name for name, keys in groups.items() if key in keys), "Other")
 
 
+# One spec per parameter key the pixel pipeline reads. A catalogue entry's
+# declarations derive from its defaults: the key names the spec, the entry's
+# own value is the default. The renderer clamps incoming values to these.
+PARAM_SPECS = {
+    "exposure": {"min": -2.0, "max": 2.0, "step": 0.01, "unit": "stops", "group": "tone"},
+    "contrast": {"min": 0.2, "max": 3.0, "step": 0.01, "unit": "x", "group": "tone"},
+    "gamma": {"min": 0.2, "max": 3.0, "step": 0.01, "unit": "", "group": "tone"},
+    "lift": {"min": -0.25, "max": 0.25, "step": 0.005, "unit": "", "group": "tone"},
+    "saturation": {"min": 0.0, "max": 3.0, "step": 0.01, "unit": "x", "group": "color"},
+    "vibrance": {"min": -1.0, "max": 1.0, "step": 0.01, "unit": "", "group": "color"},
+    "temperature": {"min": -0.5, "max": 0.5, "step": 0.005, "unit": "", "group": "color"},
+    "tint": {"min": -0.5, "max": 0.5, "step": 0.005, "unit": "", "group": "color"},
+    "sepia": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "color"},
+    "shadows_r": {"min": -0.3, "max": 0.3, "step": 0.005, "unit": "", "group": "wheels"},
+    "shadows_g": {"min": -0.3, "max": 0.3, "step": 0.005, "unit": "", "group": "wheels"},
+    "shadows_b": {"min": -0.3, "max": 0.3, "step": 0.005, "unit": "", "group": "wheels"},
+    "highlights_r": {"min": -0.3, "max": 0.3, "step": 0.005, "unit": "", "group": "wheels"},
+    "highlights_g": {"min": -0.3, "max": 0.3, "step": 0.005, "unit": "", "group": "wheels"},
+    "highlights_b": {"min": -0.3, "max": 0.3, "step": 0.005, "unit": "", "group": "wheels"},
+    "radius": {"min": 1.0, "max": 24.0, "step": 1.0, "unit": "px", "group": "shape"},
+    "size": {"min": 2.0, "max": 64.0, "step": 1.0, "unit": "px", "group": "shape"},
+    "levels": {"min": 2.0, "max": 16.0, "step": 1.0, "unit": "", "group": "shape"},
+    "threshold": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "shape"},
+    "strength": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "shape"},
+}
+
+
+def declare(defaults: dict) -> list[dict]:
+    """The parameter declarations for one catalogue entry, from its defaults."""
+    out = []
+    for key, value in defaults.items():
+        spec = PARAM_SPECS[key]
+        out.append({"key": key, "labelKey": f"param.{key}", "min": spec["min"], "max": spec["max"],
+                    "default": value, "step": spec["step"], "unit": spec["unit"], "group": spec["group"]})
+    return out
+
+
+def clamp_params(params: dict) -> dict:
+    """Incoming parameter values held to their declared ranges; unknown keys dropped."""
+    out = {}
+    for key, value in (params or {}).items():
+        spec = PARAM_SPECS.get(key)
+        if spec is None or not isinstance(value, (int, float)):
+            continue
+        out[key] = min(spec["max"], max(spec["min"], float(value)))
+    return out
+
+
 NAMES = {
     "gaussian": "Gaussian Blur", "box": "Box Blur", "edge": "Edge Detect", "chromatic": "Chromatic Aberration",
     "grain": "Film Grain", "interference": "Signal Interference", "pencil": "Pencil Sketch", "de-ess": "De-ess",
@@ -197,12 +245,14 @@ def _preview_version() -> str:
 PREVIEW_VERSION = _preview_version()
 
 
+EFFECT_DEFAULTS = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}, "tilt-shift": {"radius": 3}, "lens-blur": {"radius": 3}, "median-soften": {"radius": 3}, "soft-focus": {"radius": 3}, "diagonal-blur": {"size": 12}, "ghost-trail": {"size": 12}, "halftone": {"size": 12}, "crosshatch": {"size": 12}, "ripple": {"size": 12}, "slice-glitch": {"size": 12}, "heat-haze": {"size": 12}, "chroma-noise": {"strength": 0.15}}
+
+
 @router.get("")
 def catalogue() -> dict:
-    parameters = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}, "tilt-shift": {"radius": 3}, "lens-blur": {"radius": 3}, "median-soften": {"radius": 3}, "soft-focus": {"radius": 3}, "diagonal-blur": {"size": 12}, "ghost-trail": {"size": 12}, "halftone": {"size": 12}, "crosshatch": {"size": 12}, "ripple": {"size": 12}, "slice-glitch": {"size": 12}, "heat-haze": {"size": 12}, "chroma-noise": {"strength": 0.15}}
     return {
-        "video": [{"id": k, "name": label(k), "category": "Color", "group": group_of(k, FILTER_GROUPS), "parameters": GRADES[k]} for k in GRADES]
-        + [{"id": k, "name": label(k), "category": "Effects", "group": group_of(k, EFFECT_GROUPS), "parameters": parameters.get(k, {})} for k in VIDEO_EFFECTS],
+        "video": [{"id": k, "name": label(k), "category": "Color", "group": group_of(k, FILTER_GROUPS), "parameters": GRADES[k], "declarations": declare(GRADES[k])} for k in GRADES]
+        + [{"id": k, "name": label(k), "category": "Effects", "group": group_of(k, EFFECT_GROUPS), "parameters": EFFECT_DEFAULTS.get(k, {}), "declarations": declare(EFFECT_DEFAULTS.get(k, {}))} for k in VIDEO_EFFECTS],
         "audio": [{"id": k, "name": label(k), "group": group_of(k, AUDIO_GROUPS)} for k in AUDIO_CHAINS],
         "transitions": TRANSITIONS,
         "blendModes": ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"],

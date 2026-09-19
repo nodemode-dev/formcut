@@ -3,7 +3,7 @@ import math
 import cv2
 import numpy as np
 
-from .catalogue import GRADES, VIDEO_EFFECTS
+from .catalogue import GRADES, VIDEO_EFFECTS, clamp_params
 
 
 def grade(rgb: np.ndarray, params: dict) -> np.ndarray:
@@ -253,6 +253,6 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
         if entry["id"] not in GRADES and entry["id"] not in VIDEO_EFFECTS:
             raise ValueError("Unknown visual effect: " + entry["id"])
-        changed = process(result[:, :, :3], entry["id"], local, entry.get("params") or {})
+        changed = process(result[:, :, :3], entry["id"], local, clamp_params(entry.get("params") or {}))
         result[:, :, :3] = np.clip(result[:, :, :3] * (1 - amount) + changed * amount, 0, 1)
     return np.round(result * 255).astype(np.uint8)
