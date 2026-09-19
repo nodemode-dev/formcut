@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .export import router as export_router
 from .features import router as features_router
 from .security import LocalOnly
 from .brush import router as brush_router
@@ -41,7 +40,6 @@ async def _prepare_models() -> None:
 app.add_middleware(LocalOnly)
 app.include_router(projects_router)
 app.include_router(media_router)
-app.include_router(export_router)
 app.include_router(stock_router)
 app.include_router(tts_router)
 app.include_router(presets_router)

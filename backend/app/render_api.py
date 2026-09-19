@@ -25,6 +25,7 @@ from .audio_render import processed_clip_audio, RATE
 from .media import MEDIA_DIR, reversed_path
 from .paths import DATA_DIR
 from .frame_cache import FrameCache, ReadAhead
+from .encoders import choose as choose_encoder, tier_flags, status as encoder_status
 from .matte_cache import matte_key, sample_times, store as matte_store, progress as matte_progress
 from . import jobs
 
@@ -40,6 +41,7 @@ class RenderInput(BaseModel):
     width: int | None = Field(default=None, ge=16, le=7680)
     format: str = "mp4"
     quality: str = "high"
+    codec: str | None = None
 
 
 def checked(body: RenderInput) -> dict:
@@ -51,7 +53,10 @@ def checked(body: RenderInput) -> dict:
 
 @router.get("/status")
 def capabilities():
-    return {"compositor": gpu.status(), "shared_preview_export": True, "formats": ["mp4", "webm"], "frame_format": "png"}
+    encoders = encoder_status()
+    return {"compositor": gpu.status(), "shared_preview_export": True, "formats": ["mp4", "webm"],
+            "frame_format": "png", "encoders": encoders,
+            "codecs": encoders["containers"]}
 
 
 @router.post("/sessions", status_code=201)
@@ -162,7 +167,7 @@ def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) ->
         worker.close()
 
 
-def export_media(project: dict, job_id: str, report, cancelled, format: str, quality: str) -> dict:
+def export_media(project: dict, job_id: str, report, cancelled, format: str, quality: str, codec_name: str | None = None) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     path = OUTPUTS / (job_id + "." + format)
     audio = OUTPUTS / (job_id + ".wav")
@@ -173,7 +178,21 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
         render_audio(project, audio, cancelled)
         report(0.1)
         fps = project["fps"]
-        codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", {"high": "18", "medium": "23", "low": "28"}[quality], "-c:a", "aac"] if format == "mp4" else ["-c:v", "libvpx-vp9", "-b:v", "0", "-cpu-used", "5", "-crf", {"high": "24", "medium": "33", "low": "40"}[quality], "-c:a", "libopus"]
+        # X2: choose the codec the caller asked for when this build can encode
+        # it, else the container's default; hardware is preferred inside choose.
+        wanted = codec_name or ("h264" if format == "mp4" else "vp9")
+        encoder = choose_encoder(wanted)
+        if not encoder:
+            fallback = "h264" if format == "mp4" else "vp9"
+            encoder = choose_encoder(fallback)
+            wanted = fallback
+        if not encoder:
+            raise ValueError("This build has no working video encoder")
+        speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
+        # `audio` is already the temporary wav path in this scope, so the audio
+        # codec flags need their own name.
+        audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
+        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags]
         count = math.ceil(project["duration"] * fps)
         command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", *codec, "-pix_fmt", "yuv420p", "-t", str(project["duration"]), str(path)]
         with log.open("wb") as errors:
@@ -205,7 +224,7 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
             process.wait(timeout=600)
         if process.returncode:
             raise ValueError(log.read_text(errors="replace")[-2000:])
-        return {"file": str(path), "name": "formcut-export." + format, "media_type": "video/mp4" if format == "mp4" else "video/webm", "frames": count, "width": renderer.width, "height": renderer.height}
+        return {"file": str(path), "name": "formcut-export." + format, "media_type": "video/mp4" if format == "mp4" else "video/webm", "frames": count, "width": renderer.width, "height": renderer.height, "codec": wanted, "encoder": encoder}
     except BaseException:
         if process and process.poll() is None:
             process.kill()
@@ -223,7 +242,11 @@ def export(body: RenderInput):
     project = checked(body)
     if body.format not in ("mp4", "webm") or body.quality not in ("high", "medium", "low"):
         raise HTTPException(422, "Unknown export format or quality")
-    return jobs.submit("export", lambda job_id, report, cancelled: export_media(project, job_id, report, cancelled, body.format, body.quality))
+    if body.codec is not None:
+        allowed = encoder_status()["containers"].get(body.format, [])
+        if body.codec not in allowed:
+            raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
+    return jobs.submit("export", lambda job_id, report, cancelled: export_media(project, job_id, report, cancelled, body.format, body.quality, body.codec))
 
 
 @router.post("/audio", status_code=202)
