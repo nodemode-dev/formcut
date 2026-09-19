@@ -1,5 +1,6 @@
 import atexit
 import math
+import os
 import subprocess
 import tempfile
 import threading
@@ -51,7 +52,7 @@ class VideoSource:
         self.position = self.requested
         self.errors = tempfile.TemporaryFile()
         self.process = subprocess.Popen([
-            "ffmpeg", "-v", "error", "-nostdin", "-threads", "0", "-ss", str(self.position / self.fps),
+            "ffmpeg", "-v", "error", "-nostdin", "-threads", "0", *hwaccel_flags(), "-ss", str(self.position / self.fps),
             "-i", self.path, "-map", "0:v:0", "-an", "-sn", "-dn", "-vf", f"fps={self.fps},scale={self.width}:{self.height}",
             "-threads", "1", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1",
         ], stdout=subprocess.PIPE, stderr=self.errors)
@@ -99,6 +100,42 @@ _pool_lock = threading.Lock()
 _idle: list[tuple[float, VideoSource]] = []
 IDLE_LIMIT = 4
 IDLE_SECONDS = 60.0
+
+
+_HWACCEL: list[str] | None = None
+
+
+def hwaccel_flags() -> list[str]:
+    """Hardware decode when a method actually decodes here, else nothing.
+
+    Probed once, by decoding a generated clip rather than trusting `-hwaccels`,
+    which lists methods a machine merely has drivers for: this container lists
+    cuda with no GPU behind it. Any failure leaves the software path exactly as
+    it was, so a machine without a decoder never pays for the attempt.
+    """
+    global _HWACCEL
+    if _HWACCEL is None:
+        _HWACCEL = []
+        if os.environ.get("FORMCUT_HWACCEL") == "off":
+            return _HWACCEL
+        try:
+            listed = subprocess.run(["ffmpeg", "-v", "error", "-hwaccels"], capture_output=True, text=True, timeout=20).stdout
+            names = {line.strip() for line in listed.splitlines()[1:] if line.strip()}
+            for candidate in ("videotoolbox", "cuda", "qsv", "vaapi", "d3d11va"):
+                if candidate not in names:
+                    continue
+                probe = subprocess.run(
+                    ["ffmpeg", "-v", "error", "-hwaccel", candidate, "-f", "lavfi",
+                     "-i", "testsrc2=size=320x240:rate=30:duration=0.2", "-frames:v", "3",
+                     "-f", "null", "-"],
+                    capture_output=True, text=True, timeout=30,
+                )
+                if probe.returncode == 0 and not probe.stderr.strip():
+                    _HWACCEL = ["-hwaccel", candidate]
+                    break
+        except Exception:
+            _HWACCEL = []
+    return _HWACCEL
 
 
 def acquire(path, limit=None, at=None) -> VideoSource:

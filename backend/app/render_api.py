@@ -1,7 +1,9 @@
 import io
 import math
+import os
 import subprocess
 import threading
+from concurrent.futures import ThreadPoolExecutor
 import time
 import uuid
 from pathlib import Path
@@ -15,11 +17,19 @@ from . import gpu, jobs
 from .audio_render import render_audio
 from .paths import DATA_DIR
 from .render_document import validate_document
+import hashlib
+import json
+import numpy as np
 from .renderer import FrameRenderer
+from .audio_render import processed_clip_audio, RATE
+from .media import MEDIA_DIR, reversed_path
+from .paths import DATA_DIR
+from .frame_cache import FrameCache, ReadAhead
 
 router = APIRouter(prefix="/api/render", tags=["render"])
 _lock = threading.RLock()
 _sessions = {}
+CLIP_AUDIO = DATA_DIR / "clip-audio"
 OUTPUTS = DATA_DIR / "renders"
 
 
@@ -51,10 +61,41 @@ def create_session(body: RenderInput):
         while len(_sessions) >= 8:
             first = min(_sessions, key=lambda k: _sessions[k]["touched"])
             item = _sessions.pop(first)
+            item["ahead"].stop()
             with item["lock"]:
                 item["renderer"].close()
-        _sessions[session_id] = {"renderer": renderer, "lock": threading.RLock(), "touched": time.monotonic()}
+        lock = threading.RLock()
+        cache = FrameCache(project)
+        def render_locked(at: float):
+            with lock:
+                return renderer.frame(at)
+        _sessions[session_id] = {"renderer": renderer, "lock": lock, "touched": time.monotonic(),
+                                 "cache": cache, "ahead": ReadAhead(render_locked, cache, project["fps"])}
     return {"id": session_id, "width": renderer.width, "height": renderer.height, "duration": project["duration"]}
+
+
+@router.post("/sessions/{session_id}/document")
+def retarget_session(session_id: str, body: RenderInput):
+    """Point a live session at an edited document; only touched frames drop."""
+    project = checked(body)
+    with _lock:
+        item = _sessions.get(session_id)
+        if not item:
+            raise HTTPException(404, "Preview session expired")
+    dropped = item["cache"].retarget(project)
+    with item["lock"]:
+        item["renderer"].close()
+        item["renderer"] = FrameRenderer(project, body.width)
+    return {"dropped": dropped, **item["cache"].stats()}
+
+
+@router.get("/sessions/{session_id}/stats")
+def session_stats(session_id: str):
+    with _lock:
+        item = _sessions.get(session_id)
+        if not item:
+            raise HTTPException(404, "Preview session expired")
+    return item["cache"].stats()
 
 
 @router.delete("/sessions/{session_id}", status_code=204)
@@ -62,6 +103,7 @@ def delete_session(session_id: str):
     with _lock:
         item = _sessions.pop(session_id, None)
     if item:
+        item["ahead"].stop()
         with item["lock"]:
             item["renderer"].close()
 
@@ -76,13 +118,46 @@ def frame(session_id: str, time: float = 0):
     if not math.isfinite(time) or time < 0:
         raise HTTPException(422, "Invalid frame time")
     try:
-        with item["lock"]:
-            pixels = item["renderer"].frame(time)
-            output = io.BytesIO()
-            Image.fromarray(pixels).save(output, format="PNG", compress_level=1)
-        return Response(output.getvalue(), media_type="image/png", headers={"Cache-Control": "no-store"})
+        cache = item["cache"]
+        pixels = cache.get(time)
+        served = "hit"
+        if pixels is None:
+            served = "miss"
+            with item["lock"]:
+                pixels = item["renderer"].frame(time)
+            cache.put(time, pixels)
+        item["ahead"].seek(time)
+        output = io.BytesIO()
+        Image.fromarray(pixels).save(output, format="PNG", compress_level=1)
+        return Response(output.getvalue(), media_type="image/png",
+                        headers={"Cache-Control": "no-store", "x-formcut-frame": served})
     except Exception as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+def export_workers() -> int:
+    """Bounded by cores and by an override, so a small machine stays serial."""
+    override = os.environ.get("FORMCUT_EXPORT_WORKERS")
+    if override:
+        try:
+            return max(1, min(8, int(override)))
+        except ValueError:
+            pass
+    return max(1, min(4, (os.cpu_count() or 1) - 1))
+
+
+def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) -> list[bytes]:
+    """Render one contiguous run of frames with a renderer of its own."""
+    worker = FrameRenderer(project)
+    try:
+        out = []
+        for index in range(span[0], span[1]):
+            if cancelled():
+                raise InterruptedError("Cancelled")
+            out.append(worker.frame(index / fps).tobytes())
+        return out
+    finally:
+        worker.close()
 
 
 def export_media(project: dict, job_id: str, report, cancelled, format: str, quality: str) -> dict:
@@ -101,11 +176,29 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
         command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", *codec, "-pix_fmt", "yuv420p", "-t", str(project["duration"]), str(path)]
         with log.open("wb") as errors:
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=errors)
-            for i in range(count):
-                if cancelled():
-                    raise InterruptedError("Cancelled")
-                process.stdin.write(renderer.frame(i / fps).tobytes())
-                report(0.1 + 0.85 * (i + 1) / count)
+            # R5: render chunks on a bounded worker pool and feed the encoder in
+            # frame order. Each worker keeps its own renderer, so decoders stay
+            # sequential inside a chunk; one worker reproduces the old path.
+            workers = export_workers()
+            if workers > 1 and count > workers * 4:
+                chunk = math.ceil(count / workers)
+                spans = [(start, min(count, start + chunk)) for start in range(0, count, chunk)]
+                with ThreadPoolExecutor(max_workers=workers) as pool:
+                    pending = [pool.submit(_render_span, project, fps, span, cancelled) for span in spans]
+                    done = 0
+                    for future in pending:
+                        for payload in future.result():
+                            if cancelled():
+                                raise InterruptedError("Cancelled")
+                            process.stdin.write(payload)
+                            done += 1
+                            report(0.1 + 0.85 * done / count)
+            else:
+                for i in range(count):
+                    if cancelled():
+                        raise InterruptedError("Cancelled")
+                    process.stdin.write(renderer.frame(i / fps).tobytes())
+                    report(0.1 + 0.85 * (i + 1) / count)
             process.stdin.close()
             process.wait(timeout=600)
         if process.returncode:
@@ -140,3 +233,45 @@ def audio(body: RenderInput):
         render_audio(project, path, cancelled)
         return {"file": str(path), "name": "formcut-preview.wav", "media_type": "audio/wav"}
     return jobs.submit("preview-audio", operation)
+
+class ClipAudioInput(BaseModel):
+    clip: dict
+
+
+@router.post("/clip-audio")
+def clip_audio(body: ClipAudioInput):
+    """R2: one clip's processed sound, cached, for live mixing in the interface.
+
+    The buffer carries speed and audio effects but not gain, fades or pan: the
+    interface applies those as Web Audio automation so a volume change is heard
+    at once, and the export applies the same curve from clip_envelope.
+    """
+    clip = body.clip
+    media_id = str(clip.get("mediaId") or "")
+    if not media_id:
+        raise HTTPException(422, "Clip has no media")
+    signature = hashlib.sha1(json.dumps({k: clip.get(k) for k in
+        ("mediaId", "sourceIn", "duration", "extendOut", "speed", "speedCurve", "reversed", "audioEffects", "audioFx")},
+        sort_keys=True, default=str).encode()).hexdigest()[:20]
+    CLIP_AUDIO.mkdir(parents=True, exist_ok=True)
+    path = CLIP_AUDIO / f"{signature}.f32"
+    if not path.is_file():
+        if clip.get("reversed"):
+            source = reversed_path(media_id)
+            if not source.is_file():
+                raise HTTPException(409, "Reversed copy is not prepared yet")
+        else:
+            matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+            if not matches:
+                raise HTTPException(404, "Media file is missing")
+            source = matches[0]
+        try:
+            samples = processed_clip_audio(clip, source)
+        except Exception as exc:
+            raise HTTPException(422, str(exc)) from exc
+        staging = path.with_suffix(".part")
+        staging.write_bytes(np.ascontiguousarray(samples, dtype="<f4").tobytes())
+        staging.replace(path)
+    return Response(path.read_bytes(), media_type="application/octet-stream",
+                    headers={"x-formcut-rate": str(RATE), "x-formcut-signature": signature,
+                             "Cache-Control": "no-store"})

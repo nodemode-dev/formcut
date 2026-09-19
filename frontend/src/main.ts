@@ -1,4 +1,5 @@
 import { installWorkspaceLayout } from "./ui/workspace-layout";
+import { LiveMixer } from "./engine/live-mix";
 import { primeInterfaceMode, applyInterfaceProfile, observeInterfaceFeatures, activeProfile } from "./ui/interface-mode";
 import { installAccordions } from "./ui/accordion";
 import { installEditorActions } from "./ui/editor-actions";
@@ -63,6 +64,7 @@ mobileBar.addEventListener("click", (ev) => {
 });
 app.append(mobileBar);
 
+const liveMix = new LiveMixer();
 const actions = {
   save: () => void saveProject(engine),
   newProject: () => newProject(engine, undefined, activeProfile().behaviour.magneticMain),
@@ -85,4 +87,4 @@ installAccordions(workspace);
 app.append(buildStartScreen(engine, bin));
 localizeElement(document.body);
 void bin.load();
-Object.defineProperty(window, "formcut", { value: { engine, bin, actions } });
+Object.defineProperty(window, "formcut", { value: { engine, bin, actions, liveMix } });

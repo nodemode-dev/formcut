@@ -78,23 +78,7 @@ def render_audio(project: dict, destination, cancelled=lambda: False):
         if not any(s.get("codec_type") == "audio" for s in _ffprobe(paths[0]).get("streams", [])):
             continue
         duration = clip["duration"] + clip.get("extendOut", 0)
-        span = source_delta(clip, duration)
-        process = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(clip.get("sourceIn") or 0), "-i", str(paths[0]), "-t", str(span), "-vn", "-f", "f32le", "-ar", str(RATE), "-ac", "2", "pipe:1"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = communicate(process, cancelled=cancelled)
-        if process.returncode:
-            raise ValueError(error.decode(errors="replace")[-1000:])
-        raw = np.frombuffer(output, "<f4").reshape(-1, 2)
-        samples = time_stretch(raw, clip, int(duration * RATE), cancelled)
-        effects = list(clip.get("audioEffects") or [])
-        if clip.get("audioFx"):
-            effects.insert(0, {"id": clip["audioFx"], "amount": 1})
-        for effect in effects:
-            if effect["id"] not in AUDIO_CHAINS:
-                raise ValueError("Unknown audio processor")
-            wet = filter_audio(samples, AUDIO_CHAINS[effect["id"]], cancelled)
-            count = max(len(samples), len(wet))
-            amount = max(0, min(1, float(effect.get("amount", 1))))
-            samples = np.pad(samples, ((0, count - len(samples)), (0, 0))) * (1 - amount) + np.pad(wet, ((0, count - len(wet)), (0, 0))) * amount
+        samples = processed_clip_audio(clip, paths[0], cancelled)
         count = min(len(samples), int(duration * RATE))
         envelope_times = np.linspace(0, duration, max(2, math.ceil(duration * 200)))
         envelope = np.array([fade_at(clip, t) for t in envelope_times])
@@ -112,3 +96,40 @@ def render_audio(project: dict, destination, cancelled=lambda: False):
         out.setsampwidth(2)
         out.setframerate(RATE)
         out.writeframes(np.round(np.clip(mix, -1, 1) * 32767).astype("<i2").tobytes())
+
+def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarray:
+    """One clip's sound after speed and effects, before gain, fades and pan.
+
+    R2 factors this out so the per-clip cache the interface mixes live and the
+    exported mix come from the same code, which is what keeps the two within
+    the parity gate; gain, fades and pan stay outside because the interface
+    applies them as live Web Audio automation.
+    """
+    duration = clip["duration"] + clip.get("extendOut", 0)
+    span = source_delta(clip, duration)
+    process = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(clip.get("sourceIn") or 0), "-i", str(path), "-t", str(span), "-vn", "-f", "f32le", "-ar", str(RATE), "-ac", "2", "pipe:1"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = communicate(process, cancelled=cancelled)
+    if process.returncode:
+        raise ValueError(error.decode(errors="replace")[-1000:])
+    raw = np.frombuffer(output, "<f4").reshape(-1, 2)
+    samples = time_stretch(raw, clip, int(duration * RATE), cancelled)
+    effects = list(clip.get("audioEffects") or [])
+    if clip.get("audioFx"):
+        effects.insert(0, {"id": clip["audioFx"], "amount": 1})
+    for effect in effects:
+        if effect["id"] not in AUDIO_CHAINS:
+            raise ValueError("Unknown audio processor")
+        wet = filter_audio(samples, AUDIO_CHAINS[effect["id"]], cancelled)
+        count = max(len(samples), len(wet))
+        amount = max(0, min(1, float(effect.get("amount", 1))))
+        samples = np.pad(samples, ((0, count - len(samples)), (0, 0))) * (1 - amount) + np.pad(wet, ((0, count - len(wet)), (0, 0))) * amount
+    return samples
+
+
+def clip_envelope(clip: dict, count: int) -> np.ndarray:
+    """The fade and volume curve the export applies; the interface mirrors it."""
+    duration = clip["duration"] + clip.get("extendOut", 0)
+    times = np.linspace(0, duration, max(2, math.ceil(duration * 200)))
+    envelope = np.array([fade_at(clip, t) for t in times])
+    gain = np.interp(np.arange(count) / RATE, times, envelope)
+    return gain * max(0, min(4, float(clip.get("volume", 1))))

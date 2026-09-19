@@ -89,6 +89,7 @@ export interface Clip {
   keyframes?: Keyframe[];
   key?: ClipKey;
   muted?: boolean;
+  extendOut?: number;
   reversed?: boolean;
   detachedFrom?: string;
   crop?: { left?: number; top?: number; right?: number; bottom?: number };
