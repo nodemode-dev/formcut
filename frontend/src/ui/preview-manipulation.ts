@@ -276,5 +276,8 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
   engine.subscribe((_state, event) => { if (!dragging && ["clips", "timeline", "clip-selection", "playhead"].includes(event)) { draw(); drawCrop(); } });
   stage.addEventListener("formcut:crop-mode", () => { drawCrop(); draw(); });
   document.addEventListener("change", event => { if ((event.target as HTMLElement).matches("[data-brush]")) draw(); });
+  // A pane resize changes the stage box, so the overlays are redrawn from the
+  // document rather than left at the sizes they were last given.
+  new ResizeObserver(() => { if (!dragging) { draw(); drawCrop(); } }).observe(stage);
   bin.subscribe(draw); draw();
 }

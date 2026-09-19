@@ -427,5 +427,6 @@
   "layout.pane.timeline": "Línea de tiempo",
   "layout.slot.left": "izquierda",
   "layout.slot.right": "derecha",
-  "layout.slot.bottom": "abajo"
+  "layout.slot.bottom": "abajo",
+  "title.gallery.removed": "Estilo quitado"
 }

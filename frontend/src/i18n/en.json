@@ -427,5 +427,6 @@
   "layout.pane.timeline": "Timeline",
   "layout.slot.left": "left",
   "layout.slot.right": "right",
-  "layout.slot.bottom": "bottom"
+  "layout.slot.bottom": "bottom",
+  "title.gallery.removed": "Style removed"
 }

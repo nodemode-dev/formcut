@@ -188,6 +188,31 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     }
   });
   bin.subscribe(invalidate);
+  // The stage is fitted explicitly rather than left to max-width and
+  // max-height: when both clamps bind, the browser trims one dimension without
+  // adjusting the other, and the frame stops matching the project's shape. The
+  // arithmetic is the same letterbox fit the renderer uses.
+  const wrap = stage.parentElement as HTMLElement | null;
+  const sizeStage = () => {
+    const s = engine.snapshot;
+    const ratio = Math.max(1, s.width) / Math.max(1, s.height);
+    stage.style.setProperty("--stage-aspect", `${Math.max(1, s.width)} / ${Math.max(1, s.height)}`);
+    if (!wrap) return;
+    const style = getComputedStyle(wrap);
+    const room = {
+      width: Math.max(0, wrap.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)),
+      height: Math.max(0, wrap.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)),
+    };
+    if (room.width < 2 || room.height < 2) return;
+    const scale = Math.min(room.width / ratio, room.height);
+    const height = Math.max(1, Math.floor(scale));
+    const width = Math.max(1, Math.floor(height * ratio));
+    if (stage.style.width !== `${width}px`) stage.style.width = `${width}px`;
+    if (stage.style.height !== `${height}px`) stage.style.height = `${height}px`;
+  };
+  engine.subscribe((_state, event) => { if (event === "project" || event === "timeline") sizeStage(); });
+  if (wrap) new ResizeObserver(() => sizeStage()).observe(wrap);
+  sizeStage();
   previewManipulation(stage, engine, bin);
   invalidate();
   return element;

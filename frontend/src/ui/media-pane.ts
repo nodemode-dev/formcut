@@ -553,15 +553,39 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
     })
     .catch(() => { /* the gallery is optional if the engine is offline */ });
+  // A style card is a toggle: clicking the applied one takes it off again,
+  // which means clearing exactly the properties that style set rather than
+  // resetting the whole title, so a hand-made size or colour survives.
+  let appliedStyle: string | null = null;
+  const clearPatch = (style: Record<string, unknown>): Record<string, unknown> => {
+    const base = defaultTextStyle("") as unknown as Record<string, unknown>;
+    const patch: Record<string, unknown> = {};
+    for (const key of Object.keys(style)) {
+      patch[key] = key in base ? base[key] : undefined;
+    }
+    return patch;
+  };
   titleGrid.addEventListener("click", (ev) => {
     const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-title-style]");
     if (!card) return;
     const entry = titleStyles.find((e) => e.id === card.dataset.titleStyle);
     if (!entry) return;
-    captionStyle = entry.style as Partial<TextStyle>;
     const clipId = engine.snapshot.selectedClipId;
     const found = clipId ? engine.findClip(clipId) : null;
-    if (found && found.clip.kind === "text") engine.dispatch("clip.text", { clipId: found.clip.id, patch: entry.style });
+    const isText = !!found && found.clip.kind === "text";
+    const already = appliedStyle === entry.id && card.classList.contains("is-active");
+    if (already) {
+      appliedStyle = null;
+      captionStyle = {};
+      if (isText) engine.dispatch("clip.text", { clipId: found!.clip.id, patch: clearPatch(entry.style) });
+      card.classList.remove("is-active");
+      capStatus.hidden = false;
+      capStatus.textContent = t("title.gallery.removed");
+      return;
+    }
+    appliedStyle = entry.id;
+    captionStyle = entry.style as Partial<TextStyle>;
+    if (isText) engine.dispatch("clip.text", { clipId: found!.clip.id, patch: entry.style });
     else { capStatus.hidden = false; capStatus.textContent = t("title.gallery.stored"); }
     for (const other of titleGrid.querySelectorAll(".title-card")) other.classList.toggle("is-active", other === card);
   });

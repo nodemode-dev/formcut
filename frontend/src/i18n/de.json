@@ -427,5 +427,6 @@
   "layout.pane.timeline": "Zeitleiste",
   "layout.slot.left": "links",
   "layout.slot.right": "rechts",
-  "layout.slot.bottom": "unten"
+  "layout.slot.bottom": "unten",
+  "title.gallery.removed": "Stil entfernt"
 }

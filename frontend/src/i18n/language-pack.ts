@@ -728,6 +728,7 @@ Inspector|Inspecteur|Ispettore|インスペクター|인스펙터|Inspetor|Ин�
 left|gauche|sinistra|左|왼쪽|esquerda|слева|sol|左侧|左側
 right|droite|destra|右|오른쪽|direita|справа|sağ|右侧|右側
 bottom|bas|in basso|下|아래|abaixo|снизу|alt|底部|底部
+Style removed|Style retiré|Stile rimosso|スタイルを解除しました|스타일을 제거했습니다|Estilo removido|Стиль снят|Stil kaldırıldı|已移除样式|已移除樣式
 Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {

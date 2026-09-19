@@ -286,6 +286,20 @@ export function installWorkspaceLayout(): void {
     workspace.append(handle);
     dividers.set(key, handle);
   }
-  new ResizeObserver(() => placeDividers()).observe(workspace);
+  // Everything that is positioned over the grid has to follow a resize: the
+  // dividers and, since P7, the stack tab strips, which were left behind.
+  const replace = () => {
+    const inSlot = (slot: "left" | "right" | "bottom") => (["media", "inspector", "timeline"] as const)
+      .filter((pane) => settings.slots[pane] === slot && settings[pane] && !settings.focus);
+    placeTabs(inSlot("left"), inSlot("right"), inSlot("bottom"));
+    placeDividers();
+  };
+  const observer = new ResizeObserver(() => replace());
+  observer.observe(workspace);
+  for (const pane of ["media", "inspector", "timeline", "preview"]) {
+    const node = workspace.querySelector(`.pane-${pane}`);
+    if (node) observer.observe(node);
+  }
+  window.addEventListener("resize", replace);
   apply();
 }

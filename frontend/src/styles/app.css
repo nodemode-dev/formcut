@@ -203,9 +203,18 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 }
 .stage {
   position: relative;
-  height: 100%;
-  aspect-ratio: 9 / 16;
+  /* The stage follows the project's own aspect, set by the preview as a custom
+     property. It was pinned to 9/16, so a wide project previewed in a portrait
+     box and every overlay, which positions itself as a percentage of this
+     element, sat against the wrong rectangle. Sizing by both max dimensions
+     lets it letterbox correctly whichever way the panel is resized. */
+  aspect-ratio: var(--stage-aspect, 16 / 9);
+  height: auto;
+  width: auto;
+  max-height: 100%;
   max-width: 100%;
+  min-width: 0;
+  min-height: 0;
   background: var(--screen);
   z-index: var(--z-base);
   container-type: size;
@@ -904,9 +913,23 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .audition-frame[hidden] { display: none; }
 
 .typed-captions { width: 100%; margin: 4px 0; padding: 6px; border: 1px solid var(--edge); border-radius: 6px; background: var(--inset); color: var(--ink); font: inherit; font-size: 12px; resize: vertical; }
-.title-card.is-active { outline: 2px solid var(--cue); }
+.title-card.is-active .effect-thumb { outline: 2px solid var(--cue); outline-offset: -2px; }
+.title-card.is-active .effect-name { color: var(--ink); }
 
 .export-estimate { color: var(--ink-soft); font-size: 12px; }
+
+/* Title styles are pictures of a whole frame, so their tiles keep the frame's
+   shape and show all of it: at 4/3 with `cover` the rendered 16/9 previews were
+   cropped down their sides, which hid exactly the part that distinguishes a
+   lower third from a centred title. Wider columns and a single-line name keep
+   the rows even. */
+/* The Text view lays its children out in a column that does not stretch, so the
+   gallery has to claim the pane's width itself or it collapses to one tile
+   wide and the tiles never form a grid. */
+.title-grid { width: 100%; box-sizing: border-box; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; }
+.title-grid .effect-thumb { aspect-ratio: 16 / 9; background: var(--screen); }
+.title-grid .effect-thumb img { object-fit: contain; }
+.title-grid .effect-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .pane-stack-tabs { position: absolute; z-index: var(--z-handles); display: flex; gap: 2px; padding: 2px; background: var(--pane); border-bottom: 1px solid var(--edge); }
 .pane-stack-tabs[hidden] { display: none; }
