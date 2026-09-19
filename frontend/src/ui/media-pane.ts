@@ -9,6 +9,7 @@ import { transcribeClip } from "../engine/captions";
 import { t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
+import { api } from "../engine/api";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -199,8 +200,10 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   let previewVersion = "";
   const thumb = (kind: string, id: string) =>
     `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/${kind}/${encodeURIComponent(id)}?v=${previewVersion}" alt="" loading="eager" fetchpriority="low" decoding="async" draggable="false" /></div>`;
+  const favourites = new Set<string>(JSON.parse(localStorage.getItem("formcut.favourites") ?? "[]"));
+  const favKey = (kind: string, id: string) => `${kind}:${id}`;
   const fxCard = (mode: string, kind: string, cat: string, id: string, label: string, visual: string) =>
-    `<div class="effect-card fx-card" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
+    `<div class="effect-card fx-card${favourites.has(favKey(kind, id)) ? " is-fav" : ""}" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden><button class="fav-star" data-star aria-label="Favourite" aria-pressed="${favourites.has(favKey(kind, id))}">${"\u2605"}</button>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
   const transitionName = (type: string) =>
     type === "crossfade" ? t("trans.crossfade") : type === "dip" ? t("trans.dip") : text(type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
   type CatalogueEntry = { id: string; name: string; category?: string; group?: string };
@@ -235,7 +238,68 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     applyFxFilter();
   });
   fxSearch.addEventListener("input", applyFxFilter);
+  let auditionTimer = 0;
+  let auditionToken = 0;
+  const auditionFrame = (() => {
+    const img = document.createElement("img");
+    img.className = "audition-frame";
+    img.hidden = true;
+    img.alt = "";
+    return img;
+  })();
+  const stageFor = () => document.querySelector<HTMLElement>(".stage");
+  const endAudition = () => {
+    window.clearTimeout(auditionTimer);
+    auditionToken += 1;
+    auditionFrame.hidden = true;
+  };
+  const startAudition = (card: HTMLElement) => {
+    if (card.dataset.kind !== "video") return;
+    const clip = selectedClip();
+    if (!clip || (clip.kind !== "video" && clip.kind !== "image") ) return;
+    window.clearTimeout(auditionTimer);
+    auditionTimer = window.setTimeout(async () => {
+      const token = ++auditionToken;
+      const s = engine.snapshot;
+      const local = Math.min(Math.max(s.playhead - clip.start, 0), clip.duration - 0.01);
+      const probe = structuredClone(clip);
+      probe.start = 0;
+      probe.effects = [...(probe.effects ?? []), { id: card.dataset.id!, amount: 1 }];
+      const project = { title: "audition", width: s.width, height: s.height, fps: s.fps, duration: clip.duration, activeTimeline: 0,
+        timelines: [{ id: "aud", name: "aud", tracks: [{ id: "t", name: "V", clips: [probe] }] }] };
+      try {
+        const session = await api("/api/render/sessions", { project, width: 480 });
+        if (token !== auditionToken) { void api(`/api/render/sessions/${session.id}`, undefined, "DELETE").catch(() => {}); return; }
+        const stage = stageFor();
+        if (stage && auditionFrame.parentElement !== stage) stage.append(auditionFrame);
+        auditionFrame.src = `/api/render/sessions/${session.id}/frame?time=${local.toFixed(3)}&v=${Date.now()}`;
+        auditionFrame.onload = () => { if (token === auditionToken) auditionFrame.hidden = false; };
+        window.setTimeout(() => void api(`/api/render/sessions/${session.id}`, undefined, "DELETE").catch(() => {}), 5000);
+      } catch { /* audition is best-effort */ }
+    }, 300);
+  };
+  fxGrid.addEventListener("mouseover", (ev) => {
+    const card = (ev.target as HTMLElement).closest<HTMLElement>(".fx-card");
+    if (card) startAudition(card);
+  });
+  fxGrid.addEventListener("mouseout", (ev) => {
+    const card = (ev.target as HTMLElement).closest<HTMLElement>(".fx-card");
+    const next = (ev as MouseEvent).relatedTarget as HTMLElement | null;
+    if (card && (!next || !card.contains(next))) endAudition();
+  });
   fxGrid.addEventListener("click", async (ev) => {
+    const star = (ev.target as HTMLElement).closest<HTMLElement>("[data-star]");
+    if (star) {
+      ev.stopPropagation();
+      const card = star.closest<HTMLElement>(".fx-card")!;
+      const key = favKey(card.dataset.kind!, card.dataset.id!);
+      const on = !favourites.has(key);
+      if (on) favourites.add(key); else favourites.delete(key);
+      localStorage.setItem("formcut.favourites", JSON.stringify([...favourites]));
+      card.classList.toggle("is-fav", on);
+      star.setAttribute("aria-pressed", String(on));
+      return;
+    }
     const card = (ev.target as HTMLElement).closest<HTMLElement>(".fx-card");
     if (!card) return;
     const clip = selectedClip();
