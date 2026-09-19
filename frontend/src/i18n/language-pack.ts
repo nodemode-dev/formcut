@@ -630,7 +630,12 @@ How do you want to edit?|Comment souhaitez-vous monter ?|Come vuoi montare?|ど�
 Unknown ids skipped|Identifiants inconnus ignorés|Id sconosciuti ignorati|不明なIDをスキップしました|알 수 없는 ID 건너뜀|Ids desconhecidos ignorados|Неизвестные идентификаторы пропущены|Bilinmeyen kimlikler atlandı|已跳过未知 ID|已略過未知 ID
 Profile imported|Profil importé|Profilo importato|プロファイルを読み込みました|프로필을 가져왔습니다|Perfil importado|Профиль импортирован|Profil içe aktarıldı|配置已导入|設定檔已匯入
 Delete profile|Supprimer le profil|Elimina profilo|プロファイルを削除|프로필 삭제|Excluir perfil|Удалить профиль|Profili sil|删除配置|刪除設定檔
-Choose later in Settings|Modifiable plus tard dans Paramètres|Modificabile dopo nelle Impostazioni|設定で後から変更できます|설정에서 나중에 변경 가능|Mude depois em Configurações|Можно изменить позже в настройках|Daha sonra Ayarlar'dan değiştirin|稍后可在设置中更改|稍後可在設定中變更`;
+Choose later in Settings|Modifiable plus tard dans Paramètres|Modificabile dopo nelle Impostazioni|設定で後から変更できます|설정에서 나중에 변경 가능|Mude depois em Configurações|Можно изменить позже в настройках|Daha sonra Ayarlar'dan değiştirin|稍后可在设置中更改|稍後可在設定中變更
+Choose a format|Choisir un format|Scegli un formato|フォーマットを選択|형식 선택|Escolha um formato|Выберите формат|Bir format seçin|选择格式|選擇格式
+Vertical|Vertical|Verticale|縦|세로|Vertical|Вертикальный|Dikey|竖屏|直式
+Wide|Large|Largo|横|가로|Largo|Широкий|Geniş|横屏|橫式
+Square|Carré|Quadrato|正方形|정사각형|Quadrado|Квадрат|Kare|方形|方形
+Portrait|Portrait|Ritratto|ポートレート|세로 사진|Retrato|Портрет|Portre|肖像|肖像`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

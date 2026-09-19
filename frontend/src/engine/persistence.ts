@@ -1,6 +1,6 @@
 import type { ProjectEngine } from "./project";
 import type { Timeline } from "./types";
-import { blankProject } from "./seed";
+import { blankProject, type ProjectFormat } from "./seed";
 
 const API = "/api/projects";
 
@@ -85,8 +85,8 @@ export async function openProject(engine: ProjectEngine, id: string): Promise<bo
   }
 }
 
-export function newProject(engine: ProjectEngine): void {
-  const blank = blankProject();
+export function newProject(engine: ProjectEngine, format?: ProjectFormat): void {
+  const blank = blankProject(format);
   engine.dispatch("project.load", {
     projectId: null,
     title: blank.title,

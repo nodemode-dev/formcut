@@ -106,6 +106,39 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     return button;
   };
 
+  // --- new project format ------------------------------------------------------
+
+  const ASPECTS: Array<[string, number, number, string]> = [["9:16", 1080, 1920, "format.vertical"], ["16:9", 1920, 1080, "format.wide"], ["1:1", 1080, 1080, "format.square"], ["4:5", 1080, 1350, "format.portrait"]];
+  const RATES = [24, 25, 30, 50, 60];
+  let format = { width: 1080, height: 1920, fps: 30 };
+  const sheet = document.createElement("div");
+  sheet.className = "mode-ask format-sheet";
+  sheet.hidden = true;
+  sheet.innerHTML = `<div class="mode-ask-card"><strong>${t("format.title")}</strong>
+    <div class="mode-cards format-cards" data-ref="aspects">${ASPECTS.map(([ratio, w, h, key]) => `<button class="mode-card format-card${w === 1080 && h === 1920 ? " is-active" : ""}" data-w="${w}" data-h="${h}"><i class="format-shape" style="aspect-ratio:${w}/${h}"></i><strong>${ratio}</strong><span>${t(key)} · ${w}x${h}</span></button>`).join("")}</div>
+    <div class="format-rates"><span>${t("format.rate")}</span><div class="seg" data-ref="rates">${RATES.map((rate) => `<button data-fps="${rate}"${rate === 30 ? ' class="is-active"' : ""}>${rate}</button>`).join("")}</div></div>
+    <div class="mode-actions format-actions"><button class="tool-chip" data-ref="format-cancel">${t("export.cancel")}</button><button class="tool-chip is-primary" data-ref="format-create">${icon("plus")}${t("start.new")}</button></div></div>`;
+  el.append(sheet);
+  sheet.querySelector('[data-ref="aspects"]')!.addEventListener("click", (event) => {
+    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-w]");
+    if (!hit) return;
+    format = { ...format, width: Number(hit.dataset.w), height: Number(hit.dataset.h) };
+    for (const card of sheet.querySelectorAll<HTMLElement>("[data-w]")) card.classList.toggle("is-active", card === hit);
+  });
+  sheet.querySelector('[data-ref="rates"]')!.addEventListener("click", (event) => {
+    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-fps]");
+    if (!hit) return;
+    format = { ...format, fps: Number(hit.dataset.fps) };
+    for (const button of sheet.querySelectorAll<HTMLElement>("[data-fps]")) button.classList.toggle("is-active", button === hit);
+  });
+  sheet.querySelector('[data-ref="format-cancel"]')!.addEventListener("click", () => { sheet.hidden = true; });
+  sheet.querySelector('[data-ref="format-create"]')!.addEventListener("click", () => {
+    sheet.hidden = true;
+    newProject(engine, format);
+    dismiss();
+  });
+  const openFormatSheet = () => { sheet.hidden = false; sheet.querySelector<HTMLElement>('[data-ref="format-create"]')!.focus(); };
+
   // --- projects --------------------------------------------------------------
 
   const openDemo = async (button: HTMLButtonElement) => {
@@ -331,8 +364,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     count(0, "");
     if (view === "projects") {
       const fresh = chip(t("start.new"), () => {
-        newProject(engine);
-        dismiss();
+        openFormatSheet();
       }, "plus");
       fresh.dataset.act = "new";
       const demo = chip(t("start.demo"), (button) => void openDemo(button), "play");

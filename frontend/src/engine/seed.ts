@@ -31,10 +31,17 @@ export function seedProject(): ProjectState {
   };
 }
 
-export function blankProject(): ProjectState {
+export interface ProjectFormat { width: number; height: number; fps: number }
+
+export function blankProject(format?: ProjectFormat): ProjectState {
   const state = seedProject();
   for (const timeline of state.timelines) {
     for (const t of timeline.tracks) t.clips = [];
+  }
+  if (format) {
+    state.width = format.width;
+    state.height = format.height;
+    state.fps = format.fps;
   }
   state.selectedClipId = null;
   state.playhead = 0;
