@@ -51,6 +51,8 @@ const PALETTES = PROFILES.filter((profile) => !profile.behaviour).map((profile) 
 
 export interface Appearance {
   theme: string;
+  dark?: string;
+  light?: string;
   accent: string | null;
   derived: Record<string, string> | null;
 }
@@ -78,6 +80,22 @@ export function derive(hex: string): Record<string, string> {
   };
 }
 
+/** P5: Automatic follows the OS setting, using the two chosen profiles. */
+export const AUTOMATIC = "automatic";
+
+export function osPrefersDark(): boolean {
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return true;
+  }
+}
+
+export function resolveTheme(state: Appearance): string {
+  if (state.theme !== AUTOMATIC) return state.theme;
+  return osPrefersDark() ? (state.dark ?? "formcut-dark") : (state.light ?? "light");
+}
+
 export function read(): Appearance {
   try {
     const raw = localStorage.getItem(STORE);
@@ -85,6 +103,8 @@ export function read(): Appearance {
       const parsed = JSON.parse(raw) as Partial<Appearance>;
       return {
         theme: typeof parsed.theme === "string" ? parsed.theme : "formcut-dark",
+        dark: typeof parsed.dark === "string" ? parsed.dark : "formcut-dark",
+        light: typeof parsed.light === "string" ? parsed.light : "light",
         accent: typeof parsed.accent === "string" ? parsed.accent : null,
         derived: parsed.derived && typeof parsed.derived === "object" ? parsed.derived as Record<string, string> : null,
       };
@@ -92,7 +112,7 @@ export function read(): Appearance {
   } catch {
     // A blocked or corrupt store must not stop the editor from opening.
   }
-  return { theme: "formcut-dark", accent: null, derived: null };
+  return { theme: "formcut-dark", dark: "formcut-dark", light: "light", accent: null, derived: null };
 }
 
 function write(state: Appearance): void {
@@ -133,9 +153,25 @@ function paintAccent(accent: string | null, derived: Record<string, string> | nu
 
 // Applying a behaviour profile keeps the stored choice as the behaviour, while
 // what gets painted is a palette: the behaviour is how the palette is chosen.
+let osWatch: MediaQueryList | null = null;
+
 export function apply(state: Appearance, persist = true): void {
-  const profile = PROFILES.find((entry) => entry.id === state.theme);
+  // P5: Automatic resolves to a palette and re-resolves when the OS flips, so
+  // the change is one paint rather than a reload.
+  const resolved = resolveTheme(state);
+  const profile = PROFILES.find((entry) => entry.id === resolved);
   stopCycle();
+  if (state.theme === AUTOMATIC && !osWatch) {
+    try {
+      osWatch = window.matchMedia("(prefers-color-scheme: dark)");
+      osWatch.addEventListener("change", () => {
+        const current = read();
+        if (current.theme === AUTOMATIC) apply(current, false);
+      });
+    } catch {
+      osWatch = null;
+    }
+  }
   if (profile?.behaviour === "cycle") {
     paint(randomPalette());
     cycleTimer = window.setInterval(() => paint(randomPalette(document.documentElement.dataset.theme)), 20000);

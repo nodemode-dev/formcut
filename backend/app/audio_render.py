@@ -132,7 +132,8 @@ def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarra
     if clip.get("audioFx"):
         effects.insert(0, {"id": clip["audioFx"], "amount": 1})
     for effect in effects:
-        if effect["id"] not in AUDIO_CHAINS:
+        from .effect_packages import find as find_package
+        if effect["id"] not in AUDIO_CHAINS and not find_package(effect["id"]):
             raise ValueError("Unknown audio processor")
         wet = filter_audio(samples, audio_chain(effect["id"], effect.get("params")), cancelled)
         count = max(len(samples), len(wet))

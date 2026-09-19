@@ -1,4 +1,5 @@
 import { installWorkspaceLayout } from "./ui/workspace-layout";
+import { loadExtraLocales } from "./i18n";
 import { LiveMixer } from "./engine/live-mix";
 import { primeInterfaceMode, applyInterfaceProfile, observeInterfaceFeatures, activeProfile } from "./ui/interface-mode";
 import { installAccordions } from "./ui/accordion";
@@ -87,4 +88,4 @@ installAccordions(workspace);
 app.append(buildStartScreen(engine, bin));
 localizeElement(document.body);
 void bin.load();
-Object.defineProperty(window, "formcut", { value: { engine, bin, actions, liveMix } });
+Object.defineProperty(window, "formcut", { value: { engine, bin, actions, liveMix, loadExtraLocales } });

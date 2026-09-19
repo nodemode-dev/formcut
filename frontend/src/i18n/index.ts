@@ -38,7 +38,36 @@ function readLocale(): string {
 export const locale = readLocale();
 
 export function t(key: string): string {
-  return LOCALES[locale][key] ?? LOCALES.en[key] ?? key;
+  return LOCALES[locale]?.[key] ?? LOCALES.en[key] ?? key;
+}
+
+/**
+ * P6: merge locale files dropped into the data directory's `locales/` folder.
+ *
+ * A dropped-in file wins over the built-in strings for the codes it carries, so
+ * a corrected translation needs no release; it lists under its own
+ * `language.name`, and keys it omits fall back to English through t().
+ * Called once at start, before the first paint of translated text.
+ */
+export async function loadExtraLocales(): Promise<Array<{ code: string; name: string; missingCount: number }>> {
+  try {
+    const reply = await fetch("/api/locales").then((r) => (r.ok ? r.json() : { locales: [] }));
+    const listed: Array<{ code: string; name: string; missingCount: number }> = [];
+    for (const entry of reply.locales ?? []) {
+      if (entry.error || !entry.strings) continue;
+      LOCALES[entry.code] = { ...(LOCALES[entry.code] ?? {}), ...entry.strings };
+      if (!LOCALE_NAMES.some((known) => known.code === entry.code)) {
+        LOCALE_NAMES.push({ code: entry.code, name: entry.name });
+      } else {
+        const known = LOCALE_NAMES.find((item) => item.code === entry.code)!;
+        known.name = entry.name;
+      }
+      listed.push({ code: entry.code, name: entry.name, missingCount: entry.missingCount ?? 0 });
+    }
+    return listed;
+  } catch {
+    return [];
+  }
 }
 
 export function setLocale(code: string): void {

@@ -18,7 +18,16 @@
           var raw = localStorage.getItem("formcut.appearance");
           if (!raw) return;
           var saved = JSON.parse(raw);
-          if (saved && typeof saved.theme === "string") document.documentElement.dataset.theme = saved.theme;
+          if (saved && typeof saved.theme === "string") {
+            // P5: Automatic resolves here too, so following the OS is applied
+            // before the first paint rather than after the module loads.
+            var theme = saved.theme;
+            if (theme === "automatic") {
+              var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+              theme = dark ? (saved.dark || "formcut-dark") : (saved.light || "light");
+            }
+            document.documentElement.dataset.theme = theme;
+          }
           if (saved && saved.derived) {
             for (var name in saved.derived) document.documentElement.style.setProperty(name, saved.derived[name]);
           }

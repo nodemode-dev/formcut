@@ -84,7 +84,63 @@ def _start_log() -> Path:
 
 RUN_LOG = _start_log()
 
+from .effect_packages import reload as _reload_packages
+
+_PACKAGE_STATE = _reload_packages()
+logging.getLogger("formcut").info("effect packages: %s loaded, %s failed",
+                                  len(_PACKAGE_STATE["loaded"]), len(_PACKAGE_STATE["failures"]))
+
 SECRET_HINTS = ("key", "token", "secret", "password", "authorization")
+
+
+@app.get("/api/locales")
+def locales() -> dict:
+    """P6: locale files dropped into the data directory, with missing keys named."""
+    import json as _json
+    folder = DATA_DIR / "locales"
+    english: dict = {}
+    base = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n" / "en.json"
+    if base.is_file():
+        try:
+            english = _json.loads(base.read_text(encoding="utf-8"))
+        except ValueError:
+            english = {}
+    out = []
+    if folder.is_dir():
+        for path in sorted(folder.glob("*.json")):
+            try:
+                data = _json.loads(path.read_text(encoding="utf-8"))
+            except ValueError as exc:
+                out.append({"code": path.stem, "error": f"not valid json ({exc})"})
+                continue
+            if not isinstance(data, dict):
+                out.append({"code": path.stem, "error": "the file is not an object of keys"})
+                continue
+            missing = sorted(set(english) - set(data)) if english else []
+            out.append({
+                # A locale names itself, so a dropped-in language lists under its
+                # own name rather than a code the person does not recognise.
+                "code": path.stem,
+                "name": str(data.get("language.name") or path.stem),
+                "keys": len(data),
+                "missing": missing[:50],
+                "missingCount": len(missing),
+                "strings": data,
+            })
+    return {"locales": out}
+
+
+@app.get("/api/packages")
+def packages() -> dict:
+    """P3: loaded effect packages and, for Settings, any that failed with why."""
+    from .effect_packages import entries, failures
+    return {"packages": entries(), "failures": failures()}
+
+
+@app.post("/api/packages/reload")
+def packages_reload() -> dict:
+    from .effect_packages import reload as reload_packages
+    return reload_packages()
 
 
 @app.get("/api/diagnostics")

@@ -49,7 +49,11 @@ def clip_values(clip):
             if key not in ('posX', 'posY', 'scale', 'rotation', 'opacity'):
                 raise ValueError('Unknown animated property')
             number(value, key)
-    for field, allowed in [('effects', set(GRADES) | set(VIDEO_EFFECTS)), ('audioEffects', set(AUDIO_CHAINS))]:
+    from .effect_packages import entries as package_entries
+    video_packages = {e["id"] for e in package_entries("video")}
+    audio_packages = {e["id"] for e in package_entries("audio")}
+    for field, allowed in [('effects', set(GRADES) | set(VIDEO_EFFECTS) | video_packages),
+                           ('audioEffects', set(AUDIO_CHAINS) | audio_packages)]:
         entries = clip.get(field) or []
         if len(entries) > 32:
             raise ValueError('Too many processors')

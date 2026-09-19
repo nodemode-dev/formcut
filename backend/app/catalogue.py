@@ -250,6 +250,13 @@ EFFECT_DEFAULTS = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-
 
 
 @router.get("")
+def package_entries(kind: str) -> list[dict]:
+    from .effect_packages import entries
+    return [{"id": e["id"], "name": e["name"], "category": e.get("category", "Packages"),
+             "group": "Packages", "parameters": e["parameters"], "declarations": e["declarations"]}
+            for e in entries(kind)]
+
+
 def catalogue() -> dict:
     return {
         "video": [{"id": k, "name": label(k), "category": "Color", "group": group_of(k, FILTER_GROUPS), "parameters": GRADES[k], "declarations": declare(GRADES[k])} for k in GRADES]
@@ -285,6 +292,10 @@ AUDIO_TEMPLATES: dict[str, str] = {
 
 
 def audio_chain(effect_id: str, params: dict | None) -> str:
+    from .effect_packages import chain_for
+    packaged = chain_for(effect_id, params)
+    if packaged:
+        return packaged
     """The filter text for an effect, with any declared strength applied."""
     template = AUDIO_TEMPLATES.get(effect_id)
     if not template:
