@@ -5,6 +5,8 @@ import { defaultTextStyle, defaultTransform, type ClipTransform } from "../engin
 import { icon } from "./icons";
 import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
+import { api } from "../engine/api";
+import { sourceTime } from "../engine/timing";
 import { text } from "../i18n/text";
 import { sampledTransform } from "../engine/keyframes";
 
@@ -139,6 +141,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span>${t("row.mute")}</span>
           <span></span>
           <button class="toggle" data-ref="mute" aria-label="Mute clip"></button>
+        </div>
+        <div class="prop-row" data-feature="row.reverse">
+          <span>${t("row.reverse")}</span>
+          <span class="prop-aux" data-ref="reverse-state"></span>
+          <button class="toggle" data-ref="reverse" aria-label="Reverse clip"></button>
         </div>
       </div>
       <div class="section" data-section="blend" data-feature="section.blend">
@@ -355,6 +362,34 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     engine.dispatch("clip.mute", { clipId: found.clip.id, muted: !found.clip.muted });
   });
 
+  const reverseState = el.querySelector<HTMLElement>('[data-ref="reverse-state"]')!;
+  el.querySelector('[data-ref="reverse"]')!.addEventListener("click", () => void (async () => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    const clip = found?.clip;
+    if (!clip || clip.kind !== "video" || !clip.mediaId) return;
+    const item = bin.find(clip.mediaId);
+    const total = item?.duration ?? 0;
+    if (!total) return;
+    const span = sourceTime(clip, clip.duration) - (clip.sourceIn ?? 0);
+    const flipped = Math.max(0, Math.round((total - (clip.sourceIn ?? 0) - span) * 100) / 100);
+    if (!clip.reversed) {
+      reverseState.textContent = t("row.reverse.preparing");
+      const reply = await api(`/api/media/${clip.mediaId}/reverse`, {});
+      if (reply.job_id) {
+        for (let waited = 0; waited < 600; waited += 1) {
+          const status = await fetch(`/api/jobs/${reply.job_id}`).then((r) => r.json());
+          if (status.status === "done") break;
+          if (status.status === "error" || status.status === "failed") { reverseState.textContent = t("row.reverse.failed"); return; }
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+      reverseState.textContent = "";
+    }
+    if (!engine.findClip(clip.id)) return;
+    engine.dispatch("clip.creator", { clipId: clip.id, patch: { reversed: !clip.reversed || undefined, sourceIn: flipped } });
+  })().catch(() => { reverseState.textContent = t("row.reverse.failed"); }));
+
   el.addEventListener("contextmenu", (ev) => {
     const kfBtn = (ev.target as HTMLElement).closest<HTMLElement>(".kf-btn");
     if (!kfBtn) return;
@@ -490,6 +525,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     }
     keyOn.classList.toggle("is-on", Boolean(clip?.key));
     el.querySelector('[data-ref="mute"]')!.classList.toggle("is-on", Boolean(clip?.muted));
+    el.querySelector('[data-ref="reverse"]')!.classList.toggle("is-on", Boolean(clip?.reversed));
     if (clip?.key) {
       if (document.activeElement !== keyColor && keyColor.value !== clip.key.color) {
         keyColor.value = clip.key.color;

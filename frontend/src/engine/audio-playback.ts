@@ -29,7 +29,7 @@ export function audioSignature(project: ProjectState): string {
         if (clip.kind !== "audio" && clip.kind !== "video") continue;
         parts.push([
           clip.id, clip.mediaId ?? "", clip.start, clip.duration, clip.sourceIn ?? 0,
-          clip.speed ?? 1, clip.speedCurve ?? null, clip.volume ?? 1, clip.muted ?? false,
+          clip.speed ?? 1, clip.speedCurve ?? null, clip.volume ?? 1, clip.muted ?? false, clip.reversed ?? false,
           clip.fadeIn ?? 0, clip.fadeOut ?? 0, clip.audioEffects ?? null,
         ]);
       }

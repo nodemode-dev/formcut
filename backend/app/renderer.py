@@ -11,7 +11,7 @@ from . import gpu
 from .assets import apply_lut, asset_path
 from .expressions import evaluate
 from .fonts import title_font
-from .media import MEDIA_DIR, _find
+from .media import MEDIA_DIR, _find, reversed_path
 from .pixel_effects import apply_effects
 from .render_document import flatten, validate_document
 from .timing import fade_at, property_at, source_time
@@ -47,7 +47,13 @@ class FrameRenderer:
         if not media_id:
             raise ValueError("Media clip has no source")
         _find(media_id)
-        paths = list(MEDIA_DIR.glob(f"{media_id}.*"))
+        if clip.get("reversed"):
+            candidate = reversed_path(media_id)
+            if not candidate.is_file():
+                raise ValueError("Reversed copy is not prepared yet: " + media_id)
+            paths = [candidate]
+        else:
+            paths = list(MEDIA_DIR.glob(f"{media_id}.*"))
         if not paths:
             raise ValueError("Media file is missing: " + media_id)
         if clip["kind"] == "image":

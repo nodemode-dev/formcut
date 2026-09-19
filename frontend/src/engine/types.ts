@@ -73,6 +73,7 @@ export interface Clip {
   keyframes?: Keyframe[];
   key?: ClipKey;
   muted?: boolean;
+  reversed?: boolean;
   mask?: ClipMask;
   audioFx?: string;
   fx?: boolean;

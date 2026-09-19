@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .paths import DATA_DIR
+from . import jobs
 MEDIA_DIR = DATA_DIR / "media"
 THUMB_DIR = DATA_DIR / "thumbs"
 INDEX_FILE = DATA_DIR / "media.json"
@@ -174,6 +175,82 @@ def get_file(media_id: str) -> FileResponse:
 
 class FreezeBody(BaseModel):
     time: float
+
+
+REVERSED_DIR = DATA_DIR / "reversed"
+
+
+def reversed_path(media_id: str) -> Path:
+    return REVERSED_DIR / f"{media_id}.mp4"
+
+
+def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
+    """Segment the source, reverse each piece, and concatenate the pieces backwards.
+
+    Reversing whole files buffers every frame in memory; half-second chunks bound
+    that even for 4K sources (a 4 s 1080p chunk was OOM-killed on a 4 GB machine),
+    and concatenation of the reversed chunks in reverse order is stream copy.
+    """
+    import tempfile
+
+    REVERSED_DIR.mkdir(parents=True, exist_ok=True)
+    final = reversed_path(media_id)
+    if final.is_file() and final.stat().st_size > 0:
+        return final
+    with tempfile.TemporaryDirectory(dir=REVERSED_DIR) as folder:
+        work = Path(folder)
+        seg = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(source), "-f", "segment", "-segment_time", "0.5",
+             "-reset_timestamps", "1", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+             "-c:a", "aac", "-b:a", "192k", str(work / "part_%05d.mp4")],
+            capture_output=True, text=True, timeout=1800,
+        )
+        if seg.returncode != 0:
+            raise ValueError("Could not segment the source: " + seg.stderr[-300:])
+        parts = sorted(work.glob("part_*.mp4"))
+        if not parts:
+            raise ValueError("The source produced no segments")
+        for index, part in enumerate(parts):
+            if cancelled():
+                raise InterruptedError("Cancelled")
+            report(index / len(parts))
+            has_audio = any(s.get("codec_type") == "audio" for s in _ffprobe(part).get("streams", []))
+            filters = ["-vf", "reverse"] + (["-af", "areverse"] if has_audio else [])
+            rev = subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-i", str(part), *filters,
+                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18", "-c:a", "aac", "-b:a", "192k",
+                 str(work / f"rev_{part.name}")],
+                capture_output=True, text=True, timeout=1800,
+            )
+            if rev.returncode != 0:
+                raise ValueError("Could not reverse a segment (memory or codec): " + rev.stderr[-300:])
+        listing = work / "concat.txt"
+        listing.write_text("".join(f"file '{work / ('rev_' + part.name)}'\n" for part in reversed(parts)), encoding="utf-8")
+        joined = work / "joined.mp4"
+        cat = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(joined)],
+            capture_output=True, text=True, timeout=600,
+        )
+        if cat.returncode != 0 or not joined.is_file():
+            raise ValueError("Could not join the reversed segments: " + cat.stderr[-300:])
+        shutil.move(str(joined), str(final))
+    return final
+
+
+@router.post("/{media_id}/reverse", status_code=202)
+def reverse_media(media_id: str) -> dict:
+    record = _find(media_id)
+    if record["kind"] != "video":
+        raise HTTPException(status_code=400, detail="only video media can be reversed")
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="media file missing")
+    if reversed_path(media_id).is_file():
+        return {"status": "ready", "media_id": media_id}
+    def operation(job_id, report, cancelled):
+        build_reversed(media_id, matches[0], report, cancelled)
+        return {"media_id": media_id, "status": "ready"}
+    return jobs.submit("reverse-media", operation)
 
 
 @router.post("/{media_id}/freeze", status_code=201)

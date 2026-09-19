@@ -6,7 +6,7 @@ import wave
 import numpy as np
 
 from .catalogue import AUDIO_CHAINS
-from .media import MEDIA_DIR, _ffprobe
+from .media import MEDIA_DIR, _ffprobe, reversed_path
 from .render_document import flatten
 from .timing import fade_at, source_delta
 
@@ -66,7 +66,13 @@ def render_audio(project: dict, destination, cancelled=lambda: False):
             raise InterruptedError("Cancelled")
         if clip["kind"] not in ("video", "audio") or clip.get("muted") or not clip.get("mediaId"):
             continue
-        paths = list(MEDIA_DIR.glob(f"{clip['mediaId']}.*"))
+        if clip.get("reversed"):
+            candidate = reversed_path(clip["mediaId"])
+            if not candidate.is_file():
+                raise ValueError("Reversed copy is not prepared yet")
+            paths = [candidate]
+        else:
+            paths = list(MEDIA_DIR.glob(f"{clip['mediaId']}.*"))
         if not paths:
             raise ValueError("Audio media is missing")
         if not any(s.get("codec_type") == "audio" for s in _ffprobe(paths[0]).get("streams", [])):

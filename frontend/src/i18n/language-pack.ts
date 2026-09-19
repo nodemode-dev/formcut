@@ -667,7 +667,10 @@ The track is locked|La piste est verrouillée|La traccia è bloccata|トラッ�
 Pieces must share the same media|Les segments doivent partager le même média|Le parti devono condividere lo stesso file|断片は同じメディアを共有する必要があります|조각이 같은 미디어를 공유해야 합니다|As partes devem compartilhar a mesma mídia|Фрагменты должны использовать один источник|Parçalar aynı medyayı paylaşmalı|片段必须共享同一媒体|片段必須共享同一媒體
 Pieces must play at the same constant speed|Les segments doivent avoir la même vitesse constante|Le parti devono avere la stessa velocità costante|断片は同じ一定速度である必要があります|조각이 같은 일정 속도여야 합니다|As partes devem ter a mesma velocidade constante|Фрагменты должны идти с одной постоянной скоростью|Parçalar aynı sabit hızda olmalı|片段必须以相同恒定速度播放|片段必須以相同恆定速度播放
 Pieces must touch on the timeline|Les segments doivent se toucher sur la timeline|Le parti devono toccarsi sulla timeline|断片はタイムライン上で接している必要があります|조각이 타임라인에서 맞닿아야 합니다|As partes devem se tocar na linha do tempo|Фрагменты должны соприкасаться на шкале|Parçalar zaman çizgisinde bitişik olmalı|片段必须在时间线上相接|片段必須在時間軸上相接
-Pieces must continue the same source range|Les segments doivent prolonger la même plage source|Le parti devono continuare lo stesso intervallo di origine|断片は同じソース範囲の続きである必要があります|조각이 같은 소스 범위를 이어야 합니다|As partes devem continuar o mesmo intervalo de origem|Фрагменты должны продолжать один диапазон источника|Parçalar aynı kaynak aralığını sürdürmeli|片段必须延续同一源范围|片段必須延續同一來源範圍`;
+Pieces must continue the same source range|Les segments doivent prolonger la même plage source|Le parti devono continuare lo stesso intervallo di origine|断片は同じソース範囲の続きである必要があります|조각이 같은 소스 범위를 이어야 합니다|As partes devem continuar o mesmo intervalo de origem|Фрагменты должны продолжать один диапазон источника|Parçalar aynı kaynak aralığını sürdürmeli|片段必须延续同一源范围|片段必須延續同一來源範圍
+Reverse|Inverser|Inverti|逆再生|역재생|Inverter|Реверс|Ters çevir|倒放|倒放
+Preparing|Préparation|Preparazione|準備中|준비 중|Preparando|Подготовка|Hazırlanıyor|准备中|準備中
+Could not prepare|Préparation impossible|Preparazione non riuscita|準備できませんでした|준비할 수 없습니다|Não foi possível preparar|Не удалось подготовить|Hazırlanamadı|无法准备|無法準備`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");
