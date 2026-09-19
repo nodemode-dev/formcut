@@ -64,6 +64,66 @@ def apply_edit(project: dict, command: dict):
         clip["duration"] = offset
         clip["fadeOut"] = 0
         located[0]["clips"].append(tail)
+    elif operation == "clips.move":
+        tracks = timeline["tracks"]
+        d_track = int(command.get("deltaTrack", 0))
+        delta = float(command["deltaStart"])
+        members = []
+        for wanted in command["clipIds"]:
+            spot = next(((i, t, c) for i, t in enumerate(tracks) for c in t["clips"] if c["id"] == wanted), None)
+            if not spot:
+                raise ValueError("Clip not found")
+            members.append(spot)
+        for index, track, clip in members:
+            target = index + d_track
+            if track.get("locked") or not 0 <= target < len(tracks) or tracks[target].get("locked") or clip["start"] + delta < 0:
+                raise ValueError("Move lands on a locked track or before zero")
+        for index, track, clip in members:
+            if d_track:
+                track["clips"].remove(clip)
+                tracks[index + d_track]["clips"].append(clip)
+            clip["start"] = max(0.0, round((clip["start"] + delta) * 100) / 100)
+    elif operation == "clips.remove":
+        tracks = timeline["tracks"]
+        for wanted in command["clipIds"]:
+            spot = next(((t, c) for t in tracks if not t.get("locked") for c in t["clips"] if c["id"] == wanted), None)
+            if spot:
+                spot[0]["clips"].remove(spot[1])
+    elif operation == "clips.duplicate":
+        tracks = timeline["tracks"]
+        made = []
+        for wanted in command["clipIds"]:
+            spot = next(((t, c) for t in tracks if not t.get("locked") for c in t["clips"] if c["id"] == wanted), None)
+            if not spot:
+                continue
+            twin = copy.deepcopy(spot[1])
+            twin["id"] = uuid.uuid4().hex
+            twin["start"] = spot[1]["start"] + spot[1]["duration"]
+            spot[0]["clips"].append(twin)
+            made.append(twin["id"])
+        return {"clipIds": made}
+    elif operation == "clips.add":
+        tracks = timeline["tracks"]
+        made = []
+        for entry in command["entries"]:
+            index = int(entry["track"])
+            if not 0 <= index < len(tracks) or tracks[index].get("locked"):
+                continue
+            clip = copy.deepcopy(entry["clip"])
+            clip.setdefault("id", uuid.uuid4().hex)
+            tracks[index]["clips"].append(clip)
+            made.append(clip["id"])
+        return {"clipIds": made}
+    elif operation == "clips.mute":
+        tracks = timeline["tracks"]
+        muted = bool(command["muted"])
+        for wanted in command["clipIds"]:
+            spot = next((c for t in tracks if not t.get("locked") for c in t["clips"] if c["id"] == wanted), None)
+            if spot is not None:
+                if muted:
+                    spot["muted"] = True
+                else:
+                    spot.pop("muted", None)
     elif operation == "track.add":
         timeline["tracks"].append({"id": uuid.uuid4().hex, "name": command.get("name", "Track"), "clips": []})
     elif operation == "track.remove":
@@ -115,7 +175,7 @@ def dispatch(method: str, params: dict):
         return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
                 "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "track.add", "track.remove", "timeline.add", "project.settings"]}
     if method == "catalogue":
         return catalogue()
     if method == "project.list":

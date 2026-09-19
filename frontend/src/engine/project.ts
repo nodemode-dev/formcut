@@ -250,6 +250,101 @@ export class ProjectEngine {
         this.emit("clip-selection");
         break;
       }
+      case "clips.move": {
+        const p = payload as { clipIds: string[]; deltaStart: number; deltaTrack?: number };
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const dTrack = p.deltaTrack ?? 0;
+        const members = p.clipIds.map((id) => this.findClip(id)).filter((m): m is NonNullable<typeof m> => !!m);
+        if (!members.length) break;
+        const blocked = members.some((m) => {
+          const target = m.trackIndex + dTrack;
+          return tracks[m.trackIndex].locked || !tracks[target] || tracks[target].locked || m.clip.start + p.deltaStart < 0;
+        });
+        if (blocked) break;
+        this.pushHistory();
+        for (const m of members) {
+          if (dTrack !== 0) {
+            const from = tracks[m.trackIndex].clips;
+            from.splice(from.indexOf(m.clip), 1);
+            tracks[m.trackIndex + dTrack].clips.push(m.clip);
+          }
+          m.clip.start = Math.max(0, Math.round((m.clip.start + p.deltaStart) * 100) / 100);
+          s.duration = Math.max(s.duration, m.clip.start + m.clip.duration);
+        }
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
+      case "clips.remove": {
+        const ids = payload as string[];
+        const members = ids.map((id) => this.findClip(id)).filter((m): m is NonNullable<typeof m> => !!m);
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const doable = members.filter((m) => !tracks[m.trackIndex].locked);
+        if (!doable.length) break;
+        this.pushHistory();
+        for (const m of doable) {
+          const clips = tracks[m.trackIndex].clips;
+          clips.splice(clips.indexOf(m.clip), 1);
+        }
+        s.selection = s.selection.filter((id) => !doable.some((m) => m.clip.id === id));
+        if (s.selectedClipId && doable.some((m) => m.clip.id === s.selectedClipId)) s.selectedClipId = s.selection.length ? s.selection[s.selection.length - 1] : null;
+        s.saved = false;
+        this.emit("clips");
+        this.emit("clip-selection");
+        break;
+      }
+      case "clips.duplicate": {
+        const ids = payload as string[];
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const members = ids.map((id) => this.findClip(id)).filter((m): m is NonNullable<typeof m> => !!m && !tracks[m.trackIndex].locked);
+        if (!members.length) break;
+        this.pushHistory();
+        const made: string[] = [];
+        for (const m of members) {
+          const copy = structuredClone(m.clip);
+          copy.id = crypto.randomUUID();
+          copy.start = m.clip.start + m.clip.duration;
+          tracks[m.trackIndex].clips.push(copy);
+          s.duration = Math.max(s.duration, copy.start + copy.duration);
+          made.push(copy.id);
+        }
+        s.selection = made;
+        s.selectedClipId = made[made.length - 1];
+        s.saved = false;
+        this.emit("clips");
+        this.emit("clip-selection");
+        break;
+      }
+      case "clips.add": {
+        const p = payload as { entries: Array<{ trackIndex: number; clip: import("./types").Clip }> };
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const doable = p.entries.filter((entry) => tracks[entry.trackIndex] && !tracks[entry.trackIndex].locked);
+        if (!doable.length) break;
+        this.pushHistory();
+        const made: string[] = [];
+        for (const entry of doable) {
+          tracks[entry.trackIndex].clips.push(entry.clip);
+          s.duration = Math.max(s.duration, entry.clip.start + entry.clip.duration);
+          made.push(entry.clip.id);
+        }
+        s.selection = made;
+        s.selectedClipId = made[made.length - 1];
+        s.saved = false;
+        this.emit("clips");
+        this.emit("clip-selection");
+        break;
+      }
+      case "clips.mute": {
+        const p = payload as { clipIds: string[]; muted: boolean };
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const members = p.clipIds.map((id) => this.findClip(id)).filter((m): m is NonNullable<typeof m> => !!m && !tracks[m.trackIndex].locked);
+        if (!members.length) break;
+        this.pushHistory();
+        for (const m of members) m.clip.muted = p.muted || undefined;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.move": {
         const p = payload as { clipId: string; start: number; trackIndex?: number };
         const found = this.findClip(p.clipId);

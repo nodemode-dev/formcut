@@ -457,10 +457,17 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   scroller.addEventListener("pointerup", () => {
     if (!drag) return;
     const { kind, node, clipId, moved, laneIndex } = drag;
+    const dragged = drag;
     drag = null;
     if (!moved) return;
     const start = parseFloat(node.style.left) / PX_PER_SEC;
     const duration = (parseFloat(node.style.width) + 3) / PX_PER_SEC;
+    const set = engine.snapshot.selection;
+    if (kind === "move" && set.length > 1 && set.includes(clipId)) {
+      engine.dispatch("clips.move", { clipIds: set, deltaStart: start - dragged.start, deltaTrack: laneIndex - (engine.findClip(clipId)?.trackIndex ?? laneIndex) });
+      reconcile();
+      return;
+    }
     if (kind === "move") engine.dispatch("clip.move", { clipId, start, trackIndex: laneIndex });
     else engine.dispatch("clip.trim", { clipId, start, duration });
   });
@@ -472,8 +479,9 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     }
   });
   el.querySelector('[data-ref="act-delete"]')!.addEventListener("click", () => {
-    const selected = engine.snapshot.selectedClipId;
-    if (selected) engine.dispatch("clip.remove", selected);
+    const state = engine.snapshot;
+    if (state.selection.length > 1) engine.dispatch("clips.remove", state.selection);
+    else if (state.selectedClipId) engine.dispatch("clip.remove", state.selectedClipId);
   });
   window.addEventListener("keydown", (ev) => {
     const target = ev.target as HTMLElement;
@@ -494,10 +502,13 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       return;
     }
     if (ev.key === "Delete" || ev.key === "Backspace") {
-      const selected = engine.snapshot.selectedClipId;
-      if (selected) {
+      const state = engine.snapshot;
+      if (state.selection.length > 1) {
         ev.preventDefault();
-        engine.dispatch("clip.remove", selected);
+        engine.dispatch("clips.remove", state.selection);
+      } else if (state.selectedClipId) {
+        ev.preventDefault();
+        engine.dispatch("clip.remove", state.selectedClipId);
       }
     }
   });

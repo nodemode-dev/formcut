@@ -4,11 +4,38 @@ import type { Clip } from "../engine/types";
 import { api } from "../engine/api";
 
 export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void {
-  let copied: Clip | undefined;
+  let copied: Array<{ trackIndex: number; clip: Clip }> = [];
   const selection = () => engine.snapshot.selectedClipId ? engine.findClip(engine.snapshot.selectedClipId) : null;
-  const duplicate = () => { const found = selection(); if (!found) return; const clip = structuredClone(found.clip); clip.id = crypto.randomUUID(); clip.start += clip.duration; engine.dispatch("clip.add", { trackIndex: found.trackIndex, clip }); engine.dispatch("clip.select", clip.id); };
-  const copy = () => { const found = selection(); if (found) copied = structuredClone(found.clip); };
-  const paste = () => { if (!copied) return; const clip = structuredClone(copied); clip.id = crypto.randomUUID(); clip.start = engine.snapshot.playhead; engine.dispatch("clip.add", { trackIndex: selection()?.trackIndex ?? 0, clip }); engine.dispatch("clip.select", clip.id); };
+  const selectedSet = (): string[] => {
+    const s = engine.snapshot;
+    return s.selection.length ? s.selection : s.selectedClipId ? [s.selectedClipId] : [];
+  };
+  const duplicate = () => {
+    const ids = selectedSet();
+    if (ids.length > 1) { engine.dispatch("clips.duplicate", ids); return; }
+    const found = selection(); if (!found) return;
+    const clip = structuredClone(found.clip); clip.id = crypto.randomUUID(); clip.start += clip.duration;
+    engine.dispatch("clip.add", { trackIndex: found.trackIndex, clip });
+    engine.dispatch("clip.select", clip.id);
+  };
+  const copy = () => {
+    copied = selectedSet()
+      .map((id) => engine.findClip(id))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map((m) => ({ trackIndex: m.trackIndex, clip: structuredClone(m.clip) }));
+  };
+  const paste = () => {
+    if (!copied.length) return;
+    const anchor = Math.min(...copied.map((entry) => entry.clip.start));
+    const at = engine.snapshot.playhead;
+    const entries = copied.map((entry) => {
+      const clip = structuredClone(entry.clip);
+      clip.id = crypto.randomUUID();
+      clip.start = at + (entry.clip.start - anchor);
+      return { trackIndex: entry.trackIndex, clip };
+    });
+    engine.dispatch("clips.add", { entries });
+  };
   const detach = async () => {
     const found = selection(); if (!found?.clip.mediaId || found.clip.kind !== "video") return;
     const source = found.clip;
@@ -21,7 +48,7 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
     ["Undo", () => engine.dispatch("history.undo")], ["Redo", () => engine.dispatch("history.redo")],
     ["Copy clip", copy], ["Paste clip", paste], ["Duplicate clip", duplicate],
     ["Split at playhead", () => { const f = selection(); if (f) engine.dispatch("clip.split", { clipId: f.clip.id, time: engine.snapshot.playhead }); }],
-    ["Detach audio", detach], ["Delete clip", () => { const f = selection(); if (f) engine.dispatch("clip.remove", f.clip.id); }],
+    ["Detach audio", detach], ["Delete clip", () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); }],
   ];
   const bindMenu = (button: HTMLButtonElement, entries: Array<[string, () => unknown]>) => {
     const menu = document.createElement("div"); menu.className = "dropdown"; menu.hidden = true;
