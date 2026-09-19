@@ -12,7 +12,7 @@ from .assets import apply_lut, asset_path
 from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
-from .pixel_effects import apply_effects
+from .pixel_effects import apply_effects, apply_colour_panel, COLOUR_PANEL
 from .render_document import flatten, validate_document
 from .timing import fade_at, property_at, source_time
 
@@ -254,13 +254,23 @@ class FrameRenderer:
             alpha = np.zeros((h, w), np.float32)
             x0, y0 = int(mask["x"] / 100 * w), int(mask["y"] / 100 * h)
             x1, y1 = int((mask["x"] + mask["w"]) / 100 * w), int((mask["y"] + mask["h"]) / 100 * h)
-            if mask["shape"] == "ellipse":
+            if mask["shape"] == "linear":
+                # K5: a linear mask is a half-plane through the mask's centre at
+                # the given angle; feather softens the edge like any other shape.
+                angle = math.radians(float(mask.get("angle", 0)))
+                cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+                yy, xx = np.mgrid[:h, :w]
+                side = (xx - cx) * math.sin(angle) - (yy - cy) * math.cos(angle)
+                alpha = (side >= 0).astype(np.float32)
+            elif mask["shape"] == "ellipse":
                 cv2.ellipse(alpha, ((x0 + x1) // 2, (y0 + y1) // 2), (max(1, (x1 - x0) // 2), max(1, (y1 - y0) // 2)), 0, 0, 360, 1, -1)
             else:
                 cv2.rectangle(alpha, (x0, y0), (x1, y1), 1, -1)
             feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
             if feather > 0:
                 alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
+            if mask.get("invert"):
+                alpha = 1.0 - alpha
             out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
         if clip.get("cutout"):
             from .segmentation import cutout_alpha
@@ -311,14 +321,16 @@ class FrameRenderer:
                 canvas = apply_effects(canvas, effects, local)
                 continue
             if clip["kind"] == "image" and not clip.get("shaderId") and all(entry["id"] in GRADES for entry in effects):
-                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"), crop_box(clip))
+                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"), crop_box(clip), repr(clip.get("colour")))
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
+                    still = apply_colour_panel(still, clip.get("colour"))
                     still = apply_effects(still, effects, 0) if effects else still
                     self.prepared[key] = apply_lut(still, clip["lutId"]) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
             else:
                 image = self.text_frame(clip) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
+                image = apply_colour_panel(image, clip.get("colour"))
                 image = apply_effects(image, effects, local) if effects else image
                 if clip.get("lutId"):
                     image = apply_lut(image, clip["lutId"])

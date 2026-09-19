@@ -47,12 +47,14 @@ export interface ClipTransition {
 }
 
 export interface ClipMask {
-  shape: "rect" | "ellipse";
+  shape: "rect" | "ellipse" | "linear";
   x: number;
   y: number;
   w: number;
   h: number;
   feather: number;
+  angle?: number;
+  invert?: boolean;
 }
 
 export interface ClipKey {
@@ -90,6 +92,8 @@ export interface Clip {
   key?: ClipKey;
   muted?: boolean;
   extendOut?: number;
+  colour?: ColourPanel;
+  pitchFollowsSpeed?: boolean;
   reversed?: boolean;
   detachedFrom?: string;
   crop?: { left?: number; top?: number; right?: number; bottom?: number };
@@ -117,6 +121,28 @@ export interface Timeline {
   fps?: number;
   tracks: Track[];
 }
+
+/** K1: the colour panel. Every field neutral at its default; absent means off. */
+export interface ColourPanel {
+  temperature?: number;
+  tint?: number;
+  saturation?: number;
+  exposure?: number;
+  brightness?: number;
+  contrast?: number;
+  highlights?: number;
+  shadows?: number;
+  whites?: number;
+  blacks?: number;
+  sharpen?: number;
+  fade?: number;
+  vignette?: number;
+}
+
+export const COLOUR_NEUTRAL: Required<ColourPanel> = {
+  temperature: 6500, tint: 0, saturation: 0, exposure: 0, brightness: 0, contrast: 0,
+  highlights: 0, shadows: 0, whites: 0, blacks: 0, sharpen: 0, fade: 0, vignette: 0,
+};
 
 export interface ClipTransform {
   scale: number;

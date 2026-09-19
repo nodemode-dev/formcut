@@ -16,6 +16,14 @@ def clip_values(clip):
         value = (clip.get('crop') or {}).get(edge)
         if value is not None:
             number(value, 'crop ' + edge, 0, 0.45)
+    panel = clip.get('colour') or {}
+    if panel:
+        for name, low, high in [('temperature', 2000, 11000), ('tint', -100, 100), ('saturation', -100, 100),
+                                ('exposure', -5, 5), ('brightness', -100, 100), ('contrast', -100, 100),
+                                ('highlights', -100, 100), ('shadows', -100, 100), ('whites', -100, 100),
+                                ('blacks', -100, 100), ('sharpen', 0, 100), ('fade', 0, 100), ('vignette', -100, 100)]:
+            if panel.get(name) is not None:
+                number(panel[name], 'colour ' + name, low, high)
     style = clip.get('textStyle') or {}
     for name, low, high in [('weight', 100, 900), ('outlineWidth', 0, 50), ('shadowBlur', 0, 100),
                             ('shadowX', -200, 200), ('shadowY', -200, 200), ('plateOpacity', 0, 1),

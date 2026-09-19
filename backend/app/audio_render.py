@@ -5,10 +5,10 @@ import wave
 
 import numpy as np
 
-from .catalogue import AUDIO_CHAINS
+from .catalogue import AUDIO_CHAINS, AUDIO_PARAMS, audio_chain
 from .media import MEDIA_DIR, _ffprobe, reversed_path
 from .render_document import flatten
-from .timing import fade_at, source_delta
+from .timing import fade_at, source_delta, source_time
 
 RATE = 48000
 
@@ -16,6 +16,21 @@ RATE = 48000
 def time_stretch(samples: np.ndarray, clip: dict, count: int, cancelled=lambda: False) -> np.ndarray:
     if not clip.get("speedCurve") and abs(float(clip.get("speed", 1)) - 1) < 1e-8:
         return np.pad(samples[:count], ((0, max(0, count - len(samples))), (0, 0)))
+    if clip.get("pitchFollowsSpeed"):
+        # K8: tape behaviour. Reading the source across the clip's own time map
+        # and resampling moves pitch with speed, which is the whole point; the
+        # phase vocoder below is what preserves pitch, so it is skipped here.
+        duration = clip["duration"] + clip.get("extendOut", 0)
+        local = np.linspace(0, duration, max(1, count), endpoint=False)
+        base = float(clip.get("sourceIn") or 0)
+        positions = np.array([(source_time(clip, t) - base) * RATE for t in local])
+        index = np.clip(positions, 0, max(0, len(samples) - 1))
+        low = np.floor(index).astype(np.int64)
+        high = np.minimum(low + 1, max(0, len(samples) - 1))
+        frac = (index - low)[:, None]
+        if not len(samples):
+            return np.zeros((count, 2), samples.dtype)
+        return samples[low] * (1 - frac) + samples[high] * frac
     window_size, hop = 2048, 512
     window = np.hanning(window_size)
     padded = np.pad(samples, ((window_size // 2, window_size), (0, 0)))
@@ -119,7 +134,7 @@ def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarra
     for effect in effects:
         if effect["id"] not in AUDIO_CHAINS:
             raise ValueError("Unknown audio processor")
-        wet = filter_audio(samples, AUDIO_CHAINS[effect["id"]], cancelled)
+        wet = filter_audio(samples, audio_chain(effect["id"], effect.get("params")), cancelled)
         count = max(len(samples), len(wet))
         amount = max(0, min(1, float(effect.get("amount", 1))))
         samples = np.pad(samples, ((0, count - len(samples)), (0, 0))) * (1 - amount) + np.pad(wet, ((0, count - len(wet)), (0, 0))) * amount

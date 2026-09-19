@@ -122,7 +122,7 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     clip!.keyframes = [...retained, ...keys].sort((a, b) => a.t - b.t);
   } else if (command === "clip.creator") {
     const values = p.patch as Partial<Clip>;
-    const allowed = ["effects", "lutId", "shaderId", "expressions", "cutout", "volume", "pan", "audioEffects", "sourceIn", "reversed", "crop"] as const;
+    const allowed = ["effects", "lutId", "shaderId", "expressions", "cutout", "volume", "pan", "audioEffects", "sourceIn", "reversed", "crop", "colour", "pitchFollowsSpeed"] as const;
     for (const key of allowed) if (key in values) Object.assign(clip!, { [key]: structuredClone(values[key]) });
   } else if (command === "clip.detach") {
     const audio = structuredClone(clip!);

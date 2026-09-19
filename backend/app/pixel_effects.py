@@ -256,3 +256,78 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         changed = process(result[:, :, :3], entry["id"], local, clamp_params(entry.get("params") or {}))
         result[:, :, :3] = np.clip(result[:, :, :3] * (1 - amount) + changed * amount, 0, 1)
     return np.round(result * 255).astype(np.uint8)
+
+
+# K1: the colour panel. A named, keyable correction stage that runs before the
+# effect stack. Every control is neutral at its default, and a clip without a
+# `colour` object skips the stage entirely, so existing frames are untouched.
+COLOUR_PANEL = {
+    "temperature": 6500.0, "tint": 0.0, "saturation": 0.0, "exposure": 0.0, "brightness": 0.0,
+    "contrast": 0.0, "highlights": 0.0, "shadows": 0.0, "whites": 0.0, "blacks": 0.0,
+    "sharpen": 0.0, "fade": 0.0, "vignette": 0.0,
+}
+
+
+def colour_active(panel) -> bool:
+    """True only when some control has left its neutral value."""
+    if not isinstance(panel, dict):
+        return False
+    return any(abs(float(panel.get(k, v)) - v) > 1e-9 for k, v in COLOUR_PANEL.items())
+
+
+def _kelvin_gain(kelvin: float) -> np.ndarray:
+    """Warm below 6500 K, cool above, neutral at 6500 K."""
+    shift = (6500.0 - max(2000.0, min(11000.0, kelvin))) / 4500.0
+    return np.array([1.0 + 0.22 * shift, 1.0 + 0.02 * abs(shift) * 0.0, 1.0 - 0.22 * shift], np.float32)
+
+
+def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
+    """Apply the colour panel to linearish RGB in 0..1. Neutral is identity."""
+    if not colour_active(panel):
+        return rgb
+    value = lambda k: float(panel.get(k, COLOUR_PANEL[k]))
+    out = rgb.astype(np.float32, copy=True)
+    out *= _kelvin_gain(value("temperature"))
+    tint = value("tint") / 100.0
+    out[:, :, 1] *= 1.0 + 0.25 * tint
+    out[:, :, 0] *= 1.0 - 0.10 * tint
+    out[:, :, 2] *= 1.0 - 0.10 * tint
+    out *= 2.0 ** value("exposure")
+    out += value("brightness") / 100.0
+    contrast = 1.0 + value("contrast") / 100.0
+    out = (out - 0.5) * contrast + 0.5
+    luminance = np.sum(np.clip(out, 0, 4) * [0.2126, 0.7152, 0.0722], axis=2, keepdims=True)
+    high = np.clip(luminance - 0.5, 0, None) * 2.0
+    low = np.clip(0.5 - luminance, 0, None) * 2.0
+    out += high * (value("highlights") / 100.0)
+    out += low * (value("shadows") / 100.0)
+    out += (luminance ** 3) * (value("whites") / 100.0)
+    out += ((1.0 - luminance) ** 3) * (value("blacks") / 100.0)
+    saturation = 1.0 + value("saturation") / 100.0
+    out = luminance + (out - luminance) * saturation
+    fade = value("fade") / 100.0
+    if fade:
+        out = out * (1.0 - 0.35 * fade) + 0.12 * fade
+    sharpen = value("sharpen") / 100.0
+    if sharpen:
+        blurred = cv2.GaussianBlur(out, (0, 0), 1.2)
+        out = out + (out - blurred) * (1.5 * sharpen)
+    vignette = value("vignette") / 100.0
+    if vignette:
+        h, w = out.shape[:2]
+        y, x = np.mgrid[:h, :w]
+        radius = np.sqrt(((x - w / 2) / (w / 2)) ** 2 + ((y - h / 2) / (h / 2)) ** 2)
+        falloff = np.clip(1.0 - (radius ** 2) * vignette, 0, 1)[:, :, None]
+        out = out * falloff if vignette > 0 else out * (2 - falloff)
+    return out
+
+
+def apply_colour_panel(image: np.ndarray, panel) -> np.ndarray:
+    """RGBA uint8 in, RGBA uint8 out; alpha untouched."""
+    if not colour_active(panel):
+        return image
+    rgb = image[:, :, :3].astype(np.float32) / 255.0
+    graded = colour_panel(rgb, panel)
+    out = image.copy()
+    out[:, :, :3] = np.clip(graded * 255.0, 0, 255).astype(np.uint8)
+    return out

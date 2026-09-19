@@ -258,3 +258,53 @@ def catalogue() -> dict:
         "blendModes": ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"],
         "previewVersion": PREVIEW_VERSION,
     }
+
+# K7: declared strength parameters, templated into the chain inside the engine.
+# Clients send an id and numbers; filter text never crosses the boundary.
+AUDIO_PARAMS: dict[str, dict] = {
+    "denoise": {"strength": {"min": 0, "max": 100, "default": 50, "unit": "%"}},
+    "deep-denoise": {"strength": {"min": 0, "max": 100, "default": 60, "unit": "%"}},
+    "hiss-cut": {"strength": {"min": 0, "max": 100, "default": 50, "unit": "%"}},
+    "voice-clean": {"strength": {"min": 0, "max": 100, "default": 50, "unit": "%"}},
+    "compress": {"strength": {"min": 0, "max": 100, "default": 50, "unit": "%"}},
+    "bass": {"strength": {"min": -100, "max": 100, "default": 50, "unit": "%"}},
+    "treble": {"strength": {"min": -100, "max": 100, "default": 50, "unit": "%"}},
+}
+
+# Chains that take their strength by template rather than by wet/dry alone.
+AUDIO_TEMPLATES: dict[str, str] = {
+    "denoise": "afftdn=nf={nf:.1f}",
+    "deep-denoise": "afftdn=nf={nf:.1f}:nr={nr:.0f}:tn=1",
+    "hiss-cut": "lowpass=f={cut:.0f},afftdn=nf={nf:.1f}:nt=w",
+    "voice-clean": "highpass=f=90,afftdn=nf={nf:.1f},acompressor=threshold=0.12:ratio={ratio:.1f},alimiter",
+    "compress": "acompressor=threshold={threshold:.3f}:ratio={ratio:.1f}",
+    "bass": "bass=g={gain:.1f}",
+    "treble": "treble=g={gain:.1f}",
+}
+
+
+def audio_chain(effect_id: str, params: dict | None) -> str:
+    """The filter text for an effect, with any declared strength applied."""
+    template = AUDIO_TEMPLATES.get(effect_id)
+    if not template:
+        return AUDIO_CHAINS[effect_id]
+    declared = AUDIO_PARAMS.get(effect_id, {})
+    raw = (params or {}).get("strength", declared.get("strength", {}).get("default", 50))
+    try:
+        strength = float(raw)
+    except (TypeError, ValueError):
+        strength = float(declared.get("strength", {}).get("default", 50))
+    span = declared.get("strength", {})
+    strength = max(float(span.get("min", 0)), min(float(span.get("max", 100)), strength))
+    unit = strength / 100.0
+    return template.format(
+        # afftdn's nf is the assumed noise floor in dB, bounded to -80..-20:
+        # a HIGHER (less negative) value treats more of the signal as noise, so
+        # strength must climb towards -20, not away from it.
+        nf=-75.0 + 52.0 * abs(unit),
+        nr=6.0 + 24.0 * abs(unit),
+        cut=14000.0 - 8000.0 * abs(unit),
+        ratio=1.5 + 6.5 * abs(unit),
+        threshold=max(0.02, 0.35 - 0.33 * abs(unit)),
+        gain=12.0 * unit,
+    )
