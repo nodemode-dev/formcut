@@ -7,6 +7,7 @@ import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
 import { api } from "../engine/api";
 import { sourceTime } from "../engine/timing";
+import { activeProfile, onInterfaceMode } from "./interface-mode";
 import { text } from "../i18n/text";
 import { sampledTransform } from "../engine/keyframes";
 
@@ -598,5 +599,32 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     }
   });
   installFontTools(el, engine);
+  const sections = [...el.querySelectorAll<HTMLElement>("[data-section]")];
+  const applyEasyViews = () => {
+    const profile = activeProfile();
+    const views = profile.inspector?.views;
+    if (!views || profile.id === "advanced") {
+      for (const section of sections) section.classList.remove("easy-hidden");
+      el.classList.remove("easy-column");
+      return;
+    }
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    const kind = found?.clip.kind ?? "none";
+    let shown: string[];
+    if (kind === "audio") shown = views["audio"] ?? ["audio"];
+    else if (kind === "text") shown = ["transform", "timing", "blend"];
+    else {
+      shown = (profile.inspector.subtabs ?? []).flatMap((subtab) => views[`video:${subtab}`] ?? []);
+      if (!shown.length) shown = ["transform", "timing"];
+    }
+    const wanted = new Set(shown.filter((name) => !name.includes(":")));
+    el.classList.add("easy-column");
+    for (const section of sections) section.classList.toggle("easy-hidden", !wanted.has(section.dataset.section!));
+  };
+  onInterfaceMode(applyEasyViews);
+  engine.subscribe((_state, event) => { if (event === "clip-selection") applyEasyViews(); });
+  applyEasyViews();
+
   return el;
 }

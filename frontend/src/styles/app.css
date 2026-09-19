@@ -893,3 +893,5 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .tray-tool { padding: 4px 10px; border: 1px solid var(--edge); border-radius: 6px; background: var(--control); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
 .tray-tool:hover { background: var(--control-hover); border-color: var(--cue); }
 .tray-tool[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+
+.inspector-pane.easy-column .section.easy-hidden, .easy-column .section.easy-hidden { display: none; }
