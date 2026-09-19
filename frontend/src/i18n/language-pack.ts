@@ -644,7 +644,23 @@ Keep my copy|Garder ma copie|Mantieni la mia copia|自分のコピーを保持|�
 Unsaved changes found|Modifications non enregistrées trouvées|Modifiche non salvate trovate|未保存の変更が見つかりました|저장되지 않은 변경 사항 발견|Alterações não salvas encontradas|Найдены несохранённые изменения|Kaydedilmemiş değişiklikler bulundu|发现未保存的更改|發現未儲存的變更
 Restore|Restaurer|Ripristina|復元|복원|Restaurar|Восстановить|Geri yükle|恢复|還原
 Discard|Ignorer|Scarta|破棄|버리기|Descartar|Отбросить|Vazgeç|丢弃|捨棄
-Saving|Enregistrement|Salvataggio|保存中|저장 중|Salvando|Сохранение|Kaydediliyor|保存中|儲存中`;
+Saving|Enregistrement|Salvataggio|保存中|저장 중|Salvando|Сохранение|Kaydediliyor|保存中|儲存中
+Parameters|Paramètres|Parametri|パラメーター|매개변수|Parâmetros|Параметры|Parametreler|参数|參數
+Reset to default|Réinitialiser|Ripristina il valore|初期値に戻す|기본값으로 재설정|Redefinir para o padrão|Сбросить к исходному|Varsayılana sıfırla|重置为默认|重設為預設
+Gamma|Gamma|Gamma|ガンマ|감마|Gama|Гамма|Gama|伽马|伽瑪
+Lift|Relèvement|Sollevamento|リフト|리프트|Elevação|Подъём|Yükseltme|提升|提升
+Temperature|Température|Temperatura|色温度|색온도|Temperatura|Температура|Sıcaklık|色温|色溫
+Tint|Teinte|Tinta|ティント|틴트|Matiz|Оттенок|Ton|色调|色調
+Shadows red|Ombres rouge|Ombre rosso|シャドウ 赤|섀도 빨강|Sombras vermelho|Тени красный|Gölgeler kırmızı|阴影 红|陰影 紅
+Shadows green|Ombres vert|Ombre verde|シャドウ 緑|섀도 초록|Sombras verde|Тени зелёный|Gölgeler yeşil|阴影 绿|陰影 綠
+Shadows blue|Ombres bleu|Ombre blu|シャドウ 青|섀도 파랑|Sombras azul|Тени синий|Gölgeler mavi|阴影 蓝|陰影 藍
+Highlights red|Hautes lumières rouge|Luci rosso|ハイライト 赤|하이라이트 빨강|Realces vermelho|Света красный|Parlaklar kırmızı|高光 红|亮部 紅
+Highlights green|Hautes lumières vert|Luci verde|ハイライト 緑|하이라이트 초록|Realces verde|Света зелёный|Parlaklar yeşil|高光 绿|亮部 綠
+Highlights blue|Hautes lumières bleu|Luci blu|ハイライト 青|하이라이트 파랑|Realces azul|Света синий|Parlaklar mavi|高光 蓝|亮部 藍
+Radius|Rayon|Raggio|半径|반경|Raio|Радиус|Yarıçap|半径|半徑
+Size|Taille|Dimensione|サイズ|크기|Tamanho|Размер|Boyut|大小|大小
+Levels|Niveaux|Livelli|レベル|레벨|Níveis|Уровни|Seviyeler|色阶|色階
+Strength|Intensité|Intensità|強さ|강도|Intensidade|Сила|Güç|强度|強度`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

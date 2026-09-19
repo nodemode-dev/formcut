@@ -1,4 +1,4 @@
-import { effectParameters } from "./effect-parameters";
+import { effectParameters, type ParamDeclaration } from "./effect-parameters";
 import { localizeElement, text as phrase } from "../i18n/text";
 import type { ProjectEngine } from "../engine/project";
 import type { Clip, KeyframeProp } from "../engine/types";
@@ -32,7 +32,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
   const points = root.querySelector<HTMLElement>(".speed-points")!;
   const pointRows: HTMLElement[] = [];
   const stacks = new Map<string, HTMLElement[]>();
-  let catalog: { video: Array<{ id: string; name: string; parameters?: Record<string, number> }>; audio: Array<{ id: string; name: string }> } = { video: [], audio: [] };
+  let catalog: { video: Array<{ id: string; name: string; parameters?: Record<string, number>; declarations?: ParamDeclaration[] }>; audio: Array<{ id: string; name: string }> } = { video: [], audio: [] };
   const choosePage = () => {
     for (const page of root.querySelectorAll<HTMLElement>("[data-group]")) page.hidden = page.dataset.group !== query<HTMLSelectElement>("page").value;
   };
@@ -58,7 +58,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       const name = rows[index].querySelector("span")!;
       if (name.textContent !== entry.id) name.textContent = entry.id;
       setValue(rows[index].querySelector("input")!, String(entry.amount));
-      if (kind === "effects") effectParameters(rows[index], entry, catalog.video.find(e => e.id === entry.id)?.parameters ?? {}, (name, value) => void safe(() => {
+      if (kind === "effects") effectParameters(rows[index], entry, catalog.video.find(e => e.id === entry.id)?.declarations ?? [], (name, value) => void safe(() => {
         const next = structuredClone(selected()?.effects ?? []);
         if (!next[index]) return;
         next[index].params = { ...next[index].params, [name]: value };
