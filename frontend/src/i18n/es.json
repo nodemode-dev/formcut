@@ -451,5 +451,6 @@
   "gen.needprompt": "Escribe una indicación primero",
   "gen.working": "Generando",
   "gen.done": "Añadido a tu biblioteca",
-  "gen.failed": "La generación falló"
+  "gen.failed": "La generación falló",
+  "home.title": "Volver a la pantalla de inicio"
 }

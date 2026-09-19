@@ -451,5 +451,6 @@
   "gen.needprompt": "Write a prompt first",
   "gen.working": "Generating",
   "gen.done": "Added to your library",
-  "gen.failed": "Generation failed"
+  "gen.failed": "Generation failed",
+  "home.title": "Back to the start screen"
 }

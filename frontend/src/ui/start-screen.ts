@@ -91,6 +91,12 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   const dismiss = () => {
     if (!el.hidden) el.hidden = true;
   };
+  // The logo in the titlebar brings the person back here, so the start screen
+  // is a place they can return to rather than something seen once at launch.
+  document.addEventListener("formcut:home", () => {
+    el.hidden = false;
+    void bin.load();
+  });
   const say = (text: string) => {
     status.textContent = text;
   };

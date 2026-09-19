@@ -21,7 +21,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   el.className = "titlebar";
   el.innerHTML = `
     <div class="titlebar-left">
-      <div class="titlebar-logo">${icon("logo")}<span>formcut</span></div>
+      <button class="titlebar-logo" data-ref="home" title="${t("home.title")}" aria-label="${t("home.title")}">${icon("logo")}</button>
       <button class="menu-item" data-ref="file" data-feature="menu.file">${t("menu.file")}</button>
       <button class="menu-item" data-ref="edit" data-feature="menu.edit">${t("menu.edit")}</button>
       <button class="menu-item" data-ref="view" data-feature="menu.view">${t("menu.view")}</button>
@@ -129,6 +129,10 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   menu.className = "dropdown";
   menu.hidden = true;
   document.body.append(menu);
+  // The logo is the way back to the start screen.
+  el.querySelector('[data-ref="home"]')!.addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("formcut:home"));
+  });
 
   const doSave = async () => {
     const result = await saveProject(engine);

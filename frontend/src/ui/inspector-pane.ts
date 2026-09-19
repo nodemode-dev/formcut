@@ -709,6 +709,32 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     if (panel) panel.dataset.brushRadius = String(value / 100);
   });
 
+  // A longer language needs a wider panel. When the tab rows do not fit, the
+  // pane asks the layout for exactly the width they need (the layout clamps it
+  // to its own maximum), and the active tab is kept in view either way, so a
+  // label is never half-cut.
+  const fitTabs = () => {
+    const rows = [...el.querySelectorAll<HTMLElement>(".seg")];
+    let needed = 0;
+    for (const row of rows) {
+      const overflow = row.scrollWidth - row.clientWidth;
+      if (overflow > 1) needed = Math.max(needed, overflow);
+      const active = row.querySelector<HTMLElement>(".is-active");
+      if (active) {
+        const left = active.offsetLeft, right = left + active.offsetWidth;
+        if (left < row.scrollLeft) row.scrollLeft = left;
+        else if (right > row.scrollLeft + row.clientWidth) row.scrollLeft = right - row.clientWidth;
+      }
+    }
+    if (needed > 1) {
+      const width = Math.ceil(el.getBoundingClientRect().width + needed + 8);
+      document.dispatchEvent(new CustomEvent("formcut:layout", { detail: { right: width } }));
+    }
+  };
+  new ResizeObserver(() => fitTabs()).observe(el);
+  engine.subscribe((_state, event) => { if (event === "clip-selection") fitTabs(); });
+  window.setTimeout(fitTabs, 0);
+
   const sections = [...el.querySelectorAll<HTMLElement>("[data-section]")];
   const applyEasyViews = () => {
     const profile = activeProfile();

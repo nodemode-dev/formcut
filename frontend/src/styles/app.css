@@ -33,8 +33,15 @@ input, select { font: inherit; color: inherit; }
   background: var(--ground);
 }
 .titlebar-left { display: flex; align-items: center; gap: var(--sp-2); }
-.titlebar-logo { color: var(--cue); display: flex; align-items: center; gap: var(--sp-2); font-weight: 600; }
-.titlebar-logo span { color: var(--ink); }
+/* The logo is the way back to the start screen, so it is a real button with a
+   hit area and a focus ring rather than decoration next to a wordmark. */
+.titlebar-logo {
+  color: var(--cue); display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 0; border-radius: var(--radius-s); background: transparent; cursor: pointer;
+}
+.titlebar-logo:hover { background: var(--control); }
+.titlebar-logo:focus-visible { outline: 2px solid var(--cue); outline-offset: 1px; }
 .menu-item {
   padding: 5px 10px;
   border-radius: var(--radius-s);
@@ -304,13 +311,20 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 .seg {
   display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  min-width: 0;
   background: var(--inset);
   border-radius: var(--radius-m);
   padding: 3px;
   gap: 2px;
 }
 .seg > button {
-  flex: 1;
+  /* Equal-width buttons clipped longer labels: German "Grundlagen" and
+     "Anpassen" ran past the row. Each button now takes the width its own text
+     needs, and the row scrolls if the pane is too narrow for all of them. */
+  flex: 0 0 auto;
   padding: 5px 10px;
   border-radius: var(--radius-s);
   color: var(--ink-soft);

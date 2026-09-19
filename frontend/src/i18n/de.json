@@ -451,5 +451,6 @@
   "gen.needprompt": "Schreibe zuerst eine Eingabe",
   "gen.working": "Wird erzeugt",
   "gen.done": "Zur Bibliothek hinzugefügt",
-  "gen.failed": "Erzeugung fehlgeschlagen"
+  "gen.failed": "Erzeugung fehlgeschlagen",
+  "home.title": "Zurück zum Startbildschirm"
 }
