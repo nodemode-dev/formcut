@@ -453,7 +453,7 @@
   "gen.done": "Zur Bibliothek hinzugefügt",
   "gen.failed": "Erzeugung fehlgeschlagen",
   "home.title": "Zurück zum Startbildschirm",
-  "urldl.title": "Medien-URL-Downloader",
+  "urldl.title": "Medien-Downloader",
   "urldl.hint": "yt-dlp, jede unterstützte Seite",
   "urldl.placeholder": "Link einfügen",
   "urldl.quality": "Qualität",

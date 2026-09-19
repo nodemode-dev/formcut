@@ -101,3 +101,18 @@ Remove background in Easy with four modes, and an export sheet offering codec, s
 
 ### v0.61.0
 Import an effect package, open a template that brings its own music and fonts, follow the OS light or dark setting, and drop in a corrected translation without waiting for a release.
+
+
+## The current surface, in the order you would use it
+
+1. **Bring media in.** Drop files, import from the library, pull from Pexels, paste a link into the media downloader (any site yt-dlp supports), or generate an image, a video or a sound with your own provider key.
+2. **Lay it out.** Multiple timelines with tabs you can reorder by dragging, rename by double-clicking and remove; multi-select with a marquee; a magnetic main track that closes gaps; per-timeline width, height and frame rate.
+3. **Cut.** Split (S), split everything under the playhead (Cmd+B), rejoin pieces, ripple delete, freeze a frame (F), reverse a clip, reattach detached audio.
+4. **Frame.** Crop with grips on the canvas, flip, and move or scale with alignment guides that snap to edges, centres, thirds and other layers.
+5. **Grade and treat.** A thirteen-control colour panel first, then effects, then LUT looks at any intensity, then shader, then key, cutout and mask, then the transform.
+6. **Mask.** Fourteen shapes with angle, feather and invert, or draw a path with the pen tool and edit its anchors and bezier handles.
+7. **Animate.** Keyframe any transform property, effect parameter or volume, with real cubic-bezier easing and named presets, or use an In, Out or Combo animation slot that rescales when the clip is trimmed.
+8. **Title.** Weight, italic, outline, shadow, plate, line height, letter spacing, wrap and opacity; a gallery of ten styles; type straight onto the canvas.
+9. **Caption.** Transcribe locally with Whisper in tiny, base or small, choose placement, size and words per caption, or type the lines yourself.
+10. **Set the range.** Drag the composition range on the ruler to choose what plays and what exports.
+11. **Export.** H.264, HEVC, AV1 or VP9, 10-bit where supported, at a size and frame rate you choose, with an estimate before you commit.

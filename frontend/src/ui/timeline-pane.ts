@@ -518,11 +518,46 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   tabControls.querySelector<HTMLButtonElement>('[data-ref="tl-add"]')!.addEventListener("click", () => engine.dispatch("timeline.add", {}));
   // Removing a timeline belongs with the tabs it removes, not in the clip tools.
   tabControls.querySelector<HTMLButtonElement>('[data-ref="tl-remove"]')!.addEventListener("click", () => {
-    if (engine.snapshot.timelines.length > 1) engine.dispatch("timeline.remove", engine.snapshot.activeTimeline);
+    // timeline.remove takes an object; passing a bare number left index
+    // undefined and the command threw, so the button did nothing at all.
+    if (engine.snapshot.timelines.length > 1) engine.dispatch("timeline.remove", { index: engine.snapshot.activeTimeline });
   });
   // Double-click renames a tab in place. The field keeps the tab's own width and
   // caps what can be typed, so a long name cannot push the strip out of shape.
   const TAB_NAME_LIMIT = 18;
+  // Tabs reorder by dragging: the one under the pointer swaps with its
+  // neighbour as it passes it, so the order is committed a step at a time and
+  // undo walks back through it.
+  const strip = tabControls.querySelector<HTMLElement>('[data-ref="tab-strip"]')!;
+  strip.addEventListener("pointerdown", (event) => {
+    const tab = (event.target as HTMLElement).closest<HTMLElement>(".tl-tab");
+    if (!tab || tab.querySelector("input")) return;
+    let index = Number(tab.dataset.tl);
+    const startX = event.clientX;
+    let moved = false;
+    const move = (next: PointerEvent) => {
+      if (!moved && Math.abs(next.clientX - startX) < 8) return;
+      moved = true;
+      tab.classList.add("is-dragging");
+      const others = [...strip.querySelectorAll<HTMLElement>(".tl-tab")];
+      const over = others.find((other) => {
+        const box = other.getBoundingClientRect();
+        return next.clientX >= box.left && next.clientX <= box.right;
+      });
+      const target = over ? Number(over.dataset.tl) : index;
+      if (target !== index) {
+        engine.dispatch("timeline.move", { from: index, to: target });
+        index = target;
+      }
+    };
+    const release = () => {
+      strip.removeEventListener("pointermove", move);
+      tab.classList.remove("is-dragging");
+    };
+    strip.addEventListener("pointermove", move);
+    strip.addEventListener("pointerup", release, { once: true });
+    strip.addEventListener("pointercancel", release, { once: true });
+  });
   tabControls.addEventListener("dblclick", (event) => {
     const tab = (event.target as HTMLElement).closest<HTMLElement>(".tl-tab");
     if (!tab || tab.querySelector("input")) return;

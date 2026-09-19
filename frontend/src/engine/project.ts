@@ -226,6 +226,22 @@ export class ProjectEngine {
         s.playhead = Math.min(Math.max(s.playhead + (payload as number) / s.fps, 0), s.duration);
         this.emit("playhead");
         break;
+      case "timeline.move": {
+        const p = payload as { from: number; to: number };
+        const list = s.timelines;
+        if (!list[p.from] || !list[p.to] || p.from === p.to) break;
+        this.pushHistory();
+        const [moved] = list.splice(p.from, 1);
+        list.splice(p.to, 0, moved);
+        // The active timeline follows the one the person is dragging.
+        if (s.activeTimeline === p.from) s.activeTimeline = p.to;
+        else if (p.from < s.activeTimeline && p.to >= s.activeTimeline) s.activeTimeline -= 1;
+        else if (p.from > s.activeTimeline && p.to <= s.activeTimeline) s.activeTimeline += 1;
+        s.saved = false;
+        this.emit("timeline");
+        this.emit("project");
+        break;
+      }
       case "timeline.rename": {
         const p = payload as { index: number; name: string };
         const target = s.timelines[p.index];

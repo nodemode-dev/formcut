@@ -26,7 +26,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       <button class="set-collapse" data-rail-toggle title="${t("set.collapse")}">${icon("chevL")}</button>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
-    <header class="set-head"><strong data-page-title>Project</strong><button class="iconbtn" data-full title="${text("Fullscreen")}" aria-label="${text("Fullscreen")}" aria-pressed="false">${icon("fullscreen")}</button><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></header>
+    <header class="set-head"><strong data-page-title>Project</strong><span class="set-head-actions"><button class="iconbtn" data-full title="${text("Fullscreen")}" aria-label="${text("Fullscreen")}" aria-pressed="false">${icon("fullscreen")}</button><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></span></header>
     <div class="set-body studio-content">
     <section data-view="project" class="set-view">
       <div class="panel-section"><div class="panel-section-head"><span>Project settings</span></div><div class="panel-rows"><label>Width <input data-width type="number" min="16" max="7680"></label><label>Height <input data-height type="number" min="16" max="7680"></label><label>Frame rate <input data-fps type="number" min="1" max="120"></label><div class="studio-actions"><button class="tool-chip is-primary" data-settings>Apply settings</button></div></div></div>
@@ -356,6 +356,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   railToggle.addEventListener("click", () => setRail(!rail.classList.contains("is-collapsed")));
   const fullButton = modal.querySelector<HTMLButtonElement>("[data-full]")!;
   fullButton.addEventListener("click", () => {
+    // Fullscreen takes the section's own container over the window, leaving the
+    // rail behind, rather than stretching the whole popout.
     const full = modal.classList.toggle("is-full");
     fullButton.setAttribute("aria-pressed", String(full));
     try { localStorage.setItem("formcut.studio.full", full ? "on" : "off"); } catch { /* ignore */ }

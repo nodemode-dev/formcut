@@ -453,7 +453,7 @@
   "gen.done": "Añadido a tu biblioteca",
   "gen.failed": "La generación falló",
   "home.title": "Volver a la pantalla de inicio",
-  "urldl.title": "Descargador de URL",
+  "urldl.title": "Descargador",
   "urldl.hint": "yt-dlp, cualquier sitio compatible",
   "urldl.placeholder": "Pega un enlace",
   "urldl.quality": "Calidad",

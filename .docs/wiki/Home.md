@@ -1,25 +1,26 @@
 # formcut wiki
 
-Start with the [README](https://github.com/nodemode-ai/formcut/blob/main/README.md) for what the app does and how to run it.
-This wiki holds the subsystem map and the contracts between parts.
+formcut is a local video editor: a TypeScript interface, a Python engine that renders every frame, and a Tauri shell. One renderer serves both the preview and the export.
 
-- [Architecture](Architecture.md): the engine, the shared renderer, playback and
-  where state lives
-- [Creator workflow](Creator-workflow.md): the editing surface, effects,
-  captions, speech and cutout
-- [Automation](Automation.md): the JSON-RPC surface for scripted editing
-- [Packaging](Packaging.md): desktop shell, portable build and environment
-- [Translation](Translation.md): how every string reaches all 12 languages, and
-  how to keep it that way
-- [Mobile notes](Mobile-notes.md): what a phone build needs
-- [Licences](Licences.md): third-party assets and dependency obligations
+## Pages
 
-Development records live in the planning sidecar rather than in this
-repository: the phased plan, the per-version build notes and the reasoning logs
-for every area. `.docs/` carries these pages, the asset and dependency licences
-and the mobile layout notes. These pages are the editable source for the GitHub
-wiki; a push to main that touches them publishes the wiki through
-`.github/workflows/publish-wiki.yml`, `_Sidebar.md` included, which is the
-navigation shown beside every wiki page.
-When a document here disagrees with the running code, the code wins and the
-document is corrected in the same change.
+- [Architecture](Architecture) — how the pieces fit, and where a frame comes from
+- [Creator workflow](Creator-workflow) — what you can do to a clip, in the order you would do it
+- [Automation](Automation) — driving the editor from outside, over RPC or MCP
+- [Translation](Translation) — the twelve languages, and adding or correcting one
+- [Packaging](Packaging) — desktop and portable builds
+- [Licences](Licences) — model and asset licences, and the gate that keeps them honest
+- [Mobile notes](Mobile-notes) — the phone layout
+
+## Where things live
+
+| Path | What it holds |
+| --- | --- |
+| `frontend/src/engine` | the document, its commands, history, persistence, timing and easing |
+| `frontend/src/ui` | panes, popouts and overlays |
+| `backend/app` | the renderer, the effect catalogue, media, jobs, automation and the model manager |
+| `mcp/` | the MCP server |
+| `src-tauri/` | the desktop shell |
+| `.docs/wiki` | these pages |
+
+Every released version is recorded in `BUILD_NOTES.md` in the planning sidecar, with the measurement that closed each task.

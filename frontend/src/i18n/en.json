@@ -453,7 +453,7 @@
   "gen.done": "Added to your library",
   "gen.failed": "Generation failed",
   "home.title": "Back to the start screen",
-  "urldl.title": "Media URL downloader",
+  "urldl.title": "Media downloader",
   "urldl.hint": "yt-dlp, any site it supports",
   "urldl.placeholder": "Paste a link",
   "urldl.quality": "Quality",

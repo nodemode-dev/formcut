@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.63.0-ffae2b" alt="version v0.63.0" />
+  <img src="https://img.shields.io/badge/version-v0.64.0-ffae2b" alt="version v0.64.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -19,23 +19,20 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 
 ## Highlights
 
-- **One renderer for preview and export.** The same decode, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Playback streams JPEG frames paced to the wall clock; a paused or scrubbed frame is lossless PNG from the same renderer.
-- **Effect catalogue, browsable and real**: 74 colour grades, 55 visual effects, 48 audio chains, 12 transitions, shape masks, LUT (`.cube`) and custom WGSL shader inputs. Every card's thumbnail is rendered by the engine through that effect, not a stock picture.
-- **Editing surface**: multi-timeline, multi-track, drag and drop from the media bin, trim, blade, split, ripple delete, detach audio, cross-track moves, clip-edge snapping, undo and redo, and a draggable playhead that snaps to edges and lands on frames.
-- **Per-property keyframes** with linear and hold interpolation, sampled on the canvas and expressed as piecewise time expressions in export, plus motion tracking that writes keyframes from a clicked subject. Each track opens its own lanes or a curve graph with an eased-curves toggle, the inspector's transform rows carry value sliders, track heights drag from the head, and a work area on the ruler with in and out grips loops playback the way an After Effects preview does.
-- **Stock media in Studio**: Pexels video and photo search with orientation, size and colour filters, paged results, and per card add to media, place on a new track at the playhead, download, or open the source page. Attribution is shown and stored with every import.
-- **Local AI, on your hardware**: captions by Whisper in the browser, its model files kept in `models/` and served by the engine, speech by Kokoro through a separate local runtime, subject and person cutout by U2Net. The models download in the background on first start into `models/` at the repository root (the data directory in the packaged app), Whisper's English model included, and the Studio panel can still install, import or retry the cutout and speech models by hand.
-- **Export**: MP4 (H.264 + AAC) and WebM (VP9 + Opus) at three quality ladders, as a cancellable job with progress.
-- **Templates**: a project saved as a template with named media slots, exported and imported as a file, filled by binding slots to media.
-- **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, with 15 methods, optimistic concurrency on
-  every edit, and asset import plus render collection for an external caller
-- **Orchestration**: an external system registers a session, drives the editor, and watches a server-sent event
-  stream for operations and job progress; the app shows who is connected and can cancel their renders
-- **MCP server**: 14 workflow tools over stdio in `mcp/`, so an agent can import media, build a project, render it
-  and collect the file without touching the interface
-- **Interface**: 12 languages covering every string, catalogue names included (281 keys and a 616-row phrase table), inline `currentColor` icons on a 24-unit grid, a token-driven dark theme, a usable phone layout, and hidden but functional scrollbars.
-- **Desktop and portable**: a Tauri 2 shell that boots the engine on an ephemeral port and recovers the bound port from its log, plus frozen portable builds for macOS, Windows and Linux.
-- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, and the only outbound traffic is the model downloads (in the background on first start, or on first use with `FORMCUT_MODELS_AUTO=0`), which include both caption models, and the stock and hosted-speech providers you supply keys for. The captions runtime ships with the app.
+- **One renderer for preview and export.** The same decode, crop, colour, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Pixel-measured parameters follow the resolution actually decoded, so a blur looks the same in a small preview and a full-resolution export.
+- **Effect catalogue, browsable and real**: 74 colour grades, 55 visual effects, 48 audio chains, 12 transitions, plus effect packages you can drop in as data (a manifest with a filter-chain template or a WGSL shader, checked against an engine allowlist). Every card's thumbnail is rendered by the engine through that effect.
+- **Editing surface**: multi-timeline with reorderable, renameable tabs, multi-track, multi-select with marquee, drag and drop, trim, blade, split and group split, rejoin, ripple delete, freeze frame, reverse, crop with canvas grips, vertical flip, detach and reattach audio, a magnetic main track, canvas alignment guides, and per-timeline width, height and frame rate.
+- **Colour and shape**: a thirteen-control colour panel ahead of the effect stack, imported LUTs as library looks with an intensity mix, fourteen mask shapes plus a pen tool with editable anchors and bezier handles, and In, Out and Combo animation slots that rescale when a clip is trimmed.
+- **Keyframes that actually curve**: cubic-bezier easing solved the way CSS solves it, with named presets (ease, easeIn, easeOut, easeInOut, smooth, snap, overshoot, anticipate) as handle positions and a bezier mode with handles of your own, on transform properties, effect parameters and volume alike.
+- **Titles**: weight, italic, outline, shadow, background plate, line height, letter spacing, wrap width and opacity, a gallery of ten built-in styles with engine-rendered thumbnails, presets that carry their own font, and double-click typing on the canvas.
+- **Captions and speech**: Whisper in the browser in tiny, base or small, English-only or multilingual, on WebGPU where the browser offers it, with placement, size and words-per-caption controls, typed captions, and local speech that accepts models beyond the bundled one.
+- **Studio**: project settings, Pexels stock, a media downloader for any site yt-dlp supports, generate image, video and audio through your own provider keys, timeline templates, local video and image browsers, local speech and local models, in a popout with a collapsible rail and a per-section fullscreen view.
+- **Export**: H.264, HEVC, AV1 and VP9 with hardware encoders preferred and confirmed by encoding, not by listing; 10-bit where the encoder supports it; size and frame-rate presets stored as exact fractions; and a live size estimate fitted to real output.
+- **Speed**: a content-keyed preview frame cache with read-ahead, per-clip audio cached and mixed live so a volume change is heard at once, probed hardware decode, and a bounded worker pool for export.
+- **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, covering every edit the interface can make, with optimistic concurrency on every edit.
+- **MCP server**: workflow tools over stdio in `mcp/`, so an agent can import media, build a project, render it and collect the file without touching the interface.
+- **Interface**: 12 languages covering every string, switched in place without a reload or losing your work, drop-in locale files, an Easy mode with its own tool tray and clip panel, movable panes that stack as tabs, an appearance that can follow the operating system, and inline `currentColor` icons on a 24-unit grid.
+- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, remote access needs a token you set, model downloads are pinned by SHA-256, and diagnostics report secrets as set or unset rather than by value.
 
 ## Quick Start
 
@@ -179,18 +176,24 @@ most defects here, so a change starts from what is true rather than from a guess
 
 ## Status
 
-Under active development. Every version is a commit, and each one's record lives in the planning sidecar. The current run is phased:
+Under active development, released version by version. Every version is a commit and each one's record lives in the planning sidecar and in `BUILD_NOTES.md`.
 
-1. Chrome and containment: hidden but functional scrollbars, panel scrolling, containment fixes. Done
-2. Timeline interaction and icons: draggable playhead, one licensed icon family. Done
-3. Theming and containering, app-wide: editor-grade panel containering, a real settings popout, 30 appearance profiles and a live accent
-4. Audio that plays properly: buffered scheduling instead of element sync
-5. Real content in clips: waveforms and frame previews from new engine endpoints
-6. Panels that resize and swap slots
-7. Keyframe lanes and a graph curve editor
-8. AI provider panels for ElevenLabs and Pexels
-9. A home screen that manages media, not just projects
-10. ANA connected orchestration for video editing: formcut as an orchestrated node in the wider ANA graph, so edits, renders and asset flows can be driven and composed from outside the app
+Shipped so far:
+
+| Version | What it carried |
+| --- | --- |
+| 0.55.0 | interface modes, autosave and recovery, delta history, multi-select, declared effect parameters |
+| 0.56.0 | everyday editing: split, rejoin, freeze, reverse, crop, flip, reattach, per-timeline formats, magnetic track, guides, Easy tray and clip panel, favourites and audition |
+| 0.57.0 | titles and captions: full title styling, canvas typing, a style gallery, font-carrying presets, caption model and placement controls, typed captions |
+| 0.58.0 | speed: frame cache with read-ahead, per-clip audio cache and live mixing, probed hardware decode, parallel export |
+| 0.59.0 | looks, masks, motion: colour panel, LUT looks, keyed effect parameters and volume, linear and inverted masks, animation slots, audio strength, tape pitch |
+| 0.60.0 | background-removal groundwork and export: licence gate, matte cache, Easy removal surface, HEVC, AV1, 10-bit, size and rate presets, live size estimates |
+| 0.61.0 | platform: effect packages, templates carrying their own media, pinned model downloads, per-run logs and diagnostics, drop-in locales, token-gated remote access, a complete RPC surface |
+| 0.62.0 | movable panes that stack as tabs, per profile |
+| 0.64.0 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
+| 0.64.0 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
+
+Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
 ## Licence
 

@@ -7,7 +7,10 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
   const bar = document.createElement("div");
   bar.className = "work-area";
   bar.dataset.feature = "workarea";
-  bar.hidden = true;
+  // The range is visible by default and spans the composition, the way an After
+  // Effects work area does: drag its ends to trim what plays and what exports,
+  // drag the middle to move it, double-click to clear it back to the whole.
+  bar.hidden = false;
   bar.title = text("Work area: drag the ends, drag the bar to move, double-click to clear");
   bar.innerHTML = `<button class="work-grip" data-edge="start" aria-label="${text("Work area start")}"></button><button class="work-grip" data-edge="end" aria-label="${text("Work area end")}"></button>`;
   ruler.append(bar);
@@ -15,13 +18,14 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
   let area: { start: number; end: number } | null = null;
 
   const key = () => engine.snapshot.projectId ?? "unsaved";
+  const wholeProject = (): { start: number; end: number } => ({ start: 0, end: Math.max(0.2, engine.snapshot.duration) });
   const load = (): void => {
     try {
       const raw = localStorage.getItem(STORE);
       const all = raw ? (JSON.parse(raw) as Record<string, { start: number; end: number }>) : {};
-      area = all[key()] ?? null;
+      area = all[key()] ?? wholeProject();
     } catch {
-      area = null;
+      area = wholeProject();
     }
   };
   const save = (): void => {
