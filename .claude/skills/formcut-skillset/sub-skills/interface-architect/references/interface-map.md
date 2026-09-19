@@ -149,3 +149,7 @@ The inspector gains an Easy `section.removebg` with Off, Automatic, Brush and Ch
 ## v0.61.0 delta
 
 `ui/appearance.ts` gains `AUTOMATIC` with `resolveTheme` and an OS media-query watch; `index.html`'s pre-paint block resolves Automatic too, so following the OS is applied before the first paint. `i18n/index.ts` gains `loadExtraLocales`, merging locale files dropped into the data directory over the built-in strings and listing them by their own `language.name`.
+
+## v0.62.0 delta
+
+`ui/workspace-layout.ts` carries a slot map (`slots` per pane, `front` per slot): panes live in the left, right or bottom slot, a slot holding more than one stacks behind a `.pane-stack-tabs` strip positioned like the dividers, and hidden members stay in the DOM so node identity survives a move. The layout persists per interface profile at `formcut.layout.<profile>`, falling back to the older single key.
