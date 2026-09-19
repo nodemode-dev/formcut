@@ -10,6 +10,11 @@ import { seedProject } from "./seed";
 import { sourceTime, shiftedCurve, retimedKeys } from "./timing";
 import { CREATOR_COMMANDS, creatorCommand } from "./creator-commands";
 import { cycleKeyframeInterp, removeKeyframeProp, upsertKeyframe } from "./keyframes";
+import { apply, diff, deltaSize, type Delta } from "./json-delta";
+
+type DocumentSlice = Pick<ProjectState, "timelines" | "duration" | "selectedClipId" | "activeTimeline" | "width" | "height" | "fps" | "aspect">;
+const HISTORY_LIMIT = 200;
+const FOLD_MS = 500;
 import type { ClipKey, ClipMask, KeyframeProp } from "./types";
 
 type Listener = (state: ProjectState, changed: string) => void;
@@ -20,11 +25,14 @@ export class ProjectEngine {
   private raf = 0;
   private lastTick = 0;
   private clockSource?: () => number | null;
-  private undoStack: string[] = [];
-  private redoStack: string[] = [];
+  private undoStack: Delta[] = [];
+  private redoStack: Delta[] = [];
+  private pendingBefore: DocumentSlice | null = null;
+  private foldKey: string | null = null;
+  private foldAt = 0;
 
-  private snapshotClips(): string {
-    return JSON.stringify({
+  private snapshotObj(): DocumentSlice {
+    return structuredClone({
       timelines: this.state.timelines,
       duration: this.state.duration,
       selectedClipId: this.state.selectedClipId,
@@ -33,7 +41,11 @@ export class ProjectEngine {
       height: this.state.height,
       fps: this.state.fps,
       aspect: this.state.aspect,
-    });
+    }) as DocumentSlice;
+  }
+
+  private snapshotClips(): string {
+    return JSON.stringify(this.snapshotObj());
   }
 
   private restoreClips(snap: string) {
@@ -42,10 +54,62 @@ export class ProjectEngine {
     this.state.playhead = Math.min(this.state.playhead, this.state.duration);
   }
 
-  private pushHistory() {
-    this.undoStack.push(this.snapshotClips());
-    if (this.undoStack.length > 50) this.undoStack.shift();
+  private currentSlice(): DocumentSlice {
+    const s = this.state;
+    return { timelines: s.timelines, duration: s.duration, selectedClipId: s.selectedClipId, activeTimeline: s.activeTimeline, width: s.width, height: s.height, fps: s.fps, aspect: s.aspect } as DocumentSlice;
+  }
+
+  /** Turns the step in flight into an undo delta (after -> before) and drops the copy. */
+  private settlePending() {
+    if (!this.pendingBefore) return;
+    const delta = diff(this.currentSlice(), this.pendingBefore);
+    this.pendingBefore = null;
+    if (delta.length === 0) return;
+    this.undoStack.push(delta);
+    if (this.undoStack.length > HISTORY_LIMIT) this.undoStack.shift();
+  }
+
+  private pushHistory(foldKey?: string) {
+    const now = performance.now();
+    if (foldKey && this.pendingBefore && this.foldKey === foldKey && now - this.foldAt < FOLD_MS) {
+      this.foldAt = now;
+      return;
+    }
+    this.settlePending();
+    this.pendingBefore = this.snapshotObj();
+    this.foldKey = foldKey ?? null;
+    this.foldAt = now;
     this.redoStack.length = 0;
+  }
+
+  /** Undoes the step in flight without recording it (a command that found nothing to do or threw). */
+  private dropPending(restore: boolean) {
+    if (!this.pendingBefore) return;
+    if (restore) Object.assign(this.state, this.pendingBefore);
+    this.pendingBefore = null;
+    this.foldKey = null;
+  }
+
+  private stepBack(from: Delta[], to: Delta[]): boolean {
+    this.settlePending();
+    this.foldKey = null;
+    const delta = from.pop();
+    if (!delta) return false;
+    const before = this.currentSlice();
+    const target = structuredClone(before);
+    apply(target, delta);
+    to.push(diff(target, before));
+    Object.assign(this.state, target);
+    this.state.playhead = Math.min(this.state.playhead, this.state.duration);
+    return true;
+  }
+
+  /** Steps held and approximate bytes, for the memory report. */
+  historyStats(): { undo: number; redo: number; bytes: number } {
+    let bytes = 0;
+    for (const delta of this.undoStack) bytes += deltaSize(delta);
+    for (const delta of this.redoStack) bytes += deltaSize(delta);
+    return { undo: this.undoStack.length, redo: this.redoStack.length, bytes };
   }
 
   findClip(clipId: string): { clip: import("./types").Clip; trackIndex: number } | null {
@@ -90,7 +154,7 @@ export class ProjectEngine {
     if (CREATOR_COMMANDS.has(command)) {
       this.pushHistory();
       try { creatorCommand(s, command, payload); }
-      catch (error) { this.restoreClips(this.undoStack.pop()!); throw error; }
+      catch (error) { this.dropPending(true); throw error; }
       s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
       this.emit("clips");
       this.emit("timeline");
@@ -132,7 +196,7 @@ export class ProjectEngine {
         const p = payload as { clipId: string; patch: Partial<import("./types").ClipTransform> };
         const found = this.findClip(p.clipId);
         if (!found) break;
-        this.pushHistory();
+        this.pushHistory(`clip.transform:${p.clipId}:${Object.keys(p.patch).sort().join(",")}`);
         found.clip.transform = { ...defaultTransform(), ...found.clip.transform, ...p.patch };
         s.saved = false;
         this.emit("clips");
@@ -253,6 +317,8 @@ export class ProjectEngine {
         s.saved = p.saved ?? true;
         this.undoStack.length = 0;
         this.redoStack.length = 0;
+        this.pendingBefore = null;
+        this.foldKey = null;
         cancelAnimationFrame(this.raf);
         this.emit("clips");
         this.emit("timeline");
@@ -394,7 +460,7 @@ export class ProjectEngine {
         this.pushHistory();
         const next = cycleKeyframeInterp(found.clip, p.t);
         if (!next) {
-          this.undoStack.pop();
+          this.dropPending(false);
           break;
         }
         s.saved = false;
@@ -483,19 +549,13 @@ export class ProjectEngine {
         break;
       }
       case "history.undo": {
-        const snap = this.undoStack.pop();
-        if (!snap) break;
-        this.redoStack.push(this.snapshotClips());
-        this.restoreClips(snap);
+        if (!this.stepBack(this.undoStack, this.redoStack)) break;
         s.saved = false;
         this.emit("clips");
         break;
       }
       case "history.redo": {
-        const snap = this.redoStack.pop();
-        if (!snap) break;
-        this.undoStack.push(this.snapshotClips());
-        this.restoreClips(snap);
+        if (!this.stepBack(this.redoStack, this.undoStack)) break;
         s.saved = false;
         this.emit("clips");
         break;
