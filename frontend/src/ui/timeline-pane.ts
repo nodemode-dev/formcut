@@ -171,7 +171,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
         const width = `${clip.duration * PX_PER_SEC - 3}px`;
         if (node.style.left !== left) node.style.left = left;
         if (node.style.width !== width) node.style.width = width;
-        node.classList.toggle("is-selected", clip.id === state.selectedClipId);
+        node.classList.toggle("is-selected", clip.id === state.selectedClipId || state.selection.includes(clip.id));
         const label = node.querySelector<HTMLElement>(".bar");
         if (label && label.textContent !== clip.label) label.textContent = clip.label;
         const sig =
@@ -204,9 +204,9 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     }
   };
   const syncSelection = () => {
-    const selected = engine.snapshot.selectedClipId;
+    const state = engine.snapshot;
     for (const node of el.querySelectorAll<HTMLElement>(".clip")) {
-      node.classList.toggle("is-selected", node.dataset.clip === selected);
+      node.classList.toggle("is-selected", node.dataset.clip === state.selectedClipId || state.selection.includes(node.dataset.clip!));
     }
   };
 
@@ -313,11 +313,69 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   };
   let drag: Drag | null = null;
 
+  const marqueeBox = document.createElement("div");
+  marqueeBox.className = "tl-marquee";
+  marqueeBox.hidden = true;
+  scroller.append(marqueeBox);
+  const beginMarquee = (ev: PointerEvent) => {
+    ev.preventDefault();
+    const box = scroller.getBoundingClientRect();
+    const origin = { x: ev.clientX - box.left + scroller.scrollLeft, y: ev.clientY - box.top + scroller.scrollTop };
+    let moved = false;
+    const rect = { left: origin.x, top: origin.y, right: origin.x, bottom: origin.y };
+    const paint = () => {
+      const left = `${rect.left}px`, top = `${rect.top}px`, width = `${rect.right - rect.left}px`, height = `${rect.bottom - rect.top}px`;
+      if (marqueeBox.style.left !== left) marqueeBox.style.left = left;
+      if (marqueeBox.style.top !== top) marqueeBox.style.top = top;
+      if (marqueeBox.style.width !== width) marqueeBox.style.width = width;
+      if (marqueeBox.style.height !== height) marqueeBox.style.height = height;
+    };
+    const hits = (): string[] => {
+      const tracks = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks;
+      const ids: string[] = [];
+      for (const [trackIndex, lane] of lanes.entries()) {
+        if (tracks[trackIndex]?.locked) continue;
+        const laneBox = lane.getBoundingClientRect();
+        const laneTop = laneBox.top - box.top + scroller.scrollTop;
+        const laneBottom = laneTop + laneBox.height;
+        if (laneBottom < rect.top || laneTop > rect.bottom) continue;
+        for (const clip of tracks[trackIndex].clips) {
+          const clipLeft = clip.start * PX_PER_SEC + (laneBox.left - box.left + scroller.scrollLeft);
+          const clipRight = clipLeft + clip.duration * PX_PER_SEC;
+          if (clipRight >= rect.left && clipLeft <= rect.right) ids.push(clip.id);
+        }
+      }
+      return ids;
+    };
+    const move = (moveEv: PointerEvent) => {
+      const x = moveEv.clientX - box.left + scroller.scrollLeft;
+      const y = moveEv.clientY - box.top + scroller.scrollTop;
+      if (!moved && Math.hypot(x - origin.x, y - origin.y) < 4) return;
+      moved = true;
+      if (marqueeBox.hidden) marqueeBox.hidden = false;
+      rect.left = Math.min(origin.x, x); rect.right = Math.max(origin.x, x);
+      rect.top = Math.min(origin.y, y); rect.bottom = Math.max(origin.y, y);
+      paint();
+      engine.dispatch("clip.select-set", hits());
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      if (!marqueeBox.hidden) marqueeBox.hidden = true;
+      if (!moved) engine.dispatch("clip.select", null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
   scroller.addEventListener("pointerdown", (ev) => {
     const target = ev.target as HTMLElement;
     const node = target.closest<HTMLElement>(".clip");
     if (!node) {
-      if (target.closest(".lane")) engine.dispatch("clip.select", null);
+      if (target.closest(".lane") && tool === "select" && ev.button === 0) beginMarquee(ev);
+      else if (target.closest(".lane")) engine.dispatch("clip.select", null);
       return;
     }
     const clipId = node.dataset.clip!;
@@ -330,7 +388,11 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       engine.dispatch("clip.split", { clipId, time });
       return;
     }
-    engine.dispatch("clip.select", clipId);
+    if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {
+      engine.dispatch("clip.select-toggle", clipId);
+      return;
+    }
+    if (!engine.snapshot.selection.includes(clipId) || engine.snapshot.selection.length <= 1) engine.dispatch("clip.select", clipId);
     const kind = target.classList.contains("trim-l")
       ? "trim-l"
       : target.classList.contains("trim-r")
@@ -420,6 +482,15 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     if (meta && ev.key.toLowerCase() === "z") {
       ev.preventDefault();
       engine.dispatch(ev.shiftKey ? "history.redo" : "history.undo");
+      return;
+    }
+    if (meta && ev.key.toLowerCase() === "a") {
+      ev.preventDefault();
+      engine.dispatch("clip.select-all", {});
+      return;
+    }
+    if (ev.key === "Escape" && engine.snapshot.selection.length) {
+      engine.dispatch("clip.select", null);
       return;
     }
     if (ev.key === "Delete" || ev.key === "Backspace") {

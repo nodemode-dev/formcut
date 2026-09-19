@@ -12,7 +12,7 @@ import { CREATOR_COMMANDS, creatorCommand } from "./creator-commands";
 import { cycleKeyframeInterp, removeKeyframeProp, upsertKeyframe } from "./keyframes";
 import { apply, diff, deltaSize, type Delta } from "./json-delta";
 
-type DocumentSlice = Pick<ProjectState, "timelines" | "duration" | "selectedClipId" | "activeTimeline" | "width" | "height" | "fps" | "aspect">;
+type DocumentSlice = Pick<ProjectState, "timelines" | "duration" | "selectedClipId" | "selection" | "activeTimeline" | "width" | "height" | "fps" | "aspect">;
 const HISTORY_LIMIT = 200;
 const FOLD_MS = 500;
 import type { ClipKey, ClipMask, KeyframeProp } from "./types";
@@ -36,6 +36,7 @@ export class ProjectEngine {
       timelines: this.state.timelines,
       duration: this.state.duration,
       selectedClipId: this.state.selectedClipId,
+      selection: this.state.selection,
       activeTimeline: this.state.activeTimeline,
       width: this.state.width,
       height: this.state.height,
@@ -56,7 +57,7 @@ export class ProjectEngine {
 
   private currentSlice(): DocumentSlice {
     const s = this.state;
-    return { timelines: s.timelines, duration: s.duration, selectedClipId: s.selectedClipId, activeTimeline: s.activeTimeline, width: s.width, height: s.height, fps: s.fps, aspect: s.aspect } as DocumentSlice;
+    return { timelines: s.timelines, duration: s.duration, selectedClipId: s.selectedClipId, selection: s.selection, activeTimeline: s.activeTimeline, width: s.width, height: s.height, fps: s.fps, aspect: s.aspect } as DocumentSlice;
   }
 
   /** Turns the step in flight into an undo delta (after -> before) and drops the copy. */
@@ -144,7 +145,7 @@ export class ProjectEngine {
 
   dispatch(command: string, payload?: unknown): void {
     const s = this.state;
-    if (command.startsWith("clip.") && command !== "clip.select") {
+    if (command.startsWith("clip.") && !command.startsWith("clip.select")) {
       const data = payload as { clipId?: string; trackIndex?: number } | undefined;
       const id = typeof payload === "string" ? payload : data?.clipId;
       const found = id ? this.findClip(id) : null;
@@ -188,6 +189,7 @@ export class ProjectEngine {
         s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
         s.playhead = Math.min(s.playhead, s.duration);
         s.selectedClipId = null;
+        s.selection = [];
         this.emit("timeline");
         this.emit("clip-selection");
         this.emit("playhead");
@@ -216,8 +218,35 @@ export class ProjectEngine {
       }
       case "clip.select": {
         const next = (payload as string | null) ?? null;
-        if (s.selectedClipId === next) break;
+        if (s.selectedClipId === next && s.selection.length <= 1) break;
         s.selectedClipId = next;
+        s.selection = next ? [next] : [];
+        this.emit("clip-selection");
+        break;
+      }
+      case "clip.select-toggle": {
+        const id = payload as string;
+        if (!this.findClip(id)) break;
+        const at = s.selection.indexOf(id);
+        if (at >= 0) s.selection.splice(at, 1);
+        else s.selection.push(id);
+        s.selectedClipId = s.selection.length ? s.selection[s.selection.length - 1] : null;
+        this.emit("clip-selection");
+        break;
+      }
+      case "clip.select-set": {
+        const ids = (payload as string[]).filter((id) => this.findClip(id));
+        if (ids.length === s.selection.length && ids.every((id, i) => s.selection[i] === id)) break;
+        s.selection = ids;
+        s.selectedClipId = ids.length ? ids[ids.length - 1] : null;
+        this.emit("clip-selection");
+        break;
+      }
+      case "clip.select-all": {
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const ids = tracks.filter((track) => !track.locked).flatMap((track) => track.clips.map((clip) => clip.id));
+        s.selection = ids;
+        s.selectedClipId = ids.length ? ids[ids.length - 1] : null;
         this.emit("clip-selection");
         break;
       }
@@ -279,6 +308,7 @@ export class ProjectEngine {
         const clips = s.timelines[s.activeTimeline].tracks[trackIndex].clips;
         clips.splice(clips.indexOf(clip) + 1, 0, tail);
         s.selectedClipId = tail.id;
+        s.selection = [tail.id];
         s.saved = false;
         this.emit("clips");
         break;
@@ -291,6 +321,8 @@ export class ProjectEngine {
         const clips = s.timelines[s.activeTimeline].tracks[found.trackIndex].clips;
         clips.splice(clips.indexOf(found.clip), 1);
         if (s.selectedClipId === clipId) s.selectedClipId = null;
+        const inSet = s.selection.indexOf(clipId);
+        if (inSet >= 0) s.selection.splice(inSet, 1);
         s.saved = false;
         this.emit("clips");
         break;
@@ -314,6 +346,7 @@ export class ProjectEngine {
         s.playhead = 0;
         s.playing = false;
         s.selectedClipId = null;
+        s.selection = [];
         s.saved = p.saved ?? true;
         this.undoStack.length = 0;
         this.redoStack.length = 0;

@@ -25,6 +25,7 @@ export function seedProject(): ProjectState {
     aspect: "9:16",
     activeTimeline: 0,
     selectedClipId: null,
+    selection: [],
     timelines: [
       { id: "tl1", name: "Timeline 1", tracks },
     ],
@@ -44,6 +45,7 @@ export function blankProject(format?: ProjectFormat): ProjectState {
     state.fps = format.fps;
   }
   state.selectedClipId = null;
+  state.selection = [];
   state.playhead = 0;
   state.duration = 12;
   return state;

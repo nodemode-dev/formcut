@@ -576,6 +576,13 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .clip.k-image { background: var(--tag-image); }
 .clip.k-image .body { background: var(--tag-image-shade); }
 .lane.is-drop { background-color: var(--track-bed-alt); box-shadow: inset 0 0 0 1.5px var(--cue-wash); }
+.tl-marquee {
+  position: absolute;
+  background: var(--cue-wash);
+  border: 1px solid var(--cue);
+  pointer-events: none;
+  z-index: var(--z-handles);
+}
 
 .toast-root {
   position: fixed;

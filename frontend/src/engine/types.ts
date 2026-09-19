@@ -120,6 +120,7 @@ export interface ProjectState {
   aspect: string;
   activeTimeline: number;
   selectedClipId: string | null;
+  selection: string[];
   timelines: Timeline[];
 }
 
