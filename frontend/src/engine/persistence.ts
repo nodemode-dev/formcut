@@ -23,12 +23,12 @@ interface ProjectRecord {
 export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary | null> {
   const s = engine.snapshot;
   const origin = s.timelines;
-  const signature = JSON.stringify([s.title, s.width, s.height, s.fps, s.timelines, s.activeTimeline]);
+  const signature = JSON.stringify([s.title, engine.baseFormat, s.timelines, s.activeTimeline]);
   const body = JSON.stringify({
     title: s.title,
-    width: s.width,
-    height: s.height,
-    fps: s.fps,
+    width: engine.baseFormat.width,
+    height: engine.baseFormat.height,
+    fps: engine.baseFormat.fps,
     timelines: s.timelines,
     activeTimeline: s.activeTimeline,
     revision: s.revision ?? 0,
@@ -44,7 +44,7 @@ export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary
     const record = (await res.json()) as ProjectRecord;
     if (engine.snapshot.timelines === origin) {
       const current = engine.snapshot;
-      const unchanged = signature === JSON.stringify([current.title, current.width, current.height, current.fps, current.timelines, current.activeTimeline]);
+      const unchanged = signature === JSON.stringify([current.title, engine.baseFormat, current.timelines, current.activeTimeline]);
       engine.dispatch("project.saved", { id: record.id, revision: record.revision, unchanged });
     }
     return { id: record.id, title: record.title };
@@ -117,7 +117,7 @@ const journalKey = (engine: ProjectEngine) => engine.snapshot.projectId ?? "unsa
 
 function journalDocument(engine: ProjectEngine) {
   const s = engine.snapshot;
-  return { title: s.title, width: s.width, height: s.height, fps: s.fps, timelines: s.timelines, activeTimeline: s.activeTimeline };
+  return { title: s.title, width: engine.baseFormat.width, height: engine.baseFormat.height, fps: engine.baseFormat.fps, timelines: s.timelines, activeTimeline: s.activeTimeline };
 }
 
 export async function listJournals(): Promise<JournalSummary[]> {
@@ -210,9 +210,9 @@ export function installAutosave(engine: ProjectEngine, onState: (state: "idle" |
 export async function saveProjectChecked(engine: ProjectEngine): Promise<"saved" | "conflict" | "failed"> {
   const s = engine.snapshot;
   const origin = s.timelines;
-  const signature = JSON.stringify([s.title, s.width, s.height, s.fps, s.timelines, s.activeTimeline]);
+  const signature = JSON.stringify([s.title, engine.baseFormat, s.timelines, s.activeTimeline]);
   const body = JSON.stringify({
-    title: s.title, width: s.width, height: s.height, fps: s.fps,
+    title: s.title, width: engine.baseFormat.width, height: engine.baseFormat.height, fps: engine.baseFormat.fps,
     timelines: s.timelines, activeTimeline: s.activeTimeline, revision: s.revision ?? 0,
   });
   const url = s.projectId ? `${API}/${s.projectId}` : API;
@@ -223,7 +223,7 @@ export async function saveProjectChecked(engine: ProjectEngine): Promise<"saved"
     const record = (await res.json()) as ProjectRecord;
     if (engine.snapshot.timelines === origin) {
       const current = engine.snapshot;
-      const unchanged = signature === JSON.stringify([current.title, current.width, current.height, current.fps, current.timelines, current.activeTimeline]);
+      const unchanged = signature === JSON.stringify([current.title, engine.baseFormat, current.timelines, current.activeTimeline]);
       engine.dispatch("project.saved", { id: record.id, revision: record.revision, unchanged });
     }
     return "saved";

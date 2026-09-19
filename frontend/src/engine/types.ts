@@ -94,6 +94,9 @@ export interface Track {
 export interface Timeline {
   id: string;
   name: string;
+  width?: number;
+  height?: number;
+  fps?: number;
   tracks: Track[];
 }
 

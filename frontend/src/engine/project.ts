@@ -144,7 +144,11 @@ export class ProjectEngine {
 
   constructor(initial?: ProjectState) {
     this.state = initial ?? seedProject();
+    this.baseFormat = { width: this.state.width, height: this.state.height, fps: this.state.fps };
   }
+
+  /** The project's own format; timelines without overrides inherit it, and saves record it. */
+  baseFormat: { width: number; height: number; fps: number };
 
   get snapshot(): ProjectState {
     return this.state;
@@ -176,6 +180,7 @@ export class ProjectEngine {
       this.pushHistory();
       try { creatorCommand(s, command, payload); }
       catch (error) { this.dropPending(true); throw error; }
+      if (command === "project.settings" && s.timelines.length === 1) this.baseFormat = { width: s.width, height: s.height, fps: s.fps };
       s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
       this.emit("clips");
       this.emit("timeline");
@@ -206,6 +211,13 @@ export class ProjectEngine {
         if (!s.timelines[Number(payload)]) break;
         this.pause();
         s.activeTimeline = Number(payload);
+        {
+          const active = s.timelines[s.activeTimeline];
+          s.width = active.width ?? this.baseFormat.width;
+          s.height = active.height ?? this.baseFormat.height;
+          s.fps = active.fps ?? this.baseFormat.fps;
+          s.aspect = `${s.width}:${s.height}`;
+        }
         s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
         s.playhead = Math.min(s.playhead, s.duration);
         s.selectedClipId = null;
@@ -466,6 +478,14 @@ export class ProjectEngine {
         Object.assign(s, structuredClone(p));
         s.revision = p.revision ?? 0;
         s.activeTimeline = s.timelines[p.activeTimeline ?? 0] ? (p.activeTimeline ?? 0) : 0;
+        this.baseFormat = { width: s.width, height: s.height, fps: s.fps };
+        {
+          const active = s.timelines[s.activeTimeline];
+          s.width = active.width ?? s.width;
+          s.height = active.height ?? s.height;
+          s.fps = active.fps ?? s.fps;
+          s.aspect = `${s.width}:${s.height}`;
+        }
         s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
         s.playhead = 0;
         s.playing = false;

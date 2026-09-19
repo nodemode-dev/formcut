@@ -174,11 +174,14 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     state.activeTimeline = Math.min(state.activeTimeline, state.timelines.length - 1);
     state.selectedClipId = null;
   } else if (command === "project.settings") {
+    const own = timeline as { width?: number; height?: number; fps?: number };
     for (const key of ["width", "height", "fps"] as const) {
       if (p[key] === undefined) continue;
       const value = Number(p[key]);
       const low = key === "fps" ? 1 : 16, high = key === "fps" ? 120 : 7680;
       if (!Number.isInteger(value) || value < low || value > high) throw new Error(`Invalid ${key}`);
+      if (state.timelines.length > 1) own[key] = value;
+      else state[key] = value;
       state[key] = value;
     }
     state.aspect = `${state.width}:${state.height}`;

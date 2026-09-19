@@ -16,6 +16,21 @@ def validate_document(project: dict) -> dict:
     active = result.get("activeTimeline", 0)
     if not isinstance(timelines, list) or not timelines or not isinstance(active, int) or not 0 <= active < len(timelines):
         raise ValueError("Project needs an active timeline")
+    for timeline in timelines:
+        if not isinstance(timeline, dict):
+            raise ValueError("Every timeline needs a track list")
+        for field, low, high in [("width", 16, 7680), ("height", 16, 7680), ("fps", 1, 120)]:
+            value = timeline.get(field)
+            if value is None:
+                continue
+            if not isinstance(value, (int, float)) or not math.isfinite(value) or int(value) != value or not low <= value <= high:
+                raise ValueError(f"Invalid timeline {field}")
+            timeline[field] = int(value)
+    # The active timeline's format wins; a timeline without its own keeps the project's.
+    for field in ("width", "height", "fps"):
+        override = timelines[active].get(field)
+        if override:
+            result[field] = int(override)
     all_tracks = []
     for timeline in timelines:
         if not isinstance(timeline, dict) or not isinstance(timeline.get("tracks"), list):
