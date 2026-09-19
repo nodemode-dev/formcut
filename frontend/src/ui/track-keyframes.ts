@@ -337,6 +337,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "iconbtn kfb-toggle";
+    toggle.dataset.feature = "kf.toggle";
     toggle.title = t("kf.title");
     toggle.setAttribute("aria-label", t("kf.title"));
     toggle.setAttribute("aria-expanded", "false");

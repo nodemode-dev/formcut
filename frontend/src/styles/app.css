@@ -91,7 +91,10 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   min-width: 0;
 }
 .pane-tabs > .pane-tab { flex: 0 0 auto; }
-.pane-tabs > .select-chip { flex: 0 0 auto; margin-left: auto; }
+.pane-tabs > .select-chip { flex: 0 0 auto; margin-left: auto; order: 99; }
+.tl-toolbar[data-labels="true"] .iconbtn[data-label] { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-height: 32px; padding: 0 10px; gap: 6px; border: 1px solid var(--edge); background: var(--inset); }
+.tl-toolbar[data-labels="true"] .iconbtn[data-label]::after { content: attr(data-label); font-size: 12px; }
+.tl-toolbar[data-labels="true"] .iconbtn[data-label].is-accent { background: var(--cue-wash); border-color: var(--cue); }
 .pane-tab {
   padding: 6px 12px;
   border-radius: var(--radius-s);

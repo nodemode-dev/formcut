@@ -78,6 +78,12 @@ export function installWorkspaceLayout(): void {
     const button = document.createElement("button"); button.className = "dropdown-item"; button.textContent = title;
     button.addEventListener("click", () => { settings[key] = !settings[key]; settings.focus = false; apply(); }); menu.append(button); options.set(key, button);
   }
+  document.addEventListener("formcut:layout", (event) => {
+    const detail = (event as CustomEvent<Partial<typeof settings>>).detail;
+    if (!detail || typeof detail !== "object") return;
+    settings = { ...settings, ...detail };
+    apply();
+  });
   // Slot moves live in the same menu as pane visibility, so they are reachable
   // without a drag for anyone who cannot make one.
   for (const [key, labelKey] of [["swap", "layout.swap"], ["timelineTop", "layout.timelinetop"]] as const) {

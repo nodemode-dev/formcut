@@ -52,32 +52,32 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   const el = document.createElement("section");
   el.className = "pane pane-timeline";
   el.innerHTML = `
-    <div class="tl-tabs" data-ref="tabs">
+    <div class="tl-tabs" data-ref="tabs" data-feature="tl.tabs">
       ${s.timelines.map((t, i) => `<button class="tl-tab${i === s.activeTimeline ? " is-active" : ""}" data-tl="${i}">${t.name}</button>`).join("")}
       <button class="iconbtn">${icon("plus")}</button>
       <span class="spacer"></span>
       <button class="select-chip">${icon("layout")}${icon("chevD")}</button>
     </div>
     <div class="tl-toolbar">
-      <button class="iconbtn is-accent" title="${t('tool.select')}" data-ref="tool-select">${icon("pointer")}</button>
-      <button class="iconbtn" title="${t('tool.blade')}" data-ref="tool-blade">${icon("blade")}</button>
+      <button class="iconbtn is-accent" title="${t('tool.select')}" data-ref="tool-select" data-feature="tool.select" data-label="${t('tool.select')}">${icon("pointer")}</button>
+      <button class="iconbtn" title="${t('tool.blade')}" data-ref="tool-blade" data-feature="tool.blade" data-label="${t('tool.blade')}">${icon("blade")}</button>
       <span class="divider"></span>
-      <button class="iconbtn" title="${t('tool.split')}" data-ref="act-split">${icon("split")}</button>
-      <button class="iconbtn" title="${t('tool.detach')}" data-ref="act-detach">${icon("detach")}</button>
-      <button class="iconbtn" title="${t('tool.ripple')}" data-ref="act-ripple">${icon("ripple")}</button>
-      <button class="iconbtn" title="${t('tool.delete')}" data-ref="act-delete">${icon("trash")}</button>
+      <button class="iconbtn" title="${t('tool.split')}" data-ref="act-split" data-feature="act.split" data-label="${t('tool.split')}">${icon("split")}</button>
+      <button class="iconbtn" title="${t('tool.detach')}" data-ref="act-detach" data-feature="act.detach" data-label="${t('tool.detach')}">${icon("detach")}</button>
+      <button class="iconbtn" title="${t('tool.ripple')}" data-ref="act-ripple" data-feature="act.ripple" data-label="${t('tool.ripple')}">${icon("ripple")}</button>
+      <button class="iconbtn" title="${t('tool.delete')}" data-ref="act-delete" data-feature="act.delete" data-label="${t('tool.delete')}">${icon("trash")}</button>
       <span class="divider"></span>
-      <button class="iconbtn is-accent" title="${t('tool.snap')}" data-ref="snap">${icon("magnet")}</button>
+      <button class="iconbtn is-accent" title="${t('tool.snap')}" data-ref="snap" data-feature="snap" data-label="${t('tool.snap')}">${icon("magnet")}</button>
       <span class="divider"></span>
-      <button class="tool-chip" data-ref="chip-captions">${icon("captions")}${t("chip.captions")}</button>
-      <button class="tool-chip" data-ref="chip-speak" disabled>${icon("speak")}${t("chip.speak")}</button>
-      <button class="tool-chip" data-ref="chip-detach">${icon("detach")}${t("chip.detach")}</button>
-      <button class="iconbtn" title="${t('tool.addtrack')}" data-ref="act-add-track">${icon("addTrack")}</button>
+      <button class="tool-chip" data-ref="chip-captions" data-feature="chip.captions">${icon("captions")}${t("chip.captions")}</button>
+      <button class="tool-chip" data-ref="chip-speak" data-feature="chip.speak" disabled>${icon("speak")}${t("chip.speak")}</button>
+      <button class="tool-chip" data-ref="chip-detach" data-feature="chip.detach">${icon("detach")}${t("chip.detach")}</button>
+      <button class="iconbtn" title="${t('tool.addtrack')}" data-ref="act-add-track" data-feature="act.addTrack" data-label="${t('tool.addtrack')}">${icon("addTrack")}</button>
       <span class="spacer"></span>
       <span class="tl-tc" data-ref="tc">${formatTimecode(s.playhead, s.fps)}</span>
-      <button class="iconbtn" title="${t('tool.fit')}" data-ref="zoom-fit">${icon("fit")}</button>
-      <button class="iconbtn" title="${t('tool.zoomout')}" data-ref="zoom-out">${icon("zoomOut")}</button>
-      <button class="iconbtn" title="${t('tool.zoomin')}" data-ref="zoom-in">${icon("zoomIn")}</button>
+      <button class="iconbtn" title="${t('tool.fit')}" data-ref="zoom-fit" data-feature="zoom.fit" data-label="${t('tool.fit')}">${icon("fit")}</button>
+      <button class="iconbtn" title="${t('tool.zoomout')}" data-ref="zoom-out" data-feature="zoom.out" data-label="${t('tool.zoomout')}">${icon("zoomOut")}</button>
+      <button class="iconbtn" title="${t('tool.zoomin')}" data-ref="zoom-in" data-feature="zoom.in" data-label="${t('tool.zoomin')}">${icon("zoomIn")}</button>
     </div>
     <div class="tl-scroller" data-ref="scroller">
       <div class="tl-grid" data-ref="grid">

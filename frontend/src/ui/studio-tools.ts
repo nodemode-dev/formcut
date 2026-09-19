@@ -9,7 +9,7 @@ import { icon } from "./icons";
 export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const inspector = buildCreatorPanel(engine);
   document.querySelector(".inspector-body")!.append(inspector);
-  const opener = document.createElement("button"); opener.className = "tool-chip"; opener.textContent = "Studio";
+  const opener = document.createElement("button"); opener.className = "tool-chip"; opener.textContent = "Studio"; opener.dataset.feature = "titlebar.studio";
   document.querySelector(".titlebar-right")!.prepend(opener);
   const modal = document.createElement("div"); modal.className = "set-scrim studio-modal"; modal.hidden = true;
   const tab = (page: string, glyph: string, label: string, active = false) => `<button class="set-tab${active ? " is-active" : ""}" data-page="${page}">${icon(glyph)}<span>${label}</span></button>`;

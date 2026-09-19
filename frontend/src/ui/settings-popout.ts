@@ -412,6 +412,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     const tab = document.createElement("button");
     tab.className = "set-tab";
     tab.dataset.page = id;
+    tab.dataset.feature = `set.${id}`;
     tab.innerHTML = `${icon(glyph)}<span>${t(labelKey)}</span>`;
     tab.addEventListener("click", () => {
       page = id;

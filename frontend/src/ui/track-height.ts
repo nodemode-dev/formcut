@@ -44,6 +44,7 @@ export function installTrackHeightGrip(header: HTMLElement, lane: HTMLElement, i
   apply(trackHeight(index));
   const grip = document.createElement("div");
   grip.className = "track-grip";
+  grip.dataset.feature = "tl.heights";
   grip.title = text("Drag to change the track height");
   grip.setAttribute("role", "separator");
   grip.setAttribute("aria-orientation", "horizontal");

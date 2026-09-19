@@ -19,9 +19,9 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   el.innerHTML = `
     <div class="titlebar-left">
       <div class="titlebar-logo">${icon("logo")}<span>formcut</span></div>
-      <button class="menu-item" data-ref="file">${t("menu.file")}</button>
-      <button class="menu-item" data-ref="edit">${t("menu.edit")}</button>
-      <button class="menu-item" data-ref="view">${t("menu.view")}</button>
+      <button class="menu-item" data-ref="file" data-feature="menu.file">${t("menu.file")}</button>
+      <button class="menu-item" data-ref="edit" data-feature="menu.edit">${t("menu.edit")}</button>
+      <button class="menu-item" data-ref="view" data-feature="menu.view">${t("menu.view")}</button>
     </div>
     <div class="titlebar-center">
       <span class="project-title" data-ref="title" title="Click to rename">${escapeHtml(s.title)}</span>
@@ -29,10 +29,10 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       <span class="save-state" data-ref="saved">${s.saved ? "saved" : "edited"}</span>
     </div>
     <div class="titlebar-right">
-      <button class="iconbtn" title="${t('layout.focus')}" data-ref="focus-preview">${icon("pip")}</button>
-      <button class="iconbtn" title="${t('layout.panels')}" data-ref="panels">${icon("sliders")}</button>
-      <button class="iconbtn" title="${t('set.title')}" data-ref="settings">${icon("settings")}</button>
-      <button class="btn-export" data-ref="export">${icon("export")}${t("btn.export")}</button>
+      <button class="iconbtn" title="${t('layout.focus')}" data-ref="focus-preview" data-feature="titlebar.focus">${icon("pip")}</button>
+      <button class="iconbtn" title="${t('layout.panels')}" data-ref="panels" data-feature="titlebar.panels">${icon("sliders")}</button>
+      <button class="iconbtn" title="${t('set.title')}" data-ref="settings" data-feature="titlebar.settings">${icon("settings")}</button>
+      <button class="btn-export" data-ref="export" data-feature="titlebar.export">${icon("export")}${t("btn.export")}</button>
     </div>`;
   const saved = el.querySelector<HTMLElement>('[data-ref="saved"]')!;
   const title = el.querySelector<HTMLElement>('[data-ref="title"]')!;

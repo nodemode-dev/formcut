@@ -1,0 +1,44 @@
+{
+  "format": "fcui/1",
+  "id": "easy",
+  "name": "Easy",
+  "description": "Labelled tools, galleries and a magnetic main track. Expert settings stay in the project and open in Advanced.",
+  "panes": {
+    "media": { "shown": true, "width": 360 },
+    "inspector": { "shown": true, "width": 300 },
+    "timeline": { "shown": true, "height": 40 }
+  },
+  "tabs": ["Media", "Text", "Effects", "Filters", "Transitions", "Templates"],
+  "inspector": {
+    "groups": ["video", "audio"],
+    "subtabs": ["basic", "speed", "animation", "adjust"],
+    "views": {
+      "video:basic": ["transform", "timing", "text"],
+      "video:speed": ["timing", "creator:speed"],
+      "video:animation": ["creator:motion"],
+      "video:adjust": ["creator:effects", "mask", "key"],
+      "audio": ["audio", "creator:audio"],
+      "effects": ["creator:effects", "creator:transition", "creator:cutout"]
+    }
+  },
+  "tools": {
+    "labels": true,
+    "shown": ["tool.select", "act.split", "act.delete", "snap", "chip.captions", "chip.speak", "zoom.fit", "zoom.out", "zoom.in"]
+  },
+  "behaviour": { "snapping": true, "magneticMain": true, "autosave": true },
+  "exportPresets": ["mp4:high", "mp4:medium", "mp4:small"],
+  "features": {
+    "menu.file": true, "menu.edit": true, "menu.view": false,
+    "titlebar.studio": true, "titlebar.focus": false, "titlebar.panels": false, "titlebar.settings": true, "titlebar.export": true,
+    "tab.Media": true, "tab.Text": true, "tab.Transitions": true, "tab.Effects": true, "tab.Filters": true, "tab.Templates": true,
+    "group.video": true, "group.audio": true, "group.effects": false, "insp.showall": false,
+    "subtab.basic": true, "subtab.speed": true, "subtab.animation": true, "subtab.adjust": true,
+    "section.transform": true, "section.timing": true, "section.audio": true, "section.blend": false, "section.track": false, "section.mask": true, "section.key": true,
+    "creator.page": true,
+    "creator.speed": true, "creator.motion": true, "creator.effects": true, "creator.audio": true, "creator.transition": true, "creator.cutout": true, "creator.advanced": false,
+    "tool.select": true, "tool.blade": false, "act.split": true, "act.detach": false, "act.ripple": false, "act.delete": true, "snap": true,
+    "chip.captions": true, "chip.speak": true, "chip.detach": false, "act.addTrack": false, "zoom.fit": true, "zoom.out": true, "zoom.in": true,
+    "tl.tabs": false, "tl.heights": true, "kf.toggle": false, "workarea": false,
+    "set.project": true, "set.playback": true, "set.appearance": true, "set.providers": true, "set.connections": false, "set.advanced": false
+  }
+}

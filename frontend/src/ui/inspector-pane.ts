@@ -56,18 +56,18 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   el.innerHTML = `
     <div class="inspector-head">
       <div class="seg" data-ref="group">
-        <button class="is-active" data-group="video">Video</button><button data-group="audio">Audio</button><button data-group="effects">Effects</button>
+        <button class="is-active" data-group="video" data-feature="group.video">Video</button><button data-group="audio" data-feature="group.audio">Audio</button><button data-group="effects" data-feature="group.effects">Effects</button>
       </div>
-      <button class="select-chip" data-ref="show-all" title="${t("insp.showall")}" aria-pressed="false">${icon("sliders")}</button>
+      <button class="select-chip" data-ref="show-all" data-feature="insp.showall" title="${t("insp.showall")}" aria-pressed="false">${icon("sliders")}</button>
     </div>
     <div class="inspector-subtabs">
       <div class="seg" data-ref="subtabs">
-        <button class="is-active" data-tab="basic">Basic</button><button data-tab="speed">Speed</button><button data-tab="animation">Animation</button><button data-tab="adjust">Adjust</button>
+        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">Adjust</button>
       </div>
     </div>
     <div class="inspector-body">
       <div class="inspector-empty" role="status">${t("insp.empty")}</div>
-      <div class="section" data-section="transform">
+      <div class="section" data-section="transform" data-feature="section.transform">
         <div class="section-head">${t("sec.transform")} ${icon("chevD")}<span class="spacer"></span><button class="iconbtn" data-ref="reset-transform" title="${t("insp.reset")}">${icon("reset")}</button></div>
         ${propRow(t("row.scale"), "scale", sel.scale, "%")}
         ${propRow(t("row.posx"), "posX", sel.posX, "%")}
@@ -104,7 +104,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux"></span>
         </div>
       </div>
-      <div class="section" data-section="timing">
+      <div class="section" data-section="timing" data-feature="section.timing">
         <div class="section-head">${t("sec.timing")} ${icon("chevD")}</div>
         <div class="prop-row">
           <span>Speed</span>
@@ -122,7 +122,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux"></span>
         </div>
       </div>
-      <div class="section" data-section="audio">
+      <div class="section" data-section="audio" data-feature="section.audio">
         <div class="prop-row">
           <span>${t("row.audiofx")}</span>
           <select class="mini-select" data-ref="audiofx">
@@ -141,7 +141,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <button class="toggle" data-ref="mute" aria-label="Mute clip"></button>
         </div>
       </div>
-      <div class="section" data-section="blend">
+      <div class="section" data-section="blend" data-feature="section.blend">
         <div class="section-head">${t("sec.blend")} ${icon("chevD")}</div>
         ${propRow(t("row.opacity"), "opacity", sel.opacity, "%")}
         <div class="prop-row">
@@ -155,12 +155,12 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <button class="toggle${sel.flipH ? " is-on" : ""}" data-ref="flip" aria-label="Flip horizontal"></button>
         </div>
       </div>
-      <div class="section" data-section="track">
+      <div class="section" data-section="track" data-feature="section.track">
         <div class="section-head">${t("sec.track")} ${icon("chevD")}</div>
         <button class="tool-chip" data-ref="track-btn">${icon("search")}${t("track.btn")}</button>
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
       </div>
-      <div class="section" data-section="mask">
+      <div class="section" data-section="mask" data-feature="section.mask">
         <div class="section-head">${t("sec.mask")} ${icon("chevD")}</div>
         <div class="prop-row">
           <span>${t("row.maskshape")}</span>
@@ -178,7 +178,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${propRow(t("row.feather"), "maskF", 0, "%")}
         <div class="text-add-hint">${t("mask.note")}</div>
       </div>
-      <div class="section" data-section="key">
+      <div class="section" data-section="key" data-feature="section.key">
         <div class="section-head">${t("sec.key")} ${icon("chevD")}</div>
         <div class="prop-row">
           <span>${t("row.screencolor")}</span>
@@ -231,7 +231,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const page = inspectorBody.querySelector<HTMLSelectElement>(".creator-panel select[data-page]");
     if (page && view.pages.length) {
       for (const option of page.options) {
-        const outside = !view.pages.includes(option.value);
+        const outside = !view.pages.includes(option.value) || option.dataset.featureOff === "true";
         if (option.hidden !== outside) option.hidden = outside;
       }
       if (!view.pages.includes(page.value)) {

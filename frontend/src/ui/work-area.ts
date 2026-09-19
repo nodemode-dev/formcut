@@ -6,6 +6,7 @@ const STORE = "formcut.workArea";
 export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler: HTMLElement): void {
   const bar = document.createElement("div");
   bar.className = "work-area";
+  bar.dataset.feature = "workarea";
   bar.hidden = true;
   bar.title = text("Work area: drag the ends, drag the bar to move, double-click to clear");
   bar.innerHTML = `<button class="work-grip" data-edge="start" aria-label="${text("Work area start")}"></button><button class="work-grip" data-edge="end" aria-label="${text("Work area end")}"></button>`;
@@ -43,7 +44,7 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
     const width = `${(area.end - area.start) * scale()}px`;
     if (bar.style.left !== left) bar.style.left = left;
     if (bar.style.width !== width) bar.style.width = width;
-    if (bar.hidden) bar.hidden = false;
+    if (bar.hidden && bar.dataset.featureOff !== "true") bar.hidden = false;
   };
   const commit = (): void => {
     engine.setWorkArea(area);

@@ -1,4 +1,5 @@
 import { installWorkspaceLayout } from "./ui/workspace-layout";
+import { primeInterfaceMode, applyInterfaceProfile, observeInterfaceFeatures } from "./ui/interface-mode";
 import { installAccordions } from "./ui/accordion";
 import { installEditorActions } from "./ui/editor-actions";
 import "./engine/local-transport";
@@ -66,7 +67,11 @@ const actions = {
 const titlebar = buildTitlebar(engine, actions);
 localizeElement(titlebar);
 localizeElement(workspace);
+const modeProfile = primeInterfaceMode();
+applyInterfaceProfile(titlebar, modeProfile);
+applyInterfaceProfile(workspace, modeProfile);
 app.append(titlebar, workspace);
+observeInterfaceFeatures(app);
 installStudioTools(engine, bin);
 installBehaviours();
 const settingsButton = titlebar.querySelector<HTMLElement>('[data-ref="settings"]');
