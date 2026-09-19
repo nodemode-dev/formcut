@@ -2,6 +2,8 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import type { Clip } from "../engine/types";
 import { api } from "../engine/api";
+import { rejoinEligibility } from "../engine/creator-commands";
+import { t } from "../i18n";
 
 export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void {
   let copied: Array<{ trackIndex: number; clip: Clip }> = [];
@@ -44,17 +46,27 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
     if (!engine.findClip(source.id)) return;
     engine.dispatch("clip.detach", { clipId: source.id, mediaId: item.id, label: item.name });
   };
-  const actions: Array<[string, () => unknown]> = [
+  const actions: Array<[string, () => unknown, (() => string | null)?]> = [
     ["Undo", () => engine.dispatch("history.undo")], ["Redo", () => engine.dispatch("history.redo")],
     ["Copy clip", copy], ["Paste clip", paste], ["Duplicate clip", duplicate],
     ["Split at playhead", () => { const ids = selectedSet(); if (ids.length) engine.dispatch("clips.split", { clipIds: ids, time: engine.snapshot.playhead }); }],
+    ["Rejoin", () => engine.dispatch("clip.rejoin", { clipIds: selectedSet() }), () => {
+      const verdict = rejoinEligibility(engine.snapshot, selectedSet());
+      return verdict.ok ? null : t(verdict.reason);
+    }],
     ["Detach audio", detach], ["Delete clip", () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); }],
   ];
-  const bindMenu = (button: HTMLButtonElement, entries: Array<[string, () => unknown]>) => {
+  const bindMenu = (button: HTMLButtonElement, entries: Array<[string, () => unknown, (() => string | null)?]>) => {
     const menu = document.createElement("div"); menu.className = "dropdown"; menu.hidden = true;
-    for (const [name, action] of entries) { const item = document.createElement("button"); item.className = "dropdown-item"; item.textContent = name; item.addEventListener("click", () => { menu.hidden = true; void Promise.resolve().then(action).catch(error => window.alert(error.message)); }); menu.append(item); }
+    const probes: Array<() => void> = [];
+    for (const [name, action, ready] of entries) {
+      const item = document.createElement("button"); item.className = "dropdown-item"; item.textContent = name;
+      item.addEventListener("click", () => { menu.hidden = true; void Promise.resolve().then(action).catch(error => window.alert(error.message)); });
+      if (ready) probes.push(() => { const reason = ready(); item.disabled = !!reason; item.title = reason ?? ""; });
+      menu.append(item);
+    }
     document.body.append(menu);
-    button.addEventListener("click", () => { const rect = button.getBoundingClientRect(); menu.style.left = `${rect.left}px`; menu.style.top = `${rect.bottom}px`; menu.hidden = !menu.hidden; });
+    button.addEventListener("click", () => { const rect = button.getBoundingClientRect(); menu.style.left = `${rect.left}px`; menu.style.top = `${rect.bottom}px`; if (menu.hidden) for (const probe of probes) probe(); menu.hidden = !menu.hidden; });
     document.addEventListener("pointerdown", event => { if (!menu.contains(event.target as Node) && !button.contains(event.target as Node) && !menu.hidden) menu.hidden = true; });
     document.addEventListener("keydown", event => { if (event.key === "Escape") menu.hidden = true; });
   };

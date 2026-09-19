@@ -137,6 +137,48 @@ def apply_edit(project: dict, command: dict):
             track["clips"].append(tail)
             made.append(tail["id"])
         return {"clipIds": made}
+    elif operation == "clip.rejoin":
+        tracks = timeline["tracks"]
+        wanted = list(command["clipIds"])
+        if len(wanted) < 2:
+            raise ValueError("Select two or more pieces to rejoin")
+        spots = []
+        for cid in wanted:
+            spot = next(((i, t, c) for i, t in enumerate(tracks) for c in t["clips"] if c["id"] == cid), None)
+            if not spot:
+                raise ValueError("Clip not found")
+            spots.append(spot)
+        track_index = spots[0][0]
+        if any(s[0] != track_index for s in spots):
+            raise ValueError("Pieces must sit on one track")
+        if tracks[track_index].get("locked"):
+            raise ValueError("The track is locked")
+        ordered = sorted((s[2] for s in spots), key=lambda c: c["start"])
+        media = ordered[0].get("mediaId")
+        if any(c.get("mediaId") != media for c in ordered):
+            raise ValueError("Pieces must share the same media")
+        speed = ordered[0].get("speed", 1)
+        if any(c.get("speedCurve") or c.get("speed", 1) != speed for c in ordered):
+            raise ValueError("Pieces must play at the same constant speed")
+        for prev, nxt in zip(ordered, ordered[1:]):
+            if abs(prev["start"] + prev["duration"] - nxt["start"]) > 0.02:
+                raise ValueError("Pieces must touch on the timeline")
+            if abs(source_time(prev, prev["duration"]) - nxt.get("sourceIn", 0)) > 0.02:
+                raise ValueError("Pieces must continue the same source range")
+        first, last = ordered[0], ordered[-1]
+        at = first["duration"]
+        merged = list(first.get("keyframes") or [])
+        for piece in ordered[1:]:
+            merged.extend({**copy.deepcopy(k), "t": k["t"] + at} for k in piece.get("keyframes") or [])
+            at += piece["duration"]
+        first["duration"] = round((last["start"] + last["duration"] - first["start"]) * 100) / 100
+        if merged:
+            first["keyframes"] = sorted(merged, key=lambda k: k["t"])
+        else:
+            first.pop("keyframes", None)
+        first["fadeOut"] = last.get("fadeOut", 0)
+        gone = {c["id"] for c in ordered[1:]}
+        tracks[track_index]["clips"] = [c for c in tracks[track_index]["clips"] if c["id"] not in gone]
     elif operation == "clips.mute":
         tracks = timeline["tracks"]
         muted = bool(command["muted"])
@@ -198,7 +240,7 @@ def dispatch(method: str, params: dict):
         return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
                 "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "track.add", "track.remove", "timeline.add", "project.settings"]}
     if method == "catalogue":
         return catalogue()
     if method == "project.list":

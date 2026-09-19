@@ -1,12 +1,60 @@
 import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
-import { SPEED_PRESETS, speedPoints } from "./timing";
+import { SPEED_PRESETS, speedPoints, sourceTime } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.ripple-delete", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
+export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.ripple-delete", "clip.rejoin", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
+
+/** Whether the given clips form a rejoinable chain; the reason key names why not. */
+export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
+  if (clipIds.length < 2) return { ok: false, reason: "rejoin.need-two" };
+  const timeline = state.timelines[state.activeTimeline];
+  const spots = clipIds.map((id) => {
+    const trackIndex = timeline.tracks.findIndex((track) => track.clips.some((c) => c.id === id));
+    return trackIndex < 0 ? null : { trackIndex, clip: timeline.tracks[trackIndex].clips.find((c) => c.id === id)! };
+  });
+  if (spots.some((s) => !s)) return { ok: false, reason: "rejoin.need-two" };
+  const trackIndex = spots[0]!.trackIndex;
+  if (spots.some((s) => s!.trackIndex !== trackIndex)) return { ok: false, reason: "rejoin.one-track" };
+  if (timeline.tracks[trackIndex].locked) return { ok: false, reason: "rejoin.locked" };
+  const ordered = spots.map((s) => s!.clip).sort((a, b) => a.start - b.start);
+  const media = ordered[0].mediaId;
+  if (ordered.some((c) => c.mediaId !== media)) return { ok: false, reason: "rejoin.same-media" };
+  const shape = JSON.stringify([ordered[0].speed ?? 1]);
+  if (ordered.some((c) => c.speedCurve?.length || JSON.stringify([c.speed ?? 1]) !== shape)) return { ok: false, reason: "rejoin.same-speed" };
+  for (let i = 1; i < ordered.length; i += 1) {
+    const prev = ordered[i - 1], next = ordered[i];
+    if (Math.abs(prev.start + prev.duration - next.start) > 0.02) return { ok: false, reason: "rejoin.adjacent" };
+    if (Math.abs(sourceTime(prev, prev.duration) - (next.sourceIn ?? 0)) > 0.02) return { ok: false, reason: "rejoin.contiguous" };
+  }
+  return { ok: true, ordered, trackIndex };
+}
 
 export function creatorCommand(state: ProjectState, command: string, data: unknown): void {
   const p = data as Record<string, unknown>;
   const timeline = state.timelines[state.activeTimeline];
+  if (command === "clip.rejoin") {
+    const verdict = rejoinEligibility(state, p.clipIds as string[]);
+    if (!verdict.ok) throw new Error(verdict.reason);
+    const { ordered, trackIndex } = verdict;
+    const first = ordered[0];
+    const last = ordered[ordered.length - 1];
+    let at = first.duration;
+    const merged = [...(first.keyframes ?? [])];
+    for (const piece of ordered.slice(1)) {
+      for (const key of piece.keyframes ?? []) merged.push({ ...structuredClone(key), t: key.t + at });
+      at += piece.duration;
+    }
+    first.duration = Math.round((last.start + last.duration - first.start) * 100) / 100;
+    first.keyframes = merged.length ? merged.sort((a, b) => a.t - b.t) : undefined;
+    first.fadeOut = last.fadeOut;
+    const track = timeline.tracks[trackIndex];
+    const gone = new Set(ordered.slice(1).map((c) => c.id));
+    track.clips = track.clips.filter((c) => !gone.has(c.id));
+    state.selection = [first.id];
+    state.selectedClipId = first.id;
+    state.saved = false;
+    return;
+  }
   const clip = timeline.tracks.flatMap(t => t.clips).find(c => c.id === p.clipId);
   if (command.startsWith("clip.") && !clip) throw new Error("Select a clip first");
   if (command === "clip.ripple-delete") {

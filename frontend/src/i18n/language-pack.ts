@@ -660,7 +660,14 @@ Highlights blue|Hautes lumières bleu|Luci blu|ハイライト 青|하이라이�
 Radius|Rayon|Raggio|半径|반경|Raio|Радиус|Yarıçap|半径|半徑
 Size|Taille|Dimensione|サイズ|크기|Tamanho|Размер|Boyut|大小|大小
 Levels|Niveaux|Livelli|レベル|레벨|Níveis|Уровни|Seviyeler|色阶|色階
-Strength|Intensité|Intensità|強さ|강도|Intensidade|Сила|Güç|强度|強度`;
+Strength|Intensité|Intensità|強さ|강도|Intensidade|Сила|Güç|强度|強度
+Select two or more pieces to rejoin|Sélectionnez au moins deux segments à réunir|Seleziona due o più parti da riunire|結合するには2つ以上の断片を選択|다시 결합하려면 두 개 이상 선택|Selecione duas ou mais partes para reunir|Выберите два или более фрагмента для соединения|Birleştirmek için iki veya daha fazla parça seçin|选择两个或更多片段进行合并|選擇兩個或更多片段進行合併
+Pieces must sit on one track|Les segments doivent être sur une seule piste|Le parti devono stare su una sola traccia|断片は同じトラック上にある必要があります|조각이 한 트랙에 있어야 합니다|As partes devem estar em uma única trilha|Фрагменты должны быть на одной дорожке|Parçalar tek bir kanalda olmalı|片段必须位于同一轨道|片段必須位於同一軌道
+The track is locked|La piste est verrouillée|La traccia è bloccata|トラックがロックされています|트랙이 잠겨 있습니다|A trilha está bloqueada|Дорожка заблокирована|Kanal kilitli|轨道已锁定|軌道已鎖定
+Pieces must share the same media|Les segments doivent partager le même média|Le parti devono condividere lo stesso file|断片は同じメディアを共有する必要があります|조각이 같은 미디어를 공유해야 합니다|As partes devem compartilhar a mesma mídia|Фрагменты должны использовать один источник|Parçalar aynı medyayı paylaşmalı|片段必须共享同一媒体|片段必須共享同一媒體
+Pieces must play at the same constant speed|Les segments doivent avoir la même vitesse constante|Le parti devono avere la stessa velocità costante|断片は同じ一定速度である必要があります|조각이 같은 일정 속도여야 합니다|As partes devem ter a mesma velocidade constante|Фрагменты должны идти с одной постоянной скоростью|Parçalar aynı sabit hızda olmalı|片段必须以相同恒定速度播放|片段必須以相同恆定速度播放
+Pieces must touch on the timeline|Les segments doivent se toucher sur la timeline|Le parti devono toccarsi sulla timeline|断片はタイムライン上で接している必要があります|조각이 타임라인에서 맞닿아야 합니다|As partes devem se tocar na linha do tempo|Фрагменты должны соприкасаться на шкале|Parçalar zaman çizgisinde bitişik olmalı|片段必须在时间线上相接|片段必須在時間軸上相接
+Pieces must continue the same source range|Les segments doivent prolonger la même plage source|Le parti devono continuare lo stesso intervallo di origine|断片は同じソース範囲の続きである必要があります|조각이 같은 소스 범위를 이어야 합니다|As partes devem continuar o mesmo intervalo de origem|Фрагменты должны продолжать один диапазон источника|Parçalar aynı kaynak aralığını sürdürmeli|片段必须延续同一源范围|片段必須延續同一來源範圍`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");
