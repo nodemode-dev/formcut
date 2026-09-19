@@ -16,6 +16,13 @@ def clip_values(clip):
         value = (clip.get('crop') or {}).get(edge)
         if value is not None:
             number(value, 'crop ' + edge, 0, 0.45)
+    style = clip.get('textStyle') or {}
+    for name, low, high in [('weight', 100, 900), ('outlineWidth', 0, 50), ('shadowBlur', 0, 100),
+                            ('shadowX', -200, 200), ('shadowY', -200, 200), ('plateOpacity', 0, 1),
+                            ('platePadding', 0, 200), ('plateRadius', 0, 200), ('lineHeight', 0.5, 4),
+                            ('letterSpacing', -50, 200), ('wrapWidth', 5, 100), ('textOpacity', 0, 1)]:
+        if style.get(name) is not None:
+            number(style[name], 'title ' + name, low, high)
     for point in clip.get('speedCurve') or []:
         number(point['t'], 'curve time', 0, 86400)
         number(point['speed'], 'curve speed', 0.05, 16)

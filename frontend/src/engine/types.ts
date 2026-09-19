@@ -7,6 +7,22 @@ export interface TextStyle {
   color: string;
   bold: boolean;
   align: "left" | "center" | "right";
+  weight?: number;
+  italic?: boolean;
+  outlineColor?: string;
+  outlineWidth?: number;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowX?: number;
+  shadowY?: number;
+  plateColor?: string;
+  plateOpacity?: number;
+  platePadding?: number;
+  plateRadius?: number;
+  lineHeight?: number;
+  letterSpacing?: number;
+  wrapWidth?: number;
+  textOpacity?: number;
 }
 
 export function defaultTextStyle(content = "Title"): TextStyle {

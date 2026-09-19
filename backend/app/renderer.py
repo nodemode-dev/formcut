@@ -5,7 +5,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from . import gpu
 from .assets import apply_lut, asset_path
@@ -43,6 +43,59 @@ def apply_crop(image: np.ndarray, clip: dict) -> np.ndarray:
     x0, x1 = int(w * left), max(int(w * left) + 1, int(w * (1 - right)))
     y0, y1 = int(h * top), max(int(h * top) + 1, int(h * (1 - bottom)))
     return image[y0:y1, x0:x1]
+
+
+def wrap_text(content: str, font, limit: float) -> str:
+    """Wrap each paragraph to a pixel width, keeping deliberate line breaks."""
+    lines = []
+    for paragraph in content.split("\n"):
+        words = paragraph.split(" ")
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if current and font.getlength(candidate) > limit:
+                lines.append(current)
+                current = word
+            else:
+                current = candidate
+        lines.append(current)
+    return "\n".join(lines)
+
+
+def line_width(font, line: str, tracking: float) -> float:
+    if not tracking:
+        return font.getlength(line)
+    return sum(font.getlength(char) for char in line) + tracking * max(0, len(line) - 1)
+
+
+def measure_text(draw, content: str, font, spacing: float, tracking: float, stroke: int) -> tuple[float, float, float, float]:
+    """Pillow's own block box, with the tracked width when tracking applies."""
+    box = draw.multiline_textbbox((0, 0), content, font=font, spacing=spacing, stroke_width=stroke)
+    if tracking:
+        lines = content.split("\n")
+        widest = max((line_width(font, line, tracking) for line in lines), default=0.0)
+        return (box[0], box[1], widest + stroke * 2, box[3] - box[1])
+    return (box[0], box[1], box[2] - box[0], box[3] - box[1])
+
+
+def paint_text(draw, origin, content: str, font, fill, align: str, spacing: float, tracking: float, stroke: int, stroke_fill) -> None:
+    """Draw the block at origin; per-glyph only when tracking asks for it."""
+    x, y = origin
+    if not tracking:
+        draw.multiline_text((x, y), content, font=font, fill=fill, align=align, spacing=spacing,
+                            stroke_width=stroke, stroke_fill=stroke_fill)
+        return
+    lines = content.split("\n")
+    widest = max((line_width(font, line, tracking) for line in lines), default=0.0)
+    step = font.size + spacing
+    for index, line in enumerate(lines):
+        width = line_width(font, line, tracking)
+        start = x if align == "left" else x + widest - width if align == "right" else x + (widest - width) / 2
+        cursor = start
+        for char in line:
+            draw.text((cursor, y + index * step), char, font=font, fill=fill,
+                      stroke_width=stroke, stroke_fill=stroke_fill, anchor="la")
+            cursor += font.getlength(char) + tracking
 
 
 class FrameRenderer:
@@ -116,12 +169,48 @@ class FrameRenderer:
         size = max(1, round(float(text.get("size", 8)) / 100 * self.height))
         font = title_font(text, size)
         content = str(text.get("content", "Title"))[:10000]
+        spacing = size * (float(text["lineHeight"]) - 1 if text.get("lineHeight") else 0.2)
+        wrap = text.get("wrapWidth")
+        if wrap:
+            content = wrap_text(content, font, max(1, self.width * float(wrap) / 100))
+        tracking = float(text.get("letterSpacing", 0)) / 100 * size
         draw = ImageDraw.Draw(image)
-        box = draw.multiline_textbbox((0, 0), content, font=font, spacing=size * 0.2)
         align = text.get("align", "center")
-        x = self.width * 0.05 if align == "left" else self.width * 0.95 - (box[2] - box[0]) if align == "right" else (self.width - box[2] + box[0]) / 2
-        y = (self.height - box[3] + box[1]) / 2 - box[1]
-        draw.multiline_text((x, y), content, font=font, fill=text.get("color", "#ffffff"), align=align, spacing=size * 0.2, stroke_width=max(1, size // 32), stroke_fill="#000000")
+        stroke = max(0, round(float(text["outlineWidth"]) / 100 * size)) if text.get("outlineWidth") is not None else max(1, size // 32)
+        stroke_fill = text.get("outlineColor", "#000000")
+        box = measure_text(draw, content, font, spacing, tracking, 0)
+        plate_box = measure_text(draw, content, font, spacing, tracking, stroke)
+        x = self.width * 0.05 if align == "left" else self.width * 0.95 - box[2] if align == "right" else (self.width - box[2]) / 2
+        x -= box[0]
+        y = (self.height - box[3]) / 2 - box[1]
+        plate = text.get("plateColor")
+        if plate:
+            pad = float(text.get("platePadding", 2)) / 100 * size
+            radius = float(text.get("plateRadius", 0)) / 100 * size
+            alpha = round(max(0.0, min(1.0, float(text.get("plateOpacity", 1)))) * 255)
+            layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            ImageDraw.Draw(layer).rounded_rectangle(
+                [x - pad, y - pad, x + plate_box[2] + pad, y + plate_box[3] + pad],
+                radius=radius, fill=ImageColor.getrgb(plate) + (alpha,),
+            )
+            image.alpha_composite(layer)
+            draw = ImageDraw.Draw(image)
+        shadow = text.get("shadowColor")
+        if shadow:
+            blur = float(text.get("shadowBlur", 0)) / 100 * size
+            offset = (float(text.get("shadowX", 0)) / 100 * size, float(text.get("shadowY", 0)) / 100 * size)
+            layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            paint_text(ImageDraw.Draw(layer), (x + offset[0], y + offset[1]), content, font, shadow, align, spacing, tracking, 0, None)
+            if blur > 0:
+                layer = layer.filter(ImageFilter.GaussianBlur(blur))
+            image.alpha_composite(layer)
+            draw = ImageDraw.Draw(image)
+        paint_text(draw, (x, y), content, font, text.get("color", "#ffffff"), align, spacing, tracking, stroke, stroke_fill)
+        opacity = float(text.get("textOpacity", 1))
+        if opacity < 1:
+            faded = np.array(image)
+            faded[:, :, 3] = np.round(faded[:, :, 3] * max(0.0, min(1.0, opacity))).astype(np.uint8)
+            return faded
         return np.array(image)
 
     def mask_frame(self, image: np.ndarray, clip: dict) -> np.ndarray:

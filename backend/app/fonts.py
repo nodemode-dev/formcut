@@ -38,7 +38,16 @@ def title_font(style, size):
     candidates = [os.environ.get('FORMCUT_FONT_PATH', '')]
     if any(ord(char) > 0x2e80 for char in text):
         candidates.extend(['/System/Library/Fonts/PingFang.ttc', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', str(Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts' / 'msyh.ttc')])
-    candidates.append('DejaVuSans-Bold.ttf' if style.get('bold', True) else 'DejaVuSans.ttf')
+    # weight and italic pick a face; bold keeps its original meaning when neither is set
+    heavy = style.get('weight') is not None and int(style['weight']) >= 600 or style.get('weight') is None and style.get('bold', True)
+    italic = bool(style.get('italic'))
+    faces = []
+    if heavy and italic:
+        faces.append('DejaVuSans-BoldOblique.ttf')
+    elif italic:
+        faces.append('DejaVuSans-Oblique.ttf')
+    faces.append('DejaVuSans-Bold.ttf' if heavy else 'DejaVuSans.ttf')
+    candidates.extend(faces)
     for candidate in candidates:
         if not candidate:
             continue
