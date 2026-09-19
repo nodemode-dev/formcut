@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { api, waitJob } from "../engine/api";
+import { escapeHtml } from "./safe-text";
 import { buildCreatorPanel } from "./creator-panel";
 import { icon } from "./icons";
 
@@ -14,8 +15,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const modal = document.createElement("div"); modal.className = "set-scrim studio-modal"; modal.hidden = true;
   const tab = (page: string, glyph: string, label: string, active = false) => `<button class="set-tab${active ? " is-active" : ""}" data-page="${page}">${icon(glyph)}<span>${label}</span></button>`;
   modal.innerHTML = `<div class="set-pair studio-pair">
-    <nav class="set-rail" aria-label="Studio"><div class="set-rail-head"><strong>Studio</strong></div>
-      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("templates", "template", "Timeline templates")}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
+    <nav class="set-rail studio-rail" aria-label="Studio" data-collapsed="false">
+      <div class="set-rail-head"><strong>Studio</strong>
+        <button class="iconbtn rail-collapse" data-rail-toggle title="Collapse" aria-label="Collapse sidebar" aria-expanded="true">${icon("chevL")}</button>
+      </div>
+      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "mic", t("gen.audio"))}${tab("templates", "template", "Timeline templates")}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
     <header class="set-head"><strong data-page-title>Project</strong><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></header>
@@ -24,6 +28,29 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       <div class="panel-section"><div class="panel-section-head"><span>Project settings</span></div><div class="panel-rows"><label>Width <input data-width type="number" min="16" max="7680"></label><label>Height <input data-height type="number" min="16" max="7680"></label><label>Frame rate <input data-fps type="number" min="1" max="120"></label><div class="studio-actions"><button class="tool-chip is-primary" data-settings>Apply settings</button></div></div></div>
       <div class="panel-section"><div class="panel-section-head"><span>Timeline structure</span><small>All settings and structure changes support Undo.</small></div><div class="panel-rows"><label>Name <input data-structure-name value="New track"></label><label>Active timeline <select data-timeline></select></label><div class="studio-actions"><button class="tool-chip" data-track-add>${icon("addTrack")}Add track</button><button class="tool-chip" data-timeline-add>${icon("plus")}Add timeline</button><button class="tool-chip" data-timeline-remove>${icon("trash")}Remove active timeline</button></div></div></div>
     </section>
+    ${["image", "video", "audio"].map((kind) => `
+    <section data-view="gen${kind}" class="set-view" hidden>
+      <div class="panel-section">
+        <div class="panel-section-head"><span>${t(`gen.${kind}`)}</span><small data-gen-ready="${kind}"></small></div>
+        <div class="panel-rows">
+          <label>${t("gen.model")} <select data-gen-model="${kind}"></select></label>
+          <label>${t("gen.prompt")} <textarea data-gen-prompt="${kind}" rows="3" placeholder="${t(`gen.${kind}.hint`)}"></textarea></label>
+          <label>${t("gen.negative")} <input data-gen-negative="${kind}" placeholder="${t("gen.negative.hint")}"></label>
+          <div class="stock-row">
+            <label data-gen-size-row="${kind}">${t("gen.size")} <select data-gen-size="${kind}"></select></label>
+            <label data-gen-seconds-row="${kind}" hidden>${t("gen.seconds")} <input data-gen-seconds="${kind}" type="number" min="1" max="22" value="5"></label>
+            <label data-gen-count-row="${kind}">${t("gen.count")} <input data-gen-count="${kind}" type="number" min="1" max="4" value="1"></label>
+          </div>
+          <div class="studio-actions">
+            <button class="tool-chip is-primary" data-gen-go="${kind}">${icon("diamond")}${t("gen.go")}</button>
+            <button class="tool-chip" data-gen-cancel="${kind}" hidden>${t("cap.cancel")}</button>
+          </div>
+          <p class="stock-note" data-gen-note="${kind}"></p>
+        </div>
+      </div>
+      <div class="panel-section"><div class="panel-section-head"><span>${t("gen.results")}</span><small>${t("gen.results.hint")}</small></div>
+        <div class="card-grid stock-grid" data-gen-grid="${kind}"></div></div>
+    </section>`).join("")}
     <section data-view="stock" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Pexels</span><small><a class="stock-attrib" href="https://www.pexels.com" target="_blank" rel="noreferrer">Photos and videos provided by Pexels</a></small></div><div class="panel-rows">
         <div class="stock-row"><div class="seg" data-stock-kind><button class="is-active" data-val="video">${icon("video")}${t("stock.video")}</button><button data-val="photo">${icon("image")}${t("stock.photos")}</button></div><input data-stock-q type="search" placeholder="Search Pexels" aria-label="Search Pexels"><button class="tool-chip is-primary" data-stock-go>${icon("search")}${t("stock.search")}</button></div>
@@ -151,16 +178,23 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           let card = stockCards.get(key);
           if (!card) {
             card = document.createElement("div"); card.className = "effect-card stock-card"; card.dataset.stock = key;
-            card.innerHTML = `<div class="effect-thumb stock-thumb has-image"><img alt="" loading="lazy" draggable="false"><span class="stock-badge"></span></div><div class="effect-name stock-credit"></div><div class="stock-actions"><button class="iconbtn" data-stock-act="media" title="${text("Add to media")}">${icon("plus")}</button><button class="iconbtn" data-stock-act="track" title="${text("Place on a new track at the playhead")}">${icon("addToTrack")}</button><button class="iconbtn" data-stock-act="download" title="${text("Download")}">${icon("download")}</button><a class="iconbtn" data-stock-act="open" target="_blank" rel="noreferrer" title="${text("Open on Pexels")}">${icon("open")}</a></div>`;
+            card.innerHTML = `<div class="effect-thumb stock-thumb has-image"><img alt="" loading="lazy" draggable="false"><span class="stock-badge"></span></div><div class="effect-name stock-credit"><a target="_blank" rel="noreferrer noopener"></a></div><div class="stock-actions"><button class="iconbtn" data-stock-act="media" title="${text("Add to media")}">${icon("plus")}</button><button class="iconbtn" data-stock-act="track" title="${text("Place on a new track at the playhead")}">${icon("addToTrack")}</button><button class="iconbtn" data-stock-act="download" title="${text("Download")}">${icon("download")}</button><a class="iconbtn" data-stock-act="open" target="_blank" rel="noreferrer" title="${text("Open on Pexels")}">${icon("open")}</a></div>`;
             stockCards.set(key, card);
           }
           const img = card.querySelector<HTMLImageElement>("img")!;
           if (img.getAttribute("src") !== item.preview) img.src = item.preview!;
           const badge = card.querySelector<HTMLElement>(".stock-badge")!;
-          const badgeText = item.type === "video" ? `${Math.round(item.duration ?? 0)}s` : `${item.width}x${item.height}`;
+          // Pexels asks for the photographer by name, and a person choosing a
+          // clip wants its length and its size, not one or the other.
+          const badgeText = item.type === "video"
+            ? `${Math.round(item.duration ?? 0)}s · ${item.width}x${item.height}`
+            : `${item.width}x${item.height}`;
           if (badge.textContent !== badgeText) badge.textContent = badgeText;
-          const credit = card.querySelector<HTMLElement>(".stock-credit")!;
-          if (credit.textContent !== (item.credit ?? "Pexels")) credit.textContent = item.credit ?? "Pexels";
+          const credit = card.querySelector<HTMLAnchorElement>(".stock-credit a")!;
+          const who = item.credit ?? "Pexels";
+          if (credit.textContent !== who) credit.textContent = who;
+          const whoUrl = (item as { credit_url?: string }).credit_url ?? item.page_url ?? "https://www.pexels.com";
+          if (credit.getAttribute("href") !== whoUrl) credit.href = whoUrl;
           const open = card.querySelector<HTMLAnchorElement>("[data-stock-act=open]")!;
           if (open.href !== (item.page_url ?? "")) open.href = item.page_url ?? "";
           if (cursor ? card.previousElementSibling !== cursor : stockGrid.firstElementChild !== card) stockGrid.insertBefore(card, cursor ? cursor.nextElementSibling : stockGrid.firstElementChild);
@@ -244,6 +278,93 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     }
   };
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });
+  // The rail collapses to icons, like the settings popout, and remembers it.
+  const rail = modal.querySelector<HTMLElement>(".studio-rail")!;
+  const railToggle = modal.querySelector<HTMLButtonElement>("[data-rail-toggle]")!;
+  const setRail = (collapsed: boolean) => {
+    rail.dataset.collapsed = String(collapsed);
+    railToggle.setAttribute("aria-expanded", String(!collapsed));
+    railToggle.title = collapsed ? "Expand" : "Collapse";
+    try { localStorage.setItem("formcut.studio.rail", collapsed ? "collapsed" : "open"); } catch { /* ignore */ }
+  };
+  railToggle.addEventListener("click", () => setRail(rail.dataset.collapsed !== "true"));
+  try { setRail(localStorage.getItem("formcut.studio.rail") === "collapsed"); } catch { setRail(false); }
+
+  // Generation: the sheet builds itself from what the engine says it can do, so
+  // a provider that is not configured is visible as such rather than failing
+  // only when the button is pressed.
+  let generators: Array<{ id: string; label: string; kind: string; providerLabel: string; sizes: string[]; options: Record<string, unknown>; ready: boolean }> = [];
+  const genJobs = new Map<string, AbortController>();
+  const pick = <T extends HTMLElement>(sel: string) => modal.querySelector<T>(sel)!;
+  const paintGenerators = () => {
+    for (const kind of ["image", "video", "audio"] as const) {
+      const select = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`);
+      const mine = generators.filter((g) => g.kind === kind);
+      select.innerHTML = mine.map((g) => `<option value="${g.id}">${g.label} · ${g.providerLabel}${g.ready ? "" : " — " + t("gen.needkey")}</option>`).join("")
+        || `<option value="">${t("gen.none")}</option>`;
+      const refresh = () => {
+        const entry = mine.find((g) => g.id === select.value);
+        const ready = pick<HTMLElement>(`[data-gen-ready="${kind}"]`);
+        ready.textContent = entry ? (entry.ready ? t("gen.ready") : t("gen.needkey")) : t("gen.none");
+        const sizes = pick<HTMLSelectElement>(`[data-gen-size="${kind}"]`);
+        sizes.innerHTML = (entry?.sizes ?? []).map((size) => `<option value="${size}">${size}</option>`).join("");
+        pick<HTMLElement>(`[data-gen-size-row="${kind}"]`).hidden = !(entry?.sizes ?? []).length;
+        const wantsSeconds = !!entry && "seconds" in (entry.options ?? {});
+        pick<HTMLElement>(`[data-gen-seconds-row="${kind}"]`).hidden = !wantsSeconds;
+        pick<HTMLElement>(`[data-gen-count-row="${kind}"]`).hidden = !(entry && "count" in (entry.options ?? {}));
+      };
+      select.onchange = refresh;
+      refresh();
+    }
+  };
+  void fetch("/api/generate").then((r) => r.json()).then((reply) => { generators = reply.generators ?? []; paintGenerators(); }).catch(() => { /* offline engine */ });
+
+  for (const kind of ["image", "video", "audio"] as const) {
+    const note = pick<HTMLElement>(`[data-gen-note="${kind}"]`);
+    const grid = pick<HTMLElement>(`[data-gen-grid="${kind}"]`);
+    const cancel = pick<HTMLButtonElement>(`[data-gen-cancel="${kind}"]`);
+    cancel.addEventListener("click", () => { genJobs.get(kind)?.abort(); genJobs.delete(kind); cancel.hidden = true; note.textContent = t("cap.cancelled"); });
+    pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).addEventListener("click", () => void (async () => {
+      const generator = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`).value;
+      const prompt = pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).value.trim();
+      if (!generator) { note.textContent = t("gen.none"); return; }
+      if (!prompt) { note.textContent = t("gen.needprompt"); return; }
+      const body = {
+        generator, prompt,
+        negative: pick<HTMLInputElement>(`[data-gen-negative="${kind}"]`).value,
+        size: pick<HTMLSelectElement>(`[data-gen-size="${kind}"]`).value || null,
+        seconds: Number(pick<HTMLInputElement>(`[data-gen-seconds="${kind}"]`).value) || null,
+        count: Number(pick<HTMLInputElement>(`[data-gen-count="${kind}"]`).value) || 1,
+      };
+      note.textContent = t("gen.working");
+      cancel.hidden = false;
+      const controller = new AbortController();
+      genJobs.set(kind, controller);
+      try {
+        const started = await api("/api/generate", body);
+        for (let waited = 0; waited < 1200 && !controller.signal.aborted; waited += 1) {
+          const status = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
+          if (status.status === "done") {
+            const made = status.result?.media ?? [];
+            grid.insertAdjacentHTML("afterbegin", made.map((item: { id: string; name: string }) =>
+              `<div class="effect-card stock-card"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div></div>`).join(""));
+            note.textContent = `${t("gen.done")}: ${made.length}`;
+            await bin.load();
+            break;
+          }
+          if (status.status === "error" || status.status === "failed") { note.textContent = String(status.error ?? t("gen.failed")); break; }
+          note.textContent = `${t("gen.working")} ${Math.round((status.progress ?? 0) * 100)}%`;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        note.textContent = error instanceof Error ? error.message : t("gen.failed");
+      } finally {
+        cancel.hidden = true;
+        genJobs.delete(kind);
+      }
+    })());
+  }
+
   document.addEventListener("formcut:studio", event => {
     const page = (event as CustomEvent<{ page?: string }>).detail?.page;
     if (page && modal.querySelector(`[data-view="${page}"]`)) activePage = page;

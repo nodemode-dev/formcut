@@ -47,6 +47,8 @@ app.include_router(media_router)
 app.include_router(stock_router)
 app.include_router(tts_router)
 app.include_router(presets_router)
+from .generate import router as generate_router
+app.include_router(generate_router)
 app.include_router(track_router)
 app.include_router(features_router)
 app.include_router(brush_router)

@@ -48,7 +48,12 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     const s = engine.snapshot;
     if (!s.playing) { audio.pause(); return; }
     if (audio.needsMix(s)) { void audio.prepare(s, () => (engine.snapshot.playing ? engine.snapshot.playhead : null)); return; }
-    if (audio.ready() && audio.position() === null) audio.play(s.playhead);
+    const at = audio.position();
+    if (audio.ready() && at === null) { audio.play(s.playhead); return; }
+    // A loop wrap moves the playhead back while the mix is still running on past
+    // the end, so the sound has to be restarted from the new position or picture
+    // and sound part company on the second pass.
+    if (audio.ready() && at !== null && Math.abs(at - s.playhead) > 0.35) audio.play(s.playhead);
   };
   const prepareAudio = async () => {
     const s = engine.snapshot;

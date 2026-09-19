@@ -778,6 +778,9 @@ export class ProjectEngine {
     this.clockSource = source ?? undefined;
   }
 
+  /** Playback wraps at the end until the person stops it. */
+  looping = true;
+
   workArea: { start: number; end: number } | null = null;
 
   setWorkArea(area: { start: number; end: number } | null) {
@@ -797,11 +800,23 @@ export class ProjectEngine {
       this.lastTick = now;
       const external = this.clockSource?.() ?? null;
       this.state.playhead = external === null ? this.state.playhead + dt : external;
-      if (this.workArea && external === null && this.state.playhead >= this.workArea.end) {
-        this.state.playhead = this.workArea.start;
-      } else if (this.state.playhead >= this.state.duration) {
-        this.state.playhead = this.state.duration;
-        this.pause();
+      // Playback loops rather than stopping at the end: it runs until the person
+      // stops it with the spacebar or the play button. A work area loops to its
+      // own start; otherwise the whole timeline wraps to the beginning. The wrap
+      // re-emits transport so anything driving the clock, the audio mixer in
+      // particular, re-schedules from the new position instead of running on
+      // past the end and dragging the playhead with it.
+      const end = this.workArea ? this.workArea.end : this.state.duration;
+      const start = this.workArea ? this.workArea.start : 0;
+      if (this.state.playhead >= end) {
+        if (this.looping) {
+          this.state.playhead = start;
+          this.lastTick = now;
+          this.emit("transport");
+        } else {
+          this.state.playhead = end;
+          this.pause();
+        }
       }
       this.emit("playhead");
       this.raf = requestAnimationFrame(tick);

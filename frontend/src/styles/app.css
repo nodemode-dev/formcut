@@ -86,13 +86,23 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 }
 .pane-timeline { grid-column: 1 / -1; }
 
+/* The tabs are one row that scrolls sideways rather than a wrapping row: a
+   growing spacer inside a wrapping flex container pushed whichever tabs did not
+   fit onto a second line, which is what left Media stranded above Templates.
+   The chip sits outside the scroller so it stays put at any pane width. */
 .pane-tabs {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+  display: flex; flex-wrap: nowrap; align-items: center; gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
   min-width: 0;
 }
-.pane-tabs > .pane-tab { flex: 0 0 auto; }
-.pane-tabs > .select-chip { flex: 0 0 auto; margin-left: auto; order: 99; }
+.pane-tab-strip {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 2px;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.pane-tab-strip::-webkit-scrollbar { height: 0; }
+.pane-tabs > .select-chip { flex: 0 0 auto; }
 .tl-toolbar[data-labels="true"] .iconbtn[data-label] { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-height: 32px; padding: 0 10px; gap: 6px; border: 1px solid var(--edge); background: var(--inset); }
 .tl-toolbar[data-labels="true"] .iconbtn[data-label]::after { content: attr(data-label); font-size: 12px; }
 .tl-toolbar[data-labels="true"] .iconbtn[data-label].is-accent { background: var(--cue-wash); border-color: var(--cue); }
@@ -104,7 +114,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 }
 .pane-tab:hover { color: var(--ink); }
 .pane-tab.is-active { background: var(--cue); color: var(--on-cue); }
-.pane-tabs .spacer { flex: 1; }
+.pane-tab-strip > .pane-tab { flex: 0 0 auto; }
 
 .media-body { display: flex; flex: 1; min-height: 0; }
 .media-cats { width: 132px; padding: var(--sp-2); overflow-y: auto; }
@@ -935,3 +945,16 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pane-stack-tabs[hidden] { display: none; }
 .pane-stack-tab { padding: 2px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 12px; cursor: pointer; }
 .pane-stack-tab.is-active { background: var(--control); color: var(--ink); }
+
+/* The studio rail collapses to icons, like the settings popout. */
+.set-rail-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.studio-rail { transition: none; }
+.studio-rail[data-collapsed="true"] { width: 56px; min-width: 56px; }
+.studio-rail[data-collapsed="true"] .set-tab span,
+.studio-rail[data-collapsed="true"] .set-rail-head strong { display: none; }
+.studio-rail[data-collapsed="true"] .set-tab { justify-content: center; padding-inline: 0; }
+.studio-rail[data-collapsed="true"] .rail-collapse svg { transform: scaleX(-1); }
+.stock-card .effect-thumb { aspect-ratio: 16 / 9; }
+
+.stock-credit a { color: var(--ink-soft); text-decoration: none; }
+.stock-credit a:hover { color: var(--cue); text-decoration: underline; }
