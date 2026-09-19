@@ -905,3 +905,5 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 .typed-captions { width: 100%; margin: 4px 0; padding: 6px; border: 1px solid var(--edge); border-radius: 6px; background: var(--inset); color: var(--ink); font: inherit; font-size: 12px; resize: vertical; }
 .title-card.is-active { outline: 2px solid var(--cue); }
+
+.export-estimate { color: var(--ink-soft); font-size: 12px; }

@@ -719,6 +719,11 @@ Chroma key|Incrustation|Chroma key|クロマキー|크로마 키|Chroma key|Хр
 Feather|Contour progressif|Sfumatura|ぼかし|페더|Suavização|Растушёвка|Yumuşatma|羽化|羽化
 Brush size|Taille du pinceau|Dimensione pennello|ブラシサイズ|브러시 크기|Tamanho do pincel|Размер кисти|Fırça boyutu|画笔大小|筆刷大小
 Ready|Prêt|Pronto|準備完了|준비됨|Pronto|Готово|Hazır|就绪|就緒
+Codec|Codec|Codec|コーデック|코덱|Codec|Кодек|Kodek|编解码器|編解碼器
+Size|Taille|Dimensione|サイズ|크기|Tamanho|Размер|Boyut|尺寸|尺寸
+Timeline|Montage|Timeline|タイムライン|타임라인|Linha do tempo|Таймлайн|Zaman çizelgesi|时间线|時間軸
+10-bit colour|Couleur 10 bits|Colore a 10 bit|10ビットカラー|10비트 색상|Cor de 10 bits|10-битный цвет|10 bit renk|10 位色彩|10 位色彩
+Estimated size|Taille estimée|Dimensione stimata|推定サイズ|예상 크기|Tamanho estimado|Примерный размер|Tahmini boyut|预计大小|預計大小
 Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {

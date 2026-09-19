@@ -360,3 +360,21 @@ def delete_media(media_id: str):
     for path in MEDIA_DIR.glob(f"{media_id}.*"):
         path.unlink(missing_ok=True)
     (THUMB_DIR / f"{media_id}.jpg").unlink(missing_ok=True)
+
+
+_audio_streams: dict[str, bool] = {}
+
+
+def has_audio(media_id: str) -> bool:
+    """Whether a media file carries an audio stream; probed once and cached."""
+    if media_id in _audio_streams:
+        return _audio_streams[media_id]
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    found = False
+    if matches:
+        try:
+            found = any(s.get("codec_type") == "audio" for s in _ffprobe(matches[0]).get("streams", []))
+        except Exception:
+            found = False
+    _audio_streams[media_id] = found
+    return found

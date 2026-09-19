@@ -140,3 +140,45 @@ def pixel_format(encoder: str, ten_bit: bool) -> str:
 def supports_ten_bit(codec: str) -> bool:
     chosen = choose(codec)
     return bool(chosen and chosen in TEN_BIT)
+
+
+# X5: a size estimate for the export sheet. The shape is a power law in pixels
+# per second, because bitrate does not scale linearly with resolution, and the
+# constants below were fitted to real exports from this pipeline rather than
+# guessed: h264/hevc/av1 at 320x180, 640x360 and 1280x720, plus the three
+# quality tiers at 640x360. Measured bpp fell from 0.12 to 0.017 across that
+# range, which is the exponent doing its job.
+BITRATE_K = 2.76          # kbit/s at one unit of (pixels per second) ** EXPONENT
+EXPONENT = 0.30
+CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921}
+# Quality factors are per codec, not shared: each encoder's tiers sit at
+# different crf values, so AV1's high tier is 1.58x its medium where H.264's is
+# 2.19x. Fitting one shared curve put an HEVC low-tier estimate 130 percent out.
+QUALITY_FACTOR = {
+    "h264": {"high": 2.19, "medium": 1.0, "low": 0.45},
+    "hevc": {"high": 2.17, "medium": 1.0, "low": 0.46},
+    "av1": {"high": 1.58, "medium": 1.0, "low": 0.59},
+    "vp9": {"high": 2.07, "medium": 1.0, "low": 0.56},
+}
+AUDIO_KBPS = 128.0
+
+
+def estimate_bitrate(codec: str, width: int, height: int, fps: float, quality: str) -> float:
+    """Estimated video bitrate in kbit/s."""
+    pixels = max(1.0, float(width) * float(height) * float(fps))
+    base = BITRATE_K * (pixels ** EXPONENT)
+    tiers = QUALITY_FACTOR.get(codec, QUALITY_FACTOR["h264"])
+    return base * CODEC_FACTOR.get(codec, 1.0) * tiers.get(quality, 1.0)
+
+
+def estimate_size(codec: str, width: int, height: int, fps: float, quality: str,
+                  duration: float, has_audio: bool = True) -> dict:
+    """Estimated output size in bytes, with the parts that made it up."""
+    video = estimate_bitrate(codec, width, height, fps, quality)
+    audio = AUDIO_KBPS if has_audio else 0.0
+    total_bits = (video + audio) * 1000.0 * max(0.0, float(duration))
+    return {
+        "codec": codec, "quality": quality, "width": width, "height": height,
+        "videoKbps": round(video, 1), "audioKbps": audio,
+        "bytes": int(total_bits / 8), "seconds": duration,
+    }

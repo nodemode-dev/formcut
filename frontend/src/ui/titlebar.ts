@@ -4,6 +4,7 @@ import { escapeHtml } from "./safe-text";
 import type { ProjectEngine } from "../engine/project";
 import { listProjects, newProject, openProject, saveProject, installAutosave } from "../engine/persistence";
 import { exportProject } from "./export-job";
+import { api } from "../engine/api";
 import { icon } from "./icons";
 import { t } from "../i18n";
 import { buildModePanel } from "./mode-popout";
@@ -212,6 +213,23 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
           <button data-val="low">Low</button>
         </div>
       </div>
+      <div class="modal-row" data-ref="codec-row">
+        <span>${t("export.codec")}</span>
+        <div class="seg" data-ref="codec"><button class="is-active" data-val="">${t("export.codec.auto")}</button></div>
+      </div>
+      <div class="modal-row">
+        <span>${t("export.size")}</span>
+        <div class="seg" data-ref="size">
+          <button class="is-active" data-val="">${t("export.size.timeline")}</button>
+          <button data-val="720p">720p</button><button data-val="1080p">1080p</button>
+          <button data-val="1440p">1440p</button><button data-val="2160p">2160p</button>
+        </div>
+      </div>
+      <div class="modal-row">
+        <span>${t("export.tenbit")}</span>
+        <button class="toggle" data-ref="tenbit" aria-label="10-bit"></button>
+      </div>
+      <div class="modal-row export-estimate" data-ref="estimate"></div>
       <div class="modal-actions">
         <button class="tool-chip" data-ref="cancel">${t("export.cancel")}</button>
         <button class="btn-export" data-ref="start">${icon("export")}${t("export.start")}</button>
@@ -219,7 +237,49 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     </div>`;
   document.body.append(modal);
   const segValue = (ref: string): string =>
-    modal.querySelector<HTMLElement>(`[data-ref="${ref}"] .is-active`)!.dataset.val!;
+    modal.querySelector<HTMLElement>(`[data-ref="${ref}"] .is-active`)?.dataset.val ?? "";
+  // X5: fill the codec choices this machine can actually encode, and keep a
+  // live size estimate under the options as they change.
+  const estimateRow = modal.querySelector<HTMLElement>('[data-ref="estimate"]')!;
+  const codecSeg = modal.querySelector<HTMLElement>('[data-ref="codec"]')!;
+  let available: Record<string, string[]> = {};
+  void fetch("/api/render/status").then((r) => r.json()).then((status) => {
+    available = status.encoders?.containers ?? {};
+    paintCodecs();
+    void refreshEstimate();
+  }).catch(() => {});
+  const paintCodecs = () => {
+    const format = segValue("fmt");
+    const list = available[format] ?? [];
+    codecSeg.innerHTML = `<button class="is-active" data-val="">${t("export.codec.auto")}</button>` +
+      list.map((codec) => `<button data-val="${codec}">${codec.toUpperCase()}</button>`).join("");
+  };
+  const refreshEstimate = async () => {
+    try {
+      const body = {
+        project: structuredClone(engine.snapshot),
+        format: segValue("fmt"),
+        quality: segValue("quality"),
+        codec: segValue("codec") || null,
+        size: segValue("size") || null,
+      };
+      const reply = await api("/api/render/estimate", body);
+      const bytes = reply.tiers[segValue("quality")].bytes as number;
+      const mb = bytes / (1024 * 1024);
+      estimateRow.textContent = `${t("export.estimate")}: ${mb < 1 ? `${Math.round(bytes / 1024)} kB` : `${mb.toFixed(1)} MB`} · ${reply.width}x${reply.height}`;
+    } catch {
+      estimateRow.textContent = "";
+    }
+  };
+  modal.querySelector('[data-ref="tenbit"]')?.addEventListener("click", (ev) => {
+    (ev.currentTarget as HTMLElement).classList.toggle("is-on");
+  });
+  modal.addEventListener("click", (ev) => {
+    if (!(ev.target as HTMLElement).closest(".seg, [data-ref=tenbit]")) return;
+    if ((ev.target as HTMLElement).closest('[data-ref="fmt"]')) paintCodecs();
+    void refreshEstimate();
+  });
+
   for (const seg of modal.querySelectorAll<HTMLElement>(".seg")) {
     seg.addEventListener("click", (ev) => {
       const hit = (ev.target as HTMLElement).closest("button");
@@ -255,6 +315,9 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       return;
     }
     modal.hidden = false;
+    // The estimate must reflect the project as it is when the sheet opens, not
+    // as it was when the sheet was built.
+    void refreshEstimate();
   });
   modal.querySelector('[data-ref="start"]')!.addEventListener("click", async () => {
     if (exporting) return;
@@ -267,7 +330,11 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     cancelExport.hidden = false;
     showToast("Exporting 0%");
     try {
-      await exportProject(state, format, quality, showToast, exportController.signal);
+      await exportProject(state, format, quality, showToast, exportController.signal, {
+        codec: segValue("codec") || null,
+        tenBit: modal.querySelector('[data-ref="tenbit"]')!.classList.contains("is-on"),
+        size: segValue("size") || null,
+      });
       showToast("Export complete");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Export failed");

@@ -22,10 +22,10 @@ import json
 import numpy as np
 from .renderer import FrameRenderer
 from .audio_render import processed_clip_audio, RATE
-from .media import MEDIA_DIR, reversed_path
+from .media import MEDIA_DIR, reversed_path, has_audio as media_has_audio
 from .paths import DATA_DIR
 from .frame_cache import FrameCache, ReadAhead
-from .encoders import choose as choose_encoder, tier_flags, status as encoder_status, pixel_format, supports_ten_bit
+from .encoders import choose as choose_encoder, tier_flags, status as encoder_status, pixel_format, supports_ten_bit, estimate_size
 from .matte_cache import matte_key, sample_times, store as matte_store, progress as matte_progress
 from . import jobs
 
@@ -384,3 +384,36 @@ def build_mattes(body: MatteInput):
 @router.get("/mattes/{key}")
 def matte_status(key: str, duration: float = 1.0, fps: float = 30.0):
     return matte_progress(key, duration, fps)
+
+
+class EstimateInput(BaseModel):
+    project: dict
+    quality: str = "high"
+    codec: str | None = None
+    format: str = "mp4"
+    size: str | None = None
+    rate: str | None = None
+
+
+@router.post("/estimate")
+def estimate(body: EstimateInput):
+    """X5: the export sheet's live size estimate, per tier."""
+    project = checked(RenderInput(project=body.project, format=body.format, quality=body.quality))
+    width, height = resize_for(project, body.size)
+    num, den = RATE_PRESETS.get(body.rate or "", (0, 0))
+    fps = (num / den) if num else float(project["fps"])
+    # A video clip is only audible if its media actually carries sound; counting
+    # every video clip as audible added 128 kbit/s that the export never spends.
+    audible = any(
+        clip.get("kind") in ("audio", "video") and not clip.get("muted")
+        and clip.get("mediaId") and media_has_audio(str(clip["mediaId"]))
+        for timeline in project["timelines"] for track in timeline["tracks"] for clip in track["clips"]
+    )
+    codec = body.codec or ("h264" if body.format == "mp4" else "vp9")
+    return {
+        "tiers": {
+            tier: estimate_size(codec, width, height, fps, tier, project["duration"], audible)
+            for tier in ("high", "medium", "low")
+        },
+        "width": width, "height": height, "fps": fps, "codec": codec,
+    }

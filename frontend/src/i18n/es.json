@@ -415,5 +415,11 @@
   "bg.brushsize": "Tamaño del pincel",
   "bg.working": "Preparando",
   "bg.ready": "Listo",
-  "bg.failed": "No se pudo preparar"
+  "bg.failed": "No se pudo preparar",
+  "export.codec": "Códec",
+  "export.codec.auto": "Auto",
+  "export.size": "Tamaño",
+  "export.size.timeline": "Línea de tiempo",
+  "export.tenbit": "Color de 10 bits",
+  "export.estimate": "Tamaño estimado"
 }

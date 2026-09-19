@@ -415,5 +415,11 @@
   "bg.brushsize": "Brush size",
   "bg.working": "Preparing",
   "bg.ready": "Ready",
-  "bg.failed": "Could not prepare"
+  "bg.failed": "Could not prepare",
+  "export.codec": "Codec",
+  "export.codec.auto": "Auto",
+  "export.size": "Size",
+  "export.size.timeline": "Timeline",
+  "export.tenbit": "10-bit colour",
+  "export.estimate": "Estimated size"
 }
