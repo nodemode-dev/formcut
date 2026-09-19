@@ -249,7 +249,6 @@ PREVIEW_VERSION = _preview_version()
 EFFECT_DEFAULTS = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}, "tilt-shift": {"radius": 3}, "lens-blur": {"radius": 3}, "median-soften": {"radius": 3}, "soft-focus": {"radius": 3}, "diagonal-blur": {"size": 12}, "ghost-trail": {"size": 12}, "halftone": {"size": 12}, "crosshatch": {"size": 12}, "ripple": {"size": 12}, "slice-glitch": {"size": 12}, "heat-haze": {"size": 12}, "chroma-noise": {"strength": 0.15}}
 
 
-@router.get("")
 def package_entries(kind: str) -> list[dict]:
     from .effect_packages import entries
     return [{"id": e["id"], "name": e["name"], "category": e.get("category", "Packages"),
@@ -257,6 +256,7 @@ def package_entries(kind: str) -> list[dict]:
             for e in entries(kind)]
 
 
+@router.get("")
 def catalogue() -> dict:
     return {
         "video": [{"id": k, "name": label(k), "category": "Color", "group": group_of(k, FILTER_GROUPS), "parameters": GRADES[k], "declarations": declare(GRADES[k])} for k in GRADES]

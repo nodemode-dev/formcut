@@ -421,5 +421,11 @@
   "export.size": "Größe",
   "export.size.timeline": "Zeitleiste",
   "export.tenbit": "10-Bit-Farbe",
-  "export.estimate": "Geschätzte Größe"
+  "export.estimate": "Geschätzte Größe",
+  "layout.pane.media": "Medien",
+  "layout.pane.inspector": "Inspektor",
+  "layout.pane.timeline": "Zeitleiste",
+  "layout.slot.left": "links",
+  "layout.slot.right": "rechts",
+  "layout.slot.bottom": "unten"
 }

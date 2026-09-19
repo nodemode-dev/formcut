@@ -724,6 +724,10 @@ Size|Taille|Dimensione|サイズ|크기|Tamanho|Размер|Boyut|尺寸|尺寸
 Timeline|Montage|Timeline|タイムライン|타임라인|Linha do tempo|Таймлайн|Zaman çizelgesi|时间线|時間軸
 10-bit colour|Couleur 10 bits|Colore a 10 bit|10ビットカラー|10비트 색상|Cor de 10 bits|10-битный цвет|10 bit renk|10 位色彩|10 位色彩
 Estimated size|Taille estimée|Dimensione stimata|推定サイズ|예상 크기|Tamanho estimado|Примерный размер|Tahmini boyut|预计大小|預計大小
+Inspector|Inspecteur|Ispettore|インスペクター|인스펙터|Inspetor|Инспектор|Denetçi|检查器|檢視器
+left|gauche|sinistra|左|왼쪽|esquerda|слева|sol|左侧|左側
+right|droite|destra|右|오른쪽|direita|справа|sağ|右侧|右側
+bottom|bas|in basso|下|아래|abaixo|снизу|alt|底部|底部
 Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {

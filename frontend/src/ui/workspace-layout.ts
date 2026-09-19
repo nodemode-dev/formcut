@@ -1,4 +1,5 @@
 import { t } from "../i18n";
+import { activeProfile, onInterfaceMode } from "./interface-mode";
 
 const MIN_SIDE = 240;
 
@@ -11,11 +12,33 @@ export function installWorkspaceLayout(): void {
   // Sizes are pixels because a divider drag is a pixel gesture: storing a
   // percentage would make the same drag mean different things at different
   // window widths. Clamped on apply, so a narrow window cannot strand a pane.
-  let settings = {
+  type Slot = "left" | "right" | "bottom";
+  const DEFAULTS = {
     media: true, inspector: true, timeline: true, focus: false, height: 42,
     left: 340, right: 320, swap: false, timelineTop: false,
+    // P7: where each pane lives, and which pane is in front when two share a
+    // slot. Stored per interface profile, so Easy and Advanced keep their own
+    // arrangement rather than fighting over one.
+    slots: { media: "left" as Slot, inspector: "right" as Slot, timeline: "bottom" as Slot },
+    front: { left: "media", right: "inspector", bottom: "timeline" } as Record<Slot, string>,
   };
-  try { settings = { ...settings, ...JSON.parse(localStorage.getItem("formcut.layout") || "{}") }; } catch { /* defaults */ }
+  const layoutKey = () => `formcut.layout.${activeProfile().id}`;
+  const readLayout = (): typeof DEFAULTS => {
+    for (const key of [layoutKey(), "formcut.layout"]) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        return {
+          ...DEFAULTS, ...parsed,
+          slots: { ...DEFAULTS.slots, ...(parsed.slots ?? {}) },
+          front: { ...DEFAULTS.front, ...(parsed.front ?? {}) },
+        };
+      } catch { /* try the next key */ }
+    }
+    return { ...DEFAULTS, slots: { ...DEFAULTS.slots }, front: { ...DEFAULTS.front } };
+  };
+  let settings = readLayout();
   const menu = document.createElement("div"); menu.className = "dropdown"; menu.hidden = true;
   const options = new Map<string, HTMLButtonElement>();
   const sideOf = (key: "left" | "right") => {
@@ -49,6 +72,41 @@ export function installWorkspaceLayout(): void {
       row.style.width = `${rect.width}px`;
     }
   };
+  // P7: one tab strip per slot that holds more than one pane, positioned over
+  // the slot the same way the dividers are, so no pane markup has to change.
+  const tabStrips = new Map<string, HTMLElement>();
+  const placeTabs = (left: string[], right: string[], bottom: string[]) => {
+    const box = workspace.getBoundingClientRect();
+    for (const [slot, members] of [["left", left], ["right", right], ["bottom", bottom]] as const) {
+      let strip = tabStrips.get(slot);
+      if (members.length < 2) {
+        if (strip) strip.hidden = true;
+        continue;
+      }
+      if (!strip) {
+        strip = document.createElement("div");
+        strip.className = "pane-stack-tabs";
+        strip.dataset.slot = slot;
+        workspace.append(strip);
+        tabStrips.set(slot, strip);
+      }
+      strip.hidden = false;
+      strip.replaceChildren(...members.map((pane) => {
+        const tab = document.createElement("button");
+        tab.className = "pane-stack-tab" + (settings.front[slot as Slot] === pane ? " is-active" : "");
+        tab.textContent = t(`layout.pane.${pane}`);
+        tab.dataset.pane = pane;
+        tab.addEventListener("click", () => { settings.front[slot as Slot] = pane; apply(); });
+        return tab;
+      }));
+      const front = workspace.querySelector<HTMLElement>(`.pane-${settings.front[slot as Slot]}`);
+      if (!front) continue;
+      const rect = front.getBoundingClientRect();
+      strip.style.left = `${rect.left - box.left}px`;
+      strip.style.top = `${rect.top - box.top}px`;
+      strip.style.width = `${rect.width}px`;
+    }
+  };
   const apply = () => {
     workspace.dataset.focus = String(settings.focus);
     for (const part of ["media", "inspector", "timeline"] as const) { workspace.dataset[part + "Hidden"] = String(!settings[part]); options.get(part)?.setAttribute("aria-pressed", String(settings[part])); }
@@ -56,10 +114,37 @@ export function installWorkspaceLayout(): void {
     const widest = Math.max(MIN_SIDE, Math.round(room * 0.45));
     settings.left = Math.min(widest, Math.max(MIN_SIDE, Math.round(settings.left)));
     settings.right = Math.min(widest, Math.max(MIN_SIDE, Math.round(settings.right)));
-    const order: Array<"media" | "preview" | "inspector"> = settings.swap ? ["inspector", "preview", "media"] : ["media", "preview", "inspector"];
-    const slots = order.filter((name) => name === "preview" || (!settings.focus && settings[name]));
-    const columns = slots.map((name) => (name === "preview" ? "minmax(240px, 1fr)" : `${name === "media" ? settings.left : settings.right}px`));
-    const band = settings.timeline && !settings.focus ? `"${slots.map(() => "timeline").join(" ")}"` : "";
+    // Which panes sit in each slot, in a stable order, hidden panes excluded.
+    const inSlot = (slot: Slot) => (["media", "inspector", "timeline"] as const)
+      .filter((pane) => settings.slots[pane] === slot && settings[pane] && !settings.focus);
+    const left = inSlot("left"), right = inSlot("right"), bottom = inSlot("bottom");
+    for (const slot of ["left", "right", "bottom"] as const) {
+      const members = slot === "left" ? left : slot === "right" ? right : bottom;
+      if (members.length && !members.includes(settings.front[slot] as typeof members[number])) {
+        settings.front[slot] = members[0];
+      }
+    }
+    // A pane is placed by its slot; when a slot holds more than one, only the
+    // front pane shows, and the others stay in the DOM so their node identity
+    // and their state survive the move.
+    for (const pane of ["media", "inspector", "timeline"] as const) {
+      const node = workspace.querySelector<HTMLElement>(`.pane-${pane}`);
+      if (!node) continue;
+      const slot = settings.slots[pane];
+      const members = slot === "left" ? left : slot === "right" ? right : bottom;
+      const shown = settings[pane] && !settings.focus && settings.front[slot] === pane;
+      node.style.gridArea = members.length ? slot : "";
+      node.dataset.slot = slot;
+      node.dataset.stacked = String(members.length > 1);
+      if (node.hidden !== !shown) node.hidden = !shown;
+    }
+    const columnNames = settings.swap
+      ? [right.length ? "right" : "", "preview", left.length ? "left" : ""]
+      : [left.length ? "left" : "", "preview", right.length ? "right" : ""];
+    const slots = columnNames.filter(Boolean);
+    const columns = slots.map((name) => (name === "preview" ? "minmax(240px, 1fr)"
+      : `${name === "left" ? settings.left : settings.right}px`));
+    const band = bottom.length ? `"${slots.map(() => "bottom").join(" ")}"` : "";
     const panes = `"${slots.join(" ")}"`;
     workspace.style.gridTemplateColumns = settings.focus ? "minmax(0, 1fr)" : columns.join(" ");
     workspace.style.gridTemplateAreas = !band ? panes : settings.timelineTop ? `${band} ${panes}` : `${panes} ${band}`;
@@ -70,9 +155,10 @@ export function installWorkspaceLayout(): void {
         : `minmax(0, 1fr) minmax(180px, ${settings.height}%)`;
     workspace.dataset.swap = String(settings.swap);
     workspace.dataset.timelineTop = String(settings.timelineTop);
+    placeTabs(left, right, bottom);
     placeDividers();
     focus.setAttribute("aria-pressed", String(settings.focus));
-    try { localStorage.setItem("formcut.layout", JSON.stringify(settings)); } catch { /* settings remain active */ }
+    try { localStorage.setItem(layoutKey(), JSON.stringify(settings)); } catch { /* settings remain active */ }
   };
   for (const [key, title] of [["media", "Media panel"], ["inspector", "Inspector panel"], ["timeline", "Timeline panel"]] as const) {
     const button = document.createElement("button"); button.className = "dropdown-item"; button.textContent = title;
@@ -99,7 +185,25 @@ export function installWorkspaceLayout(): void {
     });
     menu.append(button);
   }
-  const reset = document.createElement("button"); reset.className = "dropdown-item"; reset.textContent = "Reset layout"; reset.addEventListener("click", () => { settings = { media: true, inspector: true, timeline: true, focus: false, height: 42, left: 340, right: 320, swap: false, timelineTop: false }; menu.hidden = true; apply(); }); menu.append(reset);
+  // Moving a pane is a menu action as well as a drag, so it is reachable
+  // without a pointer gesture.
+  for (const pane of ["media", "inspector", "timeline"] as const) {
+    for (const slot of ["left", "right", "bottom"] as const) {
+      const item = document.createElement("button");
+      item.className = "dropdown-item";
+      item.dataset.move = `${pane}:${slot}`;
+      item.textContent = `${t(`layout.pane.${pane}`)} → ${t(`layout.slot.${slot}`)}`;
+      item.addEventListener("click", () => {
+        settings.slots[pane] = slot;
+        settings.front[slot] = pane;
+        settings[pane] = true;
+        apply();
+      });
+      menu.append(item);
+    }
+  }
+  onInterfaceMode(() => { settings = readLayout(); apply(); });
+  const reset = document.createElement("button"); reset.className = "dropdown-item"; reset.textContent = "Reset layout"; reset.addEventListener("click", () => { settings = { ...DEFAULTS, slots: { ...DEFAULTS.slots }, front: { ...DEFAULTS.front } }; menu.hidden = true; apply(); }); menu.append(reset);
   document.body.append(menu);
   focus.title = "Focus preview"; focus.addEventListener("click", () => { settings.focus = !settings.focus; apply(); });
   panels.title = "Panels"; panels.addEventListener("click", () => { const box = panels.getBoundingClientRect(); menu.style.right = "12px"; menu.style.top = `${box.bottom}px`; menu.hidden = !menu.hidden; });

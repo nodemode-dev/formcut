@@ -907,3 +907,8 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .title-card.is-active { outline: 2px solid var(--cue); }
 
 .export-estimate { color: var(--ink-soft); font-size: 12px; }
+
+.pane-stack-tabs { position: absolute; z-index: var(--z-handles); display: flex; gap: 2px; padding: 2px; background: var(--pane); border-bottom: 1px solid var(--edge); }
+.pane-stack-tabs[hidden] { display: none; }
+.pane-stack-tab { padding: 2px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 12px; cursor: pointer; }
+.pane-stack-tab.is-active { background: var(--control); color: var(--ink); }

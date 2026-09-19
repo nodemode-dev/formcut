@@ -421,5 +421,11 @@
   "export.size": "Tamaño",
   "export.size.timeline": "Línea de tiempo",
   "export.tenbit": "Color de 10 bits",
-  "export.estimate": "Tamaño estimado"
+  "export.estimate": "Tamaño estimado",
+  "layout.pane.media": "Medios",
+  "layout.pane.inspector": "Inspector",
+  "layout.pane.timeline": "Línea de tiempo",
+  "layout.slot.left": "izquierda",
+  "layout.slot.right": "derecha",
+  "layout.slot.bottom": "abajo"
 }

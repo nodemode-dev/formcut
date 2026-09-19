@@ -421,5 +421,11 @@
   "export.size": "Size",
   "export.size.timeline": "Timeline",
   "export.tenbit": "10-bit colour",
-  "export.estimate": "Estimated size"
+  "export.estimate": "Estimated size",
+  "layout.pane.media": "Media",
+  "layout.pane.inspector": "Inspector",
+  "layout.pane.timeline": "Timeline",
+  "layout.slot.left": "left",
+  "layout.slot.right": "right",
+  "layout.slot.bottom": "bottom"
 }

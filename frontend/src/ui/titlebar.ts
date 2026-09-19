@@ -255,6 +255,11 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       list.map((codec) => `<button data-val="${codec}">${codec.toUpperCase()}</button>`).join("");
   };
   const refreshEstimate = async () => {
+    // An empty project has nothing to estimate and the engine rightly refuses
+    // to validate it, so asking would only log a 422 the person cannot act on.
+    const hasClips = engine.snapshot.timelines.some((timeline) =>
+      timeline.tracks.some((track) => track.clips.length > 0));
+    if (!hasClips) { estimateRow.textContent = ""; return; }
     try {
       const body = {
         project: structuredClone(engine.snapshot),
