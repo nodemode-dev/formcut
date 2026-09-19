@@ -686,6 +686,31 @@ Fade|Fondu|Dissolvenza|フェード|페이드|Fade|Затухание|Geçiş|�
 Voice effects|Effets de voix|Effetti voce|音声エフェクト|음성 효과|Efeitos de voz|Голосовые эффекты|Ses efektleri|语音效果|語音效果
 Place the playhead inside the clip|Placez la tête de lecture dans le clip|Posiziona l'indicatore dentro la clip|再生ヘッドをクリップ内に置いてください|재생 헤드를 클립 안에 두세요|Coloque o cursor dentro do clipe|Поместите курсор внутрь клипа|Oynatma kafasını klibin içine koyun|将播放头放在片段内|將播放頭放在片段內
 Video clips only|Clips vidéo uniquement|Solo clip video|ビデオクリップのみ|비디오 클립만|Apenas clipes de vídeo|Только видеоклипы|Yalnızca video klipler|仅限视频片段|僅限視訊片段
+Weight|Graisse|Spessore|太さ|굵기|Espessura|Насыщенность|Kalınlık|字重|字重
+Italic|Italique|Corsivo|斜体|기울임꼴|Itálico|Курсив|İtalik|斜体|斜體
+Outline|Contour|Contorno|縁取り|윤곽선|Contorno|Обводка|Anahat|描边|描邊
+Shadow|Ombre|Ombra|影|그림자|Sombra|Тень|Gölge|阴影|陰影
+Shadow offset|Décalage de l'ombre|Scostamento ombra|影のオフセット|그림자 오프셋|Deslocamento da sombra|Смещение тени|Gölge kayması|阴影偏移|陰影偏移
+Background plate|Fond|Sfondo|背景プレート|배경 판|Placa de fundo|Подложка|Arka plan|背景板|背景板
+Plate padding and radius|Marge et rayon du fond|Spaziatura e raggio dello sfondo|背景の余白と角丸|배경 여백과 반경|Espaçamento e raio da placa|Отступ и радиус подложки|Dolgu ve yarıçap|背景内边距与圆角|背景內距與圓角
+Line height|Interligne|Interlinea|行の高さ|줄 높이|Altura da linha|Межстрочный интервал|Satır yüksekliği|行高|行高
+Letter spacing|Interlettrage|Spaziatura lettere|字間|자간|Espaçamento entre letras|Межбуквенный интервал|Harf aralığı|字间距|字間距
+Wrap width|Largeur de retour|Larghezza di a capo|折り返し幅|줄바꿈 폭|Largura de quebra|Ширина переноса|Kaydırma genişliği|换行宽度|換行寬度
+Text opacity|Opacité du texte|Opacità del testo|文字の不透明度|텍스트 불투명도|Opacidade do texto|Непрозрачность текста|Metin saydamlığı|文字不透明度|文字不透明度
+Title styles|Styles de titre|Stili di titolo|タイトルスタイル|제목 스타일|Estilos de título|Стили заголовка|Başlık stilleri|标题样式|標題樣式
+Style saved for new titles and captions|Style enregistré pour les nouveaux titres et sous-titres|Stile salvato per nuovi titoli e sottotitoli|新しいタイトルと字幕にスタイルを保存しました|새 제목과 자막에 스타일을 저장했습니다|Estilo salvo para novos títulos e legendas|Стиль сохранён для новых заголовков и субтитров|Yeni başlıklar ve altyazılar için stil kaydedildi|已为新标题和字幕保存样式|已為新標題和字幕儲存樣式
+Model|Modèle|Modello|モデル|모델|Modelo|Модель|Model|模型|模型
+Tiny (fastest)|Tiny (le plus rapide)|Tiny (il più veloce)|Tiny（最速）|Tiny(가장 빠름)|Tiny (mais rápido)|Tiny (самая быстрая)|Tiny (en hızlı)|Tiny（最快）|Tiny（最快）
+Small (most accurate)|Small (le plus précis)|Small (il più preciso)|Small（最も正確）|Small(가장 정확)|Small (mais preciso)|Small (самая точная)|Small (en doğru)|Small（最准确）|Small（最準確）
+Words|Mots|Parole|単語数|단어 수|Palavras|Слова|Kelime|字数|字數
+Placement|Position|Posizione|配置|배치|Posição|Расположение|Yerleşim|位置|位置
+Centre|Centre|Centro|中央|가운데|Centro|По центру|Orta|居中|置中
+Bottom|Bas|In basso|下|아래|Abaixo|Внизу|Alt|底部|底部
+Cancelled|Annulé|Annullato|キャンセルしました|취소됨|Cancelado|Отменено|İptal edildi|已取消|已取消
+Or type caption lines, one per line|Ou saisissez les sous-titres, un par ligne|Oppure digita i sottotitoli, uno per riga|または字幕を1行ずつ入力|또는 자막을 한 줄씩 입력|Ou digite legendas, uma por linha|Или введите субтитры по строке|Ya da altyazıları satır satır yazın|或逐行输入字幕|或逐行輸入字幕
+One caption per line|Un sous-titre par ligne|Un sottotitolo per riga|1行に1つの字幕|한 줄에 자막 하나|Uma legenda por linha|По одному субтитру в строке|Satır başına bir altyazı|每行一条字幕|每行一條字幕
+Add typed captions|Ajouter les sous-titres saisis|Aggiungi i sottotitoli digitati|入力した字幕を追加|입력한 자막 추가|Adicionar legendas digitadas|Добавить введённые субтитры|Yazılan altyazıları ekle|添加输入的字幕|新增輸入的字幕
+Type at least one line|Saisissez au moins une ligne|Digita almeno una riga|1行以上入力してください|한 줄 이상 입력하세요|Digite pelo menos uma linha|Введите хотя бы одну строку|En az bir satır yazın|请至少输入一行|請至少輸入一行
 Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {

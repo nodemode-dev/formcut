@@ -4,8 +4,8 @@ import { reconcilePresets } from "./preset-grid";
 import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
-import { defaultTextStyle, defaultTransform, type Clip } from "../engine/types";
-import { transcribeClip } from "../engine/captions";
+import { defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
+import { transcribeClip, typedCaptions } from "../engine/captions";
 import { t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
@@ -66,7 +66,40 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
               <option value="2">3</option><option value="3">4</option>
             </select>
           </div>
+          <div class="prop-row">
+            <span>${t("cap.model")}</span>
+            <select class="mini-select" data-ref="cap-size">
+              <option value="tiny" selected>${t("cap.model.tiny")}</option>
+              <option value="base">${t("cap.model.base")}</option>
+              <option value="small">${t("cap.model.small")}</option>
+            </select>
+            <span>${t("cap.words")}</span>
+            <select class="mini-select" data-ref="cap-words">
+              <option value="">${t("cap.words.auto")}</option>
+              <option value="3">3</option><option value="5">5</option><option value="7">7</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <span>${t("cap.placement")}</span>
+            <select class="mini-select" data-ref="cap-place">
+              <option value="bottom" selected>${t("cap.place.bottom")}</option>
+              <option value="centre">${t("cap.place.centre")}</option>
+              <option value="top">${t("cap.place.top")}</option>
+            </select>
+            <span>${t("cap.size")}</span>
+            <select class="mini-select" data-ref="cap-scale">
+              <option value="small">${t("cap.size.small")}</option>
+              <option value="medium" selected>${t("cap.size.medium")}</option>
+              <option value="large">${t("cap.size.large")}</option>
+            </select>
+          </div>
           <button class="tool-chip" data-ref="transcribe">${icon("search")}${t("cap.transcribe")}</button>
+          <button class="tool-chip" data-ref="cap-cancel" hidden>${t("cap.cancel")}</button>
+          <div class="text-add-hint">${t("cap.typed.hint")}</div>
+          <textarea class="typed-captions" data-ref="typed-lines" rows="3" placeholder="${t("cap.typed.placeholder")}"></textarea>
+          <button class="tool-chip" data-ref="typed-add">${icon("plus")}${t("cap.typed.add")}</button>
+          <div class="text-add-hint">${t("title.gallery")}</div>
+          <div class="card-grid title-grid" data-ref="title-grid"></div>
           <div class="prop-row">
             <span>${t("cap.voice")}</span>
             <select class="mini-select" data-ref="tts-voice">
@@ -447,6 +480,10 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const capStatus = el.querySelector<HTMLElement>('[data-ref="cap-status"]')!;
   titleSpeech(el, engine, bin);
   let transcribing = false;
+  let captionAbort: AbortController | null = null;
+  const cancelChip = el.querySelector<HTMLElement>('[data-ref="cap-cancel"]')!;
+  let captionStyle: Partial<TextStyle> = {};
+  let titleStyles: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
   el.querySelector('[data-ref="transcribe"]')!.addEventListener("click", async () => {
     if (transcribing) return;
     const clipId = engine.snapshot.selectedClipId;
@@ -462,11 +499,71 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     try {
       const lang = el.querySelector<HTMLSelectElement>('[data-ref="cap-lang"]')!.value === "auto" ? "auto" as const : "en" as const;
       const track = Number(el.querySelector<HTMLSelectElement>('[data-ref="cap-track"]')!.value) || 0;
-      await transcribeClip(engine, bin, clipId, show, lang, track);
+      const pick = (ref: string) => el.querySelector<HTMLSelectElement>(`[data-ref="${ref}"]`)!.value;
+      const words = Number(pick("cap-words")) || undefined;
+      captionAbort = new AbortController();
+      cancelChip.hidden = false;
+      await transcribeClip(engine, bin, clipId, show, lang, track, {
+        size: pick("cap-size") as "tiny" | "base" | "small",
+        placement: pick("cap-place") as "top" | "centre" | "bottom",
+        scale: pick("cap-scale") as "small" | "medium" | "large",
+        style: captionStyle,
+        wordsPerCaption: words,
+        signal: captionAbort.signal,
+      });
     } catch (err) {
-      show(`${t("cap.failed")}: ${err instanceof Error ? err.message : "?"}`);
+      const message = err instanceof Error ? err.message : "?";
+      show(message === "cancelled" ? t("cap.cancelled") : `${t("cap.failed")}: ${message}`);
     }
+    cancelChip.hidden = true;
+    captionAbort = null;
     transcribing = false;
+  });
+  cancelChip.addEventListener("click", () => captionAbort?.abort());
+
+  // C4: typed or pasted lines become captions across the selected clip
+  el.querySelector('[data-ref="typed-add"]')!.addEventListener("click", () => {
+    const box = el.querySelector<HTMLTextAreaElement>('[data-ref="typed-lines"]')!;
+    const pick = (ref: string) => el.querySelector<HTMLSelectElement>(`[data-ref="${ref}"]`)!.value;
+    const selected = engine.snapshot.selectedClipId;
+    const over = selected && engine.findClip(selected)?.clip.kind !== "text" ? selected : undefined;
+    const made = typedCaptions(engine, box.value.split("\n"), {
+      placement: pick("cap-place") as "top" | "centre" | "bottom",
+      scale: pick("cap-scale") as "small" | "medium" | "large",
+      style: captionStyle,
+      spreadOverClipId: over,
+    });
+    if (!made.length) { capStatus.hidden = false; capStatus.textContent = t("cap.typed.empty"); return; }
+    const track = Number(pick("cap-track")) || 0;
+    engine.dispatch("captions.add", { trackIndex: track, clips: made });
+    box.value = "";
+    capStatus.hidden = false;
+    capStatus.textContent = `${t("cap.added")}: ${made.length}`;
+  });
+
+  // TI3: the built-in style gallery, thumbnails rendered by the engine
+  const titleGrid = el.querySelector<HTMLElement>('[data-ref="title-grid"]')!;
+  void fetch("/api/presets/titles")
+    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+    .then((styles: Array<{ id: string; name: string; style: Record<string, unknown> }>) => {
+      titleStyles = styles;
+      titleGrid.insertAdjacentHTML("beforeend", styles.map((entry) =>
+        `<div class="effect-card title-card" data-title-style="${escapeHtml(entry.id)}">` +
+        `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/title/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
+        `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
+    })
+    .catch(() => { /* the gallery is optional if the engine is offline */ });
+  titleGrid.addEventListener("click", (ev) => {
+    const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-title-style]");
+    if (!card) return;
+    const entry = titleStyles.find((e) => e.id === card.dataset.titleStyle);
+    if (!entry) return;
+    captionStyle = entry.style as Partial<TextStyle>;
+    const clipId = engine.snapshot.selectedClipId;
+    const found = clipId ? engine.findClip(clipId) : null;
+    if (found && found.clip.kind === "text") engine.dispatch("clip.text", { clipId: found.clip.id, patch: entry.style });
+    else { capStatus.hidden = false; capStatus.textContent = t("title.gallery.stored"); }
+    for (const other of titleGrid.querySelectorAll(".title-card")) other.classList.toggle("is-active", other === card);
   });
 
   const grid = el.querySelector<HTMLElement>('[data-ref="bingrid"]')!;

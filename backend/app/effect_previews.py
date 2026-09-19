@@ -22,6 +22,9 @@ _base: np.ndarray | None = None
 
 
 def known(kind: str, item: str) -> bool:
+    if kind == "title":
+        from .presets import TITLE_STYLE_IDS
+        return item in TITLE_STYLE_IDS
     return (
         (kind == "effect" and (item in GRADES or item in VIDEO_EFFECTS))
         or (kind == "transition" and item in TRANSITIONS)
@@ -51,7 +54,23 @@ def over(layer: np.ndarray, ground: np.ndarray) -> np.ndarray:
     return np.dstack([np.clip(rgb.round(), 0, 255).astype(np.uint8), np.full((HEIGHT, WIDTH), 255, np.uint8)])
 
 
+def title_style_preview(item: str) -> np.ndarray:
+    """Draw the built-in style through the renderer's own title path."""
+    from .presets import TITLE_STYLES
+    from .renderer import FrameRenderer
+    entry = next((e for e in TITLE_STYLES if e["id"] == item), None)
+    if entry is None:
+        raise HTTPException(404, "Unknown preview")
+    style = {**entry["style"], "content": entry["name"]}
+    project = {"title": "p", "width": WIDTH, "height": HEIGHT, "fps": 30, "duration": 1, "activeTimeline": 0,
+               "timelines": [{"id": "p", "name": "p", "tracks": [{"id": "t", "name": "V", "clips": [
+                   {"id": "p1", "kind": "text", "label": entry["name"], "start": 0, "duration": 1, "textStyle": style}]}]}]}
+    return FrameRenderer(project).frame(0.5)
+
+
 def render(kind: str, item: str) -> np.ndarray:
+    if kind == "title":
+        return title_style_preview(item)
     image = base_image()
     dark = np.zeros_like(image)
     dark[:, :, :3] = 28

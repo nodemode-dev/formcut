@@ -228,6 +228,51 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     const up = () => finish(true), cancel = () => finish(false);
     overlay.addEventListener("pointermove", pointerMove); overlay.addEventListener("pointerup", up, { once: true }); overlay.addEventListener("pointercancel", cancel, { once: true });
   });
+  const typing = document.createElement("div");
+  typing.className = "canvas-typing";
+  typing.hidden = true;
+  typing.contentEditable = "true";
+  typing.spellcheck = false;
+  stage.append(typing);
+  let typingId = "";
+  const endTyping = (commit: boolean) => {
+    if (!typingId) return;
+    const id = typingId;
+    typingId = "";
+    typing.hidden = true;
+    const next = typing.innerText.replace(/\n$/, "");
+    const found = engine.findClip(id);
+    if (commit && found && next !== (found.clip.textStyle?.content ?? found.clip.label)) {
+      engine.dispatch("clip.text", { clipId: id, patch: { content: next } });
+    }
+  };
+  stage.addEventListener("dblclick", (event) => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    if (!found || found.clip.kind !== "text") return;
+    if (state.timelines[state.activeTimeline].tracks[found.trackIndex].locked) return;
+    event.preventDefault();
+    engine.pause();
+    typingId = found.clip.id;
+    typing.innerText = found.clip.textStyle?.content ?? found.clip.label;
+    const box = layerBox(found.clip);
+    typing.style.left = `${box.left * 100}%`;
+    typing.style.top = `${box.top * 100}%`;
+    typing.style.width = `${Math.max(0.1, box.right - box.left) * 100}%`;
+    typing.hidden = false;
+    typing.focus();
+    const range = document.createRange();
+    range.selectNodeContents(typing);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+  });
+  typing.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { event.preventDefault(); endTyping(false); }
+    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); endTyping(true); }
+    event.stopPropagation();
+  });
+  typing.addEventListener("blur", () => endTyping(true));
+
   engine.subscribe((_state, event) => { if (!dragging && ["clips", "timeline", "clip-selection", "playhead"].includes(event)) { draw(); drawCrop(); } });
   stage.addEventListener("formcut:crop-mode", () => { drawCrop(); draw(); });
   document.addEventListener("change", event => { if ((event.target as HTMLElement).matches("[data-brush]")) draw(); });

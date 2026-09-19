@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import uuid
@@ -11,8 +12,36 @@ from .assets import ROOT, asset_path
 router = APIRouter(prefix='/api/assets', tags=['assets'])
 
 
+def install_font(raw: bytes) -> dict:
+    """Install a font file keyed by its content hash; a second import adds nothing."""
+    if len(raw) > 32_000_000:
+        raise HTTPException(413, 'Font exceeds 32 MB')
+    ROOT.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha256(raw).hexdigest()[:32]
+    record = ROOT / (key + '.json')
+    path = ROOT / (key + '.font')
+    if record.is_file() and path.is_file():
+        existing = json.loads(record.read_text())
+        existing['installed'] = False
+        return existing
+    path.write_bytes(raw)
+    try:
+        font = ImageFont.truetype(str(path), 20)
+        family = font.getname()[0]
+    except OSError as exc:
+        path.unlink(missing_ok=True)
+        raise HTTPException(422, 'This font cannot be loaded') from exc
+    result = {'id': key, 'kind': 'font', 'name': family}
+    record.write_text(json.dumps(result))
+    return {**result, 'installed': True}
+
+
 @router.post('/font', status_code=201)
 def upload_font(file: UploadFile):
+    return install_font(file.file.read(32_000_001))
+
+
+def _legacy_upload_font(file: UploadFile):
     raw = file.file.read(32_000_001)
     if len(raw) > 32_000_000:
         raise HTTPException(413, 'Font exceeds 32 MB')

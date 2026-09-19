@@ -106,6 +106,17 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <button class="wide-select" data-ref="align"><span data-ref="align-label">center</span>${icon("chevD")}</button>
           <span class="prop-aux"></span>
         </div>
+        <div class="prop-row"><span>${t("title.weight")}</span><span class="num-field"><input data-xkey="weight" value="" placeholder="400" /></span><span class="prop-aux"></span></div>
+        <div class="prop-row"><span>${t("title.italic")}</span><span></span><button class="toggle" data-ref="italic" aria-label="Italic"></button></div>
+        <div class="prop-row"><span>${t("title.outline")}</span><input type="color" class="color-field" data-xkey="outlineColor" value="#000000" /><span class="num-field"><input data-xkey="outlineWidth" value="" placeholder="3" /></span></div>
+        <div class="prop-row"><span>${t("title.shadow")}</span><input type="color" class="color-field" data-xkey="shadowColor" value="#000000" /><span class="num-field"><input data-xkey="shadowBlur" value="" placeholder="0" /></span></div>
+        <div class="prop-row"><span>${t("title.shadowoffset")}</span><span class="num-field"><input data-xkey="shadowX" value="" placeholder="0" /></span><span class="num-field"><input data-xkey="shadowY" value="" placeholder="0" /></span></div>
+        <div class="prop-row"><span>${t("title.plate")}</span><input type="color" class="color-field" data-xkey="plateColor" value="#101416" /><span class="num-field"><input data-xkey="plateOpacity" value="" placeholder="0.8" /></span></div>
+        <div class="prop-row"><span>${t("title.platebox")}</span><span class="num-field"><input data-xkey="platePadding" value="" placeholder="12" /></span><span class="num-field"><input data-xkey="plateRadius" value="" placeholder="8" /></span></div>
+        <div class="prop-row"><span>${t("title.lineheight")}</span><span class="num-field"><input data-xkey="lineHeight" value="" placeholder="1.2" /></span><span class="prop-aux"></span></div>
+        <div class="prop-row"><span>${t("title.tracking")}</span><span class="num-field"><input data-xkey="letterSpacing" value="" placeholder="0" /></span><span class="prop-aux"></span></div>
+        <div class="prop-row"><span>${t("title.wrap")}</span><span class="num-field"><input data-xkey="wrapWidth" value="" placeholder="100" /><span class="unit">%</span></span><span class="prop-aux"></span></div>
+        <div class="prop-row"><span>${t("title.opacity")}</span><span class="num-field"><input data-xkey="textOpacity" value="" placeholder="1" /></span><span class="prop-aux"></span></div>
       </div>
       <div class="section" data-section="timing" data-feature="section.timing">
         <div class="section-head">${t("sec.timing")} ${icon("chevD")}</div>
@@ -290,6 +301,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
 
   const textSection = el.querySelector<HTMLElement>('[data-ref="text-section"]')!;
   const boldBtn = el.querySelector<HTMLElement>('[data-ref="bold"]')!;
+  const italicBtn = el.querySelector<HTMLElement>('[data-ref="italic"]')!;
+  italicBtn.addEventListener("click", () => patchText({ italic: !italicBtn.classList.contains("is-on") }));
   const alignBtn = el.querySelector<HTMLElement>('[data-ref="align"]')!;
   const alignLabel = el.querySelector<HTMLElement>('[data-ref="align-label"]')!;
   const ALIGNS = ["left", "center", "right"] as const;
@@ -332,6 +345,19 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         const value = Number(input.value);
         if (!Number.isNaN(value)) patchText({ size: Math.min(50, Math.max(1, value)) });
       } else if (key === "color") patchText({ color: input.value });
+      else if (input.type === "color") patchText({ [key]: input.value });
+      else {
+        const bounds: Record<string, [number, number]> = {
+          weight: [100, 900], outlineWidth: [0, 50], shadowBlur: [0, 100], shadowX: [-200, 200], shadowY: [-200, 200],
+          plateOpacity: [0, 1], platePadding: [0, 200], plateRadius: [0, 200], lineHeight: [0.5, 4],
+          letterSpacing: [-50, 200], wrapWidth: [5, 100], textOpacity: [0, 1],
+        };
+        const span = bounds[key];
+        if (!span) return;
+        if (input.value.trim() === "") { patchText({ [key]: undefined }); return; }
+        const value = Number(input.value);
+        if (!Number.isNaN(value)) patchText({ [key]: Math.min(span[1], Math.max(span[0], value)) });
+      }
       return;
     }
     if (input.dataset.tkey) {
@@ -575,10 +601,12 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     if (isText && clip) {
       const ts = { ...defaultTextStyle(clip.label), ...clip.textStyle };
       for (const input of el.querySelectorAll<HTMLInputElement>("input[data-xkey]")) {
-        const key = input.dataset.xkey as "content" | "size" | "color";
-        const next = String(ts[key]);
+        const key = input.dataset.xkey as keyof typeof ts;
+        const raw = ts[key];
+        const next = raw === undefined || raw === null ? (input.type === "color" ? input.defaultValue : "") : String(raw);
         if (document.activeElement !== input && input.value !== next) input.value = next;
       }
+      italicBtn.classList.toggle("is-on", Boolean(ts.italic));
       boldBtn.classList.toggle("is-on", ts.bold);
       if (alignLabel.textContent !== ts.align) alignLabel.textContent = ts.align;
     }

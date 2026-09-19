@@ -105,3 +105,5 @@
   .workspace[data-timeline-hidden="true"] > .pane-timeline { display: none; }
 }
 .dropdown-item[aria-pressed="true"] { color: var(--cue); }
+.canvas-typing { position: absolute; z-index: var(--z-handles); padding: 2px 4px; border: 1px solid var(--cue); background: rgb(0 0 0 / 0.55); color: #fff; font-size: 16px; text-align: center; outline: none; }
+.canvas-typing[hidden] { display: none; }

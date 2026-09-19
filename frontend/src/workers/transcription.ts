@@ -23,9 +23,30 @@ type Transcriber = (
 let transcriber: Transcriber | null = null;
 let loadedModel = "";
 
-function modelFor(language: string): string {
-  // english-only tiny for en, multilingual tiny otherwise
-  return language === "en" ? "Xenova/whisper-tiny.en" : "onnx-community/whisper-tiny";
+const ENGLISH_ONLY: Record<string, string> = {
+  tiny: "Xenova/whisper-tiny.en",
+  base: "Xenova/whisper-base.en",
+  small: "Xenova/whisper-small.en",
+};
+const MULTILINGUAL: Record<string, string> = {
+  tiny: "onnx-community/whisper-tiny",
+  base: "onnx-community/whisper-base",
+  small: "onnx-community/whisper-small",
+};
+
+function modelFor(language: string, size = "tiny"): string {
+  const table = language === "en" ? ENGLISH_ONLY : MULTILINGUAL;
+  return table[size] ?? table.tiny;
+}
+
+async function bestDevice(): Promise<"webgpu" | "wasm"> {
+  const gpu = (self.navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+  if (!gpu) return "wasm";
+  try {
+    return (await gpu.requestAdapter()) ? "webgpu" : "wasm";
+  } catch {
+    return "wasm";
+  }
 }
 
 function isRepetitiveText(text: string): boolean {
@@ -47,14 +68,17 @@ function isRepetitiveText(text: string): boolean {
   return false;
 }
 
-self.onmessage = async (ev: MessageEvent<{ audio: Float32Array; language?: string }>) => {
+self.onmessage = async (ev: MessageEvent<{ audio: Float32Array; language?: string; size?: string }>) => {
   try {
-    const model = modelFor(ev.data.language ?? "en");
-    if (!transcriber || loadedModel !== model) {
+    const model = modelFor(ev.data.language ?? "en", ev.data.size ?? "tiny");
+    const device = await bestDevice();
+    if (!transcriber || loadedModel !== `${model}@${device}`) {
       self.postMessage({ type: "progress", message: "Loading Whisper model" });
-      loadedModel = model;
+      self.postMessage({ type: "device", device, model });
+      loadedModel = `${model}@${device}`;
       transcriber = (await pipeline("automatic-speech-recognition", model, {
-        dtype: "q8",
+        dtype: device === "webgpu" ? "fp16" : "q8",
+        device,
         progress_callback: (p: { status?: string; progress?: number }) => {
           if (p.status === "progress" && typeof p.progress === "number") {
             self.postMessage({
