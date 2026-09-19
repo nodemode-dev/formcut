@@ -75,3 +75,7 @@ Title styling is drawn entirely in `renderer.text_frame`; fonts install once by 
 
 ### v0.58.0
 Preview frames are cached by content and rendered ahead; per-clip audio is cached and mixed live in the interface against the audio clock; export renders on a bounded pool; hardware decode is probed by decoding. The GPU compositing path is still open.
+
+
+### v0.59.0
+A colour panel runs ahead of the effect stack; effect parameters, volume and animation slots are sampled per frame; pixel-measured parameters scale with the decoded resolution so preview and export agree.

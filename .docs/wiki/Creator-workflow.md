@@ -89,3 +89,7 @@ Full title styling in the inspector, double-click typing on the canvas, a ten-st
 
 ### v0.58.0
 Replaying an unchanged range is served from cache, an edit re-renders only its own span, and volume and fade changes are heard immediately during playback.
+
+
+### v0.59.0
+A thirteen-control colour panel, imported LUTs as library looks with intensity, keyframes on effect parameters and volume, linear and inverted masks, In/Out/Combo animations that survive trimming, audio strength sliders, and tape-style pitch.

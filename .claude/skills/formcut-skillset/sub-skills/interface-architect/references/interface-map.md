@@ -137,3 +137,7 @@ The inspector's text section gains eleven rows for the full title style, all on 
 ## v0.58.0 delta
 
 `engine/live-mix.ts` adds `LiveMixer`: `warm` fetches each audible clip's processed buffer once from `/api/render/clip-audio`, `play` schedules one source per clip against the audio context clock with fades, volume and pan written as 50 Hz automation matching the export's gain law, and `retune` rewrites one clip's curve in place so a gain edit needs no render. Exposed as `window.formcut.liveMix`.
+
+## v0.59.0 delta
+
+Types gain `ColourPanel` with `COLOUR_NEUTRAL`, `ValueKey` for effect and volume keys, `ClipAnimations` with `IN_ANIMATIONS` and `COMBO_ANIMATIONS`, `lutIntensity`, `pitchFollowsSpeed`, and the linear mask shape with `angle` and `invert`. `clip.creator` may patch `colour`, `pitchFollowsSpeed`, `lutIntensity`, `volumeKeys` and `animations`.
