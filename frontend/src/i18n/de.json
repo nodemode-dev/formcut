@@ -71,6 +71,7 @@
   "row.reverse": "Umkehren",
   "row.reverse.preparing": "Wird vorbereitet",
   "row.reverse.failed": "Konnte nicht vorbereitet werden",
+  "row.crop": "Zuschneiden",
   "fx.parameters": "Parameter",
   "fx.reset": "Auf Standard zurücksetzen",
   "param.exposure": "Belichtung",

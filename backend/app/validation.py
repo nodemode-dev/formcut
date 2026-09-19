@@ -12,6 +12,10 @@ def clip_values(clip):
     for name, low, high in [('sourceIn', 0, 86400), ('speed', 0.05, 16), ('volume', 0, 4), ('pan', -1, 1), ('fadeIn', 0, 86400), ('fadeOut', 0, 86400)]:
         if clip.get(name) is not None:
             number(clip[name], name, low, high)
+    for edge in ('left', 'top', 'right', 'bottom'):
+        value = (clip.get('crop') or {}).get(edge)
+        if value is not None:
+            number(value, 'crop ' + edge, 0, 0.45)
     for point in clip.get('speedCurve') or []:
         number(point['t'], 'curve time', 0, 86400)
         number(point['speed'], 'curve speed', 0.05, 16)

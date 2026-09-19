@@ -670,7 +670,8 @@ Pieces must touch on the timeline|Les segments doivent se toucher sur la timelin
 Pieces must continue the same source range|Les segments doivent prolonger la même plage source|Le parti devono continuare lo stesso intervallo di origine|断片は同じソース範囲の続きである必要があります|조각이 같은 소스 범위를 이어야 합니다|As partes devem continuar o mesmo intervalo de origem|Фрагменты должны продолжать один диапазон источника|Parçalar aynı kaynak aralığını sürdürmeli|片段必须延续同一源范围|片段必須延續同一來源範圍
 Reverse|Inverser|Inverti|逆再生|역재생|Inverter|Реверс|Ters çevir|倒放|倒放
 Preparing|Préparation|Preparazione|準備中|준비 중|Preparando|Подготовка|Hazırlanıyor|准备中|準備中
-Could not prepare|Préparation impossible|Preparazione non riuscita|準備できませんでした|준비할 수 없습니다|Não foi possível preparar|Не удалось подготовить|Hazırlanamadı|无法准备|無法準備`;
+Could not prepare|Préparation impossible|Preparazione non riuscita|準備できませんでした|준비할 수 없습니다|Não foi possível preparar|Не удалось подготовить|Hazırlanamadı|无法准备|無法準備
+Crop|Recadrer|Ritaglia|クロップ|자르기|Cortar|Кадрировать|Kırp|裁剪|裁切`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

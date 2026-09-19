@@ -71,6 +71,7 @@
   "row.reverse": "Reverse",
   "row.reverse.preparing": "Preparing",
   "row.reverse.failed": "Could not prepare",
+  "row.crop": "Crop",
   "fx.parameters": "Parameters",
   "fx.reset": "Reset to default",
   "param.exposure": "Exposure",

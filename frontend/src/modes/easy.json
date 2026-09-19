@@ -32,6 +32,7 @@
     "titlebar.studio": true, "titlebar.mode": true, "titlebar.focus": false, "titlebar.panels": false, "titlebar.settings": true, "titlebar.export": true,
     "tab.Media": true, "tab.Text": true, "tab.Transitions": true, "tab.Effects": true, "tab.Filters": true, "tab.Templates": true,
     "group.video": true, "group.audio": true, "group.effects": false, "insp.showall": false,
+    "row.reverse": true, "row.crop": true,
     "subtab.basic": true, "subtab.speed": true, "subtab.animation": true, "subtab.adjust": true,
     "section.transform": true, "section.timing": true, "section.audio": true, "section.blend": false, "section.track": false, "section.mask": true, "section.key": true,
     "creator.page": true,

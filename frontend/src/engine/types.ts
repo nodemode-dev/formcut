@@ -74,6 +74,7 @@ export interface Clip {
   key?: ClipKey;
   muted?: boolean;
   reversed?: boolean;
+  crop?: { left?: number; top?: number; right?: number; bottom?: number };
   mask?: ClipMask;
   audioFx?: string;
   fx?: boolean;

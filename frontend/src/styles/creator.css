@@ -85,6 +85,13 @@
 .handle-rotate { left: 50%; top: -16px; border-radius: 50%; cursor: grab; }
 
 [data-picking="true"] .preview-selection { pointer-events: none !important; }
+.preview-crop { position: absolute; transform: translate(-50%, -50%); border: 1px dashed var(--ink-faint); z-index: var(--z-handles); }
+.preview-crop[hidden] { display: none; }
+.crop-window { position: absolute; border: 1.5px solid var(--cue); outline: 4000px solid var(--veil); pointer-events: none; }
+.crop-grip { position: absolute; width: 12px; height: 12px; padding: 0; background: var(--cue); border: 1px solid var(--on-cue); border-radius: 50%; transform: translate(-50%, -50%); }
+.grip-left, .grip-right { cursor: ew-resize; }
+.grip-top, .grip-bottom { cursor: ns-resize; }
+.stage[data-crop="on"] .preview-selection { display: none; }
 
 .workspace[data-focus="true"] > .pane:not(.pane-preview) { display: none; }
 @media (min-width: 769px) {

@@ -147,6 +147,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux" data-ref="reverse-state"></span>
           <button class="toggle" data-ref="reverse" aria-label="Reverse clip"></button>
         </div>
+        <div class="prop-row" data-feature="row.crop">
+          <span>${t("row.crop")}</span>
+          <span></span>
+          <button class="toggle" data-ref="crop-mode" aria-label="Crop clip"></button>
+        </div>
       </div>
       <div class="section" data-section="blend" data-feature="section.blend">
         <div class="section-head">${t("sec.blend")} ${icon("chevD")}</div>
@@ -363,6 +368,14 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   });
 
   const reverseState = el.querySelector<HTMLElement>('[data-ref="reverse-state"]')!;
+  el.querySelector('[data-ref="crop-mode"]')!.addEventListener("click", () => {
+    const preview = document.querySelector<HTMLElement>(".stage");
+    if (!preview) return;
+    const on = preview.dataset.crop === "on";
+    if (on) delete preview.dataset.crop; else preview.dataset.crop = "on";
+    el.querySelector('[data-ref="crop-mode"]')!.classList.toggle("is-on", !on);
+    preview.dispatchEvent(new CustomEvent("formcut:crop-mode"));
+  });
   el.querySelector('[data-ref="reverse"]')!.addEventListener("click", () => void (async () => {
     const state = engine.snapshot;
     const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;

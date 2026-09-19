@@ -20,6 +20,31 @@ LEGACY = {"fc.gaussian-blur": "gaussian", "fc.box-blur": "box", "fc.motion-blur"
 DEFAULTS = {"scale": 100, "posX": 0, "posY": 0, "rotation": 0, "width": 100, "height": 100, "opacity": 100, "blendMode": "Normal", "flipH": False}
 
 
+def crop_box(clip: dict) -> tuple[float, float, float, float] | None:
+    """The clip's edge crop as clamped fractions (left, top, right, bottom), or None."""
+    crop = clip.get("crop")
+    if not isinstance(crop, dict):
+        return None
+    left = min(0.45, max(0.0, float(crop.get("left", 0))))
+    top = min(0.45, max(0.0, float(crop.get("top", 0))))
+    right = min(0.45, max(0.0, float(crop.get("right", 0))))
+    bottom = min(0.45, max(0.0, float(crop.get("bottom", 0))))
+    if left + top + right + bottom <= 0:
+        return None
+    return left, top, right, bottom
+
+
+def apply_crop(image: np.ndarray, clip: dict) -> np.ndarray:
+    box = crop_box(clip)
+    if not box:
+        return image
+    left, top, right, bottom = box
+    h, w = image.shape[:2]
+    x0, x1 = int(w * left), max(int(w * left) + 1, int(w * (1 - right)))
+    y0, y1 = int(h * top), max(int(h * top) + 1, int(h * (1 - bottom)))
+    return image[y0:y1, x0:x1]
+
+
 class FrameRenderer:
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
@@ -63,7 +88,7 @@ class FrameRenderer:
                     if self.decode_limit and max(still.size) > self.decode_limit:
                         still.thumbnail((self.decode_limit, self.decode_limit), Image.Resampling.LANCZOS)
                     self.stills[media_id] = np.array(still)
-            return self.stills[media_id].copy()
+            return apply_crop(self.stills[media_id].copy(), clip)
         if media_id not in self.sources:
             self.sources[media_id] = acquire(paths[0], self.decode_limit, time)
         capture = self.sources[media_id]
@@ -74,7 +99,7 @@ class FrameRenderer:
             wanted = min(count - 1, wanted)
         current = self.frame_numbers.get(media_id, -2)
         if wanted == current:
-            return self.frames[media_id].copy()
+            return apply_crop(self.frames[media_id].copy(), clip)
         if wanted != current + 1:
             capture.seek(wanted)
         ok, frame = capture.read()
@@ -83,7 +108,7 @@ class FrameRenderer:
         result = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
         self.frame_numbers[media_id] = wanted
         self.frames[media_id] = result
-        return result.copy()
+        return apply_crop(result.copy(), clip)
 
     def text_frame(self, clip: dict) -> np.ndarray:
         text = clip.get("textStyle") or {"content": clip.get("label", "Title")}
@@ -102,6 +127,30 @@ class FrameRenderer:
     def mask_frame(self, image: np.ndarray, clip: dict) -> np.ndarray:
         out = image.copy()
         h, w = out.shape[:2]
+        box = crop_box(clip)
+        if box:
+            # Mask and stroke coordinates are fractions of the SOURCE frame; the
+            # image here is the cropped window, so remap them into it.
+            left, top, right, bottom = box
+            sx, sy = 1 - left - right, 1 - top - bottom
+            clip = dict(clip)
+            if clip.get("mask"):
+                m = dict(clip["mask"])
+                m["x"] = (m["x"] / 100 - left) / sx * 100
+                m["y"] = (m["y"] / 100 - top) / sy * 100
+                m["w"] = m["w"] / sx
+                m["h"] = m["h"] / sy
+                clip["mask"] = m
+            if clip.get("cutout"):
+                options = dict(clip["cutout"])
+                strokes = []
+                for stroke in options.get("strokes", []) or []:
+                    moved = dict(stroke)
+                    moved["points"] = [((p[0] - left) / sx, (p[1] - top) / sy) for p in stroke.get("points", [])]
+                    moved["radius"] = float(stroke.get("radius", 0.02)) / max(0.1, min(sx, sy))
+                    strokes.append(moved)
+                options["strokes"] = strokes
+                clip["cutout"] = options
         key = clip.get("key")
         if key:
             color = np.array([int(key["color"][i:i + 2], 16) for i in (1, 3, 5)], np.float32) / 255
@@ -173,7 +222,7 @@ class FrameRenderer:
                 canvas = apply_effects(canvas, effects, local)
                 continue
             if clip["kind"] == "image" and not clip.get("shaderId") and all(entry["id"] in GRADES for entry in effects):
-                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"))
+                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"), crop_box(clip))
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
                     still = apply_effects(still, effects, 0) if effects else still

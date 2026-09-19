@@ -9,6 +9,84 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     const handle = document.createElement("button"); handle.className = `preview-handle handle-${direction}`; handle.dataset.handle = direction; handle.setAttribute("aria-label", direction === "rotate" ? "Rotate selected clip" : `Resize selected clip ${direction}`); overlay.append(handle);
   }
   stage.append(overlay);
+  const cropOverlay = document.createElement("div");
+  cropOverlay.className = "preview-crop";
+  cropOverlay.hidden = true;
+  cropOverlay.innerHTML = `<div class="crop-window" data-ref="window"></div>` +
+    ["left", "top", "right", "bottom"].map((edge) => `<button class="crop-grip grip-${edge}" data-edge="${edge}" aria-label="Crop ${edge}"></button>`).join("");
+  stage.append(cropOverlay);
+  const cropBox = (clip: import("../engine/types").Clip) => ({
+    left: Math.min(0.45, Math.max(0, clip.crop?.left ?? 0)),
+    top: Math.min(0.45, Math.max(0, clip.crop?.top ?? 0)),
+    right: Math.min(0.45, Math.max(0, clip.crop?.right ?? 0)),
+    bottom: Math.min(0.45, Math.max(0, clip.crop?.bottom ?? 0)),
+  });
+  const drawCrop = () => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    const clip = found?.clip;
+    const on = stage.dataset.crop === "on" && clip && (clip.kind === "video" || clip.kind === "image") && clip.start <= state.playhead && state.playhead <= clip.start + clip.duration;
+    cropOverlay.hidden = !on;
+    if (!on || !clip) return;
+    const media = clip.mediaId ? bin.find(clip.mediaId) : null;
+    const w = media?.width || state.width, h = media?.height || state.height;
+    const box = cropBox(clip);
+    const cw = w * (1 - box.left - box.right), ch = h * (1 - box.top - box.bottom);
+    const fit = Math.min(state.width / cw, state.height / ch);
+    const tr = sampledTransform(clip, state.playhead - clip.start);
+    const scale = fit * tr.scale / 100;
+    const fullW = w * scale * tr.width / 100 / state.width * 100;
+    const fullH = h * scale * tr.height / 100 / state.height * 100;
+    const centerX = 50 + tr.posX - ((box.left - box.right) / 2) * fullW;
+    const centerY = 50 + tr.posY - ((box.top - box.bottom) / 2) * fullH;
+    cropOverlay.style.width = `${fullW}%`;
+    cropOverlay.style.height = `${fullH}%`;
+    cropOverlay.style.left = `${centerX}%`;
+    cropOverlay.style.top = `${centerY}%`;
+    const window_ = cropOverlay.querySelector<HTMLElement>('[data-ref="window"]')!;
+    window_.style.left = `${box.left * 100}%`;
+    window_.style.top = `${box.top * 100}%`;
+    window_.style.right = `${box.right * 100}%`;
+    window_.style.bottom = `${box.bottom * 100}%`;
+    for (const grip of cropOverlay.querySelectorAll<HTMLElement>(".crop-grip")) {
+      const edge = grip.dataset.edge!;
+      if (edge === "left") { grip.style.left = `${box.left * 100}%`; grip.style.top = "50%"; }
+      if (edge === "right") { grip.style.left = `${(1 - box.right) * 100}%`; grip.style.top = "50%"; }
+      if (edge === "top") { grip.style.top = `${box.top * 100}%`; grip.style.left = "50%"; }
+      if (edge === "bottom") { grip.style.top = `${(1 - box.bottom) * 100}%`; grip.style.left = "50%"; }
+    }
+  };
+  cropOverlay.addEventListener("pointerdown", (event) => {
+    const edge = (event.target as HTMLElement).closest<HTMLElement>("[data-edge]")?.dataset.edge as "left" | "top" | "right" | "bottom" | undefined;
+    const id = engine.snapshot.selectedClipId, found = id ? engine.findClip(id) : null;
+    if (!edge || !found || engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks[found.trackIndex].locked) return;
+    event.preventDefault(); event.stopPropagation(); engine.pause();
+    const frame = cropOverlay.getBoundingClientRect();
+    const working = cropBox(found.clip);
+    dragging = true;
+    cropOverlay.setPointerCapture(event.pointerId);
+    const moveGrip = (next: PointerEvent) => {
+      if (edge === "left") working.left = Math.min(0.45, Math.max(0, (next.clientX - frame.left) / frame.width));
+      if (edge === "right") working.right = Math.min(0.45, Math.max(0, (frame.right - next.clientX) / frame.width));
+      if (edge === "top") working.top = Math.min(0.45, Math.max(0, (next.clientY - frame.top) / frame.height));
+      if (edge === "bottom") working.bottom = Math.min(0.45, Math.max(0, (frame.bottom - next.clientY) / frame.height));
+      const window_ = cropOverlay.querySelector<HTMLElement>('[data-ref="window"]')!;
+      window_.style.left = `${working.left * 100}%`;
+      window_.style.top = `${working.top * 100}%`;
+      window_.style.right = `${working.right * 100}%`;
+      window_.style.bottom = `${working.bottom * 100}%`;
+    };
+    const release = () => {
+      cropOverlay.removeEventListener("pointermove", moveGrip);
+      dragging = false;
+      const rounded = Object.fromEntries(Object.entries(working).map(([k, v]) => [k, Math.round(v * 1000) / 1000]));
+      engine.dispatch("clip.creator", { clipId: found.clip.id, patch: { crop: rounded } });
+      drawCrop();
+    };
+    cropOverlay.addEventListener("pointermove", moveGrip);
+    cropOverlay.addEventListener("pointerup", release, { once: true });
+    cropOverlay.addEventListener("pointercancel", release, { once: true });
+  });
   let dragging = false;
   const draw = () => {
     const state = engine.snapshot, found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
@@ -17,7 +95,8 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     overlay.hidden = !shown;
     if (!clip || !shown) return;
     const media = clip.mediaId ? bin.find(clip.mediaId) : null;
-    const w = media?.width || state.width, h = media?.height || state.height;
+    const box = cropBox(clip);
+    const w = (media?.width || state.width) * (1 - box.left - box.right), h = (media?.height || state.height) * (1 - box.top - box.bottom);
     const fit = Math.min(state.width / w, state.height / h);
     const tr = sampledTransform(clip, state.playhead - clip.start);
     overlay.style.width = `${w * fit / state.width * tr.scale * tr.width / 100}%`;
@@ -62,7 +141,8 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     const up = () => finish(true), cancel = () => finish(false);
     overlay.addEventListener("pointermove", pointerMove); overlay.addEventListener("pointerup", up, { once: true }); overlay.addEventListener("pointercancel", cancel, { once: true });
   });
-  engine.subscribe((_state, event) => { if (!dragging && ["clips", "timeline", "clip-selection", "playhead"].includes(event)) draw(); });
+  engine.subscribe((_state, event) => { if (!dragging && ["clips", "timeline", "clip-selection", "playhead"].includes(event)) { draw(); drawCrop(); } });
+  stage.addEventListener("formcut:crop-mode", () => { drawCrop(); draw(); });
   document.addEventListener("change", event => { if ((event.target as HTMLElement).matches("[data-brush]")) draw(); });
   bin.subscribe(draw); draw();
 }
