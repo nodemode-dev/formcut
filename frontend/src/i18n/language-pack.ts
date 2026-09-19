@@ -326,7 +326,6 @@ Rectangle mask|Masque rectangulaire|Maschera rettangolare|長方形マスク|사
 Ellipse mask|Masque elliptique|Maschera ellittica|楕円マスク|타원 마스크|Máscara elíptica|Эллиптическая маска|Elips maske|椭圆蒙版|橢圓遮罩
 Object cutout|Découpe d'objet|Scontorno oggetto|オブジェクト切り抜き|개체 오려내기|Recorte de objeto|Вырезание объекта|Nesne kesme|物体抠像|物件去背
 Person cutout|Découpe de personne|Scontorno persona|人物切り抜き|인물 오려내기|Recorte de pessoa|Вырезание человека|Kişi kesme|人物抠像|人物去背
-Captions|Sous-titres|Sottotitoli|字幕|자막|Legendas|Субтитры|Altyazılar|字幕|字幕
 Speak|Synthèse vocale|Voce sintetica|読み上げ|음성 생성|Narração|Озвучка|Konuşma|配音|配音
 Detach audio|Détacher l'audio|Separa audio|音声を分離|오디오 분리|Separar áudio|Отделить звук|Sesi ayır|分离音频|分離音訊
 Select a clip on the timeline first|Sélectionnez d'abord un clip dans la timeline|Seleziona prima una clip nella timeline|まずタイムラインでクリップを選択してください|먼저 타임라인에서 클립을 선택하세요|Primeiro selecione um clipe na linha do tempo|Сначала выберите клип на таймлайне|Önce zaman çizelgesinden bir klip seçin|请先在时间线上选择片段|請先在時間軸上選擇片段
@@ -383,7 +382,6 @@ Height|Hauteur|Altezza|高さ|높이|Altura|Высота|Yükseklik|高度|高�
 Opacity|Opacité|Opacità|不透明度|불투명도|Opacidade|Непрозрачность|Opaklık|不透明度|不透明度
 Mode|Mode|Modalità|モード|모드|Modo|Режим|Mod|模式|模式
 Flip horizontal|Retourner horizontalement|Rifletti orizzontalmente|左右反転|좌우 뒤집기|Inverter horizontalmente|Отразить по горизонтали|Yatay çevir|水平翻转|水平翻轉
-Speed|Vitesse|Velocità|速度|속도|Velocidade|Скорость|Hız|速度|速度
 Fade in|Fondu entrant|Dissolvenza in entrata|フェードイン|페이드 인|Entrada gradual|Появление|Açılma|淡入|淡入
 Fade out|Fondu sortant|Dissolvenza in uscita|フェードアウト|페이드 아웃|Saída gradual|Затухание|Kararma|淡出|淡出
 Screen color|Couleur à supprimer|Colore da rimuovere|背景色|제거할 색상|Cor a remover|Удаляемый цвет|Kaldırılacak renk|背景颜色|背景顏色
@@ -392,7 +390,6 @@ Select|Sélectionner|Seleziona|選択|선택|Selecionar|Выбрать|Seç|选�
 Blade|Lame|Lama|カット|자르기|Lâmina|Лезвие|Bıçak|刀片|刀片
 Split at playhead|Couper à la tête de lecture|Dividi al cursore|再生位置で分割|재생 헤드에서 분할|Dividir no cursor|Разделить на позиции курсора|Oynatma kafasında böl|在播放头处分割|在播放頭分割
 Detach audio|Détacher l’audio|Separa audio|音声を分離|오디오 분리|Separar áudio|Отделить аудио|Sesi ayır|分离音频|分離音訊
-Delete|Supprimer|Elimina|削除|삭제|Excluir|Удалить|Sil|删除|刪除
 Snap|Magnétisme|Aggancio|スナップ|맞춤|Encaixe|Привязка|Yakala|吸附|吸附
 Add title|Ajouter un titre|Aggiungi titolo|タイトルを追加|제목 추가|Adicionar título|Добавить заголовок|Başlık ekle|添加标题|新增標題
 Transcribe selected clip|Transcrire le clip sélectionné|Trascrivi clip selezionata|選択クリップを文字起こし|선택 클립 받아쓰기|Transcrever clipe selecionado|Расшифровать выбранный клип|Seçili klibi yazıya dök|转录所选片段|轉錄所選片段
@@ -413,7 +410,6 @@ Start export|Lancer l’export|Avvia esportazione|書き出し開始|내보내�
 Cancel|Annuler|Annulla|キャンセル|취소|Cancelar|Отмена|İptal|取消|取消
 Project saved|Projet enregistré|Progetto salvato|保存しました|프로젝트 저장됨|Projeto salvo|Проект сохранён|Proje kaydedildi|项目已保存|專案已儲存
 Save failed|Échec de l’enregistrement|Salvataggio non riuscito|保存できませんでした|저장 실패|Falha ao salvar|Не удалось сохранить|Kaydetme başarısız|保存失败|儲存失敗
-Filters|Filtres|Filtri|フィルター|필터|Filtros|Фильтры|Filtreler|滤镜|濾鏡
 Templates|Modèles|Modelli|テンプレート|템플릿|Modelos|Шаблоны|Şablonlar|模板|範本
 Mute audio|Couper le son|Disattiva audio|音声をミュート|오디오 음소거|Silenciar áudio|Отключить звук|Sesi kapat|音频静音|音訊靜音
 English|Anglais|Inglese|英語|영어|Inglês|Английский|İngilizce|英语|英語
@@ -674,7 +670,23 @@ Preparing|Préparation|Preparazione|準備中|준비 중|Preparando|Подгот
 Could not prepare|Préparation impossible|Preparazione non riuscita|準備できませんでした|준비할 수 없습니다|Não foi possível preparar|Не удалось подготовить|Hazırlanamadı|无法准备|無法準備
 Crop|Recadrer|Ritaglia|クロップ|자르기|Cortar|Кадрировать|Kırp|裁剪|裁切
 Flip vertical|Miroir vertical|Capovolgi in verticale|上下反転|상하 반전|Inverter na vertical|Отразить по вертикали|Dikey çevir|垂直翻转|垂直翻轉
-No detached sound belongs to this clip|Aucun son détaché n'appartient à ce clip|Nessun audio staccato appartiene a questa clip|このクリップに属する分離済み音声はありません|이 클립에 속한 분리된 소리가 없습니다|Nenhum som destacado pertence a este clipe|К этому клипу не относится отделённый звук|Bu klibe ait ayrılmış ses yok|没有属于此片段的分离音频|沒有屬於此片段的分離音訊`;
+No detached sound belongs to this clip|Aucun son détaché n'appartient à ce clip|Nessun audio staccato appartiene a questa clip|このクリップに属する分離済み音声はありません|이 클립에 속한 분리된 소리가 없습니다|Nenhum som destacado pertence a este clipe|К этому клипу не относится отделённый звук|Bu klibe ait ayrılmış ses yok|没有属于此片段的分离音频|沒有屬於此片段的分離音訊
+Add media|Ajouter des médias|Aggiungi media|メディアを追加|미디어 추가|Adicionar mídia|Добавить медиа|Medya ekle|添加媒体|新增媒體
+Captions|Sous-titres|Sottotitoli|字幕|자막|Legendas|Субтитры|Altyazılar|字幕|字幕
+Delete|Supprimer|Elimina|削除|삭제|Excluir|Удалить|Sil|删除|刪除
+Duplicate|Dupliquer|Duplica|複製|복제|Duplicar|Дублировать|Çoğalt|复制|複製
+Speed|Vitesse|Velocità|速度|속도|Velocidade|Скорость|Hız|速度|速度
+Animate|Animer|Anima|アニメーション|애니메이션|Animar|Анимировать|Canlandır|动画|動畫
+Filters|Filtres|Filtri|フィルター|필터|Filtros|Фильтры|Filtreler|滤镜|濾鏡
+Remove background|Supprimer l'arrière-plan|Rimuovi sfondo|背景を削除|배경 제거|Remover fundo|Убрать фон|Arka planı kaldır|移除背景|移除背景
+Freeze|Figer|Blocca|フリーズ|고정|Congelar|Стоп-кадр|Dondur|定格|定格
+Edit text|Modifier le texte|Modifica testo|テキストを編集|텍스트 편집|Editar texto|Изменить текст|Metni düzenle|编辑文本|編輯文字
+Style|Style|Stile|スタイル|스타일|Estilo|Стиль|Stil|样式|樣式
+Fade|Fondu|Dissolvenza|フェード|페이드|Fade|Затухание|Geçiş|淡化|淡化
+Voice effects|Effets de voix|Effetti voce|音声エフェクト|음성 효과|Efeitos de voz|Голосовые эффекты|Ses efektleri|语音效果|語音效果
+Place the playhead inside the clip|Placez la tête de lecture dans le clip|Posiziona l'indicatore dentro la clip|再生ヘッドをクリップ内に置いてください|재생 헤드를 클립 안에 두세요|Coloque o cursor dentro do clipe|Поместите курсор внутрь клипа|Oynatma kafasını klibin içine koyun|将播放头放在片段内|將播放頭放在片段內
+Video clips only|Clips vidéo uniquement|Solo clip video|ビデオクリップのみ|비디오 클립만|Apenas clipes de vídeo|Только видеоклипы|Yalnızca video klipler|仅限视频片段|僅限視訊片段
+Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

@@ -22,6 +22,7 @@ import { buildPreviewPane } from "./ui/render-preview";
 import { buildInspectorPane } from "./ui/inspector-pane";
 import { t } from "./i18n";
 import { buildTimelinePane } from "./ui/timeline-pane";
+import { buildToolTray } from "./ui/tool-tray";
 import { buildStartScreen } from "./ui/start-screen";
 
 if ("serviceWorker" in navigator) {
@@ -34,11 +35,13 @@ const bin = new MediaBin();
 const app = document.getElementById("app")!;
 const workspace = document.createElement("main");
 workspace.className = "workspace";
+const timelinePane = buildTimelinePane(engine, bin);
+timelinePane.prepend(buildToolTray(engine));
 workspace.append(
   buildMediaPane(bin, engine),
   buildPreviewPane(engine, bin),
   buildInspectorPane(engine, bin),
-  buildTimelinePane(engine, bin),
+  timelinePane,
 );
 const mobileBar = document.createElement("nav");
 mobileBar.className = "mobile-bar";

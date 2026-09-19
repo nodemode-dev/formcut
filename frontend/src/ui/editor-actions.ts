@@ -6,6 +6,8 @@ import { rejoinEligibility } from "../engine/creator-commands";
 import { sourceTime } from "../engine/timing";
 import { t } from "../i18n";
 
+export const editorVerbs: Record<string, () => void> = {};
+
 export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void {
   let copied: Array<{ trackIndex: number; clip: Clip }> = [];
   const selection = () => engine.snapshot.selectedClipId ? engine.findClip(engine.snapshot.selectedClipId) : null;
@@ -51,6 +53,15 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
     if (!engine.findClip(source.id)) return;
     engine.dispatch("clip.freeze-insert", { clipId: source.id, time: at, mediaId: item.id, label: item.name, hold: 3 });
   };
+  editorVerbs.freeze = () => void freeze().catch(error => window.alert(error instanceof Error ? error.message : String(error)));
+  editorVerbs.split = () => {
+    const s = engine.snapshot;
+    const ids = selectedSet();
+    engine.dispatch("clips.split", { clipIds: ids, time: s.playhead });
+  };
+  editorVerbs.duplicate = () => duplicate();
+  editorVerbs.remove = () => { const ids = selectedSet(); if (ids.length > 1) engine.dispatch("clips.remove", ids); else if (ids[0]) engine.dispatch("clip.remove", ids[0]); };
+
   const detach = async () => {
     const found = selection(); if (!found?.clip.mediaId || found.clip.kind !== "video") return;
     const source = found.clip;
