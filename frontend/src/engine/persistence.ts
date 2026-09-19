@@ -85,8 +85,12 @@ export async function openProject(engine: ProjectEngine, id: string): Promise<bo
   }
 }
 
-export function newProject(engine: ProjectEngine, format?: ProjectFormat): void {
+export function newProject(engine: ProjectEngine, format?: ProjectFormat, magneticMain?: boolean): void {
   const blank = blankProject(format);
+  if (magneticMain) {
+    const main = blank.timelines[0]?.tracks.find((track) => /video/i.test(track.name)) ?? blank.timelines[0]?.tracks[0];
+    if (main) main.magnetic = true;
+  }
   engine.dispatch("project.load", {
     projectId: null,
     title: blank.title,

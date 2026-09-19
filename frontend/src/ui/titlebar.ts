@@ -137,7 +137,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   if (actions) {
     actions.save = () => void doSave();
     actions.newProject = () => {
-      newProject(engine);
+      newProject(engine, undefined, activeProfile().behaviour.magneticMain);
       showToast(t("toast.new"));
       hideToastSoon(2000);
     };
@@ -170,7 +170,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     if (!hit) return;
     menu.hidden = true;
     if (hit.dataset.act === "new") {
-      newProject(engine);
+      newProject(engine, undefined, activeProfile().behaviour.magneticMain);
       showToast(t("toast.new"));
       hideToastSoon(2000);
     } else if (hit.dataset.act === "save") {

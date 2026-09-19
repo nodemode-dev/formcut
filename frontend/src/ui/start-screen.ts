@@ -12,6 +12,7 @@ import { loadDemoProject } from "../engine/demo";
 import { listProjects, newProject, openProject, listJournals, restoreJournal, clearJournal } from "../engine/persistence";
 import { api } from "../engine/api";
 import { icon } from "./icons";
+import { activeProfile } from "./interface-mode";
 import { LOCALE_NAMES, locale, setLocale, t } from "../i18n";
 import { text } from "../i18n/text";
 import { askInterfaceModeOnce } from "./mode-popout";
@@ -134,7 +135,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   sheet.querySelector('[data-ref="format-cancel"]')!.addEventListener("click", () => { sheet.hidden = true; });
   sheet.querySelector('[data-ref="format-create"]')!.addEventListener("click", () => {
     sheet.hidden = true;
-    newProject(engine, format);
+    newProject(engine, format, activeProfile().behaviour.magneticMain);
     dismiss();
   });
   const openFormatSheet = () => { sheet.hidden = false; sheet.querySelector<HTMLElement>('[data-ref="format-create"]')!.focus(); };

@@ -86,6 +86,7 @@ export interface Track {
   locked?: boolean;
   hidden?: boolean;
   muted?: boolean;
+  magnetic?: boolean;
   id: string;
   name: string;
   clips: Clip[];

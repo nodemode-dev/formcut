@@ -161,6 +161,17 @@ export class ProjectEngine {
 
   private emit(changed: string) {
     if (changed === "clips" || changed === "timeline") {
+      for (const timeline of this.state.timelines) {
+        for (const track of timeline.tracks) {
+          if (!track.magnetic) continue;
+          track.clips.sort((a, b) => a.start - b.start);
+          let cursor = 0;
+          for (const clip of track.clips) {
+            if (clip.start !== cursor) clip.start = Math.round(cursor * 100) / 100;
+            cursor = clip.start + clip.duration;
+          }
+        }
+      }
       this.state.duration = Math.max(0.1, ...this.state.timelines[this.state.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
       this.state.playhead = Math.min(this.state.playhead, this.state.duration);
     }

@@ -32,6 +32,7 @@ Remove track|Supprimer la piste|Rimuovi traccia|トラックを削除|트랙 삭
 Lock track|Verrouiller la piste|Blocca traccia|トラックをロック|트랙 잠금|Bloquear trilha|Заблокировать дорожку|Parçayı kilitle|锁定轨道|鎖定軌道
 Hide track|Masquer la piste|Nascondi traccia|トラックを非表示|트랙 숨기기|Ocultar trilha|Скрыть дорожку|Parçayı gizle|隐藏轨道|隱藏軌道
 Mute track|Couper le son de la piste|Silenzia traccia|トラックをミュート|트랙 음소거|Silenciar trilha|Заглушить дорожку|Parçanın sesini kapat|静音轨道|靜音軌道
+Magnetic track|Piste magnétique|Traccia magnetica|マグネットトラック|자석 트랙|Trilha magnética|Магнитная дорожка|Mıknatıslı parça|磁性轨道|磁性軌道
 Double-click to rename track|Double-cliquez pour renommer la piste|Doppio clic per rinominare la traccia|ダブルクリックでトラック名を変更|두 번 클릭하여 트랙 이름 바꾸기|Clique duas vezes para renomear a trilha|Дважды щёлкните, чтобы переименовать дорожку|Yeniden adlandırmak için çift tıklayın|双击以重命名轨道|按兩下以重新命名軌道
 Scrub playhead|Déplacer la tête de lecture|Trascina la testina|再生ヘッドをドラッグ|재생 헤드 이동|Arrastar o cursor de reprodução|Перемещение указателя воспроизведения|Oynatma kafasını sürükle|拖动播放头|拖曳播放頭
 Timeline height|Hauteur de la timeline|Altezza della timeline|タイムラインの高さ|타임라인 높이|Altura da linha do tempo|Высота таймлайна|Zaman çizelgesi yüksekliği|时间线高度|時間軸高度

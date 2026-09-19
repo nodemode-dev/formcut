@@ -6,7 +6,7 @@ export function trackControls(header: HTMLElement, index: number, engine: Projec
   if (!header.dataset.controls) {
     header.dataset.controls = "ready";
     const buttons = [...header.querySelectorAll<HTMLButtonElement>("button")];
-    const definitions = [["remove", "trash", text("Remove track")], ["locked", "lock", text("Lock track")], ["hidden", "eye", text("Hide track")], ["muted", "speaker", text("Mute track")]];
+    const definitions = [["remove", "trash", text("Remove track")], ["locked", "lock", text("Lock track")], ["hidden", "eye", text("Hide track")], ["muted", "speaker", text("Mute track")], ["magnetic", "magnet", text("Magnetic track")]];
     definitions.forEach(([key, glyph, title], i) => {
       const button = buttons[i] ?? document.createElement("button");
       button.className = "iconbtn"; button.title = title; button.setAttribute("aria-label", title); button.dataset.trackAction = key;
@@ -15,7 +15,7 @@ export function trackControls(header: HTMLElement, index: number, engine: Projec
         const track = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks[index];
         if (!track) return;
         if (key === "remove") { if (engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks.length > 1) engine.dispatch("track.remove", { index }); }
-        else engine.dispatch("track.update", { index, patch: { [key]: !track[key as "locked" | "hidden" | "muted"] } });
+        else engine.dispatch("track.update", { index, patch: { [key]: !track[key as "locked" | "hidden" | "muted" | "magnetic"] } });
       });
     });
     const name = header.querySelector<HTMLElement>(".name")!;
@@ -28,7 +28,7 @@ export function trackControls(header: HTMLElement, index: number, engine: Projec
   for (const button of header.querySelectorAll<HTMLButtonElement>("[data-track-action]")) {
     const key = button.dataset.trackAction!;
     button.disabled = key === "remove" && engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks.length < 2;
-    const active = Boolean(track[key as "locked" | "hidden" | "muted"]);
+    const active = Boolean(track[key as "locked" | "hidden" | "muted" | "magnetic"]);
     if (key === "hidden" || key === "muted") {
       const glyph = key === "hidden" ? (active ? "eyeOff" : "eye") : (active ? "mute" : "speaker");
       if (button.dataset.glyph !== glyph) { button.dataset.glyph = glyph; button.innerHTML = icon(glyph); }

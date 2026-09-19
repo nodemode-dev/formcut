@@ -1,5 +1,5 @@
 import { installWorkspaceLayout } from "./ui/workspace-layout";
-import { primeInterfaceMode, applyInterfaceProfile, observeInterfaceFeatures } from "./ui/interface-mode";
+import { primeInterfaceMode, applyInterfaceProfile, observeInterfaceFeatures, activeProfile } from "./ui/interface-mode";
 import { installAccordions } from "./ui/accordion";
 import { installEditorActions } from "./ui/editor-actions";
 import "./engine/local-transport";
@@ -62,7 +62,7 @@ app.append(mobileBar);
 
 const actions = {
   save: () => void saveProject(engine),
-  newProject: () => newProject(engine),
+  newProject: () => newProject(engine, undefined, activeProfile().behaviour.magneticMain),
 };
 const titlebar = buildTitlebar(engine, actions);
 localizeElement(titlebar);

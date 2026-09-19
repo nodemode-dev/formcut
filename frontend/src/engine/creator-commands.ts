@@ -154,9 +154,9 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     return;
   } else if (command === "track.update") {
     const target = timeline.tracks[Number(p.index)]; if (!target) throw new Error("Track not found");
-    const patch = p.patch as { name?: string; locked?: boolean; hidden?: boolean; muted?: boolean };
+    const patch = p.patch as { name?: string; locked?: boolean; hidden?: boolean; muted?: boolean; magnetic?: boolean };
     if (patch.name !== undefined) target.name = patch.name.trim().slice(0, 120) || "Track";
-    for (const key of ["locked", "hidden", "muted"] as const) if (key in patch) target[key] = Boolean(patch[key]);
+    for (const key of ["locked", "hidden", "muted", "magnetic"] as const) if (key in patch) target[key] = Boolean(patch[key]);
   } else if (command === "track.add") {
     timeline.tracks.push({ id: crypto.randomUUID(), name: String(p.name || `Track ${timeline.tracks.length + 1}`), clips: [] });
   } else if (command === "track.remove") {

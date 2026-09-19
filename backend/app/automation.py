@@ -319,6 +319,16 @@ def dispatch(method: str, params: dict):
                 raise ValueError("Supply between 1 and 1000 commands")
             for command in commands:
                 apply_edit(project, command)
+            for timeline in project.get("timelines", []):
+                for track in timeline.get("tracks", []):
+                    if not track.get("magnetic"):
+                        continue
+                    track["clips"].sort(key=lambda c: c["start"])
+                    cursor = 0.0
+                    for spot in track["clips"]:
+                        if spot["start"] != cursor:
+                            spot["start"] = round(cursor * 100) / 100
+                        cursor = spot["start"] + spot["duration"]
             project = validate_document(project)
             _history.setdefault(project_id, []).append(before)
             _history[project_id] = _history[project_id][-50:]
