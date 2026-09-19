@@ -129,3 +129,7 @@ specificity tie decided by source order.
 ## v0.56.0 delta
 
 Inspector rows: Reverse (`row.reverse`, job-polled with Preparing and Could not prepare), Crop (`row.crop`, stage crop mode with four edge grips), Flip vertical (`row.flipv`). Canvas: alignment guides on the `--guide` token snap moves and corner scales to edges, centre, thirds and other layers within 6 px; Alt bypasses. Track headers gain a magnet toggle. Easy: `ui/tool-tray.ts` (feature id `easy.tray`, hidden in Advanced) drives the same code paths as the Advanced keys, menus, inspector toggles and creator page select through the `editorVerbs` registry; the inspector shows one column per selection kind from the profile's `inspector.views` map via an `easy-hidden` class channel; effect cards carry favourite stars persisted at `formcut.favourites` and a 300 ms hover audition on a throwaway render session. Menu additions: Freeze frame, Reattach audio (partner-probed).
+
+## v0.57.0 delta
+
+The inspector's text section gains eleven rows for the full title style, all on the `data-xkey` channel with per-property bounds; blanking a numeric row clears the property. Double-clicking a selected title on the canvas opens `.canvas-typing`, committing one `clip.text` patch per session. The Text tab gains the title style gallery (`/api/presets/titles`, thumbnails from `/api/catalogue/preview/title/{id}`), the caption sheet rows (model, words per caption, placement, size), a cancel chip, and the typed-captions box.

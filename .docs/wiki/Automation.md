@@ -55,3 +55,7 @@ WebSocket `/api/rpc/ws` sends the same JSON objects over a loopback connection. 
 
 ### v0.56.0
 `project.edit` adds `clips.split`, `clip.rejoin`, `clip.freeze-insert`, `clip.reattach`; magnetic tracks settle after each batch; `clip_properties` includes `reversed`; per-timeline formats apply to `project.export`.
+
+
+### v0.57.0
+Title styles ride `clip.text` patches like any other style field, so the full property set is scriptable; `/api/presets/titles` lists the built-ins.

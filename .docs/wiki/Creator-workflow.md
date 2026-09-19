@@ -81,3 +81,7 @@ library entry only, so a project's references cannot break.
 
 ### v0.56.0
 Split (S, Cmd+B), rejoin, freeze frame (F), reverse, crop with canvas grips, vertical flip, reattach from either clip, canvas alignment guides (Alt bypasses), the Easy tool tray, the per-kind clip panel, favourites and hover audition.
+
+
+### v0.57.0
+Full title styling in the inspector, double-click typing on the canvas, a ten-style gallery, presets that carry their font, and captions with model, placement, size, words per caption, cancel and typed lines.

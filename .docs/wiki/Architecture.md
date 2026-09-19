@@ -67,3 +67,7 @@ the launchers export before starting. `.env` is ignored by git.
 
 ### v0.56.0
 Per-timeline formats resolve at `validate_document`; reversed intermediates cache under `DATA_DIR/reversed`; magnetic tracks settle in the engine's emit funnel and after each RPC batch.
+
+
+### v0.57.0
+Title styling is drawn entirely in `renderer.text_frame`; fonts install once by content hash; built-in title styles and their engine-rendered thumbnails live in `presets.py` and `effect_previews.py`.
