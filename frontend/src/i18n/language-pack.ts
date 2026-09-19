@@ -711,6 +711,14 @@ Or type caption lines, one per line|Ou saisissez les sous-titres, un par ligne|O
 One caption per line|Un sous-titre par ligne|Un sottotitolo per riga|1行に1つの字幕|한 줄에 자막 하나|Uma legenda por linha|По одному субтитру в строке|Satır başına bir altyazı|每行一条字幕|每行一條字幕
 Add typed captions|Ajouter les sous-titres saisis|Aggiungi i sottotitoli digitati|入力した字幕を追加|입력한 자막 추가|Adicionar legendas digitadas|Добавить введённые субтитры|Yazılan altyazıları ekle|添加输入的字幕|新增輸入的字幕
 Type at least one line|Saisissez au moins une ligne|Digita almeno una riga|1行以上入力してください|한 줄 이상 입력하세요|Digite pelo menos uma linha|Введите хотя бы одну строку|En az bir satır yazın|请至少输入一行|請至少輸入一行
+Remove background|Supprimer l'arrière-plan|Rimuovi sfondo|背景を削除|배경 제거|Remover fundo|Убрать фон|Arka planı kaldır|移除背景|移除背景
+Mode|Mode|Modalità|モード|모드|Modo|Режим|Mod|模式|模式
+Automatic|Automatique|Automatico|自動|자동|Automático|Автоматически|Otomatik|自动|自動
+Brush|Pinceau|Pennello|ブラシ|브러시|Pincel|Кисть|Fırça|画笔|筆刷
+Chroma key|Incrustation|Chroma key|クロマキー|크로마 키|Chroma key|Хромакей|Kroma anahtarı|色度键|色度鍵
+Feather|Contour progressif|Sfumatura|ぼかし|페더|Suavização|Растушёвка|Yumuşatma|羽化|羽化
+Brush size|Taille du pinceau|Dimensione pennello|ブラシサイズ|브러시 크기|Tamanho do pincel|Размер кисти|Fırça boyutu|画笔大小|筆刷大小
+Ready|Prêt|Pronto|準備完了|준비됨|Pronto|Готово|Hazır|就绪|就緒
 Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {

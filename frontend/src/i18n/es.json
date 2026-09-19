@@ -404,5 +404,16 @@
   "cap.typed.hint": "O escribe líneas de subtítulos, una por línea",
   "cap.typed.placeholder": "Un subtítulo por línea",
   "cap.typed.add": "Añadir subtítulos escritos",
-  "cap.typed.empty": "Escribe al menos una línea"
+  "cap.typed.empty": "Escribe al menos una línea",
+  "bg.title": "Quitar fondo",
+  "bg.mode": "Modo",
+  "bg.off": "Desactivado",
+  "bg.auto": "Automático",
+  "bg.brush": "Pincel",
+  "bg.chroma": "Croma",
+  "bg.feather": "Suavizado",
+  "bg.brushsize": "Tamaño del pincel",
+  "bg.working": "Preparando",
+  "bg.ready": "Listo",
+  "bg.failed": "No se pudo preparar"
 }

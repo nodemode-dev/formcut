@@ -404,5 +404,16 @@
   "cap.typed.hint": "Oder Untertitelzeilen eingeben, eine pro Zeile",
   "cap.typed.placeholder": "Ein Untertitel pro Zeile",
   "cap.typed.add": "Eingegebene Untertitel hinzufügen",
-  "cap.typed.empty": "Gib mindestens eine Zeile ein"
+  "cap.typed.empty": "Gib mindestens eine Zeile ein",
+  "bg.title": "Hintergrund entfernen",
+  "bg.mode": "Modus",
+  "bg.off": "Aus",
+  "bg.auto": "Automatisch",
+  "bg.brush": "Pinsel",
+  "bg.chroma": "Chroma-Key",
+  "bg.feather": "Weiche Kante",
+  "bg.brushsize": "Pinselgröße",
+  "bg.working": "Wird vorbereitet",
+  "bg.ready": "Bereit",
+  "bg.failed": "Konnte nicht vorbereitet werden"
 }

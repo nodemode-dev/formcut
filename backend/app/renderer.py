@@ -111,6 +111,7 @@ class FrameRenderer:
         self.frame_numbers = {}
         self.frames = {}
         self.decode_scale = {}
+        self.matte_time = 0.0
         self.closed = False
 
     def close(self):
@@ -299,9 +300,16 @@ class FrameRenderer:
                 alpha = 1.0 - alpha
             out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
         if clip.get("cutout"):
-            from .segmentation import cutout_alpha
-            alpha = cutout_alpha(out, clip["cutout"])
-            out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
+            # BG3: read the cached matte; rendering never runs inference. A clip
+            # whose mattes are not ready renders unmatted rather than stalling.
+            from .matte_cache import matte_key, read as read_matte
+            from .segmentation import feathered
+            options = clip["cutout"]
+            key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
+            h2, w2 = out.shape[:2]
+            alpha = read_matte(key, self.matte_time, (w2, h2))
+            if alpha is not None:
+                out[:, :, 3] = np.round(out[:, :, 3] * feathered(alpha, options)).astype(np.uint8)
         return out
 
     def transition(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
@@ -370,6 +378,7 @@ class FrameRenderer:
                     image = apply_lut(image, clip["lutId"], float(clip.get("lutIntensity", 1)))
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
+            self.matte_time = source_time(clip, local)
             image = self.mask_frame(image, clip)
             transform = {**DEFAULTS, **(clip.get("transform") or {})}
             for prop in ("scale", "posX", "posY", "rotation", "opacity"):

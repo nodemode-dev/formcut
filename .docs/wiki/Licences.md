@@ -53,3 +53,31 @@ All UI icons are hand-authored inline currentColor SVG in this repo, except the 
 Licence sources: [OpenCV packaging](https://github.com/opencv/opencv-python), [Pillow](https://github.com/python-pillow/Pillow), [NumPy](https://github.com/numpy/numpy), [wgpu-py](https://github.com/pygfx/wgpu-py), [wgpu](https://github.com/gfx-rs/wgpu), [ONNX Runtime](https://github.com/microsoft/onnxruntime), [gRPC](https://github.com/grpc/grpc), [U2Net](https://github.com/xuebinqin/U-2-Net), [Kokoro model](https://huggingface.co/hexgrad/Kokoro-82M), [Kokoro ONNX wrapper](https://github.com/thewh1teagle/kokoro-onnx).
 
 The packaging audit found libavcodec/libavformat/libavutil/libswscale in the initial standard OpenCV diagnostic freeze. That output is not a distributable. VideoSource now decodes through external FFmpeg, and freeze.py rejects a codec-enabled OpenCV runtime. Native platform dependency audits remain required on their actual built bundles. No frozen binary or third-party wheel is included in this source release.
+
+## Background removal model candidates (BG1 gate, v0.60.0)
+
+The gate exists so no model reaches the build before its licence is recorded. A
+candidate may only be bundled or downloaded once its row carries a licence that
+permits redistribution and a SHA-256 taken from the file we actually ship.
+
+| Role | Candidate | Licence | Source | Bundle or download | SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| Selfie segmentation, bundled (BG2) | MediaPipe Selfie Segmentation (tflite/onnx export, under 1 MB) | Apache-2.0 | https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite | bundle in the engine build | pending, recorded on first fetch |
+| Video matting, person (BG4) | MODNet | Apache-2.0 | https://github.com/ZHKKKe/MODNet | download on demand | pending, recorded on first fetch |
+| Object matting (BG4) | IS-Net (DIS), general use | Apache-2.0 | https://github.com/xuebinqin/DIS | download on demand | pending, recorded on first fetch |
+| Object matting, alternative (BG4) | BiRefNet | MIT | https://github.com/ZhengPeng7/BiRefNet | download on demand | pending, recorded on first fetch |
+| Prompted region segmentation, brush (BG5) | MobileSAM | Apache-2.0 | https://github.com/ChaoningZhang/MobileSAM | download on demand | pending, recorded on first fetch |
+| Prompted region segmentation, alternative (BG5) | SlimSAM | Apache-2.0 | https://github.com/czg1225/SlimSAM | download on demand | pending, recorded on first fetch |
+
+Excluded by policy, recorded so the decision is not revisited by accident:
+
+| Model | Licence | Why excluded |
+| --- | --- | --- |
+| RobustVideoMatting (RVM) | GPL-3.0 | copyleft, incompatible with shipping inside a proprietary bundle |
+| U2Net full weights from some mirrors | unclear or unstated | provenance not verifiable; the Apache-2.0 rembg release is used instead |
+| SAM (original, Meta) | Apache-2.0 code, weights under a separate research licence | weight licence does not permit redistribution here |
+
+Each SHA-256 stays "pending" until the file is fetched on a networked machine and
+hashed with `shasum -a 256`, and the value is written back into this table in the
+same change that adds the model to `backend/app/model_manager.py`. That ordering
+is the gate: no entry in the model manager without a hash in this row.

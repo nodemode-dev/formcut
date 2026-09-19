@@ -51,3 +51,20 @@ def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
         for a, b in zip(points, points[1:]):
             cv2.line(alpha, a, b, color, radius * 2)
     return alpha
+
+
+def feathered(alpha: np.ndarray, options: dict) -> np.ndarray:
+    """Apply threshold and feather to a stored matte at read time (BG3).
+
+    These are cheap and interactive, so they are applied when a matte is read
+    rather than baked in, which keeps one cached matte usable while the user
+    drags the feather slider.
+    """
+    threshold = float(options.get("threshold", 0.5))
+    feather = max(0.005, float(options.get("feather", 0.1)))
+    return np.clip((alpha - threshold + feather / 2) / feather, 0, 1)
+
+
+def raw_alpha(image: np.ndarray, model: str) -> np.ndarray:
+    """One model run returning an unshaped 0..1 matte, for the BG3 job."""
+    return cutout_alpha(image, {"model": model, "threshold": 0.0, "feather": 1.0, "strokes": []})

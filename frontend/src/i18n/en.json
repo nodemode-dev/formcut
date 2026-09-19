@@ -404,5 +404,16 @@
   "cap.typed.hint": "Or type caption lines, one per line",
   "cap.typed.placeholder": "One caption per line",
   "cap.typed.add": "Add typed captions",
-  "cap.typed.empty": "Type at least one line"
+  "cap.typed.empty": "Type at least one line",
+  "bg.title": "Remove background",
+  "bg.mode": "Mode",
+  "bg.off": "Off",
+  "bg.auto": "Automatic",
+  "bg.brush": "Brush",
+  "bg.chroma": "Chroma key",
+  "bg.feather": "Feather",
+  "bg.brushsize": "Brush size",
+  "bg.working": "Preparing",
+  "bg.ready": "Ready",
+  "bg.failed": "Could not prepare"
 }

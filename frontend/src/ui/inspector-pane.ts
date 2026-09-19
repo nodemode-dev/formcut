@@ -1,7 +1,7 @@
 import { installFontTools } from "./font-tools";
 import { installTracking } from "./tracking";
 import type { ProjectEngine } from "../engine/project";
-import { defaultTextStyle, defaultTransform, type ClipTransform } from "../engine/types";
+import { defaultTextStyle, defaultTransform, type Clip, type ClipTransform } from "../engine/types";
 import { icon } from "./icons";
 import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
@@ -206,6 +206,29 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${propRow(t("row.maskh"), "maskH", 80, "%")}
         ${propRow(t("row.feather"), "maskF", 0, "%")}
         <div class="text-add-hint">${t("mask.note")}</div>
+      </div>
+      <div class="section" data-section="removebg" data-feature="section.removebg">
+        <div class="section-head">${t("bg.title")} ${icon("chevD")}</div>
+        <div class="prop-row">
+          <span>${t("bg.mode")}</span>
+          <select class="mini-select" data-ref="bg-mode">
+            <option value="off" selected>${t("bg.off")}</option>
+            <option value="auto">${t("bg.auto")}</option>
+            <option value="brush">${t("bg.brush")}</option>
+            <option value="chroma">${t("bg.chroma")}</option>
+          </select>
+          <span class="prop-aux" data-ref="bg-progress"></span>
+        </div>
+        <div class="prop-row">
+          <span>${t("bg.feather")}</span>
+          <input type="range" class="slider" data-ref="bg-feather" min="1" max="60" step="1" value="10" />
+          <span class="prop-aux" data-ref="bg-feather-value">10</span>
+        </div>
+        <div class="prop-row">
+          <span>${t("bg.brushsize")}</span>
+          <input type="range" class="slider" data-ref="bg-brush" min="1" max="20" step="1" value="4" />
+          <span class="prop-aux" data-ref="bg-brush-value">4</span>
+        </div>
       </div>
       <div class="section" data-section="key" data-feature="section.key">
         <div class="section-head">${t("sec.key")} ${icon("chevD")}</div>
@@ -627,6 +650,65 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     }
   });
   installFontTools(el, engine);
+
+  // BG7: the Easy background section drives the same cutout and key fields the
+  // Advanced creator panel writes, and asks the engine for the matte job.
+  const bgMode = el.querySelector<HTMLSelectElement>('[data-ref="bg-mode"]')!;
+  const bgProgress = el.querySelector<HTMLElement>('[data-ref="bg-progress"]')!;
+  const bgFeather = el.querySelector<HTMLInputElement>('[data-ref="bg-feather"]')!;
+  const bgBrush = el.querySelector<HTMLInputElement>('[data-ref="bg-brush"]')!;
+  const selectedClip = () => {
+    const id = engine.snapshot.selectedClipId;
+    return id ? engine.findClip(id)?.clip ?? null : null;
+  };
+  bgMode.addEventListener("change", () => {
+    const clip = selectedClip();
+    if (!clip) return;
+    const feather = Number(bgFeather.value) / 100;
+    if (bgMode.value === "off") {
+      engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: undefined } });
+      engine.dispatch("clip.key", { clipId: clip.id, key: null });
+      bgProgress.textContent = "";
+      return;
+    }
+    if (bgMode.value === "chroma") {
+      engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: undefined } });
+      engine.dispatch("clip.key", { clipId: clip.id, key: { color: "#00d000", similarity: 0.25, blend: 0.05 } });
+      return;
+    }
+    const cutout = { model: "person-cutout", threshold: 0.5, feather, strokes: clip.cutout?.strokes ?? [] };
+    engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout } });
+    bgProgress.textContent = t("bg.working");
+    void api("/api/render/mattes", { clip: { ...clip, cutout }, fps: engine.snapshot.fps })
+      .then(async (reply) => {
+        if (reply.status === "ready") { bgProgress.textContent = t("bg.ready"); return; }
+        for (let waited = 0; waited < 900; waited += 1) {
+          const status = await fetch(`/api/jobs/${reply.job_id}`).then((r) => r.json());
+          if (status.status === "done") { bgProgress.textContent = t("bg.ready"); return; }
+          if (status.status === "error" || status.status === "failed") { bgProgress.textContent = t("bg.failed"); return; }
+          bgProgress.textContent = `${t("bg.working")} ${Math.round((status.progress ?? 0) * 100)}%`;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      })
+      .catch(() => { bgProgress.textContent = t("bg.failed"); });
+  });
+  const bgSlider = (input: HTMLInputElement, readout: string, apply: (value: number, clip: Clip) => void) => {
+    const label = el.querySelector<HTMLElement>(`[data-ref="${readout}"]`)!;
+    input.addEventListener("input", () => { label.textContent = input.value; });
+    input.addEventListener("change", () => {
+      const clip = selectedClip();
+      if (clip) apply(Number(input.value), clip);
+    });
+  };
+  bgSlider(bgFeather, "bg-feather-value", (value, clip) => {
+    if (!clip.cutout) return;
+    engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: { ...clip.cutout, feather: value / 100 } } });
+  });
+  bgSlider(bgBrush, "bg-brush-value", (value) => {
+    const panel = document.querySelector<HTMLElement>(".creator-panel");
+    if (panel) panel.dataset.brushRadius = String(value / 100);
+  });
+
   const sections = [...el.querySelectorAll<HTMLElement>("[data-section]")];
   const applyEasyViews = () => {
     const profile = activeProfile();

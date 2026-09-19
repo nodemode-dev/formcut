@@ -132,8 +132,14 @@ def auto_download() -> dict:
 
 
 HUB = ROOT / "hub"
-HUB_MODELS = {"Xenova/whisper-tiny.en", "onnx-community/whisper-tiny"}
-HUB_PREFETCH = {model: ("config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx") for model in ("Xenova/whisper-tiny.en", "onnx-community/whisper-tiny")}
+# C1 offers tiny, base and small in English-only and multilingual form, so every
+# one of those must be allowed through the hub or the worker's request is refused.
+WHISPER_MODELS = (
+    "Xenova/whisper-tiny.en", "Xenova/whisper-base.en", "Xenova/whisper-small.en",
+    "onnx-community/whisper-tiny", "onnx-community/whisper-base", "onnx-community/whisper-small",
+)
+HUB_MODELS = set(WHISPER_MODELS)
+HUB_PREFETCH = {model: ("config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx") for model in WHISPER_MODELS}
 _hub_lock = threading.Lock()
 
 

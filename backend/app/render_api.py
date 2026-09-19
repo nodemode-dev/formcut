@@ -25,6 +25,8 @@ from .audio_render import processed_clip_audio, RATE
 from .media import MEDIA_DIR, reversed_path
 from .paths import DATA_DIR
 from .frame_cache import FrameCache, ReadAhead
+from .matte_cache import matte_key, sample_times, store as matte_store, progress as matte_progress
+from . import jobs
 
 router = APIRouter(prefix="/api/render", tags=["render"])
 _lock = threading.RLock()
@@ -275,3 +277,49 @@ def clip_audio(body: ClipAudioInput):
     return Response(path.read_bytes(), media_type="application/octet-stream",
                     headers={"x-formcut-rate": str(RATE), "x-formcut-signature": signature,
                              "Cache-Control": "no-store"})
+
+
+class MatteInput(BaseModel):
+    clip: dict
+    fps: float = 30.0
+
+
+@router.post("/mattes", status_code=202)
+def build_mattes(body: MatteInput):
+    """BG3: compute a clip's mattes once, in the background, into the cache."""
+    clip = body.clip
+    media_id = str(clip.get("mediaId") or "")
+    options = clip.get("cutout") or {}
+    model = options.get("model", "object-cutout")
+    if not media_id:
+        raise HTTPException(422, "Clip has no media")
+    key = matte_key(media_id, model, options)
+    duration = float(clip.get("duration", 0)) + float(clip.get("extendOut", 0) or 0)
+    times = sample_times(duration, body.fps)
+    done = matte_progress(key, duration, body.fps)
+    if done["ready"]:
+        return {"status": "ready", **done}
+
+    def operation(job_id, report, cancelled):
+        from .segmentation import raw_alpha
+        renderer = FrameRenderer({"title": "matte", "width": 640, "height": 360, "fps": body.fps,
+                                  "duration": max(0.1, duration), "activeTimeline": 0,
+                                  "timelines": [{"id": "m", "name": "m", "tracks": [{"id": "t", "name": "V",
+                                      "clips": [{**clip, "start": 0, "cutout": None}]}]}]})
+        try:
+            for index, at in enumerate(times):
+                if cancelled():
+                    raise InterruptedError("Cancelled")
+                frame = renderer.media_frame(clip, at)
+                matte_store(key, at, raw_alpha(frame, model))
+                report((index + 1) / len(times))
+        finally:
+            renderer.close()
+        return {"status": "ready", **matte_progress(key, duration, body.fps)}
+
+    return jobs.submit("mattes", operation)
+
+
+@router.get("/mattes/{key}")
+def matte_status(key: str, duration: float = 1.0, fps: float = 30.0):
+    return matte_progress(key, duration, fps)
