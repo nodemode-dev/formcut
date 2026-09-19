@@ -2,6 +2,15 @@
 
 ## Interaction
 
+- Multi-select (v0.55.0): Shift or Cmd click toggles a clip into the ordered
+  set; a press on empty lane space in the select tool drags a marquee that
+  live-selects intersecting clips on unlocked tracks (a still click clears);
+  Cmd+A selects the active timeline and Esc clears. The selection paint reads
+  the set, and a click on a clip already in a multi-selection keeps the set so
+  the group drag can start from it. Releasing a move drag whose clip belongs to
+  a multi-selection dispatches `clips.move` with the drag's delta; Delete, the
+  toolbar delete and the Edit menu take the set path when it holds more than
+  one clip.
 - The playhead carries a grab handle; it and the ruler scrub under pointer
   capture. Playback pauses on grab, the value snaps to clip edges while the
   magnet is on, and it always lands on a frame.

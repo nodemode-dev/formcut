@@ -2,7 +2,7 @@
 
 Contents: modules, engine commands, emitted names, tokens, stylesheet order.
 
-Derived from `frontend/src` at v0.54.3.
+Derived from `frontend/src` at v0.55.0.
 
 ## Contents
 
@@ -20,58 +20,48 @@ Derived from `frontend/src` at v0.54.3.
 - `engine/coordinates.ts` (11L)
 - `engine/creator-commands.ts` (79L)
 - `engine/demo.ts` (57L)
+- `engine/json-delta.ts` (49L)
 - `engine/keyframes.ts` (97L)
 - `engine/local-transport.ts` (11L)
 - `engine/media.ts` (77L)
 - `engine/motion.ts` (25L)
-- `engine/persistence.ts` (99L)
-- `engine/project.ts` (580L)
-- `engine/seed.ts` (43L)
+- `engine/persistence.ts` (233L)
+- `engine/project.ts` (768L)
+- `engine/seed.ts` (52L)
 - `engine/timing.ts` (61L)
-- `engine/types.ts` (138L)
+- `engine/types.ts` (139L)
 - `ui/accordion.ts` (55L)
 - `ui/appearance.ts` (177L)
 - `ui/clip-visuals.ts` (158L)
 - `ui/creator-panel.ts` (160L)
-- `ui/editor-actions.ts` (61L)
-- `ui/effect-parameters.ts` (22L)
+- `ui/editor-actions.ts` (88L)
+- `ui/effect-parameters.ts` (76L)
 - `ui/export-job.ts` (11L)
 - `ui/file-menu.ts` (16L)
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
 - `ui/icons.ts` (51L)
 - `ui/inspector-pane.ts` (542L)
+- `ui/interface-mode.ts` (202L)
 - `ui/media-pane.ts` (631L)
+- `ui/mode-popout.ts` (157L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (68L)
 - `ui/render-preview.ts` (194L)
 - `ui/safe-text.ts` (3L)
-- `ui/settings-popout.ts` (476L)
-- `ui/start-screen.ts` (399L)
+- `ui/settings-popout.ts` (487L)
+- `ui/start-screen.ts` (452L)
 - `ui/studio-tools.ts` (302L)
-- `ui/timeline-pane.ts` (447L)
+- `ui/timeline-pane.ts` (529L)
 - `ui/timeline-structure.ts` (44L)
 - `ui/title-speech.ts` (53L)
-- `ui/titlebar.ts` (238L)
+- `ui/titlebar.ts` (281L)
 - `ui/track-controls.ts` (39L)
-- `ui/track-height.ts` (79L)
-- `ui/track-keyframes.ts` (423L)
+- `ui/track-height.ts` (80L)
+- `ui/track-keyframes.ts` (424L)
 - `ui/tracking.ts` (38L)
-- `ui/work-area.ts` (134L)
-- `ui/workspace-layout.ts` (181L)
-- `workers/transcription.ts` (84L)
-- `i18n/de.json` (284L)
-- `i18n/en.json` (284L)
-- `i18n/es.json` (284L)
-- `i18n/index.ts` (52L)
-- `i18n/language-pack.ts` (629L)
-- `i18n/text.ts` (29L)
-- `styles/app.css` (847L)
-- `styles/containers.css` (284L)
-- `styles/creator.css` (65L)
-- `styles/settings.css` (122L)
-- `styles/themes.css` (856L)
-- `styles/tokens.css` (68L)
+- `ui/work-area.ts` (135L)
+- `ui/workspace-layout.ts` (187L)
 
 ## Engine commands
 
@@ -91,6 +81,9 @@ and a UI module that mutates state directly is a defect.
 - `clip.mute`
 - `clip.remove`
 - `clip.select`
+- `clip.select-all`
+- `clip.select-set`
+- `clip.select-toggle`
 - `clip.split`
 - `clip.style`
 - `clip.text`
@@ -98,6 +91,11 @@ and a UI module that mutates state directly is a defect.
 - `clip.transform`
 - `clip.transition`
 - `clip.trim`
+- `clips.add`
+- `clips.duplicate`
+- `clips.move`
+- `clips.mute`
+- `clips.remove`
 - `history.redo`
 - `history.undo`
 - `media.relink`

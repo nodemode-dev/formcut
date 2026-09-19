@@ -21,7 +21,10 @@ capabilities
 ## Edit operations
 
 `project.edit` takes a command list. Operations include project.settings,
-clip.add, clip.update, clip.remove, clip.split, clip.trim, track.add and
+clip.add, clip.update, clip.remove, clip.split, clip.trim, track.add,
+clips.move, clips.remove, clips.duplicate, clips.add, clips.mute (multi-clip,
+the interface's semantics: one call is one undo step, a group move is refused
+whole over a locked track) and
 track.remove; `capabilities` reports the authoritative list, and an unknown
 operation is refused by name.
 

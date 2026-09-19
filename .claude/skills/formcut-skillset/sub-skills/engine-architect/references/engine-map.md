@@ -1,6 +1,6 @@
 # Engine map
 
-Derived from the tree at v0.54.3, not from memory. Regenerate by listing
+Derived from the tree at v0.55.0, not from memory. Regenerate by listing
 `backend/app` and reading each module's router prefix and decorators.
 
 ## Modules that serve routes
@@ -8,9 +8,9 @@ Derived from the tree at v0.54.3, not from memory. Regenerate by listing
 | Module | Lines | Prefix | Routes |
 | --- | --- | --- | --- |
 | assets.py | 122 | /api/assets | 3 |
-| automation.py | 205 | /api/rpc | 2 |
+| automation.py | 265 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
-| catalogue.py | 210 | /api/catalogue | 1 |
+| catalogue.py | 260 | /api/catalogue | 1 |
 | clip_visuals.py | 131 | /api/media | 2 |
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 96 | /api/catalogue/preview | 1 |
@@ -25,6 +25,7 @@ Derived from the tree at v0.54.3, not from memory. Regenerate by listing
 | presets.py | 121 | /api/presets | 5 |
 | project_tracking.py | 63 | /api/track | 1 |
 | projects.py | 58 | /api/projects | 5 |
+| recovery.py | 74 | /api/recovery | 4 |
 | providers.py | 150 | /api/providers | 4 |
 | render_api.py | 142 | /api/render | 6 |
 | render_stream.py | 71 | /api/render | 1 |
@@ -48,7 +49,7 @@ the automation transports.
 - `gpu.py` (78L)
 - `main.py` (53L)
 - `paths.py` (20L)
-- `pixel_effects.py` (131L)
+- `pixel_effects.py` (131L, clamps params to catalogue declarations)
 - `processes.py` (22L)
 - `project_tracking.py` (63L)
 - `render_document.py` (83L)
@@ -72,5 +73,5 @@ the automation transports.
 
 Under `FORMCUT_DATA_DIR` or the platform default: `media/`, `projects/`,
 `templates/`, `renders/`, `thumbs/`, `peaks/`, `filmstrips/`,
-`catalogue-previews/`, `models/`, `ai-runtime/`, `providers.json` (0600).
+`catalogue-previews/`, `models/`, `ai-runtime/`, `recovery/`, `providers.json` (0600).
 `GET /api/storage` measures these and marks which are rebuildable.

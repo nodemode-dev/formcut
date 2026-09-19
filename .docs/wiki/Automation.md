@@ -18,7 +18,7 @@ Use the returned project id and revision for subsequent changes:
 {"jsonrpc":"2.0","id":3,"method":"project.edit","params":{"id":"PROJECT_ID","revision":1,"commands":[{"op":"track.add","name":"Titles"}]}}
 ```
 
-A command can add/update/remove/move/split clips, add/remove tracks, add timelines or update project settings. `clip.update` accepts ordinary document properties. A batch of commands is committed as one undo step. Supply the current revision to detect conflicts. REST PUT `/api/projects/{id}` also checks revision. Undo history is retained for the engine session only.
+A command can add/update/remove/move/split clips, add/remove tracks, add timelines or update project settings. `clip.update` accepts ordinary document properties. Multi-clip commands act on a set in one call with the interface's semantics: `clips.move` (clipIds, deltaStart, optional deltaTrack; refused whole when any member would land on a locked track or before zero), `clips.remove`, `clips.duplicate` (copies land after their sources), `clips.add` (entries of track and clip) and `clips.mute`; capabilities lists them. A batch of commands is committed as one undo step. Supply the current revision to detect conflicts. REST PUT `/api/projects/{id}` also checks revision. Undo history is retained for the engine session only.
 
 ## Orchestration
 

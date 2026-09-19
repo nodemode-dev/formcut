@@ -4,7 +4,9 @@ Import media in Media, drag it to a track, then select a clip. The Creator panel
 
 Choose a speed preset, then edit individual time/rate points. The curve expresses source speed over timeline time; changing it does not automatically change the clip's timeline duration. Use trim to choose duration. A motion preset creates ordinary editable keyframes.
 
-Visual/audio stacks process top to bottom. Each has an amount control; supported visual parameters appear below the stack. Audio volume ranges from zero to four; pan ranges from left to right. Detach audio creates an audio clip preserving timing, then mutes the source video.
+Visual/audio stacks process top to bottom. Each has an amount control; a visual entry's declared parameters render below it as sliders carrying the catalogue's minimum, maximum, step and unit, with a localized label and a reset to the declared default. The renderer clamps incoming values to the same declarations, so out-of-range values from any caller render clamped. Audio volume ranges from zero to four; pan ranges from left to right. Detach audio creates an audio clip preserving timing, then mutes the source video.
+
+Select several clips with Shift or Cmd click, a marquee drag on empty lane space in the select tool, or Cmd+A; Esc clears. Moving, deleting, duplicating, pasting or muting a multi-selection acts on the whole set as one undo step, keeps relative offsets, and a move is refused whole if any member would land on a locked track. New projects start from a format sheet (9:16, 16:9, 1:1, 4:5 and a frame rate); work saves itself two seconds after the last change unless autosave is off in Settings > Project, and unsaved work is journaled so the start screen can restore it after a crash.
 
 Upload a .cube LUT or .wgsl shader under Advanced. Examples are provided in `examples/`. WGSL uses group 0 bindings: 0 is read-only storage array<vec4<f32>> input RGBA, 1 is read-only storage array<f32> containing width, height, time and zero, and 2 is writable storage array<vec4<f32>> output. Entry point `main` uses workgroup_size(64). Index bounds are the shader author's responsibility. Compilation is checked on import.
 
