@@ -63,3 +63,7 @@ the launchers export before starting. `.env` is ignored by git.
   interface modules added over the same period.
 - `.claude/skills/formcut-skillset/` describes this codebase for local
   development, generated from the tree rather than written from memory.
+
+
+### v0.56.0
+Per-timeline formats resolve at `validate_document`; reversed intermediates cache under `DATA_DIR/reversed`; magnetic tracks settle in the engine's emit funnel and after each RPC batch.

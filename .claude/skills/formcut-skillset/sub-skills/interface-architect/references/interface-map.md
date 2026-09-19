@@ -2,7 +2,7 @@
 
 Contents: modules, engine commands, emitted names, tokens, stylesheet order.
 
-Derived from `frontend/src` at v0.55.0.
+Derived from `frontend/src` at v0.56.0.
 
 ## Contents
 
@@ -125,3 +125,7 @@ tokens, creator, app, themes, containers, settings. The shared containering
 sheet sits between the app's own styles and the popout's so the popout keeps the
 last word about itself; moving it breaks the theme card previews, which lose a
 specificity tie decided by source order.
+
+## v0.56.0 delta
+
+Inspector rows: Reverse (`row.reverse`, job-polled with Preparing and Could not prepare), Crop (`row.crop`, stage crop mode with four edge grips), Flip vertical (`row.flipv`). Canvas: alignment guides on the `--guide` token snap moves and corner scales to edges, centre, thirds and other layers within 6 px; Alt bypasses. Track headers gain a magnet toggle. Easy: `ui/tool-tray.ts` (feature id `easy.tray`, hidden in Advanced) drives the same code paths as the Advanced keys, menus, inspector toggles and creator page select through the `editorVerbs` registry; the inspector shows one column per selection kind from the profile's `inspector.views` map via an `easy-hidden` class channel; effect cards carry favourite stars persisted at `formcut.favourites` and a 300 ms hover audition on a throwaway render session. Menu additions: Freeze frame, Reattach audio (partner-probed).

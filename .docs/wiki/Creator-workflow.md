@@ -77,3 +77,7 @@ filterable grid with thumbnails, templates, local models and a storage
 breakdown. Files dropped anywhere on it are imported. Media can be renamed,
 revealed in the file manager and deleted from there; a rename changes the
 library entry only, so a project's references cannot break.
+
+
+### v0.56.0
+Split (S, Cmd+B), rejoin, freeze frame (F), reverse, crop with canvas grips, vertical flip, reattach from either clip, canvas alignment guides (Alt bypasses), the Easy tool tray, the per-kind clip panel, favourites and hover audition.

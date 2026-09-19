@@ -51,3 +51,7 @@ python -m app.cli --grpc 18052
 TCP binds to 127.0.0.1 and uses newline-delimited JSON. Unix sockets require OS support; remove a stale socket path after an interrupted server. The generic gRPC method is `/formcut.Automation/Call`, unary request/response with UTF-8 JSON bytes. It is not a generated protobuf service, and no compatibility with any other product's protocol is claimed. The frozen entry point accepts `--headless` before these CLI options.
 
 WebSocket `/api/rpc/ws` sends the same JSON objects over a loopback connection. HTTP, stdin, TCP and gRPC have been exercised, most recently a full HTTP sweep that created a project, applied a four-command edit, rejected a stale revision, ran undo and redo, answered a batch, and drove an export to a finished file. WebSocket and Unix socket are implemented but still unverified. Do not use the GUI and a second standalone CLI process as concurrent writers to one data directory. Use HTTP RPC on the GUI's engine instead.
+
+
+### v0.56.0
+`project.edit` adds `clips.split`, `clip.rejoin`, `clip.freeze-insert`, `clip.reattach`; magnetic tracks settle after each batch; `clip_properties` includes `reversed`; per-timeline formats apply to `project.export`.

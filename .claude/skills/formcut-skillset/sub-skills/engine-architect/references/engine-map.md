@@ -1,6 +1,6 @@
 # Engine map
 
-Derived from the tree at v0.55.0, not from memory. Regenerate by listing
+Derived from the tree at v0.56.0, not from memory. Regenerate by listing
 `backend/app` and reading each module's router prefix and decorators.
 
 ## Modules that serve routes
@@ -75,3 +75,7 @@ Under `FORMCUT_DATA_DIR` or the platform default: `media/`, `projects/`,
 `templates/`, `renders/`, `thumbs/`, `peaks/`, `filmstrips/`,
 `catalogue-previews/`, `models/`, `ai-runtime/`, `recovery/`, `providers.json` (0600).
 `GET /api/storage` measures these and marks which are rebuildable.
+
+## v0.56.0 delta
+
+Creator commands added: `clip.rejoin`, `clip.freeze-insert`, `clip.reattach`; `clips.split` splits a list at one time in one step. `clip.creator` may now patch `reversed` and `crop`. Clip fields added: `reversed`, `crop` (four edge fractions, 0 to 0.45), `detachedFrom`; `ClipTransform.flipV`; `Track.magnetic` (clips settle gapless from zero in the engine's emit funnel and after each RPC `project.edit` batch); `Timeline` may carry `width`, `height`, `fps`, resolved by `validate_document` so the renderer, export and RPC read the active timeline's format. The engine keeps `baseFormat`, recorded by both save paths and the journal. `POST /api/media/{id}/reverse` builds a chunked reversed intermediate under `DATA_DIR/reversed`; `POST /api/media/{id}/freeze` extracts one full-resolution frame inline.

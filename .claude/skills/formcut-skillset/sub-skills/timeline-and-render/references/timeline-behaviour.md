@@ -93,3 +93,7 @@
 - The keyframe graph's curves toggle (`formcut.kfCurves`, default on) draws
   the sampled eased path when on and dashed straight segments between the
   keyframes when off; the disclosure on each head shows a diamond.
+
+## v0.56.0 delta
+
+A magnetic track keeps its clips sorted and packed from zero after every mutation in both command paths; Easy-created projects mark their first video track magnetic. Freeze-insert cuts at the hold point, shifts later clips right by the hold and inserts the still in one step. Per-timeline formats: the active timeline's `width`/`height`/`fps` override the project base at validation, so preview sessions and exports of the same project differ per timeline.
