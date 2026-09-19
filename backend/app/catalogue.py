@@ -324,3 +324,19 @@ def imported_looks() -> list[dict]:
             if item.get("kind") == "lut":
                 out.append({"id": item["id"], "name": item.get("name", "Look"), "group": "Imported"})
     return out
+
+
+# Parameters measured in pixels must follow the resolution actually decoded, or
+# a preview (which decodes small) blurs harder than the export of the same clip.
+PIXEL_PARAMS = {name for name, spec in PARAM_SPECS.items() if spec.get("unit") == "px"}
+
+
+def scale_pixel_params(params: dict, scale: float) -> dict:
+    """Scale pixel-measured parameters by a decode ratio, keeping declared floors."""
+    if not params or abs(scale - 1.0) < 1e-6:
+        return params
+    out = dict(params)
+    for name in PIXEL_PARAMS & set(out):
+        spec = PARAM_SPECS[name]
+        out[name] = max(float(spec["min"]), float(out[name]) * scale)
+    return out

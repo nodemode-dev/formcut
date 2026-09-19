@@ -1,5 +1,5 @@
 from .video_source import acquire, recycle
-from .catalogue import GRADES
+from .catalogue import scale_pixel_params, GRADES
 import math
 from pathlib import Path
 
@@ -110,6 +110,7 @@ class FrameRenderer:
         self.stills = {}
         self.frame_numbers = {}
         self.frames = {}
+        self.decode_scale = {}
         self.closed = False
 
     def close(self):
@@ -134,6 +135,8 @@ class FrameRenderer:
             paths = list(MEDIA_DIR.glob(f"{media_id}.*"))
         if not paths:
             raise ValueError("Media file is missing: " + media_id)
+        record = _find(media_id)
+        native = max(float(record.get("width") or 0), float(record.get("height") or 0))
         if clip["kind"] == "image":
             if media_id not in self.stills:
                 with Image.open(paths[0]) as image:
@@ -141,7 +144,10 @@ class FrameRenderer:
                     if self.decode_limit and max(still.size) > self.decode_limit:
                         still.thumbnail((self.decode_limit, self.decode_limit), Image.Resampling.LANCZOS)
                     self.stills[media_id] = np.array(still)
-            return apply_crop(self.stills[media_id].copy(), clip)
+            still = self.stills[media_id]
+            if native:
+                self.decode_scale[media_id] = max(still.shape[0], still.shape[1]) / native
+            return apply_crop(still.copy(), clip)
         if media_id not in self.sources:
             self.sources[media_id] = acquire(paths[0], self.decode_limit, time)
         capture = self.sources[media_id]
@@ -161,7 +167,27 @@ class FrameRenderer:
         result = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
         self.frame_numbers[media_id] = wanted
         self.frames[media_id] = result
+        if native:
+            self.decode_scale[media_id] = max(result.shape[0], result.shape[1]) / native
         return apply_crop(result.copy(), clip)
+
+    def scaled_effects(self, effects: list[dict], clip: dict) -> list[dict]:
+        """Pixel-measured parameters follow the resolution actually decoded.
+
+        A preview decodes small, so a radius in pixels would cover far more of
+        the frame than the same radius does in a full-resolution export. The
+        ratio is recorded when the frame is decoded, so both agree.
+        """
+        scale = self.decode_scale.get(clip.get("mediaId"), 1.0)
+        if abs(scale - 1.0) < 1e-6:
+            return effects
+        out = []
+        for entry in effects:
+            copy = dict(entry)
+            if copy.get("params"):
+                copy["params"] = scale_pixel_params(copy["params"], scale)
+            out.append(copy)
+        return out
 
     def text_frame(self, clip: dict) -> np.ndarray:
         text = clip.get("textStyle") or {"content": clip.get("label", "Title")}
@@ -319,6 +345,8 @@ class FrameRenderer:
                 if entry.get("keys"):
                     # K3: keyed parameters resolve per frame before the stack runs
                     entry["params"] = effect_params_at(entry, local)
+                # Pixel-measured parameters follow the decoded resolution, so a
+                # preview and its export agree on how strong an effect looks.
             if clip.get("effectId"):
                 effects.insert(0, {"id": LEGACY.get(clip["effectId"], clip["effectId"]), "amount": 1})
             if clip["kind"] == "filter":
@@ -329,13 +357,15 @@ class FrameRenderer:
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
                     still = apply_colour_panel(still, clip.get("colour"))
-                    still = apply_effects(still, effects, 0) if effects else still
+                    scaled = self.scaled_effects(effects, clip)
+                    still = apply_effects(still, scaled, 0) if scaled else still
                     self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
             else:
                 image = self.text_frame(clip) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
                 image = apply_colour_panel(image, clip.get("colour"))
-                image = apply_effects(image, effects, local) if effects else image
+                scaled = self.scaled_effects(effects, clip)
+                image = apply_effects(image, scaled, local) if scaled else image
                 if clip.get("lutId"):
                     image = apply_lut(image, clip["lutId"], float(clip.get("lutIntensity", 1)))
             if clip.get("shaderId"):
