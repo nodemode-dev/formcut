@@ -486,5 +486,9 @@
   "mask.linear": "Linear",
   "mask.path": "Drawn path",
   "mask.pen": "Pen tool",
-  "row.maskangle": "Mask angle"
+  "row.maskangle": "Mask angle",
+  "tl.add": "Add timeline",
+  "tl.remove": "Remove this timeline",
+  "Back half a second": "Back half a second",
+  "Forward half a second": "Forward half a second"
 }

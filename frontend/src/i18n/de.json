@@ -486,5 +486,9 @@
   "mask.linear": "Linear",
   "mask.path": "Gezeichneter Pfad",
   "mask.pen": "Zeichenstift",
-  "row.maskangle": "Maskenwinkel"
+  "row.maskangle": "Maskenwinkel",
+  "tl.add": "Zeitleiste hinzufügen",
+  "tl.remove": "Diese Zeitleiste entfernen",
+  "Back half a second": "Eine halbe Sekunde zurück",
+  "Forward half a second": "Eine halbe Sekunde vor"
 }

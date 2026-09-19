@@ -32,13 +32,19 @@ export function reconcileTimelineStructure(root: HTMLElement, engine: ProjectEng
     trackControls(lanes[index].previousElementSibling as HTMLElement, index, engine);
     if (name && name.textContent !== track.name) name.textContent = track.name;
   });
-  const tabs = root.querySelector<HTMLElement>('[data-ref="tabs"]')!;
+  // Tabs live in the scrolling strip, not in the row beside it; appending them
+  // to the row left every new timeline outside the strip, which collapsed the
+  // strip to nothing and defeated its scrolling.
+  const tabs = root.querySelector<HTMLElement>('[data-ref="tab-strip"]')
+    ?? root.querySelector<HTMLElement>('[data-ref="tabs"]')!;
   const existing = [...tabs.querySelectorAll<HTMLElement>(".tl-tab")];
   while (existing.length > state.timelines.length) existing.pop()!.remove();
   state.timelines.forEach((timeline, index) => {
     let button = existing[index];
-    if (!button) { button = document.createElement("button"); button.className = "tl-tab"; button.dataset.tl = String(index); tabs.insertBefore(button, tabs.querySelector(".iconbtn")); }
+    if (!button) { button = document.createElement("button"); button.className = "tl-tab"; button.dataset.tl = String(index); tabs.append(button); }
+    if (button.querySelector("input")) return;   // a rename is in progress
     if (button.textContent !== timeline.name) button.textContent = timeline.name;
+    if (button.title !== timeline.name) button.title = timeline.name;
     button.classList.toggle("is-active", index === state.activeTimeline);
   });
 }

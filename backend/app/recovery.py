@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 import time
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -59,9 +60,15 @@ def write_journal(body: JournalBody) -> dict[str, Any]:
     RECOVERY_DIR.mkdir(parents=True, exist_ok=True)
     path = _path(body.key)
     record = {"written": time.time(), "revision": body.revision, "document": body.document}
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(record), encoding="utf-8")
-    tmp.replace(path)
+    # Each write gets its own temporary name. With one shared name, two journal
+    # writes landing together raced: the first replace consumed the file the
+    # second was about to move, and that one failed with a missing temp file.
+    tmp = path.with_name(f"{path.stem}.{uuid.uuid4().hex}.tmp")
+    try:
+        tmp.write_text(json.dumps(record), encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
     return {"key": body.key, "written": record["written"]}
 
 

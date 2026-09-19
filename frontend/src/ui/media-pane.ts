@@ -9,6 +9,7 @@ import { transcribeClip, typedCaptions } from "../engine/captions";
 import { t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
+import { categoryIcon } from "./category-icons";
 import { api } from "../engine/api";
 
 const TABS: Array<[string, string]> = [
@@ -39,9 +40,9 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     </div>
     <div class="media-body" data-view="effects">
       <nav class="media-cats" data-ref="cats">
-        ${EFFECT_GROUPS.map(([group, cats]) => `<div class="cat-group" data-mode="effect">${icon("chevD")}${group}</div>${cats.map((c) => `<button class="cat-item${c === "Blur" ? " is-active" : ""}" data-mode="effect" data-cat="${c}">${c}</button>`).join("")}`).join("")}
+        ${EFFECT_GROUPS.map(([group, cats]) => `<div class="cat-group" data-mode="effect">${icon("chevD")}${group}</div>${cats.map((c) => `<button class="cat-item${c === "Blur" ? " is-active" : ""}" data-mode="effect" data-cat="${c}">${categoryIcon(c)}<span>${c}</span></button>`).join("")}`).join("")}
         <div class="cat-group" data-mode="filter" hidden>${icon("chevD")}Filters</div>
-        ${FILTER_GROUPS.map((c) => `<button class="cat-item" data-mode="filter" data-cat="${c}" hidden>${c}</button>`).join("")}
+        ${FILTER_GROUPS.map((c) => `<button class="cat-item" data-mode="filter" data-cat="${c}" hidden>${categoryIcon(c)}<span>${c}</span></button>`).join("")}
       </nav>
       <div class="media-main">
         <div class="search-field">${icon("search")}<input data-ref="fx-search" placeholder="${t("fx.search")}" /></div>

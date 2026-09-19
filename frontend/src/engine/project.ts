@@ -215,10 +215,30 @@ export class ProjectEngine {
         s.playhead = s.duration;
         this.emit("playhead");
         break;
+      case "transport.skip":
+        // The rewind and fast-forward buttons move in half seconds. Stepping a
+        // single frame is still available on the arrow keys, where frame
+        // accuracy is what a person is after.
+        s.playhead = Math.min(Math.max(s.playhead + (payload as number), 0), s.duration);
+        this.emit("playhead");
+        break;
       case "transport.step":
         s.playhead = Math.min(Math.max(s.playhead + (payload as number) / s.fps, 0), s.duration);
         this.emit("playhead");
         break;
+      case "timeline.rename": {
+        const p = payload as { index: number; name: string };
+        const target = s.timelines[p.index];
+        if (!target) break;
+        const next = String(p.name).trim().slice(0, 18);
+        if (!next || next === target.name) break;
+        this.pushHistory();
+        target.name = next;
+        s.saved = false;
+        this.emit("timeline");
+        this.emit("project");
+        break;
+      }
       case "timeline.activate":
         if (!s.timelines[Number(payload)]) break;
         this.pause();

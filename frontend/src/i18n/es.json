@@ -486,5 +486,9 @@
   "mask.linear": "Lineal",
   "mask.path": "Trazado",
   "mask.pen": "Herramienta pluma",
-  "row.maskangle": "Ángulo de la máscara"
+  "row.maskangle": "Ángulo de la máscara",
+  "tl.add": "Añadir línea de tiempo",
+  "tl.remove": "Quitar esta línea de tiempo",
+  "Back half a second": "Retroceder medio segundo",
+  "Forward half a second": "Avanzar medio segundo"
 }

@@ -995,3 +995,29 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* Every studio section can fill the window. */
 .studio-modal.is-full .studio-pair { width: 100vw; height: 100vh; max-width: none; max-height: none; border-radius: 0; }
 .studio-modal.is-full .set-window { max-height: none; }
+
+/* Category buttons carry the supplied icons and read as full-width pills. */
+.cat-item { display: flex; align-items: center; gap: var(--sp-2); width: 100%; text-align: left; }
+.cat-item .cat-icon { flex: 0 0 auto; opacity: 0.85; }
+.cat-item.is-active .cat-icon { opacity: 1; }
+.cat-item > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Timeline tabs: ten fit, the rest scroll. Each tab keeps one width with its
+   own padding and clips a long name, so adding timelines never reshapes the row. */
+.tl-tabs { flex-wrap: nowrap; }
+.tl-tab-strip {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 2px;
+  flex: 1 1 auto; min-width: 0;
+  max-width: calc(10 * 124px);
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin;
+}
+.tl-tab-strip::-webkit-scrollbar { height: 6px; }
+.tl-tab-strip::-webkit-scrollbar-thumb { background: var(--control); border-radius: 3px; }
+.tl-tab {
+  flex: 0 0 auto; width: 122px; padding: 7px 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+}
+.tl-tab-rename {
+  width: 100%; padding: 0; border: 0; background: transparent;
+  color: var(--ink); font: inherit; text-align: center; outline: none;
+}

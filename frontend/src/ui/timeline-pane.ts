@@ -53,8 +53,11 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   el.className = "pane pane-timeline";
   el.innerHTML = `
     <div class="tl-tabs" data-ref="tabs" data-feature="tl.tabs">
-      ${s.timelines.map((t, i) => `<button class="tl-tab${i === s.activeTimeline ? " is-active" : ""}" data-tl="${i}">${t.name}</button>`).join("")}
-      <button class="iconbtn">${icon("plus")}</button>
+      <div class="tl-tab-strip" data-ref="tab-strip">
+        ${s.timelines.map((t, i) => `<button class="tl-tab${i === s.activeTimeline ? " is-active" : ""}" data-tl="${i}" title="${t.name}">${t.name}</button>`).join("")}
+      </div>
+      <button class="iconbtn" data-ref="tl-add" title="${t("tl.add")}">${icon("plus")}</button>
+      <button class="iconbtn" data-ref="tl-remove" title="${t("tl.remove")}">${icon("trash")}</button>
       <span class="spacer"></span>
       <button class="select-chip">${icon("layout")}${icon("chevD")}</button>
     </div>
@@ -513,7 +516,43 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   });
   el.dataset.scale = String(PX_PER_SEC);
   const tabControls = el.querySelector(".tl-tabs")!;
-  tabControls.querySelector<HTMLButtonElement>(".iconbtn")!.addEventListener("click", () => engine.dispatch("timeline.add", {}));
+  tabControls.querySelector<HTMLButtonElement>('[data-ref="tl-add"]')!.addEventListener("click", () => engine.dispatch("timeline.add", {}));
+  // Removing a timeline belongs with the tabs it removes, not in the clip tools.
+  tabControls.querySelector<HTMLButtonElement>('[data-ref="tl-remove"]')!.addEventListener("click", () => {
+    if (engine.snapshot.timelines.length > 1) engine.dispatch("timeline.remove", engine.snapshot.activeTimeline);
+  });
+  // Double-click renames a tab in place. The field keeps the tab's own width and
+  // caps what can be typed, so a long name cannot push the strip out of shape.
+  const TAB_NAME_LIMIT = 18;
+  tabControls.addEventListener("dblclick", (event) => {
+    const tab = (event.target as HTMLElement).closest<HTMLElement>(".tl-tab");
+    if (!tab || tab.querySelector("input")) return;
+    const index = Number(tab.dataset.tl);
+    const current = engine.snapshot.timelines[index];
+    if (!current) return;
+    const field = document.createElement("input");
+    field.className = "tl-tab-rename";
+    field.value = current.name;
+    field.maxLength = TAB_NAME_LIMIT;
+    tab.textContent = "";
+    tab.append(field);
+    field.focus();
+    field.select();
+    const finish = (commit: boolean) => {
+      const next = field.value.trim().slice(0, TAB_NAME_LIMIT);
+      field.remove();
+      tab.textContent = commit && next ? next : current.name;
+      if (commit && next && next !== current.name) {
+        engine.dispatch("timeline.rename", { index, name: next });
+      }
+    };
+    field.addEventListener("keydown", (key) => {
+      key.stopPropagation();
+      if (key.key === "Enter") { key.preventDefault(); finish(true); }
+      if (key.key === "Escape") { key.preventDefault(); finish(false); }
+    });
+    field.addEventListener("blur", () => finish(true));
+  });
   const toolbar = el.querySelector(".tl-toolbar")!;
   const control = (ref: string) => toolbar.querySelector<HTMLButtonElement>(`[data-ref="${ref}"]`);
   control("zoom-in")?.addEventListener("click", () => zoom(1.4));
