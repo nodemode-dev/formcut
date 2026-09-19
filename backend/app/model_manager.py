@@ -6,6 +6,7 @@ import threading
 
 import httpx
 from fastapi import APIRouter, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 
 from . import jobs
@@ -257,3 +258,71 @@ def set_source(model: str, mode: str, url: str | None) -> dict:
 
 def pin_for(name: str) -> str | None:
     return PINNED.get(name)
+
+
+# Local speech is not one model. A person may add another ONNX voice model and
+# its voices file, which is registered beside Kokoro and listed like it; the
+# entry lives in the data directory so it survives an update of the app.
+SPEECH_FILE = ROOT / "speech-models.json"
+
+
+class SpeechModelInput(BaseModel):
+    id: str = Field(min_length=2, max_length=48, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    name: str = Field(min_length=1, max_length=80)
+    model_url: str = Field(min_length=8, max_length=2000)
+    voices_url: str | None = None
+    license: str = "unknown"
+
+
+def _speech_extra() -> dict:
+    if SPEECH_FILE.is_file():
+        try:
+            return json.loads(SPEECH_FILE.read_text())
+        except ValueError:
+            return {}
+    return {}
+
+
+def load_speech_models() -> None:
+    """Merge any added speech models into the registry at start."""
+    for key, entry in _speech_extra().items():
+        MODELS.setdefault(key, entry)
+
+
+@router.get("/speech")
+def list_speech_models() -> dict:
+    return {"models": [{"id": key, **entry} for key, entry in _speech_extra().items()],
+            "builtIn": "local-speech"}
+
+
+@router.post("/speech", status_code=201)
+def add_speech_model(body: SpeechModelInput) -> dict:
+    key = f"speech-{body.id}"
+    if key in MODELS and key not in _speech_extra():
+        raise HTTPException(409, "That id is already used by a built-in model")
+    files = {f"{body.id}.onnx": body.model_url}
+    if body.voices_url:
+        files[f"{body.id}-voices.bin"] = body.voices_url
+    entry = {"name": body.name, "license": body.license, "files": files, "kind": "speech", "added": True}
+    ROOT.mkdir(parents=True, exist_ok=True)
+    data = _speech_extra()
+    data[key] = entry
+    SPEECH_FILE.write_text(json.dumps(data, indent=2))
+    MODELS[key] = entry
+    return {"id": key, **entry}
+
+
+@router.delete("/speech/{key}", status_code=204)
+def remove_speech_model(key: str) -> None:
+    data = _speech_extra()
+    if key not in data:
+        raise HTTPException(404, "Unknown speech model")
+    for name in data[key].get("files", {}):
+        (ROOT / name).unlink(missing_ok=True)
+        (ROOT / (name + ".json")).unlink(missing_ok=True)
+    data.pop(key)
+    SPEECH_FILE.write_text(json.dumps(data, indent=2))
+    MODELS.pop(key, None)
+
+
+load_speech_models()

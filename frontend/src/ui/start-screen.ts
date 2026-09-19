@@ -62,7 +62,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       </nav>
       <div class="home-rail-foot">
         <select class="mini-select" data-ref="lang" aria-label="${t("home.language")}">
-          ${LOCALE_NAMES.map((entry) => `<option value="${entry.code}"${entry.code === locale ? " selected" : ""}>${entry.name}</option>`).join("")}
+          ${LOCALE_NAMES.map((entry) => `<option data-no-i18n value="${entry.code}"${entry.code === locale ? " selected" : ""}>${entry.name}</option>`).join("")}
         </select>
         <div class="start-sub">v${__APP_VERSION__}</div>
       </div>

@@ -16,13 +16,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const tab = (page: string, glyph: string, label: string, active = false) => `<button class="set-tab${active ? " is-active" : ""}" data-page="${page}">${icon(glyph)}<span>${label}</span></button>`;
   modal.innerHTML = `<div class="set-pair studio-pair">
     <nav class="set-rail studio-rail" aria-label="Studio" data-collapsed="false">
-      <div class="set-rail-head"><strong>Studio</strong>
-        <button class="iconbtn rail-collapse" data-rail-toggle title="Collapse" aria-label="Collapse sidebar" aria-expanded="true">${icon("chevL")}</button>
-      </div>
-      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "mic", t("gen.audio"))}${tab("templates", "template", "Timeline templates")}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
+      <div class="set-rail-head"><strong>Studio</strong></div>
+      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "mic", t("gen.audio"))}${tab("templates", "template", "Timeline templates")}${tab("localvideo", "video", t("localvideo.title"))}${tab("localimage", "image", t("localimage.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
+      <button class="set-collapse" data-rail-toggle title="${t("set.collapse")}">${icon("chevL")}</button>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
-    <header class="set-head"><strong data-page-title>Project</strong><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></header>
+    <header class="set-head"><strong data-page-title>Project</strong><button class="iconbtn" data-full title="${text("Fullscreen")}" aria-label="${text("Fullscreen")}" aria-pressed="false">${icon("fullscreen")}</button><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></header>
     <div class="set-body studio-content">
     <section data-view="project" class="set-view">
       <div class="panel-section"><div class="panel-section-head"><span>Project settings</span></div><div class="panel-rows"><label>Width <input data-width type="number" min="16" max="7680"></label><label>Height <input data-height type="number" min="16" max="7680"></label><label>Frame rate <input data-fps type="number" min="1" max="120"></label><div class="studio-actions"><button class="tool-chip is-primary" data-settings>Apply settings</button></div></div></div>
@@ -51,13 +50,38 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       <div class="panel-section"><div class="panel-section-head"><span>${t("gen.results")}</span><small>${t("gen.results.hint")}</small></div>
         <div class="card-grid stock-grid" data-gen-grid="${kind}"></div></div>
     </section>`).join("")}
+    <section data-view="urldl" class="set-view" hidden>
+      <div class="panel-section">
+        <div class="panel-section-head"><span>${t("urldl.title")}</span><small>${t("urldl.hint")}</small></div>
+        <div class="panel-rows">
+          <div class="stock-row"><input data-stock-url type="url" placeholder="${t("urldl.placeholder")}" aria-label="${t("urldl.title")}"><button class="tool-chip is-primary" data-stock-url-go>${icon("download")}${t("stock.urlgo")}</button></div>
+          <label>${t("urldl.quality")} <select data-url-quality><option value="best">${t("urldl.best")}</option><option value="1080">1080p</option><option value="720">720p</option><option value="audio">${t("urldl.audioonly")}</option></select></label>
+          <p class="stock-note" data-stock-url-note></p>
+        </div>
+      </div>
+    </section>
+    ${["video", "image"].map((kind) => `
+    <section data-view="local${kind}" class="set-view" hidden>
+      <div class="panel-section">
+        <div class="panel-section-head"><span>${t(`local${kind}.title`)}</span><small>${t(`local${kind}.hint`)}</small></div>
+        <div class="panel-rows">
+          <div class="stock-row">
+            <input data-local-search="${kind}" type="search" placeholder="${t("local.search")}" aria-label="${t("local.search")}">
+            <label>${t("local.sort")} <select data-local-sort="${kind}"><option value="added">${t("local.added")}</option><option value="name">${t("local.name")}</option><option value="duration">${t("local.duration")}</option></select></label>
+          </div>
+          <p class="stock-note" data-local-note="${kind}"></p>
+        </div>
+      </div>
+      <div class="panel-section"><div class="panel-section-head"><span>${t("local.inlibrary")}</span><small data-local-count="${kind}"></small></div>
+        <div class="card-grid stock-grid" data-local-grid="${kind}"></div></div>
+    </section>`).join("")}
     <section data-view="stock" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Pexels</span><small><a class="stock-attrib" href="https://www.pexels.com" target="_blank" rel="noreferrer">Photos and videos provided by Pexels</a></small></div><div class="panel-rows">
         <div class="stock-row"><div class="seg" data-stock-kind><button class="is-active" data-val="video">${icon("video")}${t("stock.video")}</button><button data-val="photo">${icon("image")}${t("stock.photos")}</button></div><input data-stock-q type="search" placeholder="Search Pexels" aria-label="Search Pexels"><button class="tool-chip is-primary" data-stock-go>${icon("search")}${t("stock.search")}</button></div>
         <div class="stock-row stock-filters"><label>Orientation <select data-stock-orientation><option value="">Any</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option><option value="square">Square</option></select></label><label>Size <select data-stock-size><option value="">Any</option><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select></label><label data-stock-color-row>Colour <select data-stock-color><option value="">Any</option><option value="red">Red</option><option value="orange">Orange</option><option value="yellow">Yellow</option><option value="green">Green</option><option value="turquoise">Turquoise</option><option value="blue">Blue</option><option value="violet">Violet</option><option value="pink">Pink</option><option value="brown">Brown</option><option value="black">Black</option><option value="gray">Gray</option><option value="white">White</option></select></label></div>
         <p class="stock-note" data-stock-note></p>
       </div></div>
-      <div class="panel-section"><div class="panel-section-head"><span>Import from a link</span><small>yt-dlp, any site it supports</small></div><div class="panel-rows"><div class="stock-row"><input data-stock-url type="url" placeholder="Paste a video link" aria-label="Video link"><button class="tool-chip" data-stock-url-go>${icon("download")}${t("stock.urlgo")}</button></div><p class="stock-note" data-stock-url-note></p></div></div>
+
       <div class="panel-section stock-results"><div class="panel-section-head"><span>Results</span><small data-stock-page></small></div><div class="card-grid stock-grid" data-stock-grid></div><div class="stock-row stock-pager"><button class="tool-chip" data-stock-prev disabled>${icon("chevL")}${t("stock.prev")}</button><button class="tool-chip" data-stock-next disabled>${t("stock.next")}${icon("chevR")}</button></div></div>
     </section>
     <section data-view="templates" class="set-view" hidden>
@@ -278,16 +302,62 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     }
   };
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });
+  // The local video and local image sections are a view of the library itself,
+  // so what is already imported is findable without leaving the studio.
+  const paintLocal = () => {
+    for (const kind of ["video", "image"] as const) {
+      const grid = modal.querySelector<HTMLElement>(`[data-local-grid="${kind}"]`);
+      if (!grid) continue;
+      const query = (modal.querySelector<HTMLInputElement>(`[data-local-search="${kind}"]`)?.value ?? "").toLowerCase();
+      const sort = modal.querySelector<HTMLSelectElement>(`[data-local-sort="${kind}"]`)?.value ?? "added";
+      let items = bin.all.filter((item) => item.kind === kind);
+      if (query) items = items.filter((item) => item.name.toLowerCase().includes(query));
+      if (sort === "name") items = [...items].sort((a, b) => a.name.localeCompare(b.name));
+      else if (sort === "duration") items = [...items].sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
+      const count = modal.querySelector<HTMLElement>(`[data-local-count="${kind}"]`);
+      if (count) count.textContent = String(items.length);
+      grid.replaceChildren(...items.map((item) => {
+        const card = document.createElement("div");
+        card.className = "effect-card stock-card";
+        card.innerHTML = `<div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy">` +
+          `<span class="stock-badge">${item.duration ? Math.round(item.duration) + "s" : (item.width ?? "") + "x" + (item.height ?? "")}</span></div>` +
+          `<div class="effect-name">${escapeHtml(item.name)}</div>`;
+        card.addEventListener("dblclick", () => {
+          const state = engine.snapshot;
+          engine.dispatch("clip.add", { trackIndex: 0, clip: {
+            id: crypto.randomUUID(), kind: item.kind, label: item.name, mediaId: item.id,
+            start: state.playhead, duration: item.duration || 4 } });
+        });
+        return card;
+      }));
+    }
+  };
+  for (const kind of ["video", "image"] as const) {
+    modal.querySelector(`[data-local-search="${kind}"]`)?.addEventListener("input", paintLocal);
+    modal.querySelector(`[data-local-sort="${kind}"]`)?.addEventListener("change", paintLocal);
+  }
+  bin.subscribe(() => paintLocal());
+
   // The rail collapses to icons, like the settings popout, and remembers it.
   const rail = modal.querySelector<HTMLElement>(".studio-rail")!;
   const railToggle = modal.querySelector<HTMLButtonElement>("[data-rail-toggle]")!;
   const setRail = (collapsed: boolean) => {
+    rail.classList.toggle("is-collapsed", collapsed);
     rail.dataset.collapsed = String(collapsed);
     railToggle.setAttribute("aria-expanded", String(!collapsed));
     railToggle.title = collapsed ? "Expand" : "Collapse";
     try { localStorage.setItem("formcut.studio.rail", collapsed ? "collapsed" : "open"); } catch { /* ignore */ }
   };
-  railToggle.addEventListener("click", () => setRail(rail.dataset.collapsed !== "true"));
+  railToggle.addEventListener("click", () => setRail(!rail.classList.contains("is-collapsed")));
+  const fullButton = modal.querySelector<HTMLButtonElement>("[data-full]")!;
+  fullButton.addEventListener("click", () => {
+    const full = modal.classList.toggle("is-full");
+    fullButton.setAttribute("aria-pressed", String(full));
+    try { localStorage.setItem("formcut.studio.full", full ? "on" : "off"); } catch { /* ignore */ }
+  });
+  try {
+    if (localStorage.getItem("formcut.studio.full") === "on") { modal.classList.add("is-full"); fullButton.setAttribute("aria-pressed", "true"); }
+  } catch { /* ignore */ }
   try { setRail(localStorage.getItem("formcut.studio.rail") === "collapsed"); } catch { setRail(false); }
 
   // Generation: the sheet builds itself from what the engine says it can do, so
