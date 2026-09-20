@@ -1,5 +1,5 @@
 import { MASK_SHAPES } from "./types";
-import type { Keyframe as ClipKeyframe } from "./types";
+import type { Keyframe as ClipKeyframe, MaskPoint } from "./types";
 import {
   defaultTextStyle,
   defaultTransform,
@@ -251,6 +251,47 @@ export class ProjectEngine {
         else delete (s as unknown as Record<string, unknown>).background;
         s.saved = false;
         this.emit("project");
+        this.emit("clips");
+        break;
+      }
+      case "clip.mask-track": {
+        // A tracked mask is stored as anchors over time, so it stays editable:
+        // a person can move a point on any frame afterwards.
+        const p = payload as { clipId: string; path: Array<{ t: number; mask: unknown }> };
+        const found = this.findClip(p.clipId);
+        if (!found || !p.path.length) break;
+        this.pushHistory();
+        found.clip.mask = {
+          ...(found.clip.mask ?? { x: 0, y: 0, w: 100, h: 100, feather: 0 }),
+          shape: "path",
+          points: p.path[0].mask as MaskPoint[],
+          track: p.path.map((entry) => ({ t: entry.t, points: entry.mask as MaskPoint[] })),
+        };
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
+      case "clip.remove-range": {
+        // Cutting a range out of a clip: the part after it moves back by the
+        // length removed, so nothing is left with a gap where a word was.
+        const p = payload as { clipId: string; start: number; end: number };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        const length = Math.max(0, p.end - p.start);
+        if (length <= 0.01) break;
+        this.pushHistory();
+        const track = s.timelines[s.activeTimeline].tracks[found.trackIndex];
+        const clip = found.clip;
+        const tail = {
+          ...structuredClone(clip),
+          id: crypto.randomUUID(),
+          start: p.start,
+          duration: Math.max(0.05, clip.start + clip.duration - p.end),
+          sourceIn: (clip.sourceIn ?? 0) + (p.end - clip.start),
+        };
+        clip.duration = Math.max(0.05, p.start - clip.start);
+        track.clips.splice(track.clips.indexOf(clip) + 1, 0, tail);
+        s.saved = false;
         this.emit("clips");
         break;
       }

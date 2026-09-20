@@ -215,6 +215,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <button class="tool-chip is-primary" data-ref="mask-subject">${t("mask.subject")}</button>
         </div>
         <p class="prop-note" data-ref="mask-pen-help" hidden>${t("mask.penhelp")}</p>
+        <div class="prop-row">
+          <span>${t("mask.track")}</span>
+          <button class="tool-chip is-primary" data-ref="mask-track">${t("mask.trackgo")}</button>
+          <span class="prop-aux" data-ref="mask-track-state"></span>
+        </div>
         <p class="prop-note" data-ref="mask-auto-note"></p>
         <div class="prop-row">
           <span>${t("mask.brush")}</span>
@@ -265,6 +270,20 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       </div>
       <div class="section" data-section="rhythm" data-feature="section.rhythm">
         <div class="section-head">${t("beat.title")} ${icon("chevD")}</div>
+        <div class="prop-row">
+          <span>${t("frame.auto")}</span>
+          <select class="mini-select" data-ref="reframe-aspect">
+            <option value="0.5625">9:16</option>
+            <option value="1">1:1</option>
+            <option value="0.8">4:5</option>
+          </select>
+          <button class="tool-chip" data-ref="reframe-go">${t("frame.apply")}</button>
+        </div>
+        <div class="prop-row">
+          <button class="tool-chip" data-ref="filler-find">${t("filler.find")}</button>
+          <button class="tool-chip is-primary" data-ref="filler-cut" hidden>${t("filler.cut")}</button>
+          <span class="prop-aux" data-ref="filler-state"></span>
+        </div>
         <div class="prop-row">
           <button class="tool-chip" data-ref="beat-find">${t("beat.find")}</button>
           <span class="prop-aux" data-ref="beat-state"></span>
@@ -827,6 +846,75 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       note.textContent = t("beat.failed");
     }
   })());
+
+  const clipNow = () => {
+    const id = engine.snapshot.selectedClipId;
+    return id ? engine.findClip(id) : null;
+  };
+  const post = async (path: string, body: unknown) =>
+    fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
+                  body: JSON.stringify(body) }).then((r) => r.json());
+
+  el.querySelector('[data-ref="mask-track"]')?.addEventListener("click", () => void (async () => {
+    const note = el.querySelector<HTMLElement>('[data-ref="mask-track-state"]');
+    const found = clipNow();
+    if (!found?.clip.mediaId || !note) return;
+    const points = found.clip.mask?.points ?? [];
+    if (points.length < 3) { note.textContent = t("mask.needpath"); return; }
+    note.textContent = t("mask.following");
+    try {
+      const reply = await post(`/api/media/${found.clip.mediaId}/track`, {
+        project: engine.snapshot, points, start: found.clip.start, duration: found.clip.duration,
+      });
+      // The mask becomes keyframed anchors, which is what makes it editable
+      // afterwards rather than a black box that moved something.
+      const frames = (reply.path ?? []).map((entry: { t: number; points: unknown }) => ({
+        t: entry.t, props: {}, mask: entry.points,
+      }));
+      engine.dispatch("clip.mask-track", { clipId: found.clip.id, path: frames });
+      note.textContent = `${reply.frames} ${t("mask.tracked")}`;
+    } catch { note.textContent = t("mask.failed"); }
+  })());
+
+  el.querySelector('[data-ref="reframe-go"]')?.addEventListener("click", () => void (async () => {
+    const found = clipNow();
+    if (!found?.clip.mediaId) return;
+    const aspect = Number(el.querySelector<HTMLSelectElement>('[data-ref="reframe-aspect"]')?.value ?? 0.5625);
+    const reply = await post(`/api/media/${found.clip.mediaId}/reframe`, {
+      project: engine.snapshot, start: found.clip.start, duration: found.clip.duration, aspect,
+    });
+    const frames = (reply.crops ?? []).map((crop: { t: number; x: number; w: number }) => ({
+      t: crop.t, props: { posX: Math.round((0.5 - (crop.x + crop.w / 2)) * 200) },
+    }));
+    engine.dispatch("clip.keyframes.replace", { clipId: found.clip.id, keyframes: frames });
+  })());
+
+  let fillerRanges: Array<{ start: number; end: number; word: string }> = [];
+  el.querySelector('[data-ref="filler-find"]')?.addEventListener("click", () => void (async () => {
+    const note = el.querySelector<HTMLElement>('[data-ref="filler-state"]');
+    const found = clipNow();
+    const captions = (found?.clip as { captions?: Array<{ start: number; end: number; text: string }> })?.captions;
+    if (!note) return;
+    if (!captions?.length) { note.textContent = t("filler.nocaptions"); return; }
+    const reply = await post("/api/media/fillers", { segments: captions, language: (document.documentElement.lang || "en").slice(0, 2) });
+    fillerRanges = reply.ranges ?? [];
+    note.textContent = `${reply.count} · ${reply.seconds}s`;
+    const cut = el.querySelector<HTMLElement>('[data-ref="filler-cut"]');
+    if (cut) cut.hidden = fillerRanges.length === 0;
+  })());
+  el.querySelector('[data-ref="filler-cut"]')?.addEventListener("click", () => {
+    const found = clipNow();
+    if (!found || !fillerRanges.length) return;
+    // Cut from the end backwards so each range still means what it meant.
+    for (const range of [...fillerRanges].sort((a, b) => b.start - a.start)) {
+      engine.dispatch("clip.remove-range", {
+        clipId: found.clip.id, start: found.clip.start + range.start, end: found.clip.start + range.end,
+      });
+    }
+    fillerRanges = [];
+    const cut = el.querySelector<HTMLElement>('[data-ref="filler-cut"]');
+    if (cut) cut.hidden = true;
+  });
 
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {

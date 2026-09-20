@@ -70,6 +70,8 @@ export interface MaskPoint {
 }
 
 export interface ClipMask {
+  /** The mask's anchors over time, when it has been tracked to a moving subject. */
+  track?: Array<{ t: number; points: MaskPoint[] }>;
   shape: MaskShape;
   points?: MaskPoint[];
   x: number;

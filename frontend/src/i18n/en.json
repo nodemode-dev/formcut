@@ -591,5 +591,15 @@
   "beat.working": "Working",
   "beat.ducked": "passages ducked",
   "beat.nospeech": "no other clip to duck under",
-  "beat.failed": "no audio to read"
+  "beat.failed": "no audio to read",
+  "mask.track": "Track",
+  "mask.trackgo": "Follow the subject",
+  "mask.following": "Following",
+  "mask.tracked": "frames tracked",
+  "mask.needpath": "draw a path first",
+  "frame.auto": "Auto reframe",
+  "frame.apply": "Reframe",
+  "filler.find": "Find filler words",
+  "filler.cut": "Remove them",
+  "filler.nocaptions": "make captions first"
 }

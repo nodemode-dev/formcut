@@ -591,5 +591,15 @@
   "beat.working": "Trabajando",
   "beat.ducked": "pasajes bajados",
   "beat.nospeech": "no hay otro clip",
-  "beat.failed": "sin audio"
+  "beat.failed": "sin audio",
+  "mask.track": "Seguir",
+  "mask.trackgo": "Seguir el sujeto",
+  "mask.following": "Siguiendo",
+  "mask.tracked": "fotogramas",
+  "mask.needpath": "dibuja un trazado primero",
+  "frame.auto": "Reencuadre automático",
+  "frame.apply": "Reencuadrar",
+  "filler.find": "Buscar muletillas",
+  "filler.cut": "Quitarlas",
+  "filler.nocaptions": "crea subtítulos primero"
 }

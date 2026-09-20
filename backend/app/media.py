@@ -384,6 +384,58 @@ def _samples(media_id: str):
     return np.frombuffer(out.stdout, np.int16).astype("float32") / 32768.0
 
 
+def _frame_series(project: dict, start: float, duration: float, fps: float = 6.0, cap: int = 240):
+    """A run of rendered frames, for anything that follows motion."""
+    from .renderer import FrameRenderer
+
+    count = max(2, min(cap, int(duration * fps)))
+    renderer = FrameRenderer(project, 480)
+    try:
+        return [renderer.frame(start + index / fps) for index in range(count)], fps
+    finally:
+        renderer.close()
+
+
+@router.post("/{media_id}/track")
+def media_track(media_id: str, body: dict) -> dict:
+    """Carry a mask forward across a clip, as keyframed anchors."""
+    from .render_document import validate_document
+    from .subject import track_points
+
+    _find(media_id)
+    project = validate_document(body.get("project") or {})
+    points = body.get("points") or []
+    if len(points) < 3:
+        raise HTTPException(status_code=422, detail="a mask needs at least three points to follow")
+    start = float(body.get("start") or 0)
+    duration = max(0.1, float(body.get("duration") or 2))
+    frames, fps = _frame_series(project, start, duration)
+    path = track_points(frames, points)
+    return {"path": [{"t": round(entry["t"] / fps, 3), "points": entry["points"]} for entry in path], "fps": fps, "frames": len(path)}
+
+
+@router.post("/{media_id}/reframe")
+def media_reframe(media_id: str, body: dict) -> dict:
+    """Where a crop of a given shape should sit over time."""
+    from .render_document import validate_document
+    from .subject import reframe
+
+    _find(media_id)
+    project = validate_document(body.get("project") or {})
+    frames, fps = _frame_series(project, float(body.get("start") or 0), max(0.1, float(body.get("duration") or 4)))
+    result = reframe(frames, float(body.get("aspect") or 9 / 16), float(body.get("smoothing") or 0.8))
+    result["crops"] = [{**crop, "t": round(crop["t"] / fps, 3)} for crop in result["crops"]]
+    return result
+
+
+@router.post("/fillers")
+def media_fillers(body: dict) -> dict:
+    """Filler words in a transcript, as ranges to review before anything is cut."""
+    from .subject import fillers
+
+    return fillers(body.get("segments") or [], str(body.get("language") or "en"), body.get("extra") or [])
+
+
 @router.get("/{media_id}/beats")
 def media_beats(media_id: str, sensitivity: float = 0.5) -> dict:
     """Where the beats are, so an edit can be cut to them."""

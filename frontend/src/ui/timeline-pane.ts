@@ -534,6 +534,35 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     });
   }, { passive: false });
 
+  // Beats found in the inspector become snap points here. The event was being
+  // dispatched with nothing listening for it, which is a feature that exists
+  // and does nothing.
+  let beatMarks: number[] = [];
+  document.addEventListener("formcut:beats", (event) => {
+    const detail = (event as CustomEvent).detail as { start: number; beats: number[] };
+    beatMarks = (detail.beats ?? []).map((at) => at + detail.start);
+    el.dataset.beats = String(beatMarks.length);
+    paintBeats();
+  });
+  const paintBeats = () => {
+    const ruler = el.querySelector<HTMLElement>(".tl-ruler");
+    if (!ruler) return;
+    for (const old of ruler.querySelectorAll(".tl-beat")) old.remove();
+    for (const at of beatMarks) {
+      const tick = document.createElement("span");
+      tick.className = "tl-beat";
+      tick.style.left = `${at * PX_PER_SEC}px`;
+      ruler.append(tick);
+    }
+  };
+  // Anything dragged near a beat lands on it.
+  (window as unknown as { formcutSnapBeat?: (t: number) => number }).formcutSnapBeat = (time: number) => {
+    if (!beatMarks.length) return time;
+    const nearest = beatMarks.reduce((best, at) =>
+      Math.abs(at - time) < Math.abs(best - time) ? at : best, beatMarks[0]);
+    return Math.abs(nearest - time) < 8 / PX_PER_SEC ? nearest : time;
+  };
+
   const tabControls = el.querySelector(".tl-tabs")!;
   tabControls.querySelector<HTMLButtonElement>('[data-ref="tl-add"]')!.addEventListener("click", () => engine.dispatch("timeline.add", {}));
   // Removing a timeline belongs with the tabs it removes, not in the clip tools.

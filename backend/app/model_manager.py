@@ -16,6 +16,26 @@ router = APIRouter(prefix="/api/models", tags=["models"])
 ROOT = MODELS_DIR
 LEGACY = DATA_DIR / "models"
 MODELS = {
+    # Heavier segmentation, offered rather than required: the cutout works
+    # without them and is better with them.
+    "video-matting": {
+        "name": "Robust Video Matting",
+        "license": "GPL-3.0-only",
+        "note": "not bundled; fetched only if a person asks for it",
+        "files": {
+            "rvm_mobilenetv3_fp32.onnx": "https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/rvm_mobilenetv3_fp32.onnx"
+        },
+    },
+    "sharp-cutout": {
+        "name": "IS-Net general matting",
+        "license": "Apache-2.0",
+        "files": {"isnet-general-use.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx"},
+    },
+    "click-select": {
+        "name": "SAM 2 Hiera Tiny",
+        "license": "Apache-2.0",
+        "files": {"sam2_hiera_tiny.onnx": "https://huggingface.co/facebook/sam2-hiera-tiny/resolve/main/sam2_hiera_tiny.onnx"},
+    },
     "object-cutout": {
         "name": "Object cutout (U2Net small)",
         "license": "Apache-2.0",

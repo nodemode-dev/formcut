@@ -591,5 +591,15 @@
   "beat.working": "Wird berechnet",
   "beat.ducked": "Passagen gesenkt",
   "beat.nospeech": "kein anderer Clip",
-  "beat.failed": "kein Ton"
+  "beat.failed": "kein Ton",
+  "mask.track": "Verfolgen",
+  "mask.trackgo": "Motiv verfolgen",
+  "mask.following": "Wird verfolgt",
+  "mask.tracked": "Bilder verfolgt",
+  "mask.needpath": "zuerst einen Pfad zeichnen",
+  "frame.auto": "Auto-Bildausschnitt",
+  "frame.apply": "Zuschneiden",
+  "filler.find": "Füllwörter finden",
+  "filler.cut": "Entfernen",
+  "filler.nocaptions": "zuerst Untertitel erstellen"
 }
