@@ -263,6 +263,18 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux" data-ref="bg-brush-value">4</span>
         </div>
       </div>
+      <div class="section" data-section="rhythm" data-feature="section.rhythm">
+        <div class="section-head">${t("beat.title")} ${icon("chevD")}</div>
+        <div class="prop-row">
+          <button class="tool-chip" data-ref="beat-find">${t("beat.find")}</button>
+          <span class="prop-aux" data-ref="beat-state"></span>
+        </div>
+        <div class="prop-row">
+          <span>${t("beat.duck")}</span>
+          <input type="range" class="slider" data-ref="duck-depth" min="5" max="80" step="5" value="25">
+          <button class="tool-chip is-primary" data-ref="duck-apply">${t("beat.apply")}</button>
+        </div>
+      </div>
       <div class="section" data-section="scenes" data-feature="section.scenes">
         <div class="section-head">${t("scene.title")} ${icon("chevD")}</div>
         <div class="prop-row">
@@ -353,8 +365,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     // and scene detection are things done TO footage, not ways of styling it,
     // and they were invisible because they were in no view at all.
     "video:adjust": { sections: ["mask", "key", "removebg"], pages: ["cutout", "advanced"] },
-    "video:repair": { sections: ["repair", "scenes"], pages: [] },
-    audio: { sections: ["audio"], pages: ["audio"] },
+    "video:repair": { sections: ["repair", "scenes", "rhythm"], pages: [] },
+    audio: { sections: ["audio", "rhythm"], pages: ["audio"] },
     effects: { sections: [], pages: ["effects", "transition"] },
   };
   const groupSeg = el.querySelector<HTMLElement>('[data-ref="group"]')!;
@@ -364,7 +376,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   let activeSubtab = "basic";
   let showAll = false;
   const everything = {
-    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas"],
+    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas", "rhythm"],
     pages: ["speed", "motion", "effects", "audio", "transition", "cutout", "advanced"],
   };
   const showAllChip = el.querySelector<HTMLButtonElement>('[data-ref="show-all"]')!;
@@ -768,6 +780,53 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       writeCanvas();
     });
   }
+
+  // Beats and ducking: both read the clip's own audio and write something a
+  // person can see and move, rather than processing the sound behind their back.
+  el.querySelector('[data-ref="beat-find"]')?.addEventListener("click", () => void (async () => {
+    const note = el.querySelector<HTMLElement>('[data-ref="beat-state"]');
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    if (!found?.clip.mediaId || !note) return;
+    note.textContent = t("beat.listening");
+    try {
+      const reply = await fetch(`/api/media/${found.clip.mediaId}/beats`).then((r) => r.json());
+      note.textContent = reply.bpm ? `${reply.count} · ${reply.bpm} bpm` : `${reply.count}`;
+      // Beats become snap points on the timeline, which is what they are for.
+      document.dispatchEvent(new CustomEvent("formcut:beats", {
+        detail: { clipId: found.clip.id, start: found.clip.start, beats: reply.beats ?? [] },
+      }));
+    } catch {
+      note.textContent = t("beat.failed");
+    }
+  })());
+  el.querySelector('[data-ref="duck-apply"]')?.addEventListener("click", () => void (async () => {
+    const note = el.querySelector<HTMLElement>('[data-ref="beat-state"]');
+    const state = engine.snapshot;
+    const music = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    if (!music || !note) return;
+    // The speech is whatever is on another track: ducking needs two things.
+    const timeline = state.timelines[state.activeTimeline];
+    const speech = timeline.tracks
+      .flatMap((track) => track.clips)
+      .find((clip) => clip.id !== music.clip.id && clip.mediaId && (clip.kind === "audio" || clip.kind === "video"));
+    if (!speech?.mediaId) { note.textContent = t("beat.nospeech"); return; }
+    note.textContent = t("beat.working");
+    try {
+      const depth = Number(el.querySelector<HTMLInputElement>('[data-ref="duck-depth"]')?.value ?? 25) / 100;
+      const reply = await fetch(`/api/media/${speech.mediaId}/ducking`, {
+        method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
+        body: JSON.stringify({ depth }),
+      }).then((r) => r.json());
+      const shifted = (reply.keyframes ?? []).map((frame: { t: number; props: Record<string, number> }) => ({
+        ...frame, t: Math.max(0, frame.t + speech.start - music.clip.start),
+      }));
+      engine.dispatch("clip.keyframes.replace", { clipId: music.clip.id, keyframes: shifted });
+      note.textContent = `${reply.regions?.length ?? 0} ${t("beat.ducked")}`;
+    } catch {
+      note.textContent = t("beat.failed");
+    }
+  })());
 
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {

@@ -71,7 +71,8 @@
       ],
       "video:repair": [
         "repair",
-        "scenes"
+        "scenes",
+        "rhythm"
       ]
     }
   },
@@ -179,6 +180,7 @@
     "section.scenes": true,
     "section.repair": true,
     "subtab.repair": true,
-    "section.canvas": true
+    "section.canvas": true,
+    "section.rhythm": true
   }
 }

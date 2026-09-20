@@ -582,5 +582,14 @@
   "canvas.gradient": "Verlauf",
   "canvas.blur": "Unscharfer Clip",
   "canvas.colours": "Farben",
-  "canvas.amount": "Stärke"
+  "canvas.amount": "Stärke",
+  "beat.title": "Rhythmus",
+  "beat.find": "Beats finden",
+  "beat.listening": "Wird gehört",
+  "beat.duck": "Unter Sprache senken",
+  "beat.apply": "Anwenden",
+  "beat.working": "Wird berechnet",
+  "beat.ducked": "Passagen gesenkt",
+  "beat.nospeech": "kein anderer Clip",
+  "beat.failed": "kein Ton"
 }

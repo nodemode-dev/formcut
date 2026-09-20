@@ -345,6 +345,16 @@ def dispatch(method: str, params: dict):
         note_operation(session_id, method, {"project": params.get("id")} if isinstance(params, dict) and params.get("id") else None)
     if method == "session.hello":
         return open_session(SessionInput(name=str(params.get("name") or "orchestrator"), agent=params.get("agent")))
+    if method == "media.beats":
+        from .media import _samples
+        from .rhythm import beats
+
+        return beats(_samples(str(params.get("id") or "")), 48000, float(params.get("sensitivity") or 0.5))
+    if method == "media.ducking":
+        from .media import _samples
+        from .rhythm import ducking
+
+        return ducking(_samples(str(params.get("id") or "")), 48000, depth=float(params.get("depth") or 0.25))
     if method == "media.scenes":
         from . import scenes as scene_module
         from .media import MEDIA_DIR, _find

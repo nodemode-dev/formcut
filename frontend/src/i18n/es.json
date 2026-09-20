@@ -582,5 +582,14 @@
   "canvas.gradient": "Degradado",
   "canvas.blur": "Clip desenfocado",
   "canvas.colours": "Colores",
-  "canvas.amount": "Cantidad"
+  "canvas.amount": "Cantidad",
+  "beat.title": "Ritmo",
+  "beat.find": "Buscar tiempos",
+  "beat.listening": "Escuchando",
+  "beat.duck": "Bajar bajo la voz",
+  "beat.apply": "Aplicar",
+  "beat.working": "Trabajando",
+  "beat.ducked": "pasajes bajados",
+  "beat.nospeech": "no hay otro clip",
+  "beat.failed": "sin audio"
 }

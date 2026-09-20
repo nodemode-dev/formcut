@@ -124,7 +124,18 @@ def _envelope(src: Path, duration: float) -> dict | None:
 
 
 def _strip(src: Path, dest: Path, kind: str, duration: float, frames: int) -> bool:
-    """One row of frames, evenly spaced across the media, as a single jpeg."""
+    """One row of frames, evenly spaced across the media, as a single jpeg.
+
+    A filmstrip is a row of thumbnails, so decoding a 4K original to build one
+    is work nobody sees. When a proxy exists it is read instead, which is the
+    same picture at a size the strip was going to scale down to anyway.
+    """
+    if kind != "image":
+        from .proxies import usable as proxy_for
+
+        stand_in = proxy_for(src.stem)
+        if stand_in is not None:
+            src = stand_in
     if kind == "image":
         cmd = ["ffmpeg", "-v", "quiet", "-y", "-i", str(src), "-frames:v", "1", "-vf", f"scale={STRIP_WIDTH}:-2", str(dest)]
     else:

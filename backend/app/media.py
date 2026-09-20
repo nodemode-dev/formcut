@@ -360,6 +360,52 @@ def subject_outline(media_id: str, body: dict) -> dict:
     return {"points": points, "model": model}
 
 
+def _samples(media_id: str):
+    """Mono samples for a media item, through the bundled ffmpeg."""
+    import subprocess
+
+    import numpy as np
+
+    from .tools import ffmpeg
+
+    source = _find(media_id)
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="media file is missing")
+    out = subprocess.run(
+        [ffmpeg(), "-v", "error", "-i", str(matches[0]), "-vn", "-ac", "1", "-ar", "48000", "-f", "s16le", "-"],
+        capture_output=True,
+        check=False,
+        timeout=600,
+    )
+    if out.returncode != 0 or not out.stdout:
+        raise HTTPException(status_code=422, detail="this item has no audio to read")
+    _ = source
+    return np.frombuffer(out.stdout, np.int16).astype("float32") / 32768.0
+
+
+@router.get("/{media_id}/beats")
+def media_beats(media_id: str, sensitivity: float = 0.5) -> dict:
+    """Where the beats are, so an edit can be cut to them."""
+    from .rhythm import beats
+
+    return beats(_samples(media_id), 48000, sensitivity)
+
+
+@router.post("/{media_id}/ducking")
+def media_ducking(media_id: str, body: dict) -> dict:
+    """The envelope music should follow under this speech, as keyframes."""
+    from .rhythm import ducking
+
+    return ducking(
+        _samples(media_id),
+        48000,
+        depth=float(body.get("depth", 0.25)),
+        attack=float(body.get("attack", 0.15)),
+        release=float(body.get("release", 0.4)),
+    )
+
+
 @router.get("/{media_id}/scenes")
 def media_scenes(media_id: str, sensitivity: float = 0.5, minimum: float = 1.0) -> dict:
     """B5: where the shots change, so a long clip can become short ones."""

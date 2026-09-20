@@ -272,6 +272,56 @@ def formcut_get_project(
 
 
 @mcp.tool(
+    name="formcut_media_proxy",
+    description=(
+        "Check or build the editing proxy for a media item. Proxies are smaller copies that make scrubbing and "
+        "previewing fast on large or awkwardly encoded footage; exports always read the original, never the proxy. "
+        "Pass build=true to start one if it is missing. Returns the proxy's state and size."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+)
+def formcut_media_proxy(
+    media_id: Annotated[str, Field(description="Media id from formcut_list_media")],
+    build: Annotated[bool, Field(description="Start building the proxy if there is not one")] = False,
+) -> str:
+    ok, state = _rpc("media.proxy", {"id": media_id, "build": build})
+    if not ok:
+        return state
+    where = state.get("state", "unknown")
+    if where == "ready":
+        size = state.get("bytes")
+        return f"Proxy ready for {media_id}" + (f", {size} bytes" if size else "")
+    if where == "building":
+        return f"Proxy for {media_id} is building, {round(float(state.get('progress') or 0) * 100)}% done"
+    if build:
+        return f"Proxy for {media_id} has been queued"
+    return f"No proxy for {media_id}. Call again with build=true to make one."
+
+
+@mcp.tool(
+    name="formcut_find_scenes",
+    description=(
+        "Find the cuts in a piece of footage, so a long recording can be split into its shots. Returns each cut's "
+        "time in seconds and the segments between them. Nothing is changed; use formcut_split_clip to act on it."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_find_scenes(
+    media_id: Annotated[str, Field(description="Media id from formcut_list_media")],
+    sensitivity: Annotated[float, Field(ge=0, le=1, description="Higher finds more cuts")] = 0.5,
+) -> str:
+    ok, found = _rpc("media.scenes", {"id": media_id, "sensitivity": sensitivity})
+    if not ok:
+        return found
+    cuts = found.get("cuts") or []
+    if not cuts:
+        return "No scene changes found; this looks like one continuous shot."
+    lines = [f"{len(cuts)} cut(s):"]
+    lines += [f"  {round(float(cut.get('at', 0)), 2)} s" for cut in cuts[:40]]
+    return "\n".join(lines)
+
+
+@mcp.tool(
     name="formcut_list_projects",
     description="List the saved formcut projects with their ids and titles, so a project can be opened or edited by id.",
     annotations={"readOnlyHint": True, "openWorldHint": False},

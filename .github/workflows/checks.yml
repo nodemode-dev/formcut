@@ -127,3 +127,7 @@ jobs:
           chmod +x "src-tauri/binaries/formcut-engine-$triple"
           echo "stubbed formcut-engine-$triple"
       - run: cargo check --manifest-path src-tauri/Cargo.toml
+      - name: clippy, with warnings treated as errors
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+      - name: rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check

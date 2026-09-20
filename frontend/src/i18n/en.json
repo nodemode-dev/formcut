@@ -582,5 +582,14 @@
   "canvas.gradient": "Gradient",
   "canvas.blur": "Blurred clip",
   "canvas.colours": "Colours",
-  "canvas.amount": "Blur amount"
+  "canvas.amount": "Blur amount",
+  "beat.title": "Rhythm",
+  "beat.find": "Find beats",
+  "beat.listening": "Listening",
+  "beat.duck": "Duck under speech",
+  "beat.apply": "Apply",
+  "beat.working": "Working",
+  "beat.ducked": "passages ducked",
+  "beat.nospeech": "no other clip to duck under",
+  "beat.failed": "no audio to read"
 }
