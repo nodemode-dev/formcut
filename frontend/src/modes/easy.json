@@ -34,7 +34,8 @@
       "basic",
       "speed",
       "animation",
-      "adjust"
+      "adjust",
+      "repair"
     ],
     "views": {
       "video:basic": [
@@ -63,6 +64,10 @@
         "creator:effects",
         "creator:transition",
         "creator:cutout"
+      ],
+      "video:repair": [
+        "repair",
+        "scenes"
       ]
     }
   },
@@ -160,6 +165,7 @@
     "set.connections": false,
     "set.advanced": false,
     "section.scenes": false,
-    "section.repair": true
+    "section.repair": true,
+    "subtab.repair": true
   }
 }

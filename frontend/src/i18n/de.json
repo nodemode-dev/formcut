@@ -414,8 +414,8 @@
   "bg.feather": "Weiche Kante",
   "bg.brushsize": "Pinselgröße",
   "bg.working": "Wird vorbereitet",
-  "bg.ready": "Bereit",
-  "bg.failed": "Konnte nicht vorbereitet werden",
+  "bg.ready": "bereit",
+  "bg.failed": "Laden fehlgeschlagen",
   "export.codec": "Codec",
   "export.codec.auto": "Automatisch",
   "export.size": "Größe",
@@ -560,5 +560,13 @@
   "scene.looking": "Wird gesucht",
   "scene.found": "Schnitte",
   "scene.done": "Teilungen",
-  "scene.failed": "Clip nicht lesbar"
+  "scene.failed": "Clip nicht lesbar",
+  "subtab.adjust": "Anpassen",
+  "subtab.repair": "Reparatur",
+  "bg.model": "Modell",
+  "bg.checking": "wird geprüft",
+  "bg.missing": "zum Laden",
+  "bg.download": "Modelle laden",
+  "bg.getting": "Wird geladen",
+  "bg.offline": "Engine nicht erreichbar"
 }

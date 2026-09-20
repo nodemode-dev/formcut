@@ -17,7 +17,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     <div class="speed-points"></div><button class="tool-chip" data-action="speed-add">Add point at playhead</button><button class="tool-chip" data-action="speed-clear">Constant speed</button>
     <svg class="speed-graph" viewBox="0 0 240 90" aria-label="Speed curve"><path fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
     <div data-group="motion" hidden><label>Motion <select data-motion>${MOTION_PRESETS.map(k => `<option value="${k}">${k[0].toUpperCase() + k.slice(1).replace(/-/g, " ")}</option>`).join("")}</select></label><label>Seconds <input data-motion-duration type="number" value="1" min="0.1" step="0.1"></label><button class="tool-chip" data-action="motion">Apply keyframes</button></div>
-    <div data-group="effects" hidden><label>Effect <select data-effect></select></label><button class="tool-chip" data-action="effect-add">Add effect</button><div data-effect-list></div></div>
+    <div data-group="effects" hidden><label>Category <select data-effect-group></select></label><label>Effect <select data-effect></select></label><button class="tool-chip" data-action="effect-add">Add effect</button><div data-effect-list></div></div>
     <div data-group="audio" hidden><label>Volume <input data-volume type="range" min="0" max="2" step="0.01" value="1"></label><label>Pan <input data-pan type="range" min="-1" max="1" step="0.01" value="0"></label><label>Processor <select data-audio></select></label><button class="tool-chip" data-action="audio-add">Add processor</button><div data-audio-list></div></div>
     <div data-group="transition" hidden><label>Transition <select data-transition><option value="">None</option>${TRANSITIONS.map(k => `<option value="${k}">${k === "crossfade" ? "Crossfade" : k === "dip" ? "Dip to black" : k.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>`).join("")}</select></label><label>Seconds <input data-transition-duration type="number" value="0.6" min="0.1" step="0.1"></label><button class="tool-chip" data-action="transition">Apply transition</button></div>
     <div data-group="cutout" hidden><label>Model <select data-cutout-model><option value="object-cutout">Object cutout</option><option value="person-cutout">Person cutout</option></select></label><label>Threshold <input data-cutout-threshold type="range" min="0" max="1" step="0.01" value="0.5"></label><label>Edge softness <input data-cutout-feather type="range" min="0.005" max="0.5" step="0.005" value="0.1"></label><button class="tool-chip" data-action="cutout">Enable cutout</button><button class="tool-chip" data-action="cutout-clear">Remove cutout</button><label>Brush <select data-brush><option value="off">Off</option><option value="keep">Restore</option><option value="erase">Erase</option></select></label><label>Brush radius <input data-brush-radius type="range" min="0.005" max="0.15" step="0.005" value="0.02"></label><button class="tool-chip" data-action="brush-undo">Remove last stroke</button><p>Paint on the preview. Brush edits use source coordinates and are saved with the clip.</p></div>
@@ -147,8 +147,44 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
   }));
   void api<typeof catalog>("/api/catalogue").then(result => {
     catalog = result;
+    // One flat list of eighty-odd entries is a scroll, not a choice. The
+    // catalogue already says which group each effect belongs to, so the list is
+    // split by it and a category picker narrows the list before it is read.
     for (const [key, entries] of [["effect", catalog.video], ["audio", catalog.audio]] as const) {
-      for (const entry of entries) { const option = document.createElement("option"); option.value = entry.id; option.textContent = phrase(entry.name); query<HTMLSelectElement>(key).append(option); }
+      const select = query<HTMLSelectElement>(key);
+      const groups = new Map<string, typeof entries>();
+      for (const entry of entries) {
+        const name = (entry as { group?: string }).group || (entry as { category?: string }).category || "Other";
+        groups.set(name, [...(groups.get(name) ?? []), entry]);
+      }
+      select.replaceChildren(...[...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, list]) => {
+        const holder = document.createElement("optgroup");
+        holder.label = phrase(name);
+        holder.append(...list.map((entry) => {
+          const option = document.createElement("option");
+          option.value = entry.id;
+          option.textContent = phrase(entry.name);
+          return option;
+        }));
+        return holder;
+      }));
+      const picker = root.querySelector<HTMLSelectElement>(`[data-${key}-group]`);
+      if (picker) {
+        picker.replaceChildren(...[["", phrase("All")], ...[...groups.keys()].sort().map((n) => [n, phrase(n)])]
+          .map(([value, label]) => {
+            const option = document.createElement("option");
+            option.value = String(value);
+            option.textContent = String(label);
+            return option;
+          }));
+        picker.addEventListener("change", () => {
+          for (const holder of select.querySelectorAll("optgroup")) {
+            holder.hidden = !!picker.value && holder.label !== phrase(picker.value);
+          }
+          const firstVisible = select.querySelector<HTMLOptionElement>("optgroup:not([hidden]) option");
+          if (firstVisible) select.value = firstVisible.value;
+        });
+      }
     }
   }).catch(error => show(error.message));
   root.dataset.brush = "off";

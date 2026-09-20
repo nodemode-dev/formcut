@@ -10,7 +10,7 @@ import { installTrackKeyframes } from "./track-keyframes";
 import { installWorkArea } from "./work-area";
 
 let PX_PER_SEC = 90;
-const HEAD_W = 208;
+const HEAD_W = 248;
 
 function clipHtml(c: Clip, selectedId: string | null): string {
   const left = c.start * PX_PER_SEC;
@@ -523,7 +523,11 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     event.preventDefault();
     const box = zoomScroller.getBoundingClientRect();
     const before = (zoomScroller.scrollLeft + event.clientX - box.left - HEAD_W) / PX_PER_SEC;
-    const step = event.deltaY > 0 ? 1 / 1.12 : 1.12;
+    // A trackpad sends many small deltas, so a fixed 12 percent per event flew
+    // past the whole timeline in a flick. The step follows the delta and is
+    // capped, and zoom() already clamps the scale itself.
+    const magnitude = Math.min(40, Math.abs(event.deltaY));
+    const step = event.deltaY > 0 ? 1 - magnitude / 900 : 1 + magnitude / 900;
     zoom(step);
     window.requestAnimationFrame(() => {
       zoomScroller.scrollLeft = Math.max(0, before * PX_PER_SEC + HEAD_W - (event.clientX - box.left));

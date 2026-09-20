@@ -65,7 +65,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     </div>
     <div class="inspector-subtabs">
       <div class="seg" data-ref="subtabs">
-        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">Adjust</button>
+        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">${t("subtab.adjust")}</button><button data-tab="repair" data-feature="subtab.repair">${t("subtab.repair")}</button>
       </div>
     </div>
     <div class="inspector-body">
@@ -241,6 +241,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           </select>
           <span class="prop-aux" data-ref="bg-progress"></span>
         </div>
+        <div class="prop-row" data-ref="bg-model-row">
+          <span>${t("bg.model")}</span>
+          <span class="prop-aux" data-ref="bg-model-state">${t("bg.checking")}</span>
+          <button class="tool-chip" data-ref="bg-model-get" hidden>${t("bg.download")}</button>
+        </div>
         <div class="prop-row">
           <span>${t("bg.feather")}</span>
           <input type="range" class="slider" data-ref="bg-feather" min="1" max="60" step="1" value="10" />
@@ -315,7 +320,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     "video:basic": { sections: ["transform", "text", "blend"], pages: [] },
     "video:speed": { sections: ["timing"], pages: ["speed"] },
     "video:animation": { sections: ["track"], pages: ["motion"] },
-    "video:adjust": { sections: ["mask", "key"], pages: ["cutout", "advanced"] },
+    // Repair is a subtab of its own: stabilisation, flicker, noise, colour match
+    // and scene detection are things done TO footage, not ways of styling it,
+    // and they were invisible because they were in no view at all.
+    "video:adjust": { sections: ["mask", "key", "removebg"], pages: ["cutout", "advanced"] },
+    "video:repair": { sections: ["repair", "scenes"], pages: [] },
     audio: { sections: ["audio"], pages: ["audio"] },
     effects: { sections: [], pages: ["effects", "transition"] },
   };
@@ -326,7 +335,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   let activeSubtab = "basic";
   let showAll = false;
   const everything = {
-    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio"],
+    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg"],
     pages: ["speed", "motion", "effects", "audio", "transition", "cutout", "advanced"],
   };
   const showAllChip = el.querySelector<HTMLButtonElement>('[data-ref="show-all"]')!;
@@ -652,6 +661,53 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     sceneSplit.hidden = true;
     foundCuts = [];
   });
+
+  // Cutout and background removal need a model on disk. Without one they do
+  // nothing at all and say nothing about why, which is exactly what happened.
+  const modelState = el.querySelector<HTMLElement>('[data-ref="bg-model-state"]');
+  const modelGet = el.querySelector<HTMLButtonElement>('[data-ref="bg-model-get"]');
+  const CUTOUT_MODELS = ["object-cutout", "person-cutout"];
+  const refreshModels = async () => {
+    if (!modelState) return;
+    try {
+      const listed = await fetch("/api/models").then((r) => r.json());
+      const wanted = listed.filter((m: { id: string }) => CUTOUT_MODELS.includes(m.id));
+      const missing = wanted.filter((m: { ready?: boolean }) => !m.ready);
+      modelState.textContent = missing.length
+        ? `${missing.length} ${t("bg.missing")}`
+        : t("bg.ready");
+      if (modelGet) modelGet.hidden = missing.length === 0;
+    } catch {
+      modelState.textContent = t("bg.offline");
+    }
+  };
+  modelGet?.addEventListener("click", () => void (async () => {
+    if (!modelState) return;
+    modelGet.disabled = true;
+    modelState.textContent = t("bg.getting");
+    try {
+      for (const id of CUTOUT_MODELS) {
+        const started = await fetch(`/api/models/${id}/download`, {
+          method: "POST", headers: { "x-formcut-local": "1" },
+        }).then((r) => r.json());
+        // The download is a job, so it reports progress like any other.
+        if (started.job_id) {
+          for (let waited = 0; waited < 900; waited += 1) {
+            const state = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
+            if (["done", "error", "failed"].includes(state.status)) break;
+            modelState.textContent = `${t("bg.getting")} ${Math.round((state.progress ?? 0) * 100)}%`;
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        }
+      }
+    } catch {
+      modelState.textContent = t("bg.failed");
+    } finally {
+      modelGet.disabled = false;
+      await refreshModels();
+    }
+  })());
+  void refreshModels();
 
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {

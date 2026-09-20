@@ -414,8 +414,8 @@
   "bg.feather": "Suavizado",
   "bg.brushsize": "Tamaño del pincel",
   "bg.working": "Preparando",
-  "bg.ready": "Listo",
-  "bg.failed": "No se pudo preparar",
+  "bg.ready": "listo",
+  "bg.failed": "la descarga falló",
   "export.codec": "Códec",
   "export.codec.auto": "Auto",
   "export.size": "Tamaño",
@@ -560,5 +560,13 @@
   "scene.looking": "Buscando",
   "scene.found": "cortes",
   "scene.done": "divisiones",
-  "scene.failed": "No se pudo leer el clip"
+  "scene.failed": "No se pudo leer el clip",
+  "subtab.adjust": "Ajustar",
+  "subtab.repair": "Reparar",
+  "bg.model": "Modelo",
+  "bg.checking": "comprobando",
+  "bg.missing": "por descargar",
+  "bg.download": "Descargar modelos",
+  "bg.getting": "Descargando",
+  "bg.offline": "motor no disponible"
 }

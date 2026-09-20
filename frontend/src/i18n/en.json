@@ -414,8 +414,8 @@
   "bg.feather": "Feather",
   "bg.brushsize": "Brush size",
   "bg.working": "Preparing",
-  "bg.ready": "Ready",
-  "bg.failed": "Could not prepare",
+  "bg.ready": "ready",
+  "bg.failed": "download failed",
   "export.codec": "Codec",
   "export.codec.auto": "Auto",
   "export.size": "Size",
@@ -560,5 +560,13 @@
   "scene.looking": "Looking",
   "scene.found": "cuts found",
   "scene.done": "splits made",
-  "scene.failed": "Could not read that clip"
+  "scene.failed": "Could not read that clip",
+  "subtab.adjust": "Adjust",
+  "subtab.repair": "Repair",
+  "bg.model": "Model",
+  "bg.checking": "checking",
+  "bg.missing": "to download",
+  "bg.download": "Download models",
+  "bg.getting": "Downloading",
+  "bg.offline": "engine unreachable"
 }

@@ -448,7 +448,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .tl-scroller { flex: 1; min-height: 0; overflow: auto; position: relative; }
 .tl-grid {
   display: grid;
-  grid-template-columns: 208px 1fr;
+  grid-template-columns: 248px 1fr;
   align-content: start;
   min-width: max-content;
   min-height: 100%;
@@ -1294,22 +1294,23 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* F18: track headers. The name takes the room it has and stops with an
    ellipsis, the icons sit on one line at a fixed size, and nothing wraps to a
    second row however long a track is called. */
+/* The header is one row. The buttons are direct children with no wrapper, so a
+   two-column grid gave each its own cell and stacked them; it stays a flex row
+   that refuses to wrap, with the name taking the slack. */
 .track-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--sp-2);
+  display: flex; flex-wrap: nowrap; align-items: center;
+  gap: 4px;
   padding: 0 var(--sp-2) 0 var(--sp-3);
 }
-.track-head > .name, .track-head .track-name {
-  min-width: 0; max-width: 9ch;
+.track-head > .name {
+  flex: 1 1 auto; min-width: 0; max-width: 9ch;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.track-head .track-tools, .track-head > .tools {
-  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
-}
-.track-head .iconbtn { width: 22px; height: 22px; flex: 0 0 auto; }
-.track-head .iconbtn svg { width: 14px; height: 14px; }
+.track-head > .iconbtn { flex: 0 0 auto; }
+
+
+.track-head .iconbtn { width: 20px; height: 20px; flex: 0 0 auto; padding: 0; }
+.track-head .iconbtn svg { width: 13px; height: 13px; }
 
 /* F23: nothing pokes out of a row. Labels shorten, values keep their width, and
    a row never grows a second line because a language is longer. */
@@ -1321,3 +1322,17 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .panel-section-head > small { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
 .stock-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
 .stock-row > input[type="search"], .stock-row > input[type="url"] { flex: 1 1 160px; min-width: 0; }
+
+
+/* The keyframe lane was as tall as a track. It only ever shows a row of glyphs,
+   so it is sized to them: a little over one glyph, not a whole track. */
+.kfb-lane, .kfb-body { min-height: 0; }
+.kfb-lane { height: 20px; }
+.kfb-row { height: 20px; }
+.kfb-dot { width: 12px; height: 12px; }
+
+/* Property labels keep enough room to be read. A column that shrinks a label to
+   "P..." is worse than one that wraps the value. */
+.prop-row > span:first-child { flex: 0 0 auto; min-width: 84px; max-width: 132px; }
+.prop-row .num-field { flex: 0 1 auto; min-width: 0; }
+.prop-row input[type="range"] { flex: 1 1 60px; min-width: 40px; }
