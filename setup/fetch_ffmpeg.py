@@ -40,19 +40,19 @@ SOURCES: dict[str, dict] = {
         "url": "",
         "licence": "LGPL-2.1-or-later",
         "members": ("ffmpeg",),
-        "configure": "build one with --disable-gpl --disable-nonfree",
+        "configure": "run setup/build_ffmpeg_lgpl.sh on that platform",
     },
     "x86_64-unknown-linux-gnu": {
         "url": "",
         "licence": "LGPL-2.1-or-later",
         "members": ("ffmpeg",),
-        "configure": "build one with --disable-gpl --disable-nonfree",
+        "configure": "run setup/build_ffmpeg_lgpl.sh on that platform",
     },
     "x86_64-pc-windows-msvc": {
         "url": "",
         "licence": "LGPL-2.1-or-later",
         "members": ("ffmpeg.exe",),
-        "configure": "build one with --disable-gpl --disable-nonfree",
+        "configure": "run setup/build_ffmpeg_lgpl.sh on that platform",
     },
 }
 
@@ -111,8 +111,9 @@ def fetch(target: str, out: Path, allow_gpl: bool) -> int:
         print(f"{target}: using the supplied {entry['licence']} build")
         return 0
     if not source:
-        print(f"no LGPL build recorded for {target}. Build one with:", file=sys.stderr)
+        print(f"no LGPL build recorded for {target}.", file=sys.stderr)
         print(f"  {entry['configure']}", file=sys.stderr)
+        print("  It writes the binary here and records its licence and checksum.", file=sys.stderr)
         print("or pass --allow-gpl to ship a GPL build knowingly.", file=sys.stderr)
         return 3
     out.mkdir(parents=True, exist_ok=True)

@@ -9,6 +9,7 @@
 - [Packaging](Packaging)
 - [Translation](Translation)
 - [Mobile notes](Mobile-notes)
+- [Models](Models)
 - [Licences](Licences)
 
 **In the repository**

@@ -61,6 +61,15 @@ without rebuilding anything. On macOS that is *Show Package Contents* and
 `Contents/Resources/binaries/`. `FORMCUT_FFMPEG_DIR` points it elsewhere
 entirely.
 
+**libx264 is GPL, so an LGPL ffmpeg has no software H.264 encoder.** That is not
+a flag to flip: including x264 makes the bundle GPL. formcut copes because its
+encoder detection prefers hardware and confirms each candidate by encoding two
+frames rather than trusting a list, so videotoolbox on macOS, mediafoundation
+or nvenc on Windows and vaapi or nvenc on Linux are used where present.
+`setup/build_ffmpeg_lgpl.sh` also links openh264 (BSD), libvpx and libaom when
+they are installed, so a machine with no hardware encoder still has a non-GPL
+software path for H.264, VP9 and AV1.
+
 **ffprobe.** An LGPL build made with `--disable-programs --enable-ffmpeg`
 contains ffmpeg alone, since ffprobe is a separate program. formcut does not
 require one: when ffprobe is absent it reads the same facts from ffmpeg's own
