@@ -10,8 +10,16 @@ def number(value, name, low=-100000, high=100000):
 
 def project_values(project):
     fill = project.get('background')
-    if fill is not None and not (isinstance(fill, str) and len(fill) <= 32):
+    if fill is None:
+        return
+    if isinstance(fill, str):
+        if len(fill) > 32:
+            raise ValueError('Invalid background')
+        return
+    if not isinstance(fill, dict) or fill.get('type') not in ('colour', 'gradient', 'image', 'blur'):
         raise ValueError('Invalid background')
+    if fill.get('amount') is not None:
+        number(fill['amount'], 'background amount', 1, 200)
 
 
 def clip_values(clip):
@@ -45,6 +53,8 @@ def clip_values(clip):
                 raise ValueError('An easing curve needs four handle values')
             for value in handles:
                 number(value, 'easing handle', -5, 5)
+    if clip.get('smoothSlow') is not None and not isinstance(clip['smoothSlow'], bool):
+        raise ValueError('Invalid smoothSlow')
     steady = clip.get('stabilise') or {}
     if steady:
         for name, low, high in [('smoothing', 0, 1), ('crop', 0, 0.3)]:

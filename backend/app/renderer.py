@@ -194,6 +194,7 @@ class FrameRenderer:
         self.sources = {}
         self.stills = {}
         self.frame_numbers = {}
+        self.tween_pairs = {}
         self.frames = {}
         self.decode_scale = {}
         # P6: a paused still shows what the export will produce, so it reads the
@@ -209,6 +210,86 @@ class FrameRenderer:
         self.stills.clear()
         self.frames.clear()
         self.closed = True
+
+    def paint_background(self, canvas: np.ndarray, time: float) -> np.ndarray:
+        """What sits behind footage that does not fill the frame (B8).
+
+        A flat colour, a gradient between two, an image from the library, or a
+        blurred, enlarged copy of the clip on screen, which is the one people
+        reach for when a vertical phone clip lands in a wide project.
+        """
+        fill = self.project.get("background")
+        if not fill:
+            return canvas
+        if isinstance(fill, str):
+            fill = {"type": "colour", "colour": fill}
+        kind = str(fill.get("type") or "colour")
+        try:
+            if kind == "colour":
+                canvas[:, :, :3] = np.array(ImageColor.getrgb(str(fill.get("colour", "#000000"))), np.uint8)
+            elif kind == "gradient":
+                top = np.array(ImageColor.getrgb(str(fill.get("from", "#000000"))), np.float32)
+                bottom = np.array(ImageColor.getrgb(str(fill.get("to", "#ffffff"))), np.float32)
+                ramp = np.linspace(0.0, 1.0, self.height, dtype=np.float32)[:, None, None]
+                canvas[:, :, :3] = np.clip(top + (bottom - top) * ramp, 0, 255).astype(np.uint8)
+            elif kind == "image" and fill.get("mediaId"):
+                still = self.media_frame({"kind": "image", "mediaId": str(fill["mediaId"])}, 0)
+                canvas[:, :, :3] = self._cover(still[:, :, :3])
+            elif kind == "blur":
+                source = next((c for c in sorted(self.clips, key=lambda c: -c["trackIndex"])
+                               if c["kind"] in ("video", "image") and c.get("mediaId")
+                               and c["start"] <= time < c["start"] + c["duration"] + c.get("extendOut", 0)), None)
+                if source is not None:
+                    still = self.media_frame(source, source_time(source, time - source["start"]))
+                    covered = self._cover(still[:, :, :3])
+                    amount = max(1, int(float(fill.get("amount", 40))))
+                    canvas[:, :, :3] = cv2.GaussianBlur(covered, (0, 0), amount)
+        except Exception:
+            # A background that cannot be drawn must never stop the frame.
+            pass
+        return canvas
+
+    def _cover(self, image: np.ndarray) -> np.ndarray:
+        """Scale an image to cover the canvas, cropping the overflow."""
+        h, w = image.shape[:2]
+        scale = max(self.width / w, self.height / h)
+        resized = cv2.resize(image, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_LINEAR)
+        top = max(0, (resized.shape[0] - self.height) // 2)
+        left = max(0, (resized.shape[1] - self.width) // 2)
+        return resized[top:top + self.height, left:left + self.width]
+
+    def _tween(self, capture, media_id: str, wanted: int, blend: float):
+        """The picture partway between two source frames, following the motion."""
+        key = (media_id, wanted)
+        pair = self.tween_pairs.get(key)
+        if pair is None:
+            current = self.frame_numbers.get(media_id, -2)
+            if wanted != current + 1:
+                capture.seek(wanted)
+            ok, first = capture.read()
+            if not ok:
+                return None
+            ok, second = capture.read()
+            if not ok:
+                return None
+            self.frame_numbers[media_id] = wanted + 1
+            self.frames[media_id] = cv2.cvtColor(second, cv2.COLOR_BGR2RGBA)
+            grey_a = cv2.cvtColor(first, cv2.COLOR_BGR2GRAY)
+            grey_b = cv2.cvtColor(second, cv2.COLOR_BGR2GRAY)
+            flow = cv2.calcOpticalFlowFarneback(grey_a, grey_b, None, 0.5, 3, 21, 3, 5, 1.2, 0)
+            self.tween_pairs = {key: (first, second, flow)}
+            pair = self.tween_pairs[key]
+        first, second, flow = pair
+        h, w = flow.shape[:2]
+        grid_y, grid_x = np.mgrid[:h, :w].astype(np.float32)
+        forward_x = (grid_x + flow[:, :, 0] * blend).astype(np.float32)
+        forward_y = (grid_y + flow[:, :, 1] * blend).astype(np.float32)
+        back_x = (grid_x - flow[:, :, 0] * (1 - blend)).astype(np.float32)
+        back_y = (grid_y - flow[:, :, 1] * (1 - blend)).astype(np.float32)
+        warped_first = cv2.remap(first, forward_x, forward_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        warped_second = cv2.remap(second, back_x, back_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        mixed = cv2.addWeighted(warped_first, 1 - blend, warped_second, blend, 0)
+        return cv2.cvtColor(mixed, cv2.COLOR_BGR2RGBA)
 
     def media_frame(self, clip: dict, time: float) -> np.ndarray:
         media_id = clip.get("mediaId")
@@ -251,6 +332,17 @@ class FrameRenderer:
         wanted = max(0, int(time * rate + 1e-7))
         if count:
             wanted = min(count - 1, wanted)
+        # B6: smooth slow motion. A slowed clip normally shows the same source
+        # frame several times over, which is what makes it look stepped. When
+        # the clip asks for it, the picture between two source frames is made
+        # rather than repeated: dense optical flow gives the motion between
+        # them, and each is warped part of the way along it before they are
+        # blended, so the movement continues instead of freezing.
+        blend = float(time * rate) - wanted
+        if clip.get("smoothSlow") and count and 0.02 < blend < 0.98 and wanted + 1 < count:
+            made = self._tween(capture, media_id, wanted, blend)
+            if made is not None:
+                return apply_crop(made, clip)
         current = self.frame_numbers.get(media_id, -2)
         if wanted == current:
             return apply_crop(self.frames[media_id].copy(), clip)
@@ -499,12 +591,7 @@ class FrameRenderer:
         canvas[:, :, 3] = 255
         # T3: what shows behind footage that does not fill the frame. Black is
         # the default, so a project without a background renders as before.
-        fill = self.project.get("background")
-        if fill:
-            try:
-                canvas[:, :, :3] = np.array(ImageColor.getrgb(str(fill)), np.uint8)
-            except ValueError:
-                pass
+        canvas = self.paint_background(canvas, time)
         for clip in sorted(self.clips, key=lambda c: (-c["trackIndex"], c["start"])):
             local = time - clip["start"]
             if clip.get("trackHidden") or clip["kind"] == "audio" or local < 0 or local >= clip["duration"] + clip.get("extendOut", 0):

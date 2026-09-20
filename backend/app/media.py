@@ -15,6 +15,7 @@ from .paths import DATA_DIR
 from . import jobs
 from . import proxies
 from . import stabilise
+from . import scenes
 MEDIA_DIR = DATA_DIR / "media"
 THUMB_DIR = DATA_DIR / "thumbs"
 INDEX_FILE = DATA_DIR / "media.json"
@@ -241,6 +242,20 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
             raise ValueError("Could not join the reversed segments: " + cat.stderr[-300:])
         shutil.move(str(joined), str(final))
     return final
+
+
+@router.get("/{media_id}/scenes")
+def media_scenes(media_id: str, sensitivity: float = 0.5, minimum: float = 1.0) -> dict:
+    """B5: where the shots change, so a long clip can become short ones."""
+    record = _find(media_id)
+    if record["kind"] != "video":
+        raise HTTPException(status_code=400, detail="only video media has scenes")
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="media file missing")
+    stand_in = proxies.proxy_path(media_id)
+    source = stand_in if proxies.status(media_id, matches[0]).get("state") == "ready" else matches[0]
+    return scenes.scenes(source, sensitivity, minimum)
 
 
 @router.get("/{media_id}/motion")
