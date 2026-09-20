@@ -404,6 +404,24 @@ class EstimateInput(BaseModel):
     rate: str | None = None
 
 
+@router.post("/sample")
+def sample_frame(body: dict) -> dict:
+    """Colour statistics of one rendered frame, for colour matching.
+
+    The reference a person means is the frame they are looking at, so this
+    renders that moment and returns the numbers rather than asking them to
+    describe a look in words.
+    """
+    from .pixel_effects import reference_statistics
+    project = validate_document(body.get("project") or {})
+    renderer = FrameRenderer(project, 480)
+    try:
+        pixels = renderer.frame(max(0.0, float(body.get("time") or 0)))
+    finally:
+        renderer.close()
+    return reference_statistics(pixels[:, :, :3].astype("float32") / 255)
+
+
 @router.post("/estimate")
 def estimate(body: EstimateInput):
     """X5: the export sheet's live size estimate, per tier."""

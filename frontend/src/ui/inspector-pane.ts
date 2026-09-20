@@ -199,10 +199,22 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           </select>
           <span class="prop-aux"></span>
         </div>
-        <div class="prop-row" data-mask-pen hidden>
+        <div class="prop-row" data-mask-pen>
           <span>${t("mask.pen")}</span>
-          <button class="toggle" data-ref="mask-draw" aria-label="${t("mask.pen")}"></button>
+          <button class="tool-chip" data-ref="mask-draw" aria-pressed="false">${icon("pointer")}${t("mask.draw")}</button>
           <span class="prop-aux" data-ref="mask-points"></span>
+        </div>
+        <p class="prop-note" data-ref="mask-pen-help" hidden>${t("mask.penhelp")}</p>
+        <div class="prop-row">
+          <span>${t("mask.brush")}</span>
+          <button class="tool-chip" data-ref="brush-keep" aria-pressed="false">${t("mask.keep")}</button>
+          <button class="tool-chip" data-ref="brush-erase" aria-pressed="false">${t("mask.erase")}</button>
+          <button class="iconbtn" data-ref="brush-clear" title="${t("mask.clearstrokes")}">${icon("reset")}</button>
+        </div>
+        <div class="prop-row">
+          <span>${t("mask.brushsize")}</span>
+          <input type="range" class="slider" data-ref="brush-size" min="1" max="30" step="1" value="8" />
+          <span class="prop-aux" data-ref="brush-size-value">8</span>
         </div>
         ${propRow(t("row.maskangle"), "maskA", 0, "°")}
         ${propRow(t("row.maskx"), "maskX", 10, "%")}
@@ -233,6 +245,39 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span>${t("bg.brushsize")}</span>
           <input type="range" class="slider" data-ref="bg-brush" min="1" max="20" step="1" value="4" />
           <span class="prop-aux" data-ref="bg-brush-value">4</span>
+        </div>
+      </div>
+      <div class="section" data-section="repair" data-feature="section.repair">
+        <div class="section-head">${t("rep.title")} ${icon("chevD")}</div>
+        <div class="prop-row">
+          <span>${t("rep.stabilise")}</span>
+          <button class="toggle" data-ref="rep-stab" aria-pressed="false" aria-label="${t("rep.stabilise")}"></button>
+          <span class="prop-aux" data-ref="rep-stab-state"></span>
+        </div>
+        <div class="prop-row" data-ref="rep-stab-rows" hidden>
+          <span>${t("rep.smoothing")}</span>
+          <input type="range" class="slider" data-ref="rep-smooth" min="0" max="100" step="5" value="60" />
+          <span class="prop-aux" data-ref="rep-smooth-value">60</span>
+        </div>
+        <div class="prop-row" data-ref="rep-crop-rows" hidden>
+          <span>${t("rep.crop")}</span>
+          <input type="range" class="slider" data-ref="rep-crop" min="0" max="30" step="1" value="6" />
+          <span class="prop-aux" data-ref="rep-crop-value">6%</span>
+        </div>
+        <div class="prop-row">
+          <span>${t("rep.deflicker")}</span>
+          <button class="toggle" data-ref="rep-flick" aria-pressed="false" aria-label="${t("rep.deflicker")}"></button>
+          <input type="range" class="slider" data-ref="rep-flick-amt" min="0" max="100" step="5" value="80" />
+        </div>
+        <div class="prop-row">
+          <span>${t("rep.denoise")}</span>
+          <button class="toggle" data-ref="rep-noise" aria-pressed="false" aria-label="${t("rep.denoise")}"></button>
+          <input type="range" class="slider" data-ref="rep-noise-amt" min="0" max="100" step="5" value="50" />
+        </div>
+        <div class="prop-row">
+          <span>${t("rep.match")}</span>
+          <button class="tool-chip" data-ref="rep-match-sample">${t("rep.sample")}</button>
+          <span class="prop-aux" data-ref="rep-match-state"></span>
         </div>
       </div>
       <div class="section" data-section="key" data-feature="section.key">
@@ -432,14 +477,157 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     engine.dispatch("clip.mute", { clipId: found.clip.id, muted: !found.clip.muted });
   });
 
+  // F8: the repairs as a panel of their own. Each writes to the clip the same
+  // way the effect list did, so nothing about the render changes; what changes
+  // is that a person can find them, and that the ones with parameters have
+  // somewhere to put them.
+  const repairClip = () => {
+    const id = engine.snapshot.selectedClipId;
+    return id ? engine.findClip(id) : null;
+  };
+  const effectsOf = (clip: { effects?: Array<{ id: string; amount?: number; params?: Record<string, number> }> }) =>
+    (clip.effects ?? []).map((entry) => ({ ...entry }));
+  const setRepairEffect = (name: string, on: boolean, params: Record<string, number>) => {
+    const found = repairClip();
+    if (!found) return;
+    const list = effectsOf(found.clip).filter((entry) => entry.id !== name);
+    if (on) list.push({ id: name, amount: 100, params });
+    engine.dispatch("clip.effects", { clipId: found.clip.id, effects: list });
+  };
+  const repairRef = <T extends HTMLElement>(name: string) => el.querySelector<T>(`[data-ref="${name}"]`);
+  const stabToggle = repairRef<HTMLButtonElement>("rep-stab");
+  const stabState = repairRef<HTMLElement>("rep-stab-state");
+  const writeStabilise = (on: boolean) => {
+    const found = repairClip();
+    if (!found) return;
+    const smoothing = Number(repairRef<HTMLInputElement>("rep-smooth")?.value ?? 60) / 100;
+    const crop = Number(repairRef<HTMLInputElement>("rep-crop")?.value ?? 6) / 100;
+    engine.dispatch("clip.stabilise", { clipId: found.clip.id, stabilise: on ? { smoothing, crop } : null });
+    repairRef<HTMLElement>("rep-stab-rows")!.hidden = !on;
+    repairRef<HTMLElement>("rep-crop-rows")!.hidden = !on;
+    if (on) void analyseMotion(found.clip.mediaId);
+  };
+  const analyseMotion = async (mediaId?: string) => {
+    if (!mediaId || !stabState) return;
+    try {
+      const started = await fetch(`/api/media/${mediaId}/motion`, {
+        method: "POST", headers: { "x-formcut-local": "1" },
+      }).then((r) => r.json());
+      stabState.textContent = started.state === "ready" ? t("rep.ready") : t("rep.analysing");
+      // The path is measured once; polling stops as soon as it is there.
+      const tick = window.setInterval(async () => {
+        const state = await fetch(`/api/media/${mediaId}/motion`).then((r) => r.json());
+        stabState.textContent = state.state === "ready"
+          ? `${t("rep.ready")} · ${state.frames ?? 0}`
+          : `${t("rep.analysing")} ${Math.round((state.progress ?? 0) * 100)}%`;
+        if (state.state === "ready" || state.state === "missing") window.clearInterval(tick);
+      }, 1200);
+    } catch {
+      stabState.textContent = t("rep.failed");
+    }
+  };
+  stabToggle?.addEventListener("click", () => {
+    const on = stabToggle.getAttribute("aria-pressed") !== "true";
+    stabToggle.setAttribute("aria-pressed", String(on));
+    stabToggle.classList.toggle("is-on", on);
+    writeStabilise(on);
+  });
+  for (const ref of ["rep-smooth", "rep-crop"]) {
+    repairRef<HTMLInputElement>(ref)?.addEventListener("input", (event) => {
+      const input = event.target as HTMLInputElement;
+      const label = repairRef<HTMLElement>(`${ref}-value`);
+      if (label) label.textContent = ref === "rep-crop" ? `${input.value}%` : input.value;
+      if (stabToggle?.getAttribute("aria-pressed") === "true") writeStabilise(true);
+    });
+  }
+  for (const [ref, name, param] of [["rep-flick", "deflicker", "strength"], ["rep-noise", "denoise-picture", "strength"]] as const) {
+    const button = repairRef<HTMLButtonElement>(ref);
+    const amount = repairRef<HTMLInputElement>(`${ref}-amt`);
+    const write = () => {
+      const on = button?.getAttribute("aria-pressed") === "true";
+      setRepairEffect(name, on, { [param]: Number(amount?.value ?? 50) / 100 });
+    };
+    button?.addEventListener("click", () => {
+      const on = button.getAttribute("aria-pressed") !== "true";
+      button.setAttribute("aria-pressed", String(on));
+      button.classList.toggle("is-on", on);
+      write();
+    });
+    amount?.addEventListener("change", write);
+  }
+  repairRef<HTMLButtonElement>("rep-match-sample")?.addEventListener("click", () => void (async () => {
+    // Colour matching needs numbers from a reference frame, and the frame a
+    // person means is the one they are looking at, so the playhead is the pick.
+    const state = repairRef<HTMLElement>("rep-match-state");
+    const found = repairClip();
+    if (!found || !state) return;
+    state.textContent = t("rep.sampling");
+    try {
+      const stats = await fetch("/api/render/sample", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
+        body: JSON.stringify({ project: engine.snapshot, time: engine.snapshot.playhead }),
+      }).then((r) => r.json());
+      setRepairEffect("colour-match", true, { strength: 1, ...stats });
+      state.textContent = t("rep.matched");
+    } catch {
+      state.textContent = t("rep.failed");
+    }
+  })());
+
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {
     const stage = document.querySelector<HTMLElement>(".stage");
     if (!stage) return;
-    const on = stage.dataset.pen === "on";
-    if (on) delete stage.dataset.pen; else stage.dataset.pen = "on";
-    drawToggle.classList.toggle("is-on", !on);
+    const wasOn = stage.dataset.pen === "on";
+    // Drawing needs a path mask to draw into. Turning the pen on when the clip
+    // has some other shape would have done nothing visible, which is most of
+    // why the tool was impossible to find.
+    if (!wasOn) {
+      const shape = el.querySelector<HTMLSelectElement>('[data-ref="mask-shape"]');
+      if (shape && shape.value !== "path") {
+        shape.value = "path";
+        shape.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      stage.dataset.pen = "on";
+    } else {
+      delete stage.dataset.pen;
+    }
+    drawToggle.classList.toggle("is-on", !wasOn);
+    drawToggle.setAttribute("aria-pressed", String(!wasOn));
+    const help = el.querySelector<HTMLElement>('[data-ref="mask-pen-help"]');
+    if (help) help.hidden = wasOn;
     stage.dispatchEvent(new CustomEvent("formcut:pen-mode"));
+  });
+  // Brush strokes go into the cutout, which is where the renderer reads them.
+  const brushState = { mode: "" as "" | "keep" | "erase" };
+  const setBrush = (mode: "keep" | "erase") => {
+    brushState.mode = brushState.mode === mode ? "" : mode;
+    for (const [ref, name] of [["brush-keep", "keep"], ["brush-erase", "erase"]] as const) {
+      const button = el.querySelector<HTMLButtonElement>(`[data-ref="${ref}"]`);
+      button?.classList.toggle("is-on", brushState.mode === name);
+      button?.setAttribute("aria-pressed", String(brushState.mode === name));
+    }
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (!stage) return;
+    if (brushState.mode) stage.dataset.brush = brushState.mode;
+    else delete stage.dataset.brush;
+    stage.dataset.brushSize = String(Number(el.querySelector<HTMLInputElement>('[data-ref="brush-size"]')?.value ?? 8) / 100);
+    stage.dispatchEvent(new CustomEvent("formcut:brush-mode"));
+  };
+  el.querySelector('[data-ref="brush-keep"]')?.addEventListener("click", () => setBrush("keep"));
+  el.querySelector('[data-ref="brush-erase"]')?.addEventListener("click", () => setBrush("erase"));
+  el.querySelector('[data-ref="brush-size"]')?.addEventListener("input", (event) => {
+    const value = (event.target as HTMLInputElement).value;
+    const label = el.querySelector<HTMLElement>('[data-ref="brush-size-value"]');
+    if (label) label.textContent = value;
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (stage) stage.dataset.brushSize = String(Number(value) / 100);
+  });
+  el.querySelector('[data-ref="brush-clear"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    if (!found?.clip.cutout) return;
+    engine.dispatch("clip.cutout", { clipId: found.clip.id, cutout: { ...found.clip.cutout, strokes: [] } });
   });
   const reverseState = el.querySelector<HTMLElement>('[data-ref="reverse-state"]')!;
   el.querySelector('[data-ref="crop-mode"]')!.addEventListener("click", () => {

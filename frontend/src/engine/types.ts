@@ -125,6 +125,10 @@ export interface Clip {
   detachedFrom?: string;
   crop?: { left?: number; top?: number; right?: number; bottom?: number };
   mask?: ClipMask;
+  /** Camera-shake correction, measured once per source and applied per frame. */
+  stabilise?: { smoothing: number; crop: number };
+  /** Frames between source frames are made rather than repeated. */
+  smoothSlow?: boolean;
   audioFx?: string;
   fx?: boolean;
   filmstrip?: boolean;

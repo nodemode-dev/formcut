@@ -226,6 +226,33 @@ export class ProjectEngine {
         s.playhead = Math.min(Math.max(s.playhead + (payload as number) / s.fps, 0), s.duration);
         this.emit("playhead");
         break;
+      case "clip.stabilise": {
+        const p = payload as { clipId: string; stabilise: { smoothing: number; crop: number } | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.stabilise) {
+          found.clip.stabilise = {
+            smoothing: Math.min(1, Math.max(0, p.stabilise.smoothing)),
+            crop: Math.min(0.3, Math.max(0, p.stabilise.crop)),
+          };
+        } else {
+          delete found.clip.stabilise;
+        }
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
+      case "clip.effects": {
+        const p = payload as { clipId: string; effects: Array<{ id: string; amount?: number; params?: Record<string, number> }> };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        found.clip.effects = p.effects.slice(0, 24).map((entry) => ({ amount: 100, ...entry }));
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "timeline.move": {
         const p = payload as { from: number; to: number };
         const list = s.timelines;
