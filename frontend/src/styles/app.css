@@ -1237,3 +1237,50 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .place-track.is-on { background: var(--cue); color: var(--on-cue); }
 .place-at { display: flex; align-items: center; gap: var(--sp-2); }
 .set-view { position: relative; }
+
+/* F14: the home screen reads like the editor, panels with gaps rather than a
+   flat sheet, and a project card carries a picture of itself and enough about
+   it to tell two apart at a glance. */
+.home-grid {
+  display: grid; gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  align-content: start; padding: var(--sp-2) 0;
+}
+.home-card.is-project {
+  position: relative; display: flex; flex-direction: column;
+  border: 1px solid var(--edge); border-radius: var(--radius-l);
+  background: var(--pane); overflow: hidden;
+}
+.home-card.is-project:hover { border-color: var(--cue); }
+.home-card-open {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 0 0 var(--sp-2); border: 0; background: transparent;
+  color: var(--ink); text-align: left; cursor: pointer; width: 100%;
+}
+.home-card-art {
+  display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 16 / 9; background: var(--screen); color: var(--ink-faint); overflow: hidden;
+}
+.home-card-art img { width: 100%; height: 100%; object-fit: cover; }
+.home-card-art svg { width: 38px; height: 38px; }
+.home-card-name {
+  padding: var(--sp-2) var(--sp-3) 0; font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.home-card-facts {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2);
+  padding: 0 var(--sp-3); color: var(--ink-soft); font-size: 11px;
+}
+.home-card-format {
+  padding: 0 var(--sp-3); color: var(--ink-faint);
+  font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.home-card-tools { position: absolute; top: 6px; right: 6px; opacity: 0; }
+.home-card.is-project:hover .home-card-tools,
+.home-card.is-project:focus-within .home-card-tools { opacity: 1; }
+.home-card-tools .iconbtn { background: rgb(0 0 0 / 0.55); }
+.home-rename {
+  width: 100%; padding: 1px 4px;
+  border: 1px solid var(--cue); border-radius: var(--radius-s);
+  background: var(--ground); color: var(--ink); font: inherit; outline: none;
+}

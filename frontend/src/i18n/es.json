@@ -545,5 +545,10 @@
   "local.place.end": "Después del último clip",
   "local.place.start": "Al principio",
   "local.place.add": "Añadir a la línea de tiempo",
-  "local.placed": "Añadido a"
+  "local.placed": "Añadido a",
+  "home.clips": "clips",
+  "home.never": "sin abrir",
+  "home.minutes": "minutos",
+  "home.hours": "horas",
+  "home.cover": "Usar este fotograma como portada"
 }

@@ -6,6 +6,7 @@
 // works: import, rename, reveal and delete for media, open for projects, and a
 // measured storage breakdown that says which parts are derived and so can be
 // deleted without losing anything.
+import { escapeHtml } from "./safe-text";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { loadDemoProject } from "../engine/demo";
@@ -172,7 +173,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     body.append(grid);
     let projects: Array<{ id: string; title: string }> = [];
     try {
-      projects = await listProjects();
+      projects = await fetch("/api/projects/summaries").then((r) => r.json());
     } catch {
       say(t("home.offline"));
     }
@@ -184,15 +185,74 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       grid.append(note);
       return;
     }
-    for (const project of projects) {
-      const card = document.createElement("button");
+    // F14: a card a person can recognise. The cover is a frame from the project
+    // itself, and what is written on it is what tells two projects apart: when
+    // it was last touched, how long it runs, how much is in it.
+    const when = (stamp: number) => {
+      if (!stamp) return t("home.never");
+      const ago = Date.now() / 1000 - stamp;
+      if (ago < 3600) return `${Math.max(1, Math.round(ago / 60))} ${t("home.minutes")}`;
+      if (ago < 86400) return `${Math.round(ago / 3600)} ${t("home.hours")}`;
+      return new Date(stamp * 1000).toLocaleDateString();
+    };
+    const runtime = (seconds: number) => {
+      const whole = Math.round(seconds);
+      return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+    };
+    for (const project of projects as Array<Record<string, number | string | boolean>>) {
+      const id = String(project.id);
+      const card = document.createElement("div");
       card.className = "home-card is-project";
-      card.dataset.open = project.id;
-      card.innerHTML = `<span class="home-card-art">${icon("film")}</span><span class="home-card-name">${project.title}</span>`;
-      card.addEventListener("click", () => void (async () => {
-        await openProject(engine, project.id);
+      card.dataset.open = id;
+      const art = project.cover
+        ? `<img src="/api/projects/${id}/cover" alt="" loading="lazy">`
+        : icon("film");
+      card.innerHTML =
+        `<button class="home-card-open" data-open-project="${id}">` +
+        `<span class="home-card-art">${art}</span>` +
+        `<span class="home-card-name" data-name>${escapeHtml(String(project.title || t("start.new")))}</span>` +
+        `<span class="home-card-facts">` +
+        `<span>${when(Number(project.updated) || 0)}</span>` +
+        `<span>${runtime(Number(project.duration) || 0)}</span>` +
+        `<span>${Number(project.clips) || 0} ${t("home.clips")}</span>` +
+        `</span>` +
+        `<span class="home-card-format">${project.width ?? ""}${project.width ? "x" : ""}${project.height ?? ""}</span>` +
+        `</button>` +
+        `<span class="home-card-tools">` +
+        `<button class="iconbtn" data-rename="${id}" title="${t("home.rename")}">${icon("text")}</button>` +
+        `</span>`;
+      card.querySelector("[data-open-project]")!.addEventListener("click", () => void (async () => {
+        await openProject(engine, id);
         dismiss();
       })());
+      card.querySelector("[data-rename]")!.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const label = card.querySelector<HTMLElement>("[data-name]")!;
+        const field = document.createElement("input");
+        field.className = "home-rename";
+        field.value = String(project.title || "");
+        field.maxLength = 120;
+        label.replaceChildren(field);
+        field.focus();
+        field.select();
+        const finish = async (commit: boolean) => {
+          const next = field.value.trim();
+          label.textContent = commit && next ? next : String(project.title || "");
+          if (!commit || !next || next === project.title) return;
+          await fetch(`/api/projects/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
+            body: JSON.stringify({ title: next }),
+          });
+          project.title = next;
+        };
+        field.addEventListener("keydown", (key) => {
+          key.stopPropagation();
+          if (key.key === "Enter") void finish(true);
+          if (key.key === "Escape") void finish(false);
+        });
+        field.addEventListener("blur", () => void finish(true));
+      });
       grid.append(card);
     }
     const journals = await listJournals();

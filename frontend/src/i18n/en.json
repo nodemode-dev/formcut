@@ -545,5 +545,10 @@
   "local.place.end": "After the last clip",
   "local.place.start": "At the start",
   "local.place.add": "Add to timeline",
-  "local.placed": "Added to"
+  "local.placed": "Added to",
+  "home.clips": "clips",
+  "home.never": "not opened yet",
+  "home.minutes": "minutes ago",
+  "home.hours": "hours ago",
+  "home.cover": "Use this frame as the cover"
 }

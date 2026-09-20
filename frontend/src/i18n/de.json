@@ -545,5 +545,10 @@
   "local.place.end": "Nach dem letzten Clip",
   "local.place.start": "Am Anfang",
   "local.place.add": "Zur Zeitleiste hinzufügen",
-  "local.placed": "Hinzugefügt zu"
+  "local.placed": "Hinzugefügt zu",
+  "home.clips": "Clips",
+  "home.never": "noch nicht geöffnet",
+  "home.minutes": "Minuten",
+  "home.hours": "Stunden",
+  "home.cover": "Dieses Bild als Titelbild"
 }

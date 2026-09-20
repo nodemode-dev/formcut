@@ -1,4 +1,5 @@
 import json
+import time
 import threading
 from pathlib import Path
 
@@ -31,6 +32,8 @@ def get_project(project_id: str) -> dict | None:
 
 
 def save_project(project: dict, expected_revision: int | None = None) -> dict:
+    # When it was last written, so the home screen can say more than a title.
+    project = {**project, "updated": time.time()}
     with _lock:
         projects = _read()
         current = next((p for p in projects if p["id"] == project["id"]), None)
