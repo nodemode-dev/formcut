@@ -30,7 +30,24 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 
 | Component | License | Decision |
 | --- | --- | --- |
-| ffmpeg, ffprobe | LGPL or GPL depending on the user-supplied build | External processes on PATH only. Video decoding, probing, audio processing and export use these executables. Distribution builds reject OpenCV wheels with bundled FFmpeg/GStreamer backends; prepare_cv.py builds image processing without them. |
+| ffmpeg, ffprobe | LGPL or GPL depending on the build shipped, see below | External processes; on PATH when run from source, inside the bundle from a release. Video decoding, probing, audio processing and export use these executables. Distribution builds reject OpenCV wheels with bundled FFmpeg/GStreamer backends; prepare_cv.py builds image processing without them. |
+
+## ffmpeg in a release bundle
+
+Running formcut from a clone uses whatever ffmpeg is on the machine, and its
+licence is that machine's concern. A release is different: `setup/fetch_ffmpeg.py`
+puts ffmpeg and ffprobe inside the bundle, and the licence of the build chosen
+then applies to what is distributed.
+
+The builds currently recorded in that script are all GPL-3.0. Shipping them
+makes the bundle GPL-3.0, which is a decision rather than an oversight, so the
+script refuses to fetch one unless `--allow-gpl` is passed, and the release
+workflow passes it. To ship under other terms, record an LGPL build in
+`SOURCES` in that script and drop the flag from the workflow.
+
+Whichever is used, the fetcher writes `ffmpeg-licence.json` beside the binaries
+recording the source URL, the licence and the archive's SHA-256, so a shipped
+bundle can always say where its ffmpeg came from.
 
 ## Icons and assets
 
