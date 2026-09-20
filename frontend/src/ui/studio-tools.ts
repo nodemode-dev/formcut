@@ -23,7 +23,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   modal.innerHTML = `<div class="set-pair studio-pair">
     <nav class="set-rail studio-rail" aria-label="Studio" data-collapsed="false">
       <div class="set-rail-head"><strong>Studio</strong></div>
-      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "tone", t("gen.audio"))}${tab("voiceover", "mic", t("voice.title"))}${tab("templates", "template", "Timeline templates")}${tab("localvideo", "video", t("localvideo.title"))}${tab("localimage", "image", t("localimage.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
+      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "tone", t("gen.audio"))}${tab("voiceover", "mic", t("voice.title"))}${tab("templates", "template", "Timeline templates")}${tab("localmedia", "image", t("local.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
       <button class="set-collapse" data-rail-toggle title="${t("set.collapse")}">${icon("chevL")}</button>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
@@ -67,21 +67,50 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         </div>
       </div>
     </section>
-    ${["video", "image"].map((kind) => `
-    <section data-view="local${kind}" class="set-view" hidden>
+    <section data-view="localmedia" class="set-view" hidden>
       <div class="panel-section">
-        <div class="panel-section-head"><span>${t(`local${kind}.title`)}</span><small>${t(`local${kind}.hint`)}</small></div>
+        <div class="panel-section-head"><span>${t("local.title")}</span><small>${t("local.inlibrary")}</small></div>
         <div class="panel-rows">
           <div class="stock-row">
-            <input data-local-search="${kind}" type="search" placeholder="${t("local.search")}" aria-label="${t("local.search")}">
-            <label>${t("local.sort")} <select data-local-sort="${kind}"><option value="added">${t("local.added")}</option><option value="name">${t("local.name")}</option><option value="duration">${t("local.duration")}</option></select></label>
+            <div class="seg local-kinds" data-ref="local-kinds">
+              <button class="is-active" data-kind="all">${t("local.all")}</button>
+              <button data-kind="video">${t("local.video")}</button>
+              <button data-kind="image">${t("local.image")}</button>
+              <button data-kind="audio">${t("local.audio")}</button>
+            </div>
+            <input data-ref="local-search" type="search" placeholder="${t("local.search")}" aria-label="${t("local.search")}">
+            <label>${t("local.sort")} <select data-ref="local-sort">
+              <option value="added">${t("local.added")}</option>
+              <option value="name">${t("local.name")}</option>
+              <option value="duration">${t("local.duration")}</option>
+            </select></label>
           </div>
-          <p class="stock-note" data-local-note="${kind}"></p>
+          <p class="stock-note" data-ref="local-note"></p>
         </div>
       </div>
-      <div class="panel-section"><div class="panel-section-head"><span>${t("local.inlibrary")}</span><small data-local-count="${kind}"></small></div>
-        <div class="card-grid stock-grid" data-local-grid="${kind}"></div></div>
-    </section>`).join("")}
+      <div class="panel-section">
+        <div class="panel-section-head"><span data-ref="local-count"></span><small>${t("local.place.hint")}</small></div>
+        <div class="local-grid" data-ref="local-grid"></div>
+      </div>
+      <div class="place-sheet" data-ref="place-sheet" hidden>
+        <div class="place-card">
+          <strong data-ref="place-name"></strong>
+          <p>${t("local.place.where")}</p>
+          <div class="place-rows" data-ref="place-tracks"></div>
+          <label class="place-at">${t("local.place.at")}
+            <select data-ref="place-at">
+              <option value="playhead">${t("local.place.playhead")}</option>
+              <option value="end">${t("local.place.end")}</option>
+              <option value="start">${t("local.place.start")}</option>
+            </select>
+          </label>
+          <div class="studio-actions">
+            <button class="tool-chip is-primary" data-ref="place-go">${t("local.place.add")}</button>
+            <button class="tool-chip" data-ref="place-cancel">${t("cap.cancel")}</button>
+          </div>
+        </div>
+      </div>
+    </section>
     <section data-view="stock" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Pexels</span><small><a class="stock-attrib" href="https://www.pexels.com" target="_blank" rel="noreferrer">Photos and videos provided by Pexels</a></small></div><div class="panel-rows">
         <div class="stock-row"><div class="seg" data-stock-kind><button class="is-active" data-val="video">${icon("video")}${t("stock.video")}</button><button data-val="photo">${icon("image")}${t("stock.photos")}</button></div><input data-stock-q type="search" placeholder="Search Pexels" aria-label="Search Pexels"><button class="tool-chip is-primary" data-stock-go>${icon("search")}${t("stock.search")}</button></div>
@@ -311,38 +340,113 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });
   // The local video and local image sections are a view of the library itself,
   // so what is already imported is findable without leaving the studio.
-  const paintLocal = () => {
-    for (const kind of ["video", "image"] as const) {
-      const grid = modal.querySelector<HTMLElement>(`[data-local-grid="${kind}"]`);
-      if (!grid) continue;
-      const query = (modal.querySelector<HTMLInputElement>(`[data-local-search="${kind}"]`)?.value ?? "").toLowerCase();
-      const sort = modal.querySelector<HTMLSelectElement>(`[data-local-sort="${kind}"]`)?.value ?? "added";
-      let items = bin.all.filter((item) => item.kind === kind);
-      if (query) items = items.filter((item) => item.name.toLowerCase().includes(query));
-      if (sort === "name") items = [...items].sort((a, b) => a.name.localeCompare(b.name));
-      else if (sort === "duration") items = [...items].sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
-      const count = modal.querySelector<HTMLElement>(`[data-local-count="${kind}"]`);
-      if (count) count.textContent = String(items.length);
-      grid.replaceChildren(...items.map((item) => {
-        const card = document.createElement("div");
-        card.className = "effect-card stock-card";
-        card.innerHTML = `<div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy">` +
-          `<span class="stock-badge">${item.duration ? Math.round(item.duration) + "s" : (item.width ?? "") + "x" + (item.height ?? "")}</span></div>` +
-          `<div class="effect-name">${escapeHtml(item.name)}</div>`;
-        card.addEventListener("dblclick", () => {
-          const state = engine.snapshot;
-          engine.dispatch("clip.add", { trackIndex: 0, clip: {
-            id: crypto.randomUUID(), kind: item.kind, label: item.name, mediaId: item.id,
-            start: state.playhead, duration: item.duration || 4 } });
-        });
-        return card;
-      }));
-    }
+  // F13: one section for everything already in the library, with a type toggle,
+  // cards that show what the media actually is, and a prompt asking where a
+  // chosen item should land rather than guessing a track.
+  let localKind = "all";
+  let pending: { id: string; name: string; kind: string; duration?: number } | null = null;
+  const localRef = <T extends HTMLElement>(name: string) => modal.querySelector<T>(`[data-ref="${name}"]`);
+  const secondsLabel = (value?: number) => {
+    if (!value) return "";
+    const minutes = Math.floor(value / 60);
+    const seconds = Math.round(value % 60);
+    return minutes ? `${minutes}:${String(seconds).padStart(2, "0")}` : `${seconds}s`;
   };
-  for (const kind of ["video", "image"] as const) {
-    modal.querySelector(`[data-local-search="${kind}"]`)?.addEventListener("input", paintLocal);
-    modal.querySelector(`[data-local-sort="${kind}"]`)?.addEventListener("change", paintLocal);
-  }
+  const paintLocal = () => {
+    const grid = localRef<HTMLElement>("local-grid");
+    if (!grid) return;
+    const query = (localRef<HTMLInputElement>("local-search")?.value ?? "").toLowerCase();
+    const sort = localRef<HTMLSelectElement>("local-sort")?.value ?? "added";
+    let items = bin.all.filter((item) => localKind === "all" || item.kind === localKind);
+    if (query) items = items.filter((item) => item.name.toLowerCase().includes(query));
+    if (sort === "name") items = [...items].sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === "duration") items = [...items].sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
+    const count = localRef<HTMLElement>("local-count");
+    if (count) count.textContent = `${items.length} ${t("local.items")}`;
+    grid.replaceChildren(...items.map((item) => {
+      const card = document.createElement("button");
+      card.className = `local-card k-${item.kind}`;
+      card.dataset.media = item.id;
+      const art = item.kind === "audio"
+        ? `<span class="local-wave">${icon("speaker")}</span>`
+        : `<img src="/api/media/${item.id}/thumb" alt="" loading="lazy">`;
+      card.innerHTML =
+        `<span class="local-art">${art}` +
+        `<span class="local-kind">${t(`local.${item.kind}`)}</span>` +
+        (item.duration ? `<span class="local-dur">${secondsLabel(item.duration)}</span>` : "") +
+        `</span><span class="local-name">${escapeHtml(item.name)}</span>` +
+        `<span class="local-meta">${item.width ? `${item.width}x${item.height}` : ""}</span>`;
+      card.addEventListener("click", () => openPlace(item));
+      return card;
+    }));
+  };
+  const openPlace = (item: { id: string; name: string; kind: string; duration?: number }) => {
+    pending = item;
+    const sheet = localRef<HTMLElement>("place-sheet");
+    const name = localRef<HTMLElement>("place-name");
+    const tracks = localRef<HTMLElement>("place-tracks");
+    if (!sheet || !tracks || !name) return;
+    name.textContent = item.name;
+    const timeline = engine.snapshot.timelines[engine.snapshot.activeTimeline];
+    tracks.replaceChildren(...timeline.tracks.map((track, index) => {
+      const choice = document.createElement("button");
+      choice.className = "tool-chip place-track";
+      choice.dataset.track = String(index);
+      choice.textContent = track.name;
+      choice.addEventListener("click", () => {
+        for (const other of tracks.querySelectorAll(".place-track")) other.classList.remove("is-on");
+        choice.classList.add("is-on");
+      });
+      return choice;
+    }));
+    // A sensible track is chosen for them, and they can say otherwise.
+    const guess = timeline.tracks.findIndex((track) =>
+      item.kind === "audio" ? /audio/i.test(track.name) : !/audio/i.test(track.name));
+    const first = tracks.querySelector<HTMLElement>(`[data-track="${Math.max(0, guess)}"]`);
+    first?.classList.add("is-on");
+    sheet.hidden = false;
+  };
+  localRef<HTMLButtonElement>("place-cancel")?.addEventListener("click", () => {
+    localRef<HTMLElement>("place-sheet")!.hidden = true;
+    pending = null;
+  });
+  localRef<HTMLButtonElement>("place-go")?.addEventListener("click", () => {
+    const sheet = localRef<HTMLElement>("place-sheet");
+    const chosen = modal.querySelector<HTMLElement>(".place-track.is-on");
+    if (!pending || !sheet || !chosen) return;
+    const state = engine.snapshot;
+    const timeline = state.timelines[state.activeTimeline];
+    const trackIndex = Number(chosen.dataset.track);
+    const where = localRef<HTMLSelectElement>("place-at")?.value ?? "playhead";
+    const track = timeline.tracks[trackIndex];
+    const end = track.clips.reduce((furthest, clip) => Math.max(furthest, clip.start + clip.duration), 0);
+    const start = where === "playhead" ? state.playhead : where === "end" ? end : 0;
+    engine.dispatch("clip.add", {
+      trackIndex,
+      clip: {
+        id: crypto.randomUUID(), kind: pending.kind, label: pending.name,
+        mediaId: pending.id, start, duration: pending.duration || 4,
+      },
+    });
+    const note = localRef<HTMLElement>("local-note");
+    if (note) note.textContent = `${t("local.placed")} ${track.name}`;
+    sheet.hidden = true;
+    pending = null;
+  });
+  // Capture phase on the modal: a shared handler for .seg rows stops these
+  // clicks before they reach anything bound on the row or the button, which is
+  // why choosing a type appeared to do nothing at all.
+  modal.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>('[data-ref="local-kinds"] [data-kind]');
+    if (!button) return;
+    localKind = button.dataset.kind ?? "all";
+    for (const other of modal.querySelectorAll('[data-ref="local-kinds"] [data-kind]')) {
+      other.classList.toggle("is-active", other === button);
+    }
+    paintLocal();
+  }, true);
+  modal.querySelector('[data-ref="local-search"]')?.addEventListener("input", paintLocal);
+  modal.querySelector('[data-ref="local-sort"]')?.addEventListener("change", paintLocal);
   bin.subscribe(() => paintLocal());
 
   modal.querySelector('[data-view="voiceover"]')!.append(buildVoiceover(engine, bin));

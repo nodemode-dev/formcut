@@ -1168,3 +1168,72 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .kfb-toggle > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: calc(var(--radius-s) - 1px); background: transparent; color: var(--ink-soft); }
 .kfb-toggle > button.is-active { background: var(--cue); color: var(--on-cue); }
 .kfb-toggle > button svg { width: 15px; height: 15px; }
+
+/* F20: the marquee and the selected keyframes. */
+.kfb-marquee { fill: var(--cue-wash); stroke: var(--cue); stroke-width: 1; stroke-dasharray: 3 2; pointer-events: none; }
+.kfb-handle.is-selected { fill: var(--on-cue); stroke: var(--cue); stroke-width: 2; }
+
+/* F13: the local media grid. Cards show what the media is before you read its
+   name: the picture fills the tile, the kind and the length sit on it, and the
+   name has room for two lines rather than being clipped to nothing. */
+.local-grid {
+  display: grid; gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  align-content: start;
+  padding: var(--sp-1) 0;
+}
+.local-card {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 0; border: 1px solid var(--edge); border-radius: var(--radius-m);
+  background: var(--pane); color: var(--ink); text-align: left; cursor: pointer;
+  overflow: hidden; transition: none;
+}
+.local-card:hover { border-color: var(--cue); }
+.local-card:focus-visible { outline: 2px solid var(--cue); outline-offset: 1px; }
+.local-art {
+  position: relative; display: block; aspect-ratio: 16 / 9;
+  background: var(--screen); overflow: hidden;
+}
+.local-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.local-wave {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  color: var(--ink-faint);
+}
+.local-wave svg { width: 34px; height: 34px; }
+.local-kind {
+  position: absolute; top: 6px; left: 6px;
+  padding: 1px 7px; border-radius: 999px;
+  background: rgb(0 0 0 / 0.62); color: var(--ink); font-size: 10px; line-height: 16px;
+}
+.local-dur {
+  position: absolute; right: 6px; bottom: 6px;
+  padding: 1px 6px; border-radius: 4px;
+  background: rgb(0 0 0 / 0.62); color: var(--ink);
+  font-size: 10px; line-height: 16px; font-variant-numeric: tabular-nums;
+}
+.local-name {
+  padding: 0 var(--sp-2); font-size: 12px; line-height: 16px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: break-word;
+}
+.local-meta {
+  padding: 0 var(--sp-2) var(--sp-2);
+  color: var(--ink-faint); font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.local-kinds { flex: 0 0 auto; }
+
+/* The placement prompt sits over the section it belongs to. */
+.place-sheet {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgb(0 0 0 / 0.55); z-index: var(--z-sticky);
+}
+.place-sheet[hidden] { display: none; }
+.place-card {
+  width: min(420px, 90%); padding: var(--sp-4);
+  border: 1px solid var(--edge); border-radius: var(--radius-l);
+  background: var(--float); display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.place-rows { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.place-track.is-on { background: var(--cue); color: var(--on-cue); }
+.place-at { display: flex; align-items: center; gap: var(--sp-2); }
+.set-view { position: relative; }

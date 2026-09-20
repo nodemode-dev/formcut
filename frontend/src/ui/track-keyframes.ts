@@ -243,6 +243,70 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     if (shown) paint(block);
   };
 
+  // F20: a box over the graph selects several keyframes, and dragging any one
+  // of them moves the whole selection. Selection is held as clip and time
+  // rather than as nodes, so a repaint does not lose it.
+  const selected = new Set<string>();
+  const selKey = (clipId: string, at: number) => `${clipId}@${at.toFixed(4)}`;
+  window.addEventListener("keydown", (event) => {
+    if (event.key !== "Delete" && event.key !== "Backspace") return;
+    if (!selected.size) return;
+    const target = event.target as HTMLElement | null;
+    if (target && /input|textarea|select/i.test(target.tagName)) return;
+    const byClip = new Map<string, number[]>();
+    for (const entry of selected) {
+      const [clipId, at] = entry.split("@");
+      byClip.set(clipId, [...(byClip.get(clipId) ?? []), Number(at)]);
+    }
+    for (const [clipId, times] of byClip) {
+      const found = engine.findClip(clipId);
+      if (!found) continue;
+      const kept = (found.clip.keyframes ?? []).filter((frame) => !times.some((at) => Math.abs(frame.t - at) < 1e-4));
+      engine.dispatch("clip.keyframes.replace", { clipId, keyframes: kept });
+    }
+    selected.clear();
+    event.preventDefault();
+  });
+  const paintSelection = (block: Block) => {
+    for (const dot of block.handles.querySelectorAll<SVGPathElement>(".kfb-handle")) {
+      const id = dot.getAttribute("data-clip") ?? "";
+      const at = Number(dot.getAttribute("data-t"));
+      dot.classList.toggle("is-selected", selected.has(selKey(id, at)));
+    }
+  };
+  const boxSelect = (block: Block, start: PointerEvent) => {
+    const box = block.graph.getBoundingClientRect();
+    const rect = svgNode("rect", "kfb-marquee") as unknown as SVGRectElement;
+    block.graph.append(rect);
+    const x0 = start.clientX - box.left, y0 = start.clientY - box.top;
+    const move = (event: PointerEvent) => {
+      const x1 = event.clientX - box.left, y1 = event.clientY - box.top;
+      setAttr(rect, "x", String(Math.min(x0, x1)));
+      setAttr(rect, "y", String(Math.min(y0, y1)));
+      setAttr(rect, "width", String(Math.abs(x1 - x0)));
+      setAttr(rect, "height", String(Math.abs(y1 - y0)));
+    };
+    const stop = (event: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      const x1 = event.clientX - box.left, y1 = event.clientY - box.top;
+      const left = Math.min(x0, x1), right = Math.max(x0, x1);
+      const top = Math.min(y0, y1), bottom = Math.max(y0, y1);
+      if (!event.shiftKey) selected.clear();
+      for (const dot of block.handles.querySelectorAll<SVGPathElement>(".kfb-handle")) {
+        const point = dot.getBoundingClientRect();
+        const cx = point.left + point.width / 2 - box.left;
+        const cy = point.top + point.height / 2 - box.top;
+        if (cx >= left && cx <= right && cy >= top && cy <= bottom) {
+          selected.add(selKey(dot.getAttribute("data-clip") ?? "", Number(dot.getAttribute("data-t"))));
+        }
+      }
+      rect.remove();
+      paintSelection(block);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop, { once: true });
+  };
+
   const dragAlong = (start: PointerEvent, clip: Clip, from: number, prop: KeyframeProp, value: number, read: (event: PointerEvent) => { t: number; v: number }) => {
     // The set as it was when the gesture began. Every move is computed from
     // this rather than from the last state, so dragging across another
@@ -254,7 +318,26 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       if (event.pointerId !== start.pointerId) return;
       const next = read(event);
       const time = localTime(clip, next.t);
+      const shift = time - startedAt;
+      const moving = new Set<number>([startedAt]);
+      for (const frame of original) {
+        if (selected.has(selKey(clip.id, frame.t)) && selected.has(selKey(clip.id, startedAt))) moving.add(frame.t);
+      }
       const rebuilt: Keyframe[] = [];
+      if (moving.size > 1) {
+        // Several selected: every one moves by the same amount, which keeps the
+        // spacing a person set up rather than collapsing them onto one point.
+        for (const frame of original) {
+          if (moving.has(frame.t)) {
+            rebuilt.push({ ...frame, t: Math.max(0, Math.min(clip.duration, frame.t + shift)), props: { ...frame.props } });
+          } else if (![...moving].some((at) => Math.abs(at + shift - frame.t) < 1e-4)) {
+            rebuilt.push({ ...frame, props: { ...frame.props } });
+          }
+        }
+        engine.dispatch("clip.keyframes.replace", { clipId: clip.id, keyframes: rebuilt, quiet: !first });
+        first = false;
+        return;
+      }
       for (const frame of original) {
         const isSource = Math.abs(frame.t - startedAt) < 1e-4;
         const isLanding = Math.abs(frame.t - time) < 1e-4;
@@ -401,6 +484,11 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         return;
       }
       if (!target.closest(".kfb-graph")) return;
+      // Empty graph space starts a marquee rather than doing nothing.
+      if (!target.closest(".kfb-handle") && !target.closest(".kfb-ease-grip")) {
+        boxSelect(block, event);
+        return;
+      }
       const [low, high] = RANGE[block.prop];
       const valueAt = (clientY: number) => {
         const box = block.graph.getBoundingClientRect();

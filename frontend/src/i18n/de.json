@@ -531,5 +531,19 @@
   "mask.keep": "Behalten",
   "mask.erase": "Löschen",
   "mask.clearstrokes": "Striche löschen",
-  "mask.brushsize": "Pinselgröße"
+  "mask.brushsize": "Pinselgröße",
+  "local.title": "Lokale Medien",
+  "local.all": "Alle",
+  "local.video": "Video",
+  "local.image": "Bild",
+  "local.audio": "Audio",
+  "local.items": "Elemente",
+  "local.place.hint": "Zum Platzieren auswählen",
+  "local.place.where": "Wohin damit?",
+  "local.place.at": "Position",
+  "local.place.playhead": "Am Abspielkopf",
+  "local.place.end": "Nach dem letzten Clip",
+  "local.place.start": "Am Anfang",
+  "local.place.add": "Zur Zeitleiste hinzufügen",
+  "local.placed": "Hinzugefügt zu"
 }

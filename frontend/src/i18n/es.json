@@ -531,5 +531,19 @@
   "mask.keep": "Conservar",
   "mask.erase": "Borrar",
   "mask.clearstrokes": "Borrar trazos",
-  "mask.brushsize": "Tamaño del pincel"
+  "mask.brushsize": "Tamaño del pincel",
+  "local.title": "Medios locales",
+  "local.all": "Todos",
+  "local.video": "Vídeo",
+  "local.image": "Imagen",
+  "local.audio": "Audio",
+  "local.items": "elementos",
+  "local.place.hint": "Elige uno para colocarlo",
+  "local.place.where": "¿Dónde debe ir?",
+  "local.place.at": "Posición",
+  "local.place.playhead": "En el cabezal",
+  "local.place.end": "Después del último clip",
+  "local.place.start": "Al principio",
+  "local.place.add": "Añadir a la línea de tiempo",
+  "local.placed": "Añadido a"
 }

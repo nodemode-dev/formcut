@@ -531,5 +531,19 @@
   "mask.keep": "Keep",
   "mask.erase": "Erase",
   "mask.clearstrokes": "Clear strokes",
-  "mask.brushsize": "Brush size"
+  "mask.brushsize": "Brush size",
+  "local.title": "Local media",
+  "local.all": "All",
+  "local.video": "Video",
+  "local.image": "Image",
+  "local.audio": "Audio",
+  "local.items": "items",
+  "local.place.hint": "Choose one to place it",
+  "local.place.where": "Where should it go?",
+  "local.place.at": "Position",
+  "local.place.playhead": "At the playhead",
+  "local.place.end": "After the last clip",
+  "local.place.start": "At the start",
+  "local.place.add": "Add to timeline",
+  "local.placed": "Added to"
 }
