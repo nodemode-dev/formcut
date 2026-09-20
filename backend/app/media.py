@@ -244,6 +244,38 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
     return final
 
 
+@router.post("/voiceover", status_code=201)
+async def upload_voiceover(file: UploadFile, name: str = "Voiceover") -> dict:
+    """B7: a recording made in the browser, converted and ingested.
+
+    Browsers record Opus in a WebM container, which is fine to play and poor to
+    edit: seeking it is slow and the container carries no sample count. It is
+    converted to wav on the way in, so a voiceover behaves like any other audio
+    in the timeline from the moment it lands.
+    """
+    raw = await file.read()
+    if len(raw) > 200_000_000:
+        raise HTTPException(status_code=413, detail="recording is too large")
+    if not raw:
+        raise HTTPException(status_code=422, detail="the recording is empty")
+    staging = MEDIA_DIR.parent / f"voiceover-{uuid.uuid4().hex}"
+    staging.parent.mkdir(parents=True, exist_ok=True)
+    staging.write_bytes(raw)
+    converted = staging.with_suffix(".wav")
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(staging), "-vn",
+             "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", str(converted)],
+            capture_output=True, text=True, timeout=600,
+        )
+        if result.returncode != 0 or not converted.is_file():
+            raise HTTPException(status_code=422, detail=f"could not read the recording: {result.stderr[-200:]}")
+        return ingest_path(converted, name, extra={"source": "voiceover"})
+    finally:
+        staging.unlink(missing_ok=True)
+        converted.unlink(missing_ok=True)
+
+
 @router.get("/{media_id}/scenes")
 def media_scenes(media_id: str, sensitivity: float = 0.5, minimum: float = 1.0) -> dict:
     """B5: where the shots change, so a long clip can become short ones."""

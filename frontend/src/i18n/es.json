@@ -498,5 +498,18 @@
   "proxy.failed": "Proxy falló",
   "proxy.stale": "Proxy desactualizado",
   "proxy.title": "Proxies",
-  "proxy.hint": "Previsualiza material pesado desde copias pequeñas; la exportación siempre usa los originales"
+  "proxy.hint": "Previsualiza material pesado desde copias pequeñas; la exportación siempre usa los originales",
+  "voice.title": "Voz en off",
+  "voice.hint": "Graba directamente en la línea de tiempo",
+  "voice.record": "Grabar",
+  "voice.stop": "Detener",
+  "voice.place": "Añadir a la línea de tiempo",
+  "voice.discard": "Descartar",
+  "voice.discarded": "Toma descartada",
+  "voice.took": "Grabado",
+  "voice.saving": "Guardando la toma",
+  "voice.placed": "Añadido en el cabezal",
+  "voice.failed": "No se pudo guardar la toma",
+  "voice.nomic": "No hay micrófono disponible",
+  "voice.silent": "no se escuchó nada, revisa la entrada"
 }

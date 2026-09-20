@@ -1123,3 +1123,10 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 [dir="rtl"] .proxy-badge { left: auto; right: 4px; }
 [dir="rtl"] .stock-badge { left: auto; right: 4px; }
 [dir="rtl"] .fav-star { right: auto; left: 2px; }
+
+/* Voiceover: a level meter says the microphone is live before a take is wasted. */
+.vo-meter { height: 8px; border-radius: 999px; background: var(--inset); overflow: hidden; margin: var(--sp-2) 0; }
+.vo-meter > span { display: block; height: 100%; width: 0; background: var(--cue); transition: width 80ms linear; }
+.vo-meter > span[data-live="no"] { background: var(--ink-faint); }
+.vo-time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.vo-preview { width: 100%; margin: var(--sp-2) 0; }

@@ -498,5 +498,18 @@
   "proxy.failed": "Proxy failed",
   "proxy.stale": "Proxy out of date",
   "proxy.title": "Proxies",
-  "proxy.hint": "Preview heavy footage from small copies; exports always read the originals"
+  "proxy.hint": "Preview heavy footage from small copies; exports always read the originals",
+  "voice.title": "Voiceover",
+  "voice.hint": "Record straight onto the timeline",
+  "voice.record": "Record",
+  "voice.stop": "Stop",
+  "voice.place": "Add to timeline",
+  "voice.discard": "Discard",
+  "voice.discarded": "Take discarded",
+  "voice.took": "Recorded",
+  "voice.saving": "Saving the take",
+  "voice.placed": "Added at the playhead",
+  "voice.failed": "Could not save the take",
+  "voice.nomic": "No microphone available",
+  "voice.silent": "nothing was heard, check the input"
 }

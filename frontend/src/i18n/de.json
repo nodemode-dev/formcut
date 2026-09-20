@@ -498,5 +498,18 @@
   "proxy.failed": "Proxy fehlgeschlagen",
   "proxy.stale": "Proxy veraltet",
   "proxy.title": "Proxys",
-  "proxy.hint": "Schweres Material aus kleinen Kopien vorschauen; Exporte lesen immer die Originale"
+  "proxy.hint": "Schweres Material aus kleinen Kopien vorschauen; Exporte lesen immer die Originale",
+  "voice.title": "Voiceover",
+  "voice.hint": "Direkt auf die Zeitleiste aufnehmen",
+  "voice.record": "Aufnehmen",
+  "voice.stop": "Stopp",
+  "voice.place": "Zur Zeitleiste hinzufügen",
+  "voice.discard": "Verwerfen",
+  "voice.discarded": "Aufnahme verworfen",
+  "voice.took": "Aufgenommen",
+  "voice.saving": "Aufnahme wird gespeichert",
+  "voice.placed": "Am Abspielkopf hinzugefügt",
+  "voice.failed": "Aufnahme konnte nicht gespeichert werden",
+  "voice.nomic": "Kein Mikrofon verfügbar",
+  "voice.silent": "nichts gehört, Eingang prüfen"
 }
