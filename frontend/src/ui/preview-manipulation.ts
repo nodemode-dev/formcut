@@ -297,8 +297,9 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     if (!current) return;
     engine.dispatch("clip.mask", { clipId: current.clip.id, mask: { ...current.mask, points } });
   };
-  const curveFor = (points: import("../engine/types").MaskPoint[]) => {
-    if (points.length < 2) return "";
+  const curveFor = (raw: import("../engine/types").MaskPoint[]) => {
+    if (raw.length < 2) return "";
+    const points = raw.map((p) => ({ ...p, ...penToFrame(p) }));
     let d = `M ${points[0].x * 100} ${points[0].y * 100}`;
     for (let index = 0; index < points.length; index += 1) {
       const a = points[index], b = points[(index + 1) % points.length];
@@ -318,7 +319,7 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     pen.querySelector<SVGPathElement>(".pen-fill")!.setAttribute("d", d);
     pen.querySelector<SVGPathElement>(".pen-line")!.setAttribute("d", d);
     const anchors = pen.querySelector<HTMLElement>(".pen-anchors")!;
-    anchors.replaceChildren(...points.flatMap((point, index) => {
+    anchors.replaceChildren(...points.map((p) => ({ ...p, ...penToFrame(p) })).flatMap((point, index) => {
       const nodes: HTMLElement[] = [];
       const anchor = document.createElement("button");
       anchor.className = "pen-anchor";
@@ -343,11 +344,77 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
   };
   const penPoint = (event: PointerEvent) => {
     const box = pen.getBoundingClientRect();
-    return { x: (event.clientX - box.left) / box.width, y: (event.clientY - box.top) / box.height };
+    const fx = (event.clientX - box.left) / box.width;
+    const fy = (event.clientY - box.top) / box.height;
+    // The mask is applied to the clip's own pixels, before the clip is scaled,
+    // moved and rotated into the frame. A point taken in frame coordinates
+    // therefore lands somewhere else entirely on any clip that has been
+    // transformed, which is why the anchors never sat where they were clicked.
+    // Undoing the transform puts the point back in the clip's own space.
+    const current = maskOf();
+    const clip = current?.clip;
+    const transform = clip?.transform;
+    if (!transform) return { x: fx, y: fy };
+    const scale = Math.max(0.01, (transform.scale ?? 100) / 100);
+    const turn = (-(transform.rotation ?? 0) * Math.PI) / 180;
+    let x = fx - 0.5 - (transform.posX ?? 0) / 100;
+    let y = fy - 0.5 - (transform.posY ?? 0) / 100;
+    const cos = Math.cos(turn), sin = Math.sin(turn);
+    const rx = x * cos - y * sin;
+    const ry = x * sin + y * cos;
+    x = rx / scale + 0.5;
+    y = ry / scale + 0.5;
+    return { x, y };
+  };
+  const penToFrame = (point: { x: number; y: number }) => {
+    // The same mapping the other way, so the overlay draws the path where the
+    // person will actually see it on the transformed clip.
+    const transform = maskOf()?.clip.transform;
+    if (!transform) return point;
+    const scale = Math.max(0.01, (transform.scale ?? 100) / 100);
+    const turn = ((transform.rotation ?? 0) * Math.PI) / 180;
+    const x = (point.x - 0.5) * scale;
+    const y = (point.y - 0.5) * scale;
+    const cos = Math.cos(turn), sin = Math.sin(turn);
+    return {
+      x: x * cos - y * sin + 0.5 + (transform.posX ?? 0) / 100,
+      y: x * sin + y * cos + 0.5 + (transform.posY ?? 0) / 100,
+    };
+  };
+  // Lasso: draw a shape freehand and it becomes anchors, because clicking a
+  // point at a time is the wrong tool for tracing something irregular.
+  const lassoPath = (raw: Array<{ x: number; y: number }>) => {
+    if (raw.length < 3) return [];
+    // Keep a point only when the line has actually turned, so a slow hand does
+    // not produce three hundred anchors nobody can edit.
+    const kept: Array<{ x: number; y: number }> = [raw[0]];
+    for (const point of raw.slice(1)) {
+      const last = kept[kept.length - 1];
+      if (Math.hypot(point.x - last.x, point.y - last.y) > 0.012) kept.push(point);
+    }
+    return kept.slice(0, 80);
   };
   pen.addEventListener("pointerdown", (event) => {
     const current = maskOf();
     if (!current) return;
+    if (stage.dataset.pen === "lasso") {
+      event.preventDefault();
+      event.stopPropagation();
+      const trail: Array<{ x: number; y: number }> = [penPoint(event)];
+      dragging = true;
+      const move = (next: PointerEvent) => { trail.push(penPoint(next)); };
+      const release = () => {
+        pen.removeEventListener("pointermove", move);
+        dragging = false;
+        const points = lassoPath(trail);
+        if (points.length >= 3) writePoints(points);
+        drawPen();
+      };
+      pen.addEventListener("pointermove", move);
+      pen.addEventListener("pointerup", release, { once: true });
+      pen.addEventListener("pointercancel", release, { once: true });
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const points = (current.mask.points ?? []).map((p) => ({ ...p }));

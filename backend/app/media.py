@@ -273,6 +273,31 @@ async def upload_voiceover(file: UploadFile, name: str = "Voiceover") -> dict:
         converted.unlink(missing_ok=True)
 
 
+@router.post("/{media_id}/subject")
+def subject_outline(media_id: str, body: dict) -> dict:
+    """An auto mask for the subject, returned as an editable path."""
+    from .render_document import validate_document
+    from .renderer import FrameRenderer
+    from .segmentation import cutout_alpha, outline
+    _find(media_id)
+    project = validate_document(body.get("project") or {})
+    model = str(body.get("model") or "person-cutout")
+    renderer = FrameRenderer(project, 640)
+    try:
+        pixels = renderer.frame(max(0.0, float(body.get("time") or 0)))
+    finally:
+        renderer.close()
+    rgb = pixels[:, :, :3].astype("float32") / 255
+    try:
+        alpha = cutout_alpha(rgb, {"model": model, "threshold": 0.0, "feather": 1.0, "strokes": []})
+    except Exception as exc:
+        raise HTTPException(status_code=409, detail=f"{model} is not ready: {exc}") from exc
+    points = outline(alpha)
+    if not points:
+        raise HTTPException(status_code=422, detail="nothing recognisable to mask in this frame")
+    return {"points": points, "model": model}
+
+
 @router.get("/{media_id}/scenes")
 def media_scenes(media_id: str, sensitivity: float = 0.5, minimum: float = 1.0) -> dict:
     """B5: where the shots change, so a long clip can become short ones."""

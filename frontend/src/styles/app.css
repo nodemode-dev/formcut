@@ -1333,6 +1333,23 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 /* Property labels keep enough room to be read. A column that shrinks a label to
    "P..." is worse than one that wraps the value. */
-.prop-row > span:first-child { flex: 0 0 auto; min-width: 84px; max-width: 132px; }
+/* A label is the only part of a row that says what the row does, so it keeps
+   its room and the slider gives way instead. Rows that were rendering "M...",
+   "Le" and "Wi" were shrinking the label to fit a slider nobody could aim at. */
+.prop-row > span:first-child {
+  flex: 0 1 auto; min-width: 92px; max-width: 150px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prop-row input[type="range"] { flex: 1 1 48px; min-width: 36px; }
+.prop-row .num-field { flex: 0 0 auto; }
+.prop-row .num-field input { width: 56px; }
 .prop-row .num-field { flex: 0 1 auto; min-width: 0; }
 .prop-row input[type="range"] { flex: 1 1 60px; min-width: 40px; }
+
+
+/* The keyframe head is one row: the mode toggle, then the property, then its
+   controls, all on a shared baseline at one height. */
+.kfb-head { display: flex; align-items: center; gap: var(--sp-2); min-height: 28px; padding: 0 var(--sp-2); }
+.kfb-head > * { flex: 0 0 auto; }
+.kfb-head select { height: 24px; padding: 0 var(--sp-2); }
+.kfb-head .kfb-toggle { margin: 0; }

@@ -568,5 +568,11 @@
   "bg.missing": "zum Laden",
   "bg.download": "Modelle laden",
   "bg.getting": "Wird geladen",
-  "bg.offline": "Engine nicht erreichbar"
+  "bg.offline": "Engine nicht erreichbar",
+  "mask.auto": "Automatisch",
+  "mask.lasso": "Lasso",
+  "mask.subject": "Motiv auswählen",
+  "mask.looking": "Motiv wird gesucht",
+  "mask.traced": "Nachgezeichnet, Punkte:",
+  "mask.failed": "Nachzeichnen nicht möglich"
 }

@@ -568,5 +568,11 @@
   "bg.missing": "por descargar",
   "bg.download": "Descargar modelos",
   "bg.getting": "Descargando",
-  "bg.offline": "motor no disponible"
+  "bg.offline": "motor no disponible",
+  "mask.auto": "Automático",
+  "mask.lasso": "Lazo",
+  "mask.subject": "Seleccionar sujeto",
+  "mask.looking": "Buscando el sujeto",
+  "mask.traced": "Trazado, puntos:",
+  "mask.failed": "No se pudo trazar"
 }

@@ -88,3 +88,31 @@ def feathered(alpha: np.ndarray, options: dict) -> np.ndarray:
 def raw_alpha(image: np.ndarray, model: str) -> np.ndarray:
     """One model run returning an unshaped 0..1 matte, for the BG3 job."""
     return cutout_alpha(image, {"model": model, "threshold": 0.0, "feather": 1.0, "strokes": []})
+
+
+def outline(alpha: np.ndarray, max_points: int = 48) -> list[dict]:
+    """Trace a matte's largest region into mask anchors.
+
+    Returning a path rather than a matte is deliberate: a person can then move a
+    point, add one, or delete one, instead of accepting or rejecting whatever
+    the model decided. The outline is simplified so it arrives as something
+    editable rather than as several thousand pixels of coastline.
+    """
+    mask = (alpha > 0.5).astype(np.uint8) * 255
+    found, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not found:
+        return []
+    biggest = max(found, key=cv2.contourArea)
+    if cv2.contourArea(biggest) < 16:
+        return []
+    height, width = alpha.shape[:2]
+    # Tighten the tolerance until the outline is small enough to work with.
+    tolerance = 0.002 * cv2.arcLength(biggest, True)
+    points = biggest
+    for _ in range(12):
+        points = cv2.approxPolyDP(biggest, tolerance, True)
+        if len(points) <= max_points:
+            break
+        tolerance *= 1.5
+    return [{"x": round(float(p[0][0]) / width, 5), "y": round(float(p[0][1]) / height, 5)}
+            for p in points]

@@ -568,5 +568,11 @@
   "bg.missing": "to download",
   "bg.download": "Download models",
   "bg.getting": "Downloading",
-  "bg.offline": "engine unreachable"
+  "bg.offline": "engine unreachable",
+  "mask.auto": "Auto",
+  "mask.lasso": "Lasso",
+  "mask.subject": "Select subject",
+  "mask.looking": "Finding the subject",
+  "mask.traced": "Traced, anchors:",
+  "mask.failed": "Could not trace that"
 }

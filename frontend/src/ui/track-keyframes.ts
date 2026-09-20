@@ -572,7 +572,10 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     body.append(graph);
     const select = head.querySelector<HTMLSelectElement>("select")!;
     select.value = "scale";
-    lane.previousElementSibling?.append(toggle);
+    // The toggle used to be appended to whatever element happened to precede the
+    // lane, which is why it floated above the row at a different size instead of
+    // sitting with the controls it belongs to. It goes at the head's start.
+    head.prepend(toggle);
     lane.after(head, body);
     const trackHeight = lane.style.getPropertyValue("--track-h");
     if (trackHeight) { head.style.setProperty("--track-h", trackHeight); body.style.setProperty("--track-h", trackHeight); }

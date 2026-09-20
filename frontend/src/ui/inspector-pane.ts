@@ -209,7 +209,13 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <button class="tool-chip" data-ref="mask-draw" aria-pressed="false">${icon("pointer")}${t("mask.draw")}</button>
           <span class="prop-aux" data-ref="mask-points"></span>
         </div>
+        <div class="prop-row">
+          <span>${t("mask.auto")}</span>
+          <button class="tool-chip" data-ref="mask-lasso" aria-pressed="false">${t("mask.lasso")}</button>
+          <button class="tool-chip is-primary" data-ref="mask-subject">${t("mask.subject")}</button>
+        </div>
         <p class="prop-note" data-ref="mask-pen-help" hidden>${t("mask.penhelp")}</p>
+        <p class="prop-note" data-ref="mask-auto-note"></p>
         <div class="prop-row">
           <span>${t("mask.brush")}</span>
           <button class="tool-chip" data-ref="brush-keep" aria-pressed="false">${t("mask.keep")}</button>
@@ -733,6 +739,44 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     if (help) help.hidden = wasOn;
     stage.dispatchEvent(new CustomEvent("formcut:pen-mode"));
   });
+  const lassoButton = el.querySelector<HTMLButtonElement>('[data-ref="mask-lasso"]');
+  lassoButton?.addEventListener("click", () => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (!stage) return;
+    const on = stage.dataset.pen !== "lasso";
+    const shape = el.querySelector<HTMLSelectElement>('[data-ref="mask-shape"]');
+    if (on && shape && shape.value !== "path") {
+      shape.value = "path";
+      shape.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (on) stage.dataset.pen = "lasso"; else delete stage.dataset.pen;
+    lassoButton.classList.toggle("is-on", on);
+    lassoButton.setAttribute("aria-pressed", String(on));
+    drawToggle?.classList.remove("is-on");
+    stage.dispatchEvent(new CustomEvent("formcut:pen-mode"));
+  });
+  el.querySelector('[data-ref="mask-subject"]')?.addEventListener("click", () => void (async () => {
+    const note = el.querySelector<HTMLElement>('[data-ref="mask-auto-note"]');
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    if (!found?.clip.mediaId || !note) return;
+    note.textContent = t("mask.looking");
+    try {
+      const reply = await fetch(`/api/media/${found.clip.mediaId}/subject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
+        body: JSON.stringify({ project: engine.snapshot, time: engine.snapshot.playhead, model: "person-cutout" }),
+      }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json()).detail))));
+      engine.dispatch("clip.mask", {
+        clipId: found.clip.id,
+        mask: { ...(found.clip.mask ?? { x: 0, y: 0, w: 100, h: 100, feather: 0 }), shape: "path", points: reply.points },
+      });
+      note.textContent = `${t("mask.traced")} ${reply.points.length}`;
+    } catch (error) {
+      note.textContent = error instanceof Error ? error.message : t("mask.failed");
+    }
+  })());
+
   // Brush strokes go into the cutout, which is where the renderer reads them.
   const brushState = { mode: "" as "" | "keep" | "erase" };
   const setBrush = (mode: "keep" | "erase") => {
