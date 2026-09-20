@@ -291,7 +291,8 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
     """Apply the colour panel to linearish RGB in 0..1. Neutral is identity."""
     if not colour_active(panel):
         return rgb
-    value = lambda k: float(panel.get(k, COLOUR_PANEL[k]))
+    def value(k):
+        return float(panel.get(k, COLOUR_PANEL[k]))
     out = rgb.astype(np.float32, copy=True)
     out *= _kelvin_gain(value("temperature"))
     tint = value("tint") / 100.0

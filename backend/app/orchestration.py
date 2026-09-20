@@ -137,7 +137,7 @@ async def events(request: Request, since: float = 0.0) -> StreamingResponse:
                     break
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=15.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # A comment keeps the connection warm through proxies and
                     # tells a reader the stream is alive rather than stalled.
                     yield ": keepalive\n\n"

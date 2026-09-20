@@ -7,7 +7,6 @@ until it contains edges. The frontend turns the returned path into position
 keyframes, so tracking rides the existing keyframe system end to end."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException

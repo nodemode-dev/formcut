@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from .media import _find
 from .paths import DATA_DIR
 from .render_document import validate_document
-from .timing import source_delta
 from .template_assets import gather, restore
+from .timing import source_delta
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 ROOT = DATA_DIR / "templates"

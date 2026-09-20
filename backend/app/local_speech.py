@@ -2,7 +2,6 @@ import json
 import os
 import subprocess
 import sys
-import wave
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -40,7 +39,7 @@ def interpreter():
         return None
     if _runtime.get(candidate):
         return candidate
-    probe = subprocess.run([candidate, "-c", "import kokoro_onnx"], capture_output=True, text=True)
+    probe = subprocess.run([candidate, "-c", "import kokoro_onnx"], capture_output=True, text=True, check=False)
     if probe.returncode:
         return None
     _runtime[candidate] = True
@@ -76,7 +75,7 @@ def speak(body: SpeechInput):
         args = {**body.model_dump(), "model": str(ROOT / "kokoro-v1.0.onnx"), "voices": str(ROOT / "voices-v1.0.bin"), "output": str(output)}
         process = subprocess.Popen([python, "-c", WORKER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            stdout, stderr = communicate(process, json.dumps(args), timeout=600, cancelled=cancelled)
+            _stdout, stderr = communicate(process, json.dumps(args), timeout=600, cancelled=cancelled)
             if cancelled():
                 raise InterruptedError("Cancelled")
             if process.returncode:

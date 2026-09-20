@@ -30,8 +30,9 @@ def main():
     parser.add_argument("--grpc", type=int)
     args = parser.parse_args()
     if args.grpc:
-        import grpc
         from concurrent.futures import ThreadPoolExecutor
+
+        import grpc
         server = grpc.server(ThreadPoolExecutor(max_workers=4))
         method = grpc.unary_unary_rpc_method_handler(lambda value, context: response(value), request_deserializer=lambda value: value.decode(), response_serializer=lambda value: json.dumps(value).encode())
         server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler("formcut.Automation", {"Call": method}),))

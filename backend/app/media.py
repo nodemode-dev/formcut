@@ -1,3 +1,4 @@
+import contextlib
 import json
 import mimetypes
 import shutil
@@ -11,11 +12,9 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from . import jobs, proxies, scenes, stabilise
 from .paths import DATA_DIR
-from . import jobs
-from . import proxies
-from . import stabilise
-from . import scenes
+
 MEDIA_DIR = DATA_DIR / "media"
 THUMB_DIR = DATA_DIR / "thumbs"
 INDEX_FILE = DATA_DIR / "media.json"
@@ -67,10 +66,8 @@ def _probe(path: Path, kind: str) -> dict:
     info = {"duration": 0.0, "width": 0, "height": 0, "fps": 0.0}
     data = _ffprobe(path)
     fmt = data.get("format", {})
-    try:
+    with contextlib.suppress(TypeError, ValueError):
         info["duration"] = round(float(fmt.get("duration", 0.0)), 3)
-    except (TypeError, ValueError):
-        pass
     for stream in data.get("streams", []):
         if stream.get("codec_type") == "video":
             info["width"] = int(stream.get("width") or 0)
@@ -97,7 +94,7 @@ def _thumbnail(src: Path, dest: Path, kind: str, duration: float) -> bool:
         "-frames:v", "1", "-vf", "scale=320:-2", str(dest),
     ]
     try:
-        subprocess.run(cmd, capture_output=True, timeout=30)
+        subprocess.run(cmd, capture_output=True, check=False, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return False
     return dest.exists()
@@ -210,7 +207,7 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
             ["ffmpeg", "-v", "error", "-y", "-i", str(source), "-f", "segment", "-segment_time", "0.5",
              "-reset_timestamps", "1", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
              "-c:a", "aac", "-b:a", "192k", str(work / "part_%05d.mp4")],
-            capture_output=True, text=True, timeout=1800,
+            capture_output=True, text=True, check=False, timeout=1800,
         )
         if seg.returncode != 0:
             raise ValueError("Could not segment the source: " + seg.stderr[-300:])
@@ -227,7 +224,7 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
                 ["ffmpeg", "-v", "error", "-y", "-i", str(part), *filters,
                  "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18", "-c:a", "aac", "-b:a", "192k",
                  str(work / f"rev_{part.name}")],
-                capture_output=True, text=True, timeout=1800,
+                capture_output=True, text=True, check=False, timeout=1800,
             )
             if rev.returncode != 0:
                 raise ValueError("Could not reverse a segment (memory or codec): " + rev.stderr[-300:])
@@ -236,7 +233,7 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
         joined = work / "joined.mp4"
         cat = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(joined)],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True, text=True, check=False, timeout=600,
         )
         if cat.returncode != 0 or not joined.is_file():
             raise ValueError("Could not join the reversed segments: " + cat.stderr[-300:])
@@ -266,7 +263,7 @@ async def upload_voiceover(file: UploadFile, name: str = "Voiceover") -> dict:
         result = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-i", str(staging), "-vn",
              "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", str(converted)],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True, text=True, check=False, timeout=600,
         )
         if result.returncode != 0 or not converted.is_file():
             raise HTTPException(status_code=422, detail=f"could not read the recording: {result.stderr[-200:]}")
@@ -373,7 +370,7 @@ def freeze_frame(media_id: str, body: FreezeBody) -> dict:
         proc = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(matches[0]),
              "-frames:v", "1", str(out)],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, check=False, timeout=120,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -397,7 +394,7 @@ def detach_audio(media_id: str) -> dict:
         proc = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-i", str(matches[0]),
              "-vn", "-c:a", "aac", "-b:a", "192k", str(out)],
-            capture_output=True, text=True, timeout=300,
+            capture_output=True, text=True, check=False, timeout=300,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise HTTPException(status_code=500, detail=str(exc))

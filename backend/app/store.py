@@ -1,9 +1,9 @@
 import json
-import time
 import threading
-from pathlib import Path
+import time
 
 from .paths import DATA_DIR
+
 PROJECTS_FILE = DATA_DIR / "projects.json"
 _lock = threading.Lock()
 

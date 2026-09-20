@@ -74,7 +74,8 @@ def title_style_preview(item: str) -> np.ndarray:
 def render(kind: str, item: str) -> np.ndarray:
     if kind == "look":
         from .assets import apply_lut
-        dark = np.zeros_like(base_image()); dark[:, :, :3] = 28
+        dark = np.zeros_like(base_image())
+        dark[:, :, :3] = 28
         return over(apply_lut(base_image(), item), dark)
     if kind == "title":
         return title_style_preview(item)

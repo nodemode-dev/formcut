@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -243,7 +243,7 @@ def _preview_version() -> str:
         source = b"".join(Path(__file__).with_name(name).read_bytes() for name in ("catalogue.py", "effect_previews.py", "pixel_effects.py", "renderer.py"))
     except OSError:
         source = str(Path(sys.executable).stat().st_mtime_ns).encode()
-    return hashlib.sha1(source).hexdigest()[:12]
+    return hashlib.sha1(source, usedforsecurity=False).hexdigest()[:12]
 
 
 PREVIEW_VERSION = _preview_version()

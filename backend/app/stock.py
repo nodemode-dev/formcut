@@ -8,7 +8,6 @@ both travel in the normalized items and into imported media records.
 """
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import sys
@@ -16,14 +15,13 @@ import tempfile
 import threading
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
-
-from . import providers
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from . import providers
 from .media import ingest_path
 
 router = APIRouter(prefix="/api/stock", tags=["stock"])
@@ -34,7 +32,7 @@ def _pexels_base() -> str:
 MAX_PER_PAGE = 80
 _MISSING_KEY = "Pexels API key not configured. Add it in Settings, AI providers, or set PEXELS_API_KEY in .env."
 
-_last_rate: dict[str, Optional[str]] = {"limit": None, "remaining": None, "reset": None}
+_last_rate: dict[str, str | None] = {"limit": None, "remaining": None, "reset": None}
 
 
 def _pexels_key() -> str:
@@ -45,7 +43,7 @@ def _pexels_key() -> str:
     return key
 
 
-def best_mp4(video: dict[str, Any]) -> Optional[str]:
+def best_mp4(video: dict[str, Any]) -> str | None:
     files = [f for f in video.get("video_files", [])
              if f.get("file_type") == "video/mp4" and f.get("width")]
     if not files:
@@ -154,8 +152,8 @@ class PexelsImportBody(BaseModel):
     url: str
     kind: str = "video"
     name: str = "pexels"
-    credit: Optional[str] = None
-    page_url: Optional[str] = None
+    credit: str | None = None
+    page_url: str | None = None
 
 
 @router.post("/import", status_code=201)
@@ -178,7 +176,7 @@ def pexels_import(body: PexelsImportBody) -> dict[str, Any]:
     })
 
 
-def _ytdlp_cmd() -> Optional[list[str]]:
+def _ytdlp_cmd() -> list[str] | None:
     # In a frozen (PyInstaller) engine sys.executable is the app binary, so
     # the -m route is meaningless there; portable builds rely on yt-dlp on
     # PATH, the same tier-1 tool policy as ffmpeg.
@@ -207,15 +205,9 @@ def _run_url_import(job_id: str, url: str) -> None:
             _jobs[job_id].update(status="error", error="yt-dlp is not installed")
         return
     workdir = Path(tempfile.mkdtemp(prefix="formcut_ytdlp_"))
-    args = cmd + [
-        "--no-playlist", "--restrict-filenames",
-        "-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b",
-        "--merge-output-format", "mp4",
-        "-o", str(workdir / "%(title).60s.%(ext)s"),
-        url,
-    ]
+    args = [*cmd, "--no-playlist", "--restrict-filenames", "-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4", "-o", str(workdir / "%(title).60s.%(ext)s"), url]
     try:
-        proc = subprocess.run(args, capture_output=True, text=True, timeout=600)
+        proc = subprocess.run(args, capture_output=True, text=True, check=False, timeout=600)
         if proc.returncode != 0:
             with _jobs_lock:
                 _jobs[job_id].update(status="error", error=(proc.stderr or "yt-dlp failed")[-300:])

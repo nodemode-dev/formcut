@@ -1,10 +1,10 @@
 import copy
-import json
+import itertools
 import shutil
 import tempfile
-from pathlib import Path
 import threading
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
@@ -160,7 +160,7 @@ def apply_edit(project: dict, command: dict):
         speed = ordered[0].get("speed", 1)
         if any(c.get("speedCurve") or c.get("speed", 1) != speed for c in ordered):
             raise ValueError("Pieces must play at the same constant speed")
-        for prev, nxt in zip(ordered, ordered[1:]):
+        for prev, nxt in itertools.pairwise(ordered):
             if abs(prev["start"] + prev["duration"] - nxt["start"]) > 0.02:
                 raise ValueError("Pieces must touch on the timeline")
             if abs(source_time(prev, prev["duration"]) - nxt.get("sourceIn", 0)) > 0.02:

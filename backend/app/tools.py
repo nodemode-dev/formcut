@@ -14,6 +14,7 @@ report when ffprobe is missing, so a bundle carrying ffmpeg alone is complete.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -73,16 +74,14 @@ def licence_note() -> dict:
     record = folder / "ffmpeg-licence.json"
     note = {"bundled": True, "folder": str(folder), "ffprobe": have("ffprobe")}
     if record.is_file():
-        try:
+        with contextlib.suppress(ValueError):
             note.update(json.loads(record.read_text(encoding="utf-8")))
-        except ValueError:
-            pass
     note["licenceText"] = (folder / "LGPL-2.1.txt").is_file()
     return note
 
 
 _DURATION = re.compile(r"Duration:\s*(\d+):(\d+):(\d+\.?\d*)")
-_VIDEO = re.compile(r"Stream #\d+:\d+.*?: Video: (\w+).*?, (\d+)x(\d+).*?, ([\d.]+) fps", re.S)
+_VIDEO = re.compile(r"Stream #\d+:\d+.*?: Video: (\w+).*?, (\d+)x(\d+).*?, ([\d.]+) fps", re.DOTALL)
 _VIDEO_NO_FPS = re.compile(r"Stream #\d+:\d+.*?: Video: (\w+).*?, (\d+)x(\d+)")
 _AUDIO = re.compile(r"Stream #\d+:\d+.*?: Audio: (\w+).*?, (\d+) Hz, ([^,]+)")
 _BITRATE = re.compile(r"bitrate:\s*(\d+) kb/s")
@@ -95,7 +94,7 @@ def _from_ffmpeg(path: Path) -> dict:
     output was asked for; that error is expected and the report is the point.
     """
     result = subprocess.run([ffmpeg(), "-hide_banner", "-i", str(path)],
-                            capture_output=True, text=True, timeout=120)
+                            capture_output=True, text=True, check=False, timeout=120)
     text = result.stderr
     streams: list[dict] = []
     video = _VIDEO.search(text) or _VIDEO_NO_FPS.search(text)
@@ -134,7 +133,7 @@ def probe(path: Path) -> dict:
             out = subprocess.run(
                 ["ffprobe", "-v", "quiet", "-print_format", "json",
                  "-show_format", "-show_streams", str(path)],
-                capture_output=True, text=True, timeout=120,
+                capture_output=True, text=True, check=False, timeout=120,
             )
             if out.returncode == 0 and out.stdout.strip():
                 return json.loads(out.stdout)

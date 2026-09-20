@@ -82,7 +82,7 @@ def _envelope(src: Path, duration: float) -> dict | None:
         "-f", "s16le", "-",
     ]
     try:
-        out = subprocess.run(cmd, capture_output=True, timeout=180)
+        out = subprocess.run(cmd, capture_output=True, check=False, timeout=180)
     except (OSError, subprocess.SubprocessError):
         return None
     raw = out.stdout
@@ -125,7 +125,7 @@ def _strip(src: Path, dest: Path, kind: str, duration: float, frames: int) -> bo
                "-vf", f"fps={rate:.6f},scale={STRIP_WIDTH}:-2,tile={frames}x1",
                "-frames:v", "1", "-q:v", "4", str(dest)]
     try:
-        subprocess.run(cmd, capture_output=True, timeout=180)
+        subprocess.run(cmd, capture_output=True, check=False, timeout=180)
     except (OSError, subprocess.SubprocessError):
         return False
     return dest.exists() and dest.stat().st_size > 0

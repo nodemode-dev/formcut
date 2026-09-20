@@ -4,28 +4,26 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .paths import DATA_DIR
-
-from .features import router as features_router
-from .security import LocalOnly
 from .brush import router as brush_router
+from .features import router as features_router
 from .media import router as media_router
-from .projects import router as projects_router
-from .stock import router as stock_router
+from .paths import DATA_DIR
 from .presets import router as presets_router
-from .track import router as track_router
-from .tts import router as tts_router
+from .projects import router as projects_router
+from .security import LocalOnly
+from .stock import router as stock_router
 
 # The bundled ffmpeg, if there is one, goes to the front of the search path so
 # a binary a person has replaced is the one that runs.
 from .tools import prefer_bundled
+from .track import router as track_router
+from .tts import router as tts_router
 
 prefer_bundled()
 
-APP_VERSION = "0.80.0"
+APP_VERSION = "0.81.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
@@ -54,6 +52,7 @@ app.include_router(stock_router)
 app.include_router(tts_router)
 app.include_router(presets_router)
 from .generate import router as generate_router
+
 app.include_router(generate_router)
 app.include_router(track_router)
 app.include_router(features_router)
@@ -80,7 +79,7 @@ def _start_log() -> Path:
     existing = sorted(LOGS.glob("engine-*.log"))
     for old in existing[:-9]:
         old.unlink(missing_ok=True)
-    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
     path = LOGS / f"engine-{stamp}.log"
     handler = logging.FileHandler(path, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
@@ -177,9 +176,10 @@ def packages_reload() -> dict:
 def diagnostics() -> dict:
     """Version, platform, encoders and models present; never a provider key."""
     import platform
+
+    from . import gpu
     from .encoders import status as encoder_status
     from .model_manager import MODELS, ready
-    from . import gpu
     environment = {
         name: ("set" if value else "unset")
         for name, value in os.environ.items()

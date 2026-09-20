@@ -13,9 +13,7 @@ Settings" and a stack trace.
 from __future__ import annotations
 
 import base64
-import mimetypes
 import uuid
-from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException

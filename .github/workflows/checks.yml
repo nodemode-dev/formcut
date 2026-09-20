@@ -98,4 +98,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      # Tauri validates externalBin when the crate is compiled, and the frozen
+      # engine is produced by the release workflow rather than this one. A check
+      # job that had to freeze Python to compile Rust would take twenty minutes
+      # to tell us about a syntax error, so a stub stands in for the sidecar.
+      # It is named for the host triple, which is what tauri looks for, and it
+      # never leaves the runner.
+      - name: stub the engine sidecar so the shell can compile
+        run: |
+          triple=$(rustc -vV | awk '/^host:/ {print $2}')
+          mkdir -p src-tauri/binaries
+          printf '#!/bin/sh\necho "stub for cargo check"\n' > "src-tauri/binaries/formcut-engine-$triple"
+          chmod +x "src-tauri/binaries/formcut-engine-$triple"
+          echo "stubbed formcut-engine-$triple"
       - run: cargo check --manifest-path src-tauri/Cargo.toml

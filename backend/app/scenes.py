@@ -11,6 +11,7 @@ for the same reason stabilisation does.
 """
 from __future__ import annotations
 
+import itertools
 import subprocess
 
 import cv2
@@ -81,7 +82,7 @@ def scenes(source, sensitivity: float = 0.5, minimum: float = 1.0) -> dict:
     duration = (len(scores) + 1) / SAMPLE_FPS
     segments = []
     edges = [0.0] + [cut["at"] for cut in cuts] + [round(duration, 3)]
-    for start, end in zip(edges, edges[1:]):
+    for start, end in itertools.pairwise(edges):
         if end - start >= minimum:
             segments.append({"start": round(start, 3), "duration": round(end - start, 3)})
     return {

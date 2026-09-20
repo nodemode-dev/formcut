@@ -16,7 +16,7 @@ from collections import OrderedDict
 
 def clip_signature(clip: dict) -> str:
     """Everything about a clip that can change its pixels."""
-    return hashlib.sha1(json.dumps(clip, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    return hashlib.sha1(json.dumps(clip, sort_keys=True, default=str).encode(), usedforsecurity=False).hexdigest()[:16]
 
 
 def covering(project: dict, at: float) -> list[dict]:

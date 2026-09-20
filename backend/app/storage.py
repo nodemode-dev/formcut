@@ -6,6 +6,7 @@ measured, never estimated: caches can be rebuilt, media and projects cannot, so
 they are reported separately rather than as one number.
 """
 
+import contextlib
 import shutil
 from pathlib import Path
 
@@ -54,10 +55,8 @@ def usage() -> dict:
         if size or count:
             areas.append({"label": label, "folder": folder, "bytes": size, "files": count, "derived": derived})
     free = 0
-    try:
+    with contextlib.suppress(OSError):
         free = shutil.disk_usage(DATA_DIR).free
-    except OSError:
-        pass
     return {
         "root": str(DATA_DIR),
         "total": sum(area["bytes"] for area in areas),

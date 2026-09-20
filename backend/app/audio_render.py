@@ -1,12 +1,12 @@
-from .processes import communicate
 import math
 import subprocess
 import wave
 
 import numpy as np
 
-from .catalogue import AUDIO_CHAINS, AUDIO_PARAMS, audio_chain
+from .catalogue import AUDIO_CHAINS, audio_chain
 from .media import MEDIA_DIR, _ffprobe, reversed_path
+from .processes import communicate
 from .render_document import flatten
 from .timing import fade_at, source_delta, source_time, volume_at
 
@@ -74,7 +74,7 @@ def filter_audio(samples: np.ndarray, chain: str, cancelled=lambda: False) -> np
     return np.frombuffer(output, "<f4").reshape(-1, 2).copy()
 
 def render_audio(project: dict, destination, cancelled=lambda: False):
-    total = int(math.ceil(project["duration"] * RATE))
+    total = math.ceil(project["duration"] * RATE)
     mix = np.zeros((total, 2), np.float32)
     for clip in flatten(project):
         if cancelled():
@@ -102,7 +102,7 @@ def render_audio(project: dict, destination, cancelled=lambda: False):
         pan = max(-1, min(1, float(clip.get("pan", 0))))
         samples[:, 0] *= min(1, 1 - pan)
         samples[:, 1] *= min(1, 1 + pan)
-        offset = int(round(clip["start"] * RATE))
+        offset = round(clip["start"] * RATE)
         count = min(count, total - offset)
         if count > 0:
             mix[offset:offset + count] += samples[:count]

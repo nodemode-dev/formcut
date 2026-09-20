@@ -6,8 +6,8 @@ import threading
 
 import httpx
 from fastapi import APIRouter, HTTPException, UploadFile
-from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 
 from . import jobs
 from .paths import DATA_DIR, MODELS_DIR
@@ -46,11 +46,13 @@ def download(model: str, report, cancelled):
             path = ROOT / name
             if path.is_file():
                 continue
-            url = source_for(model, name, url)
+            # A per-model source may override the declared one; keeping it in a
+            # separate name makes clear the loop's value is not being rewritten.
+            download_url = source_for(model, name, url)
             temporary = path.with_suffix(path.suffix + ".download")
             digest = hashlib.sha256()
             try:
-                with httpx.stream("GET", url, follow_redirects=True, timeout=120) as response:
+                with httpx.stream("GET", download_url, follow_redirects=True, timeout=120) as response:
                     response.raise_for_status()
                     length = int(response.headers.get("content-length", 0))
                     written = 0
@@ -75,7 +77,7 @@ def download(model: str, report, cancelled):
                         f"Checksum mismatch for {name}: expected {expected[:16]}..., got {digest.hexdigest()[:16]}..."
                     )
                 temporary.replace(path)
-                path.with_suffix(path.suffix + ".json").write_text(json.dumps({"url": url, "sha256": digest.hexdigest(), "license": MODELS[model]["license"]}))
+                path.with_suffix(path.suffix + ".json").write_text(json.dumps({"url": download_url, "sha256": digest.hexdigest(), "license": MODELS[model]["license"]}))
             finally:
                 temporary.unlink(missing_ok=True)
     return {"model": model, "ready": ready(model)}

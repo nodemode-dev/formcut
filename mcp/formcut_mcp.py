@@ -240,8 +240,8 @@ def formcut_get_project(
         return project
     timeline = project.get("timelines", [{}])[project.get("activeTimeline", 0)]
     lines = [f"{project.get('title')}  revision {project.get('revision')}",
-             f"frame {project.get('width')}x{project.get('height')} at {project.get('fps')} fps, "
-             f"duration {round(project.get('duration') or 0, 2)} s"]
+             (f"frame {project.get('width')}x{project.get('height')} at {project.get('fps')} fps, "
+              f"duration {round(project.get('duration') or 0, 2)} s")]
     for index, track in enumerate(timeline.get("tracks", [])):
         clips = ", ".join(f"{clip.get('label', clip.get('id'))} at {clip.get('start')}s for {clip.get('duration')}s"
                           for clip in track.get("clips", [])) or "empty"

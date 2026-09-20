@@ -1,7 +1,7 @@
 import uuid
 
-from fastapi.responses import FileResponse
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import store
@@ -72,9 +72,10 @@ def project_cover(project_id: str):
 @router.put("/{project_id}/cover", status_code=204)
 def set_project_cover(project_id: str, body: dict) -> None:
     """Render the frame at a given moment and keep it as the project's picture."""
+    from PIL import Image
+
     from .render_api import FrameRenderer
     from .render_document import validate_document
-    from PIL import Image
     document = validate_document(body.get("project") or {})
     COVERS.mkdir(parents=True, exist_ok=True)
     renderer = FrameRenderer(document, 480)

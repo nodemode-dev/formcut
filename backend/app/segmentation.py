@@ -1,4 +1,5 @@
 import hashlib
+import itertools
 import threading
 from collections import OrderedDict
 
@@ -48,7 +49,7 @@ def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
         color = 1 if stroke.get("mode") == "keep" else 0
         for point in points:
             cv2.circle(alpha, point, radius, color, -1)
-        for a, b in zip(points, points[1:]):
+        for a, b in itertools.pairwise(points):
             cv2.line(alpha, a, b, color, radius * 2)
     return alpha
 
@@ -80,10 +81,7 @@ def feathered(alpha: np.ndarray, options: dict) -> np.ndarray:
             else:
                 cv2.polylines(layer, [np.array(points, np.int32)], False, 255, radius * 2)
             soft = cv2.GaussianBlur(layer.astype(np.float32) / 255, (0, 0), max(1, radius * 0.25))
-            if stroke.get("mode") == "erase":
-                shaped = np.clip(shaped - soft, 0, 1)
-            else:
-                shaped = np.clip(shaped + soft, 0, 1)
+            shaped = np.clip(shaped - soft, 0, 1) if stroke.get("mode") == "erase" else np.clip(shaped + soft, 0, 1)
     return shaped
 
 

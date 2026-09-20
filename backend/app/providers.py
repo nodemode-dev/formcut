@@ -11,9 +11,9 @@ where it came from, and the last four characters, which is enough for a person
 to tell which key is loaded.
 """
 
+import contextlib
 import json
 import os
-from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -59,10 +59,8 @@ def _write(data: dict[str, str]) -> None:
     STORE.write_text(json.dumps(data))
     # The file holds credentials, so it is readable by its owner only. On
     # Windows this is a no-op and the platform ACL applies instead.
-    try:
+    with contextlib.suppress(OSError):
         STORE.chmod(0o600)
-    except OSError:
-        pass
 
 
 def key_for(name: str) -> str:

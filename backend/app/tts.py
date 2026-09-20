@@ -6,18 +6,16 @@ returns mp3 bytes and GET /v1/voices lists voices. Key-gated, degrading to 503
 with a clear message when no key is configured, as stock media does."""
 from __future__ import annotations
 
-import os
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
-
-from . import providers
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from . import providers
 from .media import ingest_path
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
@@ -60,8 +58,8 @@ def voices() -> dict[str, Any]:
 
 class SpeakBody(BaseModel):
     text: str
-    voice_id: Optional[str] = None
-    model_id: Optional[str] = None
+    voice_id: str | None = None
+    model_id: str | None = None
 
 
 @router.post("/speak", status_code=201)

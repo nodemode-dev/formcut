@@ -43,7 +43,7 @@ _detected: dict[str, list[str]] | None = None
 
 def _listed() -> set[str]:
     try:
-        out = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True, timeout=30).stdout
+        out = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True, check=False, timeout=30).stdout
     except Exception:
         return set()
     names = set()
@@ -60,7 +60,7 @@ def _works(encoder: str) -> bool:
         probe = subprocess.run(
             ["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30:duration=0.1",
              "-frames:v", "2", "-c:v", encoder, "-f", "null", "-"],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, check=False, timeout=60,
         )
         return probe.returncode == 0
     except Exception:

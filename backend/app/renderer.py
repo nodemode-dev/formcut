@@ -1,24 +1,23 @@
-from .video_source import acquire, recycle
-from .catalogue import scale_pixel_params, GRADES
 import math
-from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 
 from . import gpu
 from .assets import apply_lut, asset_path
+from .catalogue import GRADES, scale_pixel_params
 from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
 from .proxies import usable as proxy_for
 from .stabilise import apply as stabilise_frame
+from .video_source import acquire, recycle
 
 # Proxies may be switched off wholesale; the switch lives here so one import
 # covers both the preview path and the reverse builder.
 PROXIES_ENABLED = True
-from .pixel_effects import apply_effects, apply_colour_panel, COLOUR_PANEL
+from .pixel_effects import apply_colour_panel, apply_effects
 from .render_document import flatten, validate_document
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
 
@@ -404,7 +403,7 @@ class FrameRenderer:
             layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
             ImageDraw.Draw(layer).rounded_rectangle(
                 [x - pad, y - pad, x + plate_box[2] + pad, y + plate_box[3] + pad],
-                radius=radius, fill=ImageColor.getrgb(plate) + (alpha,),
+                radius=radius, fill=(*ImageColor.getrgb(plate), alpha),
             )
             image.alpha_composite(layer)
             draw = ImageDraw.Draw(image)
@@ -503,7 +502,8 @@ class FrameRenderer:
         if clip.get("cutout"):
             # BG3: read the cached matte; rendering never runs inference. A clip
             # whose mattes are not ready renders unmatted rather than stalling.
-            from .matte_cache import matte_key, read as read_matte
+            from .matte_cache import matte_key
+            from .matte_cache import read as read_matte
             from .segmentation import feathered
             options = clip["cutout"]
             key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
@@ -528,10 +528,14 @@ class FrameRenderer:
         kind = clip["transitionIn"]["type"]
         h, w = image.shape[:2]
         if kind.startswith("wipe"):
-            if kind == "wipe-left": image[:, int(w * progress):, 3] = 0
-            elif kind == "wipe-right": image[:, :int(w * (1 - progress)), 3] = 0
-            elif kind == "wipe-up": image[int(h * progress):, :, 3] = 0
-            else: image[:int(h * (1 - progress)), :, 3] = 0
+            if kind == "wipe-left":
+                image[:, int(w * progress):, 3] = 0
+            elif kind == "wipe-right":
+                image[:, :int(w * (1 - progress)), 3] = 0
+            elif kind == "wipe-up":
+                image[int(h * progress):, :, 3] = 0
+            else:
+                image[:int(h * (1 - progress)), :, 3] = 0
         elif kind in ("slide-left", "slide-right", "push-up"):
             dx = int(w * (1 - progress)) * (1 if kind == "slide-left" else -1) if kind != "push-up" else 0
             dy = int(h * (1 - progress)) if kind == "push-up" else 0

@@ -1,4 +1,5 @@
 import bisect
+import itertools
 import math
 
 
@@ -27,7 +28,7 @@ def source_delta(clip: dict, local: float) -> float:
     if local <= 0:
         return local * speed_at(clip, 0)
     breaks = [0.0] + [p[0] for p in curve_points(clip) if 0 < p[0] < local] + [local]
-    return sum((b - a) * (speed_at(clip, a) + speed_at(clip, b)) / 2 for a, b in zip(breaks, breaks[1:]))
+    return sum((b - a) * (speed_at(clip, a) + speed_at(clip, b)) / 2 for a, b in itertools.pairwise(breaks))
 
 
 def source_time(clip: dict, local: float) -> float:
@@ -127,7 +128,7 @@ def property_at(clip: dict, prop: str, local: float, default: float) -> float:
         return default
     if local <= points[0]["t"]:
         return points[0]["props"][prop]
-    for a, b in zip(points, points[1:]):
+    for a, b in itertools.pairwise(points):
         if local < b["t"]:
             p = ease((local - a["t"]) / max(1e-9, b["t"] - a["t"]), a.get("interp", "linear"), a.get("handles"))
             return a["props"][prop] + (b["props"][prop] - a["props"][prop]) * p
@@ -158,7 +159,7 @@ def keyed_value(points, local: float, default: float) -> float:
         return default
     if local <= usable[0]["t"]:
         return float(usable[0]["value"])
-    for a, b in zip(usable, usable[1:]):
+    for a, b in itertools.pairwise(usable):
         if local < b["t"]:
             p = ease((local - a["t"]) / max(1e-9, b["t"] - a["t"]), a.get("interp", "linear"), a.get("handles"))
             return float(a["value"]) + (float(b["value"]) - float(a["value"])) * p
@@ -215,7 +216,7 @@ def _in_shape(preset: str, p: float) -> dict:
 
 
 def _combo_shape(preset: str, local: float, duration: float) -> dict:
-    cycles = max(1.0, duration)
+    max(1.0, duration)
     phase = 2 * math.pi * local
     if preset == "pulse":
         return {"scale": 1 + 0.05 * math.sin(phase * 1.5)}

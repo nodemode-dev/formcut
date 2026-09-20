@@ -142,7 +142,7 @@ _lock = threading.RLock()
 _queued: dict[str, int] = {}
 _building: dict[str, float] = {}
 _failed: dict[str, str] = {}
-_work: "Queue[tuple[str, Path, int]]" = Queue()
+_work: Queue[tuple[str, Path, int]] = Queue()
 _export_running = threading.Event()
 _started = False
 
@@ -186,7 +186,11 @@ def _run() -> None:
             _queued.pop(media_id, None)
             _building[media_id] = 0.0
         try:
-            build_proxy(media_id, source, lambda p: _progress(media_id, p), lambda: False, long_side)
+            # The progress callback binds this iteration's id rather than the
+            # loop variable: without the default argument a later build would
+            # report its progress against whichever media the loop had reached.
+            build_proxy(media_id, source, lambda value, which=media_id: _progress(which, value),
+                        lambda: False, long_side)
         except Exception as exc:
             with _lock:
                 _failed[media_id] = str(exc)[:200]

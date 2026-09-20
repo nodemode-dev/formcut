@@ -119,7 +119,7 @@ def hwaccel_flags() -> list[str]:
         if os.environ.get("FORMCUT_HWACCEL") == "off":
             return _HWACCEL
         try:
-            listed = subprocess.run(["ffmpeg", "-v", "error", "-hwaccels"], capture_output=True, text=True, timeout=20).stdout
+            listed = subprocess.run(["ffmpeg", "-v", "error", "-hwaccels"], capture_output=True, text=True, check=False, timeout=20).stdout
             names = {line.strip() for line in listed.splitlines()[1:] if line.strip()}
             for candidate in ("videotoolbox", "cuda", "qsv", "vaapi", "d3d11va"):
                 if candidate not in names:
@@ -128,7 +128,7 @@ def hwaccel_flags() -> list[str]:
                     ["ffmpeg", "-v", "error", "-hwaccel", candidate, "-f", "lavfi",
                      "-i", "testsrc2=size=320x240:rate=30:duration=0.2", "-frames:v", "3",
                      "-f", "null", "-"],
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True, text=True, check=False, timeout=30,
                 )
                 if probe.returncode == 0 and not probe.stderr.strip():
                     _HWACCEL = ["-hwaccel", candidate]

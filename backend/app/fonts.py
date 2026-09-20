@@ -68,7 +68,7 @@ def title_font(style, size):
     if any(ord(char) > 0x2e80 for char in text):
         candidates.extend(['/System/Library/Fonts/PingFang.ttc', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', str(Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts' / 'msyh.ttc')])
     # weight and italic pick a face; bold keeps its original meaning when neither is set
-    heavy = style.get('weight') is not None and int(style['weight']) >= 600 or style.get('weight') is None and style.get('bold', True)
+    heavy = (style.get('weight') is not None and int(style['weight']) >= 600) or (style.get('weight') is None and style.get('bold', True))
     italic = bool(style.get('italic'))
     faces = []
     if heavy and italic:

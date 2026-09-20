@@ -1,4 +1,4 @@
-import base64;
+import base64
 import io
 
 from fastapi import UploadFile

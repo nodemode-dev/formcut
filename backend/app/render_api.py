@@ -1,33 +1,34 @@
+import hashlib
 import io
+import json
 import math
 import os
 import subprocess
 import threading
-from concurrent.futures import ThreadPoolExecutor
 import time
 import uuid
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
 from . import gpu, jobs
-from .audio_render import render_audio
+from .audio_render import RATE, processed_clip_audio, render_audio
+from .encoders import choose as choose_encoder
+from .encoders import estimate_size, pixel_format, supports_ten_bit, tier_flags
+from .encoders import status as encoder_status
+from .frame_cache import FrameCache, ReadAhead
+from .matte_cache import matte_key, sample_times
+from .matte_cache import progress as matte_progress
+from .matte_cache import store as matte_store
+from .media import MEDIA_DIR, reversed_path
+from .media import has_audio as media_has_audio
 from .paths import DATA_DIR
 from .render_document import validate_document
-import hashlib
-import json
-import numpy as np
 from .renderer import FrameRenderer
-from .audio_render import processed_clip_audio, RATE
-from .media import MEDIA_DIR, reversed_path, has_audio as media_has_audio
-from .paths import DATA_DIR
-from .frame_cache import FrameCache, ReadAhead
-from .encoders import choose as choose_encoder, tier_flags, status as encoder_status, pixel_format, supports_ten_bit, estimate_size
-from .matte_cache import matte_key, sample_times, store as matte_store, progress as matte_progress
-from . import jobs
 
 router = APIRouter(prefix="/api/render", tags=["render"])
 _lock = threading.RLock()
@@ -324,7 +325,7 @@ def clip_audio(body: ClipAudioInput):
         raise HTTPException(422, "Clip has no media")
     signature = hashlib.sha1(json.dumps({k: clip.get(k) for k in
         ("mediaId", "sourceIn", "duration", "extendOut", "speed", "speedCurve", "reversed", "audioEffects", "audioFx")},
-        sort_keys=True, default=str).encode()).hexdigest()[:20]
+        sort_keys=True, default=str).encode(), usedforsecurity=False).hexdigest()[:20]
     CLIP_AUDIO.mkdir(parents=True, exist_ok=True)
     path = CLIP_AUDIO / f"{signature}.f32"
     if not path.is_file():

@@ -34,17 +34,14 @@ def matte_key(media_id: str, model: str, options: dict | None = None) -> str:
         "threshold": (options or {}).get("threshold", 0.5),
         "strokes": (options or {}).get("strokes", []),
     }
-    digest = hashlib.sha1(json.dumps(shaping, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    digest = hashlib.sha1(json.dumps(shaping, sort_keys=True, default=str).encode(), usedforsecurity=False).hexdigest()[:16]
     return f"{media_id}-{model}-{digest}"
 
 
 def sample_times(duration: float, fps: float) -> list[float]:
     """Ten samples per source second, or every frame under ten seconds."""
-    if duration <= 10:
-        step = 1.0 / max(1.0, fps)
-    else:
-        step = 0.1
-    count = max(1, int(math.ceil(duration / step)))
+    step = 1.0 / max(1.0, fps) if duration <= 10 else 0.1
+    count = max(1, math.ceil(duration / step))
     return [round(index * step, 4) for index in range(count + 1)]
 
 
