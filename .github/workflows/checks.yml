@@ -1,0 +1,101 @@
+name: checks
+
+# The gaps document asks for a check on every push and pull request that
+# type-checks, builds and compiles on all three platforms, so a change that
+# breaks one of them cannot merge. No test runner appears here: this repository
+# forbids self-written tests, and the checks below are the ones that fail on
+# real breakage rather than on a changed line.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: interface (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: type-check
+        run: npx tsc --noEmit
+        working-directory: frontend
+      - name: build
+        run: npm run build
+        working-directory: frontend
+      - name: locale key counts match
+        shell: bash
+        run: |
+          cd frontend/src/i18n
+          for f in es de; do
+            a=$(node -e "console.log(Object.keys(require('./en.json')).length)")
+            b=$(node -e "console.log(Object.keys(require('./$f.json')).length)")
+            [ "$a" = "$b" ] || { echo "en has $a keys, $f has $b"; exit 1; }
+          done
+      - name: the language pack has no blank rows
+        shell: bash
+        run: |
+          cd frontend/src/i18n
+          node -e "
+            const s = require('fs').readFileSync('language-pack.ts','utf8');
+            const table = s.split('\`')[1].split('\n').filter(Boolean);
+            const bad = table.filter(l => l.split('|').length !== 10);
+            if (bad.length) { console.error('rows with the wrong column count:', bad.length); process.exit(1); }
+          "
+
+  engine:
+    name: engine (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip ruff
+      - run: pip install -r backend/requirements.txt
+      - name: compile
+        run: python -m compileall -q backend/app mcp
+      - name: lint
+        run: ruff check backend/app mcp
+      - name: the engine imports and its routes mount once
+        run: |
+          python - <<'PY'
+          import sys, collections
+          sys.path.insert(0, "backend")
+          from app.main import app
+          paths = [f"{m}:{r.path}" for r in app.routes for m in getattr(r, "methods", {"GET"})]
+          repeated = [p for p, n in collections.Counter(paths).items() if n > 1]
+          assert not repeated, f"routes mounted more than once: {repeated}"
+          print(len(paths), "routes, none repeated")
+          PY
+
+  shell:
+    name: desktop shell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: system libraries for tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: cargo check --manifest-path src-tauri/Cargo.toml

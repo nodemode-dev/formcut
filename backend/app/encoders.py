@@ -148,8 +148,14 @@ def supports_ten_bit(codec: str) -> bool:
 # guessed: h264/hevc/av1 at 320x180, 640x360 and 1280x720, plus the three
 # quality tiers at 640x360. Measured bpp fell from 0.12 to 0.017 across that
 # range, which is the exponent doing its job.
-BITRATE_K = 2.76          # kbit/s at one unit of (pixels per second) ** EXPONENT
-EXPONENT = 0.30
+# Refitted after a 4K export came in 94 percent under. The first fit used a clip
+# whose detail did not grow with resolution, which made bitrate look almost flat
+# and produced an exponent of 0.30; measuring one clip at 360p, 720p, 1440p and
+# 2160p gives about 0.85, which is also where the usual rule of thumb sits.
+# Content still dominates: two clips at the same size can differ by more than
+# this model's own error, so the estimate is a guide, not a promise.
+BITRATE_K = 0.00095       # kbit/s at one unit of (pixels per second) ** EXPONENT
+EXPONENT = 0.85
 CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921}
 # Quality factors are per codec, not shared: each encoder's tiers sit at
 # different crf values, so AV1's high tier is 1.58x its medium where H.264's is
