@@ -13,6 +13,7 @@ from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
 from .proxies import usable as proxy_for
+from .stabilise import apply as stabilise_frame
 
 # Proxies may be switched off wholesale; the switch lives here so one import
 # covers both the preview path and the reverse builder.
@@ -532,6 +533,12 @@ class FrameRenderer:
             else:
                 image = self.text_frame(clip) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
                 image = apply_colour_panel(image, clip.get("colour"))
+                # Stabilisation needs the clip's place in time, which an effect
+                # never sees, so it is applied here from the measured path.
+                steady = clip.get("stabilise")
+                if steady and clip.get("mediaId"):
+                    image = stabilise_frame(image, str(clip["mediaId"]),
+                                            int(source_time(clip, local) * self.project["fps"]), steady)
                 scaled = self.scaled_effects(effects, clip)
                 image = apply_effects(image, scaled, local) if scaled else image
                 if clip.get("lutId"):

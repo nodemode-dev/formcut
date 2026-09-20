@@ -45,6 +45,11 @@ def clip_values(clip):
                 raise ValueError('An easing curve needs four handle values')
             for value in handles:
                 number(value, 'easing handle', -5, 5)
+    steady = clip.get('stabilise') or {}
+    if steady:
+        for name, low, high in [('smoothing', 0, 1), ('crop', 0, 0.3)]:
+            if steady.get(name) is not None:
+                number(steady[name], 'stabilise ' + name, low, high)
     panel = clip.get('colour') or {}
     if panel:
         for name, low, high in [('temperature', 2000, 11000), ('tint', -100, 100), ('saturation', -100, 100),

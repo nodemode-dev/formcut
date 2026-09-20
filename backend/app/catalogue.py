@@ -85,6 +85,7 @@ GRADES = {
 }
 
 VIDEO_EFFECTS = [
+    "deflicker", "denoise-picture", "colour-match",
     "gaussian", "box", "directional-blur", "radial-blur", "sharpen", "edge", "emboss",
     "invert", "posterize", "threshold", "solarize", "pixelate", "vignette", "grain",
     "glow", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "scanlines",
@@ -154,6 +155,8 @@ EFFECT_GROUPS = {
     "Distort": ["pixelate", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "camera-shake", "swirl", "ripple", "pinch", "slice-glitch", "tile-repeat", "polar-wrap", "heat-haze"],
     "Texture": ["vignette", "grain", "scanlines", "interference", "rain", "dust", "film-scratches", "light-leak", "aperture-grille", "paper-texture", "snowfall", "bokeh-spots", "chroma-noise"],
 }
+VIDEO_GROUPS_EXTRA = {"Repair": ["deflicker", "denoise-picture", "colour-match", "stabilise"]}
+
 FILTER_GROUPS = {
     "Adjust": ["exposure", "contrast", "saturation", "vibrance", "highlight-rolloff", "shadow-detail", "low-key", "high-key", "soft-contrast", "crisp-mids", "lift-blacks", "crush-blacks", "half-stop-down", "desaturate", "brighten-mids"],
     "Film": ["faded", "matte", "pastel", "paper", "bleach", "punch", "silver", "noir", "monochrome", "sepia", "cross-process", "push-process", "pull-process", "expired-stock", "tintype", "cyanotype", "night-print"],

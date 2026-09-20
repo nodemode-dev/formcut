@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from .paths import DATA_DIR
 from . import jobs
 from . import proxies
+from . import stabilise
 MEDIA_DIR = DATA_DIR / "media"
 THUMB_DIR = DATA_DIR / "thumbs"
 INDEX_FILE = DATA_DIR / "media.json"
@@ -240,6 +241,27 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
             raise ValueError("Could not join the reversed segments: " + cat.stderr[-300:])
         shutil.move(str(joined), str(final))
     return final
+
+
+@router.get("/{media_id}/motion")
+def motion_status(media_id: str) -> dict:
+    _find(media_id)
+    return stabilise.status(media_id)
+
+
+@router.post("/{media_id}/motion", status_code=202)
+def analyse_motion(media_id: str) -> dict:
+    record = _find(media_id)
+    if record["kind"] != "video":
+        raise HTTPException(status_code=400, detail="only video media can be stabilised")
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="media file missing")
+    # A proxy is the right thing to measure: the movement is the same and the
+    # decode is a fraction of the cost.
+    stand_in = proxies.proxy_path(media_id)
+    source = stand_in if proxies.status(media_id, matches[0]).get("state") == "ready" else matches[0]
+    return stabilise.analyse(media_id, source, float(record.get("fps") or 30))
 
 
 @router.get("/{media_id}/proxy")
