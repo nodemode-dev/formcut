@@ -1,3 +1,4 @@
+import json
 import math
 
 import cv2
@@ -234,6 +235,7 @@ class FrameRenderer:
         self.tween_pairs = {}
         self.frames = {}
         self.decode_scale = {}
+        self.mask_cache: dict = {}
         # P6: a paused still shows what the export will produce, so it reads the
         # original; playback and scrubbing set this and read the proxy.
         self.allow_proxy = False
@@ -509,42 +511,54 @@ class FrameRenderer:
             out[:, :, 3] = np.round(out[:, :, 3] * np.clip((distance - similarity) / blend, 0, 1)).astype(np.uint8)
         mask = clip.get("mask")
         if mask:
-            alpha = np.zeros((h, w), np.float32)
-            x0, y0 = int(mask["x"] / 100 * w), int(mask["y"] / 100 * h)
-            x1, y1 = int((mask["x"] + mask["w"]) / 100 * w), int((mask["y"] + mask["h"]) / 100 * h)
-            if mask["shape"] == "linear":
-                # K5: a linear mask is a half-plane through the mask's centre at
-                # the given angle; feather softens the edge like any other shape.
-                angle = math.radians(float(mask.get("angle", 0)))
-                cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-                yy, xx = np.mgrid[:h, :w]
-                side = (xx - cx) * math.sin(angle) - (yy - cy) * math.cos(angle)
-                alpha = (side >= 0).astype(np.float32)
-            else:
-                # Every other shape, drawn path included, is a polygon in a unit
-                # square scaled into the mask's box and turned by its angle, so
-                # one routine covers all of them.
-                unit = mask_polygon(mask)
-                if unit:
-                    box_w, box_h = max(1, x1 - x0), max(1, y1 - y0)
-                    if mask["shape"] == "path":
-                        points = [(px * w, py * h) for px, py in unit]
-                        cx, cy = w / 2, h / 2
-                    else:
-                        points = [(x0 + px * box_w, y0 + py * box_h) for px, py in unit]
-                        cx, cy = x0 + box_w / 2, y0 + box_h / 2
-                    turn = math.radians(float(mask.get("angle", 0)))
-                    if turn:
-                        cos_a, sin_a = math.cos(turn), math.sin(turn)
-                        points = [
-                            (cx + (px - cx) * cos_a - (py - cy) * sin_a, cy + (px - cx) * sin_a + (py - cy) * cos_a) for px, py in points
-                        ]
-                    cv2.fillPoly(alpha, [np.array(points, np.int32)], 1)
-            feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
-            if feather > 0:
-                alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
-            if mask.get("invert"):
-                alpha = 1.0 - alpha
+            # A mask that does not change does not need rebuilding each frame.
+            # Filling the polygon is cheap; feathering it is not, because the
+            # sigma is a percentage of the frame, so a soft edge at 720p means a
+            # blur sigma in the tens of pixels. The key covers everything that
+            # alters the result, so an animated mask still recomputes.
+            signature = (json.dumps(mask, sort_keys=True, default=str), w, h)
+            alpha = self.mask_cache.get(signature)
+            if alpha is None:
+                alpha = np.zeros((h, w), np.float32)
+                x0, y0 = int(mask["x"] / 100 * w), int(mask["y"] / 100 * h)
+                x1, y1 = int((mask["x"] + mask["w"]) / 100 * w), int((mask["y"] + mask["h"]) / 100 * h)
+                if mask["shape"] == "linear":
+                    # K5: a linear mask is a half-plane through the mask's centre at
+                    # the given angle; feather softens the edge like any other shape.
+                    angle = math.radians(float(mask.get("angle", 0)))
+                    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+                    yy, xx = np.mgrid[:h, :w]
+                    side = (xx - cx) * math.sin(angle) - (yy - cy) * math.cos(angle)
+                    alpha = (side >= 0).astype(np.float32)
+                else:
+                    # Every other shape, drawn path included, is a polygon in a unit
+                    # square scaled into the mask's box and turned by its angle, so
+                    # one routine covers all of them.
+                    unit = mask_polygon(mask)
+                    if unit:
+                        box_w, box_h = max(1, x1 - x0), max(1, y1 - y0)
+                        if mask["shape"] == "path":
+                            points = [(px * w, py * h) for px, py in unit]
+                            cx, cy = w / 2, h / 2
+                        else:
+                            points = [(x0 + px * box_w, y0 + py * box_h) for px, py in unit]
+                            cx, cy = x0 + box_w / 2, y0 + box_h / 2
+                        turn = math.radians(float(mask.get("angle", 0)))
+                        if turn:
+                            cos_a, sin_a = math.cos(turn), math.sin(turn)
+                            points = [
+                                (cx + (px - cx) * cos_a - (py - cy) * sin_a, cy + (px - cx) * sin_a + (py - cy) * cos_a)
+                                for px, py in points
+                            ]
+                        cv2.fillPoly(alpha, [np.array(points, np.int32)], 1)
+                feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
+                if feather > 0:
+                    alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
+                if mask.get("invert"):
+                    alpha = 1.0 - alpha
+                if len(self.mask_cache) > 6:
+                    self.mask_cache.clear()
+                self.mask_cache[signature] = alpha
             out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
         if clip.get("cutout"):
             # BG3: read the cached matte; rendering never runs inference. A clip
