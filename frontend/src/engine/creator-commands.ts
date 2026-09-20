@@ -164,6 +164,9 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     if (timeline.tracks.length < 2 || !timeline.tracks[index]) throw new Error("Keep at least one track");
     timeline.tracks.splice(index, 1);
   } else if (command === "timeline.add") {
+    // A ceiling of thirteen. Past that the strip is a scroll with no end and
+    // the tabs stop being a way to find anything.
+    if (state.timelines.length >= 13) throw new Error("Thirteen timelines is the limit");
     state.timelines.push({ id: crypto.randomUUID(), name: String(p.name || `Timeline ${state.timelines.length + 1}`), tracks: [{ id: crypto.randomUUID(), name: "Video", clips: [] }, { id: crypto.randomUUID(), name: "Audio", clips: [] }] });
     state.activeTimeline = state.timelines.length - 1;
     state.selectedClipId = null;

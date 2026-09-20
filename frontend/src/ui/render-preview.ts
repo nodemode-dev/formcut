@@ -14,9 +14,9 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     <div class="stage-wrap"><div class="stage"><canvas class="render-canvas" aria-label="Video preview"></canvas><div class="preview-message" role="status"></div></div></div>
     <div class="transport"><span class="tc-field"></span><span class="tc-total"></span><div class="transport-btns">
     <button class="iconbtn" data-command="transport.home" title="Start">${icon("toStart")}</button>
-    <button class="iconbtn" data-skip="-0.5" title="${text("Back half a second")}">${icon("stepBack")}</button>
+    <button class="iconbtn" data-skip="-0.5" title="${text("Back half a second")}">${icon("chevL")}</button>
     <button class="iconbtn play" data-command="transport.toggle" title="Play or pause"><span data-play>${icon("play")}</span><span data-pause hidden>${icon("pause")}</span></button>
-    <button class="iconbtn" data-skip="0.5" title="${text("Forward half a second")}">${icon("stepFwd")}</button>
+    <button class="iconbtn" data-skip="0.5" title="${text("Forward half a second")}">${icon("chevR")}</button>
     <button class="iconbtn" data-command="transport.end" title="End">${icon("toEnd")}</button></div>
     <select class="mini-select" aria-label="Preview resolution"><option value="640">640 px</option><option value="960">960 px</option><option value="0">Full size</option></select></div>`;
   const canvas = element.querySelector("canvas")!;

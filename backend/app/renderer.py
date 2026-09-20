@@ -509,6 +509,13 @@ class FrameRenderer:
             key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
             h2, w2 = out.shape[:2]
             alpha = read_matte(key, self.matte_time, (w2, h2))
+            if alpha is None and (options.get("strokes") or []):
+                # A brush stroke is a person's own instruction, not part of the
+                # model's guess, so it has to apply whether or not a matte has
+                # been computed. Skipping the whole branch when the matte was
+                # missing threw the strokes away silently, which is why cutout
+                # and brushes stopped doing anything at all.
+                alpha = np.ones((h2, w2), np.float32)
             if alpha is not None:
                 out[:, :, 3] = np.round(out[:, :, 3] * feathered(alpha, options)).astype(np.uint8)
         return out

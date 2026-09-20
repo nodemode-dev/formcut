@@ -1130,3 +1130,30 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .vo-meter > span[data-live="no"] { background: var(--ink-faint); }
 .vo-time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .vo-preview { width: 100%; margin: var(--sp-2) 0; }
+
+/* F3, F23: rail labels stay on one row and shorten rather than wrapping, at any
+   rail width and in any language. */
+.set-tab { min-height: 38px; }
+.set-tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.set-tab { display: flex; align-items: center; gap: var(--sp-2); }
+
+/* F4: the local model rows read from the LEFT for the name and end at the RIGHT
+   for state and files, which is what was asked for. */
+.studio-model { grid-template-columns: minmax(0, 1fr) auto; }
+.studio-model > strong { justify-self: start; text-align: left; }
+.studio-model > span[data-ready], .studio-model > span.model-files {
+  justify-self: end; text-align: right; white-space: nowrap;
+}
+
+/* F6: the export sheet's toggle row and its estimate stay on one line. */
+.export-sheet .export-estimate { white-space: nowrap; }
+.export-row-inline { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: nowrap; }
+.export-row-inline > * { min-width: 0; }
+
+/* F5: the composition range sits below the ruler's numbers instead of through them. */
+.tl-ruler { padding-bottom: 9px; }
+.work-area { bottom: 1px; height: 6px; }
+.work-grip { top: -2px; height: 10px; }
+
+/* F15: three tabs visible, none clipped, the rest scroll. */
+.tl-tab-strip { max-width: min(calc(3 * 124px), calc(100% - 660px)); }

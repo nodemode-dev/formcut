@@ -62,7 +62,29 @@ def feathered(alpha: np.ndarray, options: dict) -> np.ndarray:
     """
     threshold = float(options.get("threshold", 0.5))
     feather = max(0.005, float(options.get("feather", 0.1)))
-    return np.clip((alpha - threshold + feather / 2) / feather, 0, 1)
+    shaped = np.clip((alpha - threshold + feather / 2) / feather, 0, 1)
+    # Brush strokes are painted after the model's own guess, so a person can
+    # always overrule it. They were being read at read time and then ignored,
+    # which made the brush look like it did nothing.
+    strokes = options.get("strokes") or []
+    if strokes:
+        height, width = shaped.shape[:2]
+        for stroke in strokes:
+            points = [(int(px * width), int(py * height)) for px, py in stroke.get("points", [])]
+            if not points:
+                continue
+            radius = max(1, int(float(stroke.get("radius", 0.02)) * max(width, height)))
+            layer = np.zeros((height, width), np.uint8)
+            if len(points) == 1:
+                cv2.circle(layer, points[0], radius, 255, -1)
+            else:
+                cv2.polylines(layer, [np.array(points, np.int32)], False, 255, radius * 2)
+            soft = cv2.GaussianBlur(layer.astype(np.float32) / 255, (0, 0), max(1, radius * 0.25))
+            if stroke.get("mode") == "erase":
+                shaped = np.clip(shaped - soft, 0, 1)
+            else:
+                shaped = np.clip(shaped + soft, 0, 1)
+    return shaped
 
 
 def raw_alpha(image: np.ndarray, model: str) -> np.ndarray:
