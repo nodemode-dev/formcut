@@ -1,5 +1,5 @@
 import { installWorkspaceLayout } from "./ui/workspace-layout";
-import { loadExtraLocales } from "./i18n";
+import { loadExtraLocales, applyDirection } from "./i18n";
 import { LiveMixer } from "./engine/live-mix";
 import { primeInterfaceMode, applyInterfaceProfile, observeInterfaceFeatures, activeProfile } from "./ui/interface-mode";
 import { installAccordions } from "./ui/accordion";
@@ -65,6 +65,7 @@ mobileBar.addEventListener("click", (ev) => {
 });
 app.append(mobileBar);
 
+applyDirection();
 const liveMix = new LiveMixer();
 const actions = {
   save: () => void saveProject(engine),

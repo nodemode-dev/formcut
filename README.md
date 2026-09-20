@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.67.0-ffae2b" alt="version v0.67.0" />
+  <img src="https://img.shields.io/badge/version-v0.68.0-ffae2b" alt="version v0.68.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -33,7 +33,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 - **Speed**: a content-keyed preview frame cache with read-ahead, per-clip audio cached and mixed live so a volume change is heard at once, probed hardware decode, and a bounded worker pool for export.
 - **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, covering every edit the interface can make, with optimistic concurrency on every edit.
 - **MCP server**: workflow tools over stdio in `mcp/`, so an agent can import media, build a project, render it and collect the file without touching the interface.
-- **Interface**: 12 languages covering every string, switched in place without a reload or losing your work, drop-in locale files, an Easy mode with its own tool tray and clip panel, movable panes that stack as tabs, an appearance that can follow the operating system, and inline `currentColor` icons on a 24-unit grid.
+- **Interface**: 12 languages covering every string, switched in place without a reload or losing your work, drop-in locale files that may be written right to left, an Easy mode with its own tool tray and clip panel, movable panes that stack as tabs, an appearance that can follow the operating system, and inline `currentColor` icons on a 24-unit grid.
 - **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, remote access needs a token you set, model downloads are pinned by SHA-256, and diagnostics report secrets as set or unset rather than by value.
 
 ## Quick Start
@@ -192,8 +192,8 @@ Shipped so far:
 | 0.60.0 | background-removal groundwork and export: licence gate, matte cache, Easy removal surface, HEVC, AV1, 10-bit, size and rate presets, live size estimates |
 | 0.61.0 | platform: effect packages, templates carrying their own media, pinned model downloads, per-run logs and diagnostics, drop-in locales, token-gated remote access, a complete RPC surface |
 | 0.62.0 | movable panes that stack as tabs, per profile |
-| 0.67.0 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
-| 0.67.0 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
+| 0.68.0 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
+| 0.68.0 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 

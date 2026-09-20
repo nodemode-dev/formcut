@@ -1093,3 +1093,33 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .proxy-badge[data-state="ready"] { color: var(--cue); }
 .proxy-badge[data-state="failed"], .proxy-badge[data-state="stale"] { color: var(--warn, #e0806a); }
 .proxy-badge[hidden] { display: none; }
+
+
+/* Right-to-left support.
+   The shell turns around with the document's direction, which the browser does
+   for flex and grid on its own. Three things need saying explicitly. The
+   timeline is pinned left to right, because time runs earlier to later whatever
+   the language and a clip that starts sooner belongs on the left. Anything
+   positioned by a measured pixel offset, the playhead, the work area, the pen
+   and crop overlays, is measured from the left edge in script, so its container
+   is pinned too. And a handful of decorations that point at something are
+   flipped by hand. */
+[dir="rtl"] .pane-timeline,
+[dir="rtl"] .stage,
+[dir="rtl"] .preview-pen,
+[dir="rtl"] .preview-guides { direction: ltr; }
+
+[dir="rtl"] .tl-tab-strip,
+[dir="rtl"] .pane-tab-strip { direction: ltr; }
+
+[dir="rtl"] .titlebar-logo svg,
+[dir="rtl"] .set-collapse svg,
+[dir="rtl"] .rail-collapse svg { transform: scaleX(-1); }
+
+/* Logical spacing where a physical edge was assumed. */
+[dir="rtl"] .cat-item { text-align: right; }
+[dir="rtl"] .studio-model > strong,
+[dir="rtl"] .studio-model > span { justify-self: end; text-align: right; }
+[dir="rtl"] .proxy-badge { left: auto; right: 4px; }
+[dir="rtl"] .stock-badge { left: auto; right: 4px; }
+[dir="rtl"] .fav-star { right: auto; left: 2px; }

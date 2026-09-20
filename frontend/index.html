@@ -18,6 +18,14 @@
           var raw = localStorage.getItem("formcut.appearance");
           if (!raw) return;
           var saved = JSON.parse(raw);
+          // The direction is set before the first paint too, so an RTL language
+          // never shows a frame of the interface the wrong way round.
+          try {
+            var lang = localStorage.getItem("formcut.locale") || "";
+            var rtl = ["ar","he","fa","ur","yi","dv","ps"].indexOf(lang.split("-")[0]) >= 0;
+            document.documentElement.dir = rtl ? "rtl" : "ltr";
+            if (lang) document.documentElement.lang = lang;
+          } catch (e) {}
           if (saved && typeof saved.theme === "string") {
             // P5: Automatic resolves here too, so following the OS is applied
             // before the first paint rather than after the module loads.

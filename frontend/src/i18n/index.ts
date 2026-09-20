@@ -1,7 +1,6 @@
-// Locale strings live in JSON files; the active locale is chosen once at
-// boot from localStorage and applied at render time, so switching persists
-// the choice and reloads (panes render their chrome once by design; live
-// re-render machinery for a language switch is not worth its complexity).
+// Locale strings live in JSON files. The active locale is chosen at boot from
+// localStorage and can be changed in place afterwards, without a reload and
+// without losing unsaved work; see relocalize below.
 import { languagePack } from "./language-pack";
 import de from "./de.json";
 import en from "./en.json";
@@ -35,6 +34,44 @@ function readLocale(): string {
   return "en";
 }
 
+/**
+ * Languages written right to left.
+ *
+ * A locale being listed here is what turns the interface around; a dropped-in
+ * locale file for one of these codes is enough, no build is needed. The
+ * timeline is deliberately not mirrored, whatever the language: time runs from
+ * earlier to later, and a person reading Arabic still expects a clip that
+ * starts sooner to sit to the left of one that starts later.
+ */
+export const RTL_LOCALES = new Set(["ar", "he", "fa", "ur", "yi", "dv", "ps"]);
+
+export function direction(code: string = locale): "rtl" | "ltr" {
+  return RTL_LOCALES.has(code.split("-")[0]) ? "rtl" : "ltr";
+}
+
+export function storedLocale(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEY) || locale;
+  } catch {
+    return locale;
+  }
+}
+
+/**
+ * Set the document's direction.
+ *
+ * At boot this must read the *stored* code rather than the resolved one: a
+ * dropped-in language is not in the built-in table yet, so resolving would give
+ * English, and the interface would turn from right to left and back again
+ * before its locale file arrived.
+ */
+export function applyDirection(code: string = storedLocale()): void {
+  const dir = direction(code);
+  const root = document.documentElement;
+  if (root.dir !== dir) root.dir = dir;
+  if (root.lang !== code) root.lang = code;
+}
+
 export let locale = readLocale();
 
 export function t(key: string): string {
@@ -64,6 +101,20 @@ export async function loadExtraLocales(): Promise<Array<{ code: string; name: st
       }
       listed.push({ code: entry.code, name: entry.name, missingCount: entry.missingCount ?? 0 });
       indexLocales();
+      // A dropped-in locale the person had already chosen becomes active as
+      // soon as its file loads. Without this, choosing a language that is not
+      // built in would be forgotten on every restart, and an RTL language would
+      // never turn the interface around at all.
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored && stored === entry.code && stored !== locale) {
+          locale = stored;
+          applyDirection(stored);
+          relocalize();
+        }
+      } catch {
+        /* storage unavailable: stay where we are */
+      }
     }
     return listed;
   } catch {
@@ -133,6 +184,7 @@ export function setLocale(code: string): void {
     /* the choice simply does not survive the session */
   }
   locale = code;
+  applyDirection(code);
   relocalize();
   document.dispatchEvent(new CustomEvent("formcut:locale", { detail: { locale: code } }));
 }
