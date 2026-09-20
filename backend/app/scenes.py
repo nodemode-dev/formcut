@@ -9,6 +9,7 @@ The analysis runs on small greyscale-plus-colour frames at a few samples per
 second, so a long clip is cheap to scan, and it reads the proxy when one exists
 for the same reason stabilisation does.
 """
+
 from __future__ import annotations
 
 import itertools
@@ -33,10 +34,25 @@ def _frames(source, fps: float = SAMPLE_FPS):
     # stabilisation pass ended up reading every frame a row out.
     out_h = max(2, int(round(height * ANALYSIS_WIDTH / width / 2) * 2))
     process = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-i", str(source), "-map", "0:v:0", "-an",
-         "-vf", f"fps={fps},scale={out_w}:{out_h}", "-pix_fmt", "bgr24",
-         "-f", "rawvideo", "pipe:1"],
-        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-an",
+            "-vf",
+            f"fps={fps},scale={out_w}:{out_h}",
+            "-pix_fmt",
+            "bgr24",
+            "-f",
+            "rawvideo",
+            "pipe:1",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     )
     frame_bytes = out_w * out_h * 3
     try:

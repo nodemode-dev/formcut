@@ -3,6 +3,7 @@ shareable as .fcpreset files (plain json). A style is an opaque dict of the
 clip's non-timeline fields (transform, effect, key, mask, speed, fades,
 audio fx, text style, transition); the engine applies it client-side, so
 the store never interprets it beyond size and shape guards."""
+
 from __future__ import annotations
 
 import base64
@@ -72,6 +73,7 @@ def save_preset(body: PresetBody) -> dict:
     if body.font:
         # TI4: the preset carries its font; install once, keyed by content hash
         from .fonts import install_font
+
         installed = install_font(base64.b64decode(body.font))
         style = {**style, "fontId": installed["id"]}
     item = {
@@ -126,43 +128,168 @@ def import_preset(file: UploadFile) -> dict:
     style = _validate_style(data.get("style"))
     return save_preset(PresetBody(name=str(data.get("name", "Imported")), style=style))
 
+
 # TI3: the ten built-in title styles. Each is a full TextStyle the gallery applies
 # in one click; thumbnails come from the engine so the card matches the render.
 TITLE_STYLES: list[dict] = [
-    {"id": "headline", "name": "Headline",
-     "style": {"size": 11, "color": "#ffffff", "bold": True, "align": "center", "weight": 800,
-               "outlineColor": "#000000", "outlineWidth": 4, "letterSpacing": -2, "lineHeight": 1.05}},
-    {"id": "subtitle", "name": "Subtitle",
-     "style": {"size": 6, "color": "#f2f4f5", "bold": False, "align": "center", "weight": 400,
-               "outlineWidth": 0, "shadowColor": "#000000", "shadowBlur": 8, "shadowY": 3, "lineHeight": 1.3}},
-    {"id": "lower-third", "name": "Lower third",
-     "style": {"size": 6, "color": "#ffffff", "bold": True, "align": "left", "weight": 700,
-               "outlineWidth": 0, "plateColor": "#101416", "plateOpacity": 0.78, "platePadding": 18,
-               "plateRadius": 6, "letterSpacing": 2}},
-    {"id": "caption", "name": "Caption",
-     "style": {"size": 5, "color": "#ffffff", "bold": True, "align": "center", "weight": 600,
-               "outlineColor": "#000000", "outlineWidth": 3, "wrapWidth": 80, "lineHeight": 1.2}},
-    {"id": "outline", "name": "Outline",
-     "style": {"size": 10, "color": "#00000000", "bold": True, "align": "center", "weight": 800,
-               "outlineColor": "#ffffff", "outlineWidth": 5, "textOpacity": 1}},
-    {"id": "glow", "name": "Glow",
-     "style": {"size": 10, "color": "#ffffff", "bold": True, "align": "center", "weight": 700,
-               "outlineWidth": 0, "shadowColor": "#35d0ff", "shadowBlur": 22, "letterSpacing": 1}},
-    {"id": "serif", "name": "Serif",
-     "style": {"size": 9, "color": "#f6efe2", "bold": False, "align": "center", "weight": 400,
-               "italic": True, "outlineWidth": 0, "shadowColor": "#000000", "shadowBlur": 6,
-               "letterSpacing": 4, "lineHeight": 1.35}},
-    {"id": "bold-pop", "name": "Bold pop",
-     "style": {"size": 12, "color": "#ffe600", "bold": True, "align": "center", "weight": 900,
-               "outlineColor": "#1a1a1a", "outlineWidth": 6, "shadowColor": "#1a1a1a",
-               "shadowBlur": 0, "shadowX": 6, "shadowY": 6, "letterSpacing": -1}},
-    {"id": "boxed", "name": "Boxed",
-     "style": {"size": 7, "color": "#101416", "bold": True, "align": "center", "weight": 700,
-               "outlineWidth": 0, "plateColor": "#ffffff", "plateOpacity": 0.95, "platePadding": 22,
-               "plateRadius": 26, "letterSpacing": 3}},
-    {"id": "minimal", "name": "Minimal",
-     "style": {"size": 6, "color": "#ffffff", "bold": False, "align": "center", "weight": 300,
-               "outlineWidth": 0, "letterSpacing": 12, "textOpacity": 0.92}},
+    {
+        "id": "headline",
+        "name": "Headline",
+        "style": {
+            "size": 11,
+            "color": "#ffffff",
+            "bold": True,
+            "align": "center",
+            "weight": 800,
+            "outlineColor": "#000000",
+            "outlineWidth": 4,
+            "letterSpacing": -2,
+            "lineHeight": 1.05,
+        },
+    },
+    {
+        "id": "subtitle",
+        "name": "Subtitle",
+        "style": {
+            "size": 6,
+            "color": "#f2f4f5",
+            "bold": False,
+            "align": "center",
+            "weight": 400,
+            "outlineWidth": 0,
+            "shadowColor": "#000000",
+            "shadowBlur": 8,
+            "shadowY": 3,
+            "lineHeight": 1.3,
+        },
+    },
+    {
+        "id": "lower-third",
+        "name": "Lower third",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": True,
+            "align": "left",
+            "weight": 700,
+            "outlineWidth": 0,
+            "plateColor": "#101416",
+            "plateOpacity": 0.78,
+            "platePadding": 18,
+            "plateRadius": 6,
+            "letterSpacing": 2,
+        },
+    },
+    {
+        "id": "caption",
+        "name": "Caption",
+        "style": {
+            "size": 5,
+            "color": "#ffffff",
+            "bold": True,
+            "align": "center",
+            "weight": 600,
+            "outlineColor": "#000000",
+            "outlineWidth": 3,
+            "wrapWidth": 80,
+            "lineHeight": 1.2,
+        },
+    },
+    {
+        "id": "outline",
+        "name": "Outline",
+        "style": {
+            "size": 10,
+            "color": "#00000000",
+            "bold": True,
+            "align": "center",
+            "weight": 800,
+            "outlineColor": "#ffffff",
+            "outlineWidth": 5,
+            "textOpacity": 1,
+        },
+    },
+    {
+        "id": "glow",
+        "name": "Glow",
+        "style": {
+            "size": 10,
+            "color": "#ffffff",
+            "bold": True,
+            "align": "center",
+            "weight": 700,
+            "outlineWidth": 0,
+            "shadowColor": "#35d0ff",
+            "shadowBlur": 22,
+            "letterSpacing": 1,
+        },
+    },
+    {
+        "id": "serif",
+        "name": "Serif",
+        "style": {
+            "size": 9,
+            "color": "#f6efe2",
+            "bold": False,
+            "align": "center",
+            "weight": 400,
+            "italic": True,
+            "outlineWidth": 0,
+            "shadowColor": "#000000",
+            "shadowBlur": 6,
+            "letterSpacing": 4,
+            "lineHeight": 1.35,
+        },
+    },
+    {
+        "id": "bold-pop",
+        "name": "Bold pop",
+        "style": {
+            "size": 12,
+            "color": "#ffe600",
+            "bold": True,
+            "align": "center",
+            "weight": 900,
+            "outlineColor": "#1a1a1a",
+            "outlineWidth": 6,
+            "shadowColor": "#1a1a1a",
+            "shadowBlur": 0,
+            "shadowX": 6,
+            "shadowY": 6,
+            "letterSpacing": -1,
+        },
+    },
+    {
+        "id": "boxed",
+        "name": "Boxed",
+        "style": {
+            "size": 7,
+            "color": "#101416",
+            "bold": True,
+            "align": "center",
+            "weight": 700,
+            "outlineWidth": 0,
+            "plateColor": "#ffffff",
+            "plateOpacity": 0.95,
+            "platePadding": 22,
+            "plateRadius": 26,
+            "letterSpacing": 3,
+        },
+    },
+    {
+        "id": "minimal",
+        "name": "Minimal",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": False,
+            "align": "center",
+            "weight": 300,
+            "outlineWidth": 0,
+            "letterSpacing": 12,
+            "textOpacity": 0.92,
+        },
+    },
 ]
 
 TITLE_STYLE_IDS = {entry["id"] for entry in TITLE_STYLES}

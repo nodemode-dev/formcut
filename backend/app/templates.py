@@ -26,6 +26,7 @@ def poster_frame(project: dict, at: float | None) -> str | None:
     from PIL import Image
 
     from .renderer import FrameRenderer
+
     try:
         renderer = FrameRenderer(project, 480)
     except Exception:
@@ -164,7 +165,11 @@ def fill(template_id: str, body: FillInput):
 
 @router.get("/{template_id}/file")
 def export(template_id: str):
-    return Response(json.dumps(get(template_id), indent=2), media_type="application/json", headers={"Content-Disposition": 'attachment; filename="template.fctemplate"'})
+    return Response(
+        json.dumps(get(template_id), indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="template.fctemplate"'},
+    )
 
 
 @router.post("/import", status_code=201)

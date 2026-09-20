@@ -20,7 +20,24 @@ from .storage import router as storage
 from .templates import router as templates
 
 router = APIRouter()
-for module in (assets, automation, catalogue, jobs, speech, models, render, templates,
-               project_tracking, fonts, demo, previews, playback,
-               clip_visuals, providers_router, storage, orchestration, recovery):
+for module in (
+    assets,
+    automation,
+    catalogue,
+    jobs,
+    speech,
+    models,
+    render,
+    templates,
+    project_tracking,
+    fonts,
+    demo,
+    previews,
+    playback,
+    clip_visuals,
+    providers_router,
+    storage,
+    orchestration,
+    recovery,
+):
     router.include_router(module)

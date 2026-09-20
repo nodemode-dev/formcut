@@ -147,5 +147,4 @@ async def events(request: Request, since: float = 0.0) -> StreamingResponse:
             with _lock:
                 _subscribers.discard(queue)
 
-    return StreamingResponse(body(), media_type="text/event-stream",
-                             headers={"cache-control": "no-store", "x-accel-buffering": "no"})
+    return StreamingResponse(body(), media_type="text/event-stream", headers={"cache-control": "no-store", "x-accel-buffering": "no"})

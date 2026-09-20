@@ -28,6 +28,7 @@ def _source(media_id: str) -> Path:
         raise HTTPException(status_code=404, detail="file missing")
     return matches[0]
 
+
 PEAK_DIR = DATA_DIR / "peaks"
 STRIP_DIR = DATA_DIR / "filmstrips"
 
@@ -77,9 +78,20 @@ def _envelope(src: Path, duration: float) -> dict | None:
     trimmed or zoomed.
     """
     cmd = [
-        "ffmpeg", "-v", "quiet", "-i", str(src),
-        "-map", "a:0", "-ac", "1", "-ar", str(SAMPLE_RATE),
-        "-f", "s16le", "-",
+        "ffmpeg",
+        "-v",
+        "quiet",
+        "-i",
+        str(src),
+        "-map",
+        "a:0",
+        "-ac",
+        "1",
+        "-ar",
+        str(SAMPLE_RATE),
+        "-f",
+        "s16le",
+        "-",
     ]
     try:
         out = subprocess.run(cmd, capture_output=True, check=False, timeout=180)
@@ -114,16 +126,27 @@ def _envelope(src: Path, duration: float) -> dict | None:
 def _strip(src: Path, dest: Path, kind: str, duration: float, frames: int) -> bool:
     """One row of frames, evenly spaced across the media, as a single jpeg."""
     if kind == "image":
-        cmd = ["ffmpeg", "-v", "quiet", "-y", "-i", str(src),
-               "-frames:v", "1", "-vf", f"scale={STRIP_WIDTH}:-2", str(dest)]
+        cmd = ["ffmpeg", "-v", "quiet", "-y", "-i", str(src), "-frames:v", "1", "-vf", f"scale={STRIP_WIDTH}:-2", str(dest)]
     else:
         span = max(duration, 0.1)
         # Sample at a rate that yields the requested count across the media, then
         # tile the result into one row. fps must stay above zero for short media.
         rate = max(frames / span, 0.01)
-        cmd = ["ffmpeg", "-v", "quiet", "-y", "-i", str(src),
-               "-vf", f"fps={rate:.6f},scale={STRIP_WIDTH}:-2,tile={frames}x1",
-               "-frames:v", "1", "-q:v", "4", str(dest)]
+        cmd = [
+            "ffmpeg",
+            "-v",
+            "quiet",
+            "-y",
+            "-i",
+            str(src),
+            "-vf",
+            f"fps={rate:.6f},scale={STRIP_WIDTH}:-2,tile={frames}x1",
+            "-frames:v",
+            "1",
+            "-q:v",
+            "4",
+            str(dest),
+        ]
     try:
         subprocess.run(cmd, capture_output=True, check=False, timeout=180)
     except (OSError, subprocess.SubprocessError):

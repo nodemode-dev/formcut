@@ -13,6 +13,7 @@ is smoothed, and the correction for a frame is the difference between where the
 camera was and where a steady version of it would have been. A crop hides the
 edges the correction exposes.
 """
+
 from __future__ import annotations
 
 import json
@@ -69,10 +70,25 @@ def _frames(source, fps: float):
     out_w = ANALYSIS_WIDTH
     out_h = max(2, int(round(height * ANALYSIS_WIDTH / width / 2) * 2))
     probe = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-i", str(source), "-map", "0:v:0", "-an",
-         "-vf", f"fps={fps},scale={out_w}:{out_h}", "-pix_fmt", "gray",
-         "-f", "rawvideo", "pipe:1"],
-        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-an",
+            "-vf",
+            f"fps={fps},scale={out_w}:{out_h}",
+            "-pix_fmt",
+            "gray",
+            "-f",
+            "rawvideo",
+            "pipe:1",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     )
     frame_bytes = out_w * out_h
     try:

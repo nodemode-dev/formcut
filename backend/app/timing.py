@@ -60,10 +60,10 @@ def cubic_bezier(p: float, x1: float, y1: float, x2: float, y2: float) -> float:
         return 1.0
 
     def curve(t: float, a: float, b: float) -> float:
-        return 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t ** 2 * b + t ** 3
+        return 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t**2 * b + t**3
 
     def slope(t: float, a: float, b: float) -> float:
-        return 3 * (1 - t) ** 2 * a + 6 * (1 - t) * t * (b - a) + 3 * t ** 2 * (1 - b)
+        return 3 * (1 - t) ** 2 * a + 6 * (1 - t) * t * (b - a) + 3 * t**2 * (1 - b)
 
     t = p
     for _ in range(8):

@@ -17,6 +17,7 @@ the ffmpeg formcut ships.
 The mechanism is deliberately dull: a folder, a binary, and a check that it can
 actually encode before it is offered.
 """
+
 from __future__ import annotations
 
 import json
@@ -45,8 +46,7 @@ def addon_path() -> Path | None:
 
 def _encoders(binary: Path) -> set[str]:
     try:
-        listed = subprocess.run([str(binary), "-hide_banner", "-encoders"],
-                                capture_output=True, text=True, check=False, timeout=30).stdout
+        listed = subprocess.run([str(binary), "-hide_banner", "-encoders"], capture_output=True, text=True, check=False, timeout=30).stdout
     except (OSError, subprocess.SubprocessError):
         return set()
     names = set()
@@ -61,10 +61,25 @@ def _confirm(binary: Path, encoder: str) -> bool:
     """Encode two generated frames, because a listed encoder can still fail."""
     try:
         probe = subprocess.run(
-            [str(binary), "-v", "error", "-f", "lavfi",
-             "-i", "testsrc2=size=320x240:rate=30:duration=0.1",
-             "-frames:v", "2", "-c:v", encoder, "-f", "null", "-"],
-            capture_output=True, check=False, timeout=90,
+            [
+                str(binary),
+                "-v",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=320x240:rate=30:duration=0.1",
+                "-frames:v",
+                "2",
+                "-c:v",
+                encoder,
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            check=False,
+            timeout=90,
         )
         return probe.returncode == 0
     except (OSError, subprocess.SubprocessError):
@@ -91,9 +106,17 @@ def h264_encoder() -> tuple[Path, str] | None:
     available = _encoders(binary)
     for candidate in ("libx264", "libopenh264", "h264_videotoolbox", "h264_nvenc", "h264_qsv"):
         if candidate in available and _confirm(binary, candidate):
-            record.write_text(json.dumps({
-                "encoder": candidate, "confirmed": True, "checked": time.time(),
-            }, indent=2), encoding="utf-8")
+            record.write_text(
+                json.dumps(
+                    {
+                        "encoder": candidate,
+                        "confirmed": True,
+                        "checked": time.time(),
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
             return binary, candidate
     return None
 
@@ -102,8 +125,7 @@ def status() -> dict:
     """What the interface shows: installed, working, and which encoder."""
     binary = addon_path()
     if not binary:
-        return {"installed": False,
-                "why": "formcut ships an LGPL ffmpeg, which has no software H.264 encoder"}
+        return {"installed": False, "why": "formcut ships an LGPL ffmpeg, which has no software H.264 encoder"}
     found = h264_encoder()
     return {
         "installed": True,
@@ -136,19 +158,31 @@ async def install_h264(file: UploadFile) -> dict:
     staging.chmod(0o755)
     try:
         available = _encoders(staging)
-        usable = next((name for name in ("libx264", "libopenh264", "h264_videotoolbox",
-                                         "h264_nvenc", "h264_qsv")
-                       if name in available and _confirm(staging, name)), None)
+        usable = next(
+            (
+                name
+                for name in ("libx264", "libopenh264", "h264_videotoolbox", "h264_nvenc", "h264_qsv")
+                if name in available and _confirm(staging, name)
+            ),
+            None,
+        )
         if not usable:
-            raise HTTPException(status_code=422,
-                                detail="that binary runs but cannot encode H.264")
+            raise HTTPException(status_code=422, detail="that binary runs but cannot encode H.264")
         target = ADDON_DIR / ("ffmpeg.exe" if file.filename and file.filename.endswith(".exe") else "ffmpeg")
         staging.replace(target)
         target.chmod(0o755)
-        (ADDON_DIR / "addon.json").write_text(json.dumps({
-            "encoder": usable, "confirmed": True, "checked": time.time(),
-            "source": "installed by the user",
-        }, indent=2), encoding="utf-8")
+        (ADDON_DIR / "addon.json").write_text(
+            json.dumps(
+                {
+                    "encoder": usable,
+                    "confirmed": True,
+                    "checked": time.time(),
+                    "source": "installed by the user",
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         return status()
     finally:
         staging.unlink(missing_ok=True)

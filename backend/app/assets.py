@@ -42,7 +42,15 @@ def parse_cube(text: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             rows.append([float(x) for x in parts])
         else:
             raise ValueError("Only 3D .cube LUTs are supported")
-    if size < 2 or len(rows) != size ** 3 or low.shape != (3,) or high.shape != (3,) or not np.all(np.isfinite(low)) or not np.all(np.isfinite(high)) or np.any(high <= low):
+    if (
+        size < 2
+        or len(rows) != size**3
+        or low.shape != (3,)
+        or high.shape != (3,)
+        or not np.all(np.isfinite(low))
+        or not np.all(np.isfinite(high))
+        or np.any(high <= low)
+    ):
         raise ValueError("LUT size or color domain is invalid")
     table = np.array(rows, np.float32)
     if not np.all(np.isfinite(table)):
@@ -112,6 +120,7 @@ class ShaderInput(BaseModel):
 @router.post("/shader", status_code=201)
 def upload_shader(body: ShaderInput) -> dict:
     from .gpu import custom
+
     if len(body.source) > 100_000 or len(body.name) > 100:
         raise HTTPException(422, "Shader exceeds the supported size")
     try:

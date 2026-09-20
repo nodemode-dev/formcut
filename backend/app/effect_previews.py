@@ -24,9 +24,11 @@ _base: np.ndarray | None = None
 def known(kind: str, item: str) -> bool:
     if kind == "look":
         from .assets import ROOT
+
         return (ROOT / (item + ".cube")).is_file()
     if kind == "title":
         from .presets import TITLE_STYLE_IDS
+
         return item in TITLE_STYLE_IDS
     return (
         (kind == "effect" and (item in GRADES or item in VIDEO_EFFECTS))
@@ -43,7 +45,9 @@ def base_image() -> np.ndarray:
             source = demo_dir() / "effect-example-image.jpg"
             if source.is_file():
                 with Image.open(source) as image:
-                    fitted = ImageOps.fit(ImageOps.exif_transpose(image).convert("RGBA"), (WIDTH, HEIGHT), Image.Resampling.LANCZOS, centering=(0.5, 0.28))
+                    fitted = ImageOps.fit(
+                        ImageOps.exif_transpose(image).convert("RGBA"), (WIDTH, HEIGHT), Image.Resampling.LANCZOS, centering=(0.5, 0.28)
+                    )
                 _base = np.array(fitted)
             else:
                 y, x = np.mgrid[0:HEIGHT, 0:WIDTH]
@@ -61,19 +65,39 @@ def title_style_preview(item: str) -> np.ndarray:
     """Draw the built-in style through the renderer's own title path."""
     from .presets import TITLE_STYLES
     from .renderer import FrameRenderer
+
     entry = next((e for e in TITLE_STYLES if e["id"] == item), None)
     if entry is None:
         raise HTTPException(404, "Unknown preview")
     style = {**entry["style"], "content": entry["name"]}
-    project = {"title": "p", "width": WIDTH, "height": HEIGHT, "fps": 30, "duration": 1, "activeTimeline": 0,
-               "timelines": [{"id": "p", "name": "p", "tracks": [{"id": "t", "name": "V", "clips": [
-                   {"id": "p1", "kind": "text", "label": entry["name"], "start": 0, "duration": 1, "textStyle": style}]}]}]}
+    project = {
+        "title": "p",
+        "width": WIDTH,
+        "height": HEIGHT,
+        "fps": 30,
+        "duration": 1,
+        "activeTimeline": 0,
+        "timelines": [
+            {
+                "id": "p",
+                "name": "p",
+                "tracks": [
+                    {
+                        "id": "t",
+                        "name": "V",
+                        "clips": [{"id": "p1", "kind": "text", "label": entry["name"], "start": 0, "duration": 1, "textStyle": style}],
+                    }
+                ],
+            }
+        ],
+    }
     return FrameRenderer(project).frame(0.5)
 
 
 def render(kind: str, item: str) -> np.ndarray:
     if kind == "look":
         from .assets import apply_lut
+
         dark = np.zeros_like(base_image())
         dark[:, :, :3] = 28
         return over(apply_lut(base_image(), item), dark)

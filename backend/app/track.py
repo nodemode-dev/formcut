@@ -5,6 +5,7 @@ a template without variance (a flat patch, like the inside of a solid shape)
 matches everywhere with a perfect score, so the template box auto-widens
 until it contains edges. The frontend turns the returned path into position
 keyframes, so tracking rides the existing keyframe system end to end."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -55,7 +56,7 @@ def track_point(body: TrackBody) -> dict[str, Any]:
     box = int(min(w, h) * min(max(body.box, 0.05), 0.4))
 
     def grab(b: int):
-        return gray0[max(0, cy - b // 2):cy + b // 2, max(0, cx - b // 2):cx + b // 2]
+        return gray0[max(0, cy - b // 2) : cy + b // 2, max(0, cx - b // 2) : cx + b // 2]
 
     tmpl = grab(box)
     while tmpl.size and tmpl.std() < 8 and box < min(w, h) // 2:
@@ -81,7 +82,7 @@ def track_point(body: TrackBody) -> dict[str, Any]:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         sw = box * 2
         x0, y0 = max(0, cx - sw), max(0, cy - sw)
-        region = gray[y0:y0 + 2 * sw + box, x0:x0 + 2 * sw + box]
+        region = gray[y0 : y0 + 2 * sw + box, x0 : x0 + 2 * sw + box]
         if region.shape[0] <= tmpl.shape[0] or region.shape[1] <= tmpl.shape[1]:
             break
         res = cv2.matchTemplate(region, tmpl, cv2.TM_CCOEFF_NORMED)

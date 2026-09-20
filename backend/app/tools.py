@@ -12,6 +12,7 @@ ffprobe, because ffprobe is a separate program rather than a part of ffmpeg.
 Rather than require one, `probe` answers the same questions from ffmpeg's own
 report when ffprobe is missing, so a bundle carrying ffmpeg alone is complete.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -93,27 +94,33 @@ def _from_ffmpeg(path: Path) -> dict:
     ffmpeg writes what it found to stderr and exits with an error because no
     output was asked for; that error is expected and the report is the point.
     """
-    result = subprocess.run([ffmpeg(), "-hide_banner", "-i", str(path)],
-                            capture_output=True, text=True, check=False, timeout=120)
+    result = subprocess.run([ffmpeg(), "-hide_banner", "-i", str(path)], capture_output=True, text=True, check=False, timeout=120)
     text = result.stderr
     streams: list[dict] = []
     video = _VIDEO.search(text) or _VIDEO_NO_FPS.search(text)
     if video:
         groups = video.groups()
         rate = float(groups[3]) if len(groups) > 3 else 0.0
-        streams.append({
-            "codec_type": "video", "codec_name": groups[0],
-            "width": int(groups[1]), "height": int(groups[2]),
-            "avg_frame_rate": f"{rate}/1" if rate else "0/0",
-            "r_frame_rate": f"{rate}/1" if rate else "0/0",
-        })
+        streams.append(
+            {
+                "codec_type": "video",
+                "codec_name": groups[0],
+                "width": int(groups[1]),
+                "height": int(groups[2]),
+                "avg_frame_rate": f"{rate}/1" if rate else "0/0",
+                "r_frame_rate": f"{rate}/1" if rate else "0/0",
+            }
+        )
     audio = _AUDIO.search(text)
     if audio:
-        streams.append({
-            "codec_type": "audio", "codec_name": audio.group(1),
-            "sample_rate": audio.group(2),
-            "channels": 2 if "stereo" in audio.group(3) else 1,
-        })
+        streams.append(
+            {
+                "codec_type": "audio",
+                "codec_name": audio.group(1),
+                "sample_rate": audio.group(2),
+                "channels": 2 if "stereo" in audio.group(3) else 1,
+            }
+        )
     seconds = 0.0
     found = _DURATION.search(text)
     if found:
@@ -131,9 +138,11 @@ def probe(path: Path) -> dict:
     if have("ffprobe"):
         try:
             out = subprocess.run(
-                ["ffprobe", "-v", "quiet", "-print_format", "json",
-                 "-show_format", "-show_streams", str(path)],
-                capture_output=True, text=True, check=False, timeout=120,
+                ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", str(path)],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=120,
             )
             if out.returncode == 0 and out.stdout.strip():
                 return json.loads(out.stdout)

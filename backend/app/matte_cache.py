@@ -8,6 +8,7 @@ keyed by media, source time and model, and the renderer only ever reads and
 interpolates them. A clip whose mattes are not ready renders unmatted rather
 than stalling the pipeline.
 """
+
 from __future__ import annotations
 
 import hashlib

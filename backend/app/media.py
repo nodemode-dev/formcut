@@ -56,6 +56,7 @@ def _ffprobe(path: Path) -> dict:
     with --disable-programs --enable-ffmpeg ships ffmpeg alone.
     """
     from .tools import probe
+
     try:
         return probe(path)
     except Exception:
@@ -90,8 +91,18 @@ def _thumbnail(src: Path, dest: Path, kind: str, duration: float) -> bool:
         return False
     seek = ["-ss", str(min(1.0, max(duration - 0.1, 0.0)))] if kind == "video" else []
     cmd = [
-        "ffmpeg", "-v", "quiet", "-y", *seek, "-i", str(src),
-        "-frames:v", "1", "-vf", "scale=320:-2", str(dest),
+        "ffmpeg",
+        "-v",
+        "quiet",
+        "-y",
+        *seek,
+        "-i",
+        str(src),
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=320:-2",
+        str(dest),
     ]
     try:
         subprocess.run(cmd, capture_output=True, check=False, timeout=30)
@@ -204,10 +215,35 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
     with tempfile.TemporaryDirectory(dir=REVERSED_DIR) as folder:
         work = Path(folder)
         seg = subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-i", str(source), "-f", "segment", "-segment_time", "0.5",
-             "-reset_timestamps", "1", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
-             "-c:a", "aac", "-b:a", "192k", str(work / "part_%05d.mp4")],
-            capture_output=True, text=True, check=False, timeout=1800,
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-y",
+                "-i",
+                str(source),
+                "-f",
+                "segment",
+                "-segment_time",
+                "0.5",
+                "-reset_timestamps",
+                "1",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-crf",
+                "18",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                str(work / "part_%05d.mp4"),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=1800,
         )
         if seg.returncode != 0:
             raise ValueError("Could not segment the source: " + seg.stderr[-300:])
@@ -221,10 +257,30 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
             has_audio = any(s.get("codec_type") == "audio" for s in _ffprobe(part).get("streams", []))
             filters = ["-vf", "reverse"] + (["-af", "areverse"] if has_audio else [])
             rev = subprocess.run(
-                ["ffmpeg", "-v", "error", "-y", "-i", str(part), *filters,
-                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18", "-c:a", "aac", "-b:a", "192k",
-                 str(work / f"rev_{part.name}")],
-                capture_output=True, text=True, check=False, timeout=1800,
+                [
+                    "ffmpeg",
+                    "-v",
+                    "error",
+                    "-y",
+                    "-i",
+                    str(part),
+                    *filters,
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "ultrafast",
+                    "-crf",
+                    "18",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "192k",
+                    str(work / f"rev_{part.name}"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=1800,
             )
             if rev.returncode != 0:
                 raise ValueError("Could not reverse a segment (memory or codec): " + rev.stderr[-300:])
@@ -233,7 +289,10 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
         joined = work / "joined.mp4"
         cat = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(joined)],
-            capture_output=True, text=True, check=False, timeout=600,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=600,
         )
         if cat.returncode != 0 or not joined.is_file():
             raise ValueError("Could not join the reversed segments: " + cat.stderr[-300:])
@@ -261,9 +320,11 @@ async def upload_voiceover(file: UploadFile, name: str = "Voiceover") -> dict:
     converted = staging.with_suffix(".wav")
     try:
         result = subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-i", str(staging), "-vn",
-             "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", str(converted)],
-            capture_output=True, text=True, check=False, timeout=600,
+            ["ffmpeg", "-v", "error", "-y", "-i", str(staging), "-vn", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", str(converted)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=600,
         )
         if result.returncode != 0 or not converted.is_file():
             raise HTTPException(status_code=422, detail=f"could not read the recording: {result.stderr[-200:]}")
@@ -279,6 +340,7 @@ def subject_outline(media_id: str, body: dict) -> dict:
     from .render_document import validate_document
     from .renderer import FrameRenderer
     from .segmentation import cutout_alpha, outline
+
     _find(media_id)
     project = validate_document(body.get("project") or {})
     model = str(body.get("model") or "person-cutout")
@@ -369,6 +431,7 @@ def reverse_media(media_id: str) -> dict:
         raise HTTPException(status_code=404, detail="media file missing")
     if reversed_path(media_id).is_file():
         return {"status": "ready", "media_id": media_id}
+
     def operation(job_id, report, cancelled):
         # P8: reversing re-encodes every frame, so it reads the proxy when one
         # is ready; the reversed copy is a preview artefact either way.
@@ -376,6 +439,7 @@ def reverse_media(media_id: str) -> dict:
         source = stand_in if proxies.status(media_id, matches[0]).get("state") == "ready" else matches[0]
         build_reversed(media_id, source, report, cancelled)
         return {"media_id": media_id, "status": "ready"}
+
     return jobs.submit("reverse-media", operation)
 
 
@@ -393,9 +457,11 @@ def freeze_frame(media_id: str, body: FreezeBody) -> dict:
     out = MEDIA_DIR / f"freeze_{uuid.uuid4().hex}.png"
     try:
         proc = subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(matches[0]),
-             "-frames:v", "1", str(out)],
-            capture_output=True, text=True, check=False, timeout=120,
+            ["ffmpeg", "-v", "error", "-y", "-ss", f"{at:.3f}", "-i", str(matches[0]), "-frames:v", "1", str(out)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -417,9 +483,11 @@ def detach_audio(media_id: str) -> dict:
     out = MEDIA_DIR / f"detach_{uuid.uuid4().hex}.m4a"
     try:
         proc = subprocess.run(
-            ["ffmpeg", "-v", "error", "-y", "-i", str(matches[0]),
-             "-vn", "-c:a", "aac", "-b:a", "192k", str(out)],
-            capture_output=True, text=True, check=False, timeout=300,
+            ["ffmpeg", "-v", "error", "-y", "-i", str(matches[0]), "-vn", "-c:a", "aac", "-b:a", "192k", str(out)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -472,8 +540,7 @@ def reveal_media(media_id: str) -> dict:
     try:
         subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except (OSError, subprocess.SubprocessError):
-        return {"opened": False, "path": str(path),
-                "detail": "No file manager is available on this machine; the path is above."}
+        return {"opened": False, "path": str(path), "detail": "No file manager is available on this machine; the path is above."}
     return {"opened": True, "path": str(path)}
 
 

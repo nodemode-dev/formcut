@@ -76,6 +76,15 @@ jobs:
         run: python -m compileall -q backend/app mcp
       - name: lint
         run: ruff check backend/app mcp
+      - name: format
+        run: ruff format --check backend/app mcp
+      # The sturdiest thing about formcut is that preview and export go through
+      # one renderer, and it is the easiest thing to lose quietly. These are
+      # output checks, not tests of how anything is written: fixed projects
+      # built from generated content only, so they render the same anywhere.
+      - name: golden frames, and preview against export
+        run: python setup/golden_frames.py
+
       - name: the engine imports and its routes mount once
         run: |
           python - <<'PY'

@@ -4,6 +4,7 @@ Only one capability is needed, so this is a REST client over httpx rather than
 the provider SDK: POST /v1/text-to-speech/{voice} with the xi-api-key header
 returns mp3 bytes and GET /v1/voices lists voices. Key-gated, degrading to 503
 with a clear message when no key is configured, as stock media does."""
+
 from __future__ import annotations
 
 import tempfile
@@ -20,9 +21,12 @@ from .media import ingest_path
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 
+
 # Overridable for a proxy, a mirror or a local stub; see providers.base_for.
 def _base() -> str:
     return providers.base_for("elevenlabs")
+
+
 DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM"
 DEFAULT_MODEL = "eleven_multilingual_v2"
 _MISSING_KEY = "ElevenLabs API key not configured. Add it in Settings, AI providers, or set ELEVENLABS_API_KEY in .env."
@@ -51,8 +55,7 @@ def voices() -> dict[str, Any]:
         raise HTTPException(status_code=502, detail=f"ElevenLabs request failed: {e}")
     if resp.status_code != 200:
         raise HTTPException(status_code=resp.status_code, detail=f"ElevenLabs {resp.status_code}")
-    items = [{"id": v.get("voice_id"), "name": v.get("name"), "labels": v.get("labels", {})}
-             for v in resp.json().get("voices", [])]
+    items = [{"id": v.get("voice_id"), "name": v.get("name"), "labels": v.get("labels", {})} for v in resp.json().get("voices", [])]
     return {"voices": items}
 
 
@@ -81,8 +84,7 @@ def speak(body: SpeakBody) -> dict[str, Any]:
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"ElevenLabs request failed: {e}")
     if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code,
-                            detail=f"ElevenLabs {resp.status_code}: {resp.text[:150]}")
+        raise HTTPException(status_code=resp.status_code, detail=f"ElevenLabs {resp.status_code}: {resp.text[:150]}")
     tmp = Path(tempfile.gettempdir()) / f"formcut_tts_{uuid.uuid4().hex}.mp3"
     tmp.write_bytes(resp.content)
     label = "".join(ch for ch in text[:40] if ch.isalnum() or ch in " -_").strip() or "speech"

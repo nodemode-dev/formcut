@@ -5,6 +5,7 @@ as what will run: a hardware encoder appears on a machine with the library but
 no device. So a candidate is confirmed by encoding two generated frames with it
 before it is offered, the same lesson the decode probe learned.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -58,9 +59,26 @@ def _works(encoder: str) -> bool:
     """Encode two generated frames; a listed encoder with no device fails here."""
     try:
         probe = subprocess.run(
-            ["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=30:duration=0.1",
-             "-frames:v", "2", "-c:v", encoder, "-f", "null", "-"],
-            capture_output=True, text=True, check=False, timeout=60,
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=320x240:rate=30:duration=0.1",
+                "-frames:v",
+                "2",
+                "-c:v",
+                encoder,
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
         )
         return probe.returncode == 0
     except Exception:
@@ -91,6 +109,7 @@ def choose(codec: str) -> str | None:
         # LGPL ffmpeg on a machine with no hardware encoder. An add-on the
         # person installed themselves is asked last, never bundled.
         from .addons import h264_encoder
+
         found = h264_encoder()
         if found:
             return found[1]
@@ -100,6 +119,7 @@ def choose(codec: str) -> str | None:
 def addon_binary_for(encoder: str):
     """The binary to run for an encoder, when it is not the bundled ffmpeg."""
     from .addons import h264_encoder
+
     found = h264_encoder()
     if found and found[1] == encoder:
         return found[0]
@@ -122,14 +142,12 @@ def status() -> dict:
     """What the export sheet may offer, per codec and per container."""
     found = detect()
     codecs = {
-        codec: {"available": bool(options), "encoder": options[0] if options else None, "all": options}
-        for codec, options in found.items()
+        codec: {"available": bool(options), "encoder": options[0] if options else None, "all": options} for codec, options in found.items()
     }
     return {
         "codecs": codecs,
         "containers": {
-            name: [codec for codec in members if codecs.get(codec, {}).get("available")]
-            for name, members in CONTAINERS.items()
+            name: [codec for codec in members if codecs.get(codec, {}).get("available")] for name, members in CONTAINERS.items()
         },
     }
 
@@ -173,7 +191,7 @@ def supports_ten_bit(codec: str) -> bool:
 # 2160p gives about 0.85, which is also where the usual rule of thumb sits.
 # Content still dominates: two clips at the same size can differ by more than
 # this model's own error, so the estimate is a guide, not a promise.
-BITRATE_K = 0.00095       # kbit/s at one unit of (pixels per second) ** EXPONENT
+BITRATE_K = 0.00095  # kbit/s at one unit of (pixels per second) ** EXPONENT
 EXPONENT = 0.85
 CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921}
 # Quality factors are per codec, not shared: each encoder's tiers sit at
@@ -191,19 +209,23 @@ AUDIO_KBPS = 128.0
 def estimate_bitrate(codec: str, width: int, height: int, fps: float, quality: str) -> float:
     """Estimated video bitrate in kbit/s."""
     pixels = max(1.0, float(width) * float(height) * float(fps))
-    base = BITRATE_K * (pixels ** EXPONENT)
+    base = BITRATE_K * (pixels**EXPONENT)
     tiers = QUALITY_FACTOR.get(codec, QUALITY_FACTOR["h264"])
     return base * CODEC_FACTOR.get(codec, 1.0) * tiers.get(quality, 1.0)
 
 
-def estimate_size(codec: str, width: int, height: int, fps: float, quality: str,
-                  duration: float, has_audio: bool = True) -> dict:
+def estimate_size(codec: str, width: int, height: int, fps: float, quality: str, duration: float, has_audio: bool = True) -> dict:
     """Estimated output size in bytes, with the parts that made it up."""
     video = estimate_bitrate(codec, width, height, fps, quality)
     audio = AUDIO_KBPS if has_audio else 0.0
     total_bits = (video + audio) * 1000.0 * max(0.0, float(duration))
     return {
-        "codec": codec, "quality": quality, "width": width, "height": height,
-        "videoKbps": round(video, 1), "audioKbps": audio,
-        "bytes": int(total_bits / 8), "seconds": duration,
+        "codec": codec,
+        "quality": quality,
+        "width": width,
+        "height": height,
+        "videoKbps": round(video, 1),
+        "audioKbps": audio,
+        "bytes": int(total_bits / 8),
+        "seconds": duration,
     }

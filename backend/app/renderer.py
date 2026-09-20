@@ -21,8 +21,28 @@ from .pixel_effects import apply_colour_panel, apply_effects
 from .render_document import flatten, validate_document
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
 
-LEGACY = {"fc.gaussian-blur": "gaussian", "fc.box-blur": "box", "fc.motion-blur": "directional-blur", "fc.mono": "monochrome", "fc.invert": "invert", "fc.warm": "warmth", "fc.cool": "cooling", "fc.vignette-pop": "vignette"}
-DEFAULTS = {"scale": 100, "posX": 0, "posY": 0, "rotation": 0, "width": 100, "height": 100, "opacity": 100, "blendMode": "Normal", "flipH": False, "flipV": False}
+LEGACY = {
+    "fc.gaussian-blur": "gaussian",
+    "fc.box-blur": "box",
+    "fc.motion-blur": "directional-blur",
+    "fc.mono": "monochrome",
+    "fc.invert": "invert",
+    "fc.warm": "warmth",
+    "fc.cool": "cooling",
+    "fc.vignette-pop": "vignette",
+}
+DEFAULTS = {
+    "scale": 100,
+    "posX": 0,
+    "posY": 0,
+    "rotation": 0,
+    "width": 100,
+    "height": 100,
+    "opacity": 100,
+    "blendMode": "Normal",
+    "flipH": False,
+    "flipV": False,
+}
 
 
 def crop_box(clip: dict) -> tuple[float, float, float, float] | None:
@@ -87,8 +107,9 @@ def paint_text(draw, origin, content: str, font, fill, align: str, spacing: floa
     """Draw the block at origin; per-glyph only when tracking asks for it."""
     x, y = origin
     if not tracking:
-        draw.multiline_text((x, y), content, font=font, fill=fill, align=align, spacing=spacing,
-                            stroke_width=stroke, stroke_fill=stroke_fill)
+        draw.multiline_text(
+            (x, y), content, font=font, fill=fill, align=align, spacing=spacing, stroke_width=stroke, stroke_fill=stroke_fill
+        )
         return
     lines = content.split("\n")
     widest = max((line_width(font, line, tracking) for line in lines), default=0.0)
@@ -98,8 +119,7 @@ def paint_text(draw, origin, content: str, font, fill, align: str, spacing: floa
         start = x if align == "left" else x + widest - width if align == "right" else x + (widest - width) / 2
         cursor = start
         for char in line:
-            draw.text((cursor, y + index * step), char, font=font, fill=fill,
-                      stroke_width=stroke, stroke_fill=stroke_fill, anchor="la")
+            draw.text((cursor, y + index * step), char, font=font, fill=fill, stroke_width=stroke, stroke_fill=stroke_fill, anchor="la")
             cursor += font.getlength(char) + tracking
 
 
@@ -107,8 +127,10 @@ def paint_text(draw, origin, content: str, font, fill, align: str, spacing: floa
 # one routine can scale, rotate and fill any of them; a drawn path carries its
 # own anchors and bezier handles instead.
 def _regular(sides: int, turn: float = -0.5) -> list[tuple[float, float]]:
-    return [(0.5 + 0.5 * math.cos(2 * math.pi * (i / sides + turn / sides)),
-             0.5 + 0.5 * math.sin(2 * math.pi * (i / sides + turn / sides))) for i in range(sides)]
+    return [
+        (0.5 + 0.5 * math.cos(2 * math.pi * (i / sides + turn / sides)), 0.5 + 0.5 * math.sin(2 * math.pi * (i / sides + turn / sides)))
+        for i in range(sides)
+    ]
 
 
 def _star(points: int, inner: float) -> list[tuple[float, float]]:
@@ -141,8 +163,20 @@ MASK_SHAPES = {
     "star": _star(5, 0.42),
     "star6": _star(6, 0.55),
     "heart": _heart(),
-    "cross": [(0.35, 0), (0.65, 0), (0.65, 0.35), (1, 0.35), (1, 0.65), (0.65, 0.65),
-              (0.65, 1), (0.35, 1), (0.35, 0.65), (0, 0.65), (0, 0.35), (0.35, 0.35)],
+    "cross": [
+        (0.35, 0),
+        (0.65, 0),
+        (0.65, 0.35),
+        (1, 0.35),
+        (1, 0.65),
+        (0.65, 0.65),
+        (0.65, 1),
+        (0.35, 1),
+        (0.35, 0.65),
+        (0, 0.65),
+        (0, 0.35),
+        (0.35, 0.35),
+    ],
     "arrow": [(0, 0.3), (0.6, 0.3), (0.6, 0.05), (1, 0.5), (0.6, 0.95), (0.6, 0.7), (0, 0.7)],
     "chevron": [(0, 0.1), (0.45, 0.5), (0, 0.9), (0.25, 0.9), (0.7, 0.5), (0.25, 0.1)],
     "trapezoid": [(0.2, 0), (0.8, 0), (1, 1), (0, 1)],
@@ -170,8 +204,12 @@ def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float
         for step in range(steps):
             t = step / steps
             u = 1 - t
-            out.append((u ** 3 * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t ** 3 * x3,
-                        u ** 3 * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t ** 3 * y3))
+            out.append(
+                (
+                    u**3 * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t**3 * x3,
+                    u**3 * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t**3 * y3,
+                )
+            )
     return out
 
 
@@ -235,9 +273,16 @@ class FrameRenderer:
                 still = self.media_frame({"kind": "image", "mediaId": str(fill["mediaId"])}, 0)
                 canvas[:, :, :3] = self._cover(still[:, :, :3])
             elif kind == "blur":
-                source = next((c for c in sorted(self.clips, key=lambda c: -c["trackIndex"])
-                               if c["kind"] in ("video", "image") and c.get("mediaId")
-                               and c["start"] <= time < c["start"] + c["duration"] + c.get("extendOut", 0)), None)
+                source = next(
+                    (
+                        c
+                        for c in sorted(self.clips, key=lambda c: -c["trackIndex"])
+                        if c["kind"] in ("video", "image")
+                        and c.get("mediaId")
+                        and c["start"] <= time < c["start"] + c["duration"] + c.get("extendOut", 0)
+                    ),
+                    None,
+                )
                 if source is not None:
                     still = self.media_frame(source, source_time(source, time - source["start"]))
                     covered = self._cover(still[:, :, :3])
@@ -255,7 +300,7 @@ class FrameRenderer:
         resized = cv2.resize(image, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_LINEAR)
         top = max(0, (resized.shape[0] - self.height) // 2)
         left = max(0, (resized.shape[1] - self.width) // 2)
-        return resized[top:top + self.height, left:left + self.width]
+        return resized[top : top + self.height, left : left + self.width]
 
     def _tween(self, capture, media_id: str, wanted: int, blend: float):
         """The picture partway between two source frames, following the motion."""
@@ -403,7 +448,8 @@ class FrameRenderer:
             layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
             ImageDraw.Draw(layer).rounded_rectangle(
                 [x - pad, y - pad, x + plate_box[2] + pad, y + plate_box[3] + pad],
-                radius=radius, fill=(*ImageColor.getrgb(plate), alpha),
+                radius=radius,
+                fill=(*ImageColor.getrgb(plate), alpha),
             )
             image.alpha_composite(layer)
             draw = ImageDraw.Draw(image)
@@ -454,7 +500,7 @@ class FrameRenderer:
                 clip["cutout"] = options
         key = clip.get("key")
         if key:
-            color = np.array([int(key["color"][i:i + 2], 16) for i in (1, 3, 5)], np.float32) / 255
+            color = np.array([int(key["color"][i : i + 2], 16) for i in (1, 3, 5)], np.float32) / 255
             rgb = out[:, :, :3].astype(np.float32) / 255
             chroma = rgb - rgb.mean(2, keepdims=True)
             target = color - color.mean()
@@ -490,8 +536,9 @@ class FrameRenderer:
                     turn = math.radians(float(mask.get("angle", 0)))
                     if turn:
                         cos_a, sin_a = math.cos(turn), math.sin(turn)
-                        points = [(cx + (px - cx) * cos_a - (py - cy) * sin_a,
-                                   cy + (px - cx) * sin_a + (py - cy) * cos_a) for px, py in points]
+                        points = [
+                            (cx + (px - cx) * cos_a - (py - cy) * sin_a, cy + (px - cx) * sin_a + (py - cy) * cos_a) for px, py in points
+                        ]
                     cv2.fillPoly(alpha, [np.array(points, np.int32)], 1)
             feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
             if feather > 0:
@@ -505,6 +552,7 @@ class FrameRenderer:
             from .matte_cache import matte_key
             from .matte_cache import read as read_matte
             from .segmentation import feathered
+
             options = clip["cutout"]
             key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
             h2, w2 = out.shape[:2]
@@ -529,13 +577,13 @@ class FrameRenderer:
         h, w = image.shape[:2]
         if kind.startswith("wipe"):
             if kind == "wipe-left":
-                image[:, int(w * progress):, 3] = 0
+                image[:, int(w * progress) :, 3] = 0
             elif kind == "wipe-right":
-                image[:, :int(w * (1 - progress)), 3] = 0
+                image[:, : int(w * (1 - progress)), 3] = 0
             elif kind == "wipe-up":
-                image[int(h * progress):, :, 3] = 0
+                image[int(h * progress) :, :, 3] = 0
             else:
-                image[:int(h * (1 - progress)), :, 3] = 0
+                image[: int(h * (1 - progress)), :, 3] = 0
         elif kind in ("slide-left", "slide-right", "push-up"):
             dx = int(w * (1 - progress)) * (1 if kind == "slide-left" else -1) if kind != "push-up" else 0
             dy = int(h * (1 - progress)) if kind == "push-up" else 0
@@ -574,13 +622,13 @@ class FrameRenderer:
         h, w = image.shape[:2]
         if kind.startswith("wipe"):
             if kind == "wipe-left":
-                image[:, :int(w * progress), 3] = 0
+                image[:, : int(w * progress), 3] = 0
             elif kind == "wipe-right":
-                image[:, int(w * (1 - progress)):, 3] = 0
+                image[:, int(w * (1 - progress)) :, 3] = 0
             elif kind == "wipe-up":
-                image[:int(h * progress), :, 3] = 0
+                image[: int(h * progress), :, 3] = 0
             else:
-                image[int(h * (1 - progress)):, :, 3] = 0
+                image[int(h * (1 - progress)) :, :, 3] = 0
         elif kind in ("slide-left", "slide-right", "push-up"):
             dx = int(w * progress) * (-1 if kind == "slide-left" else 1) if kind != "push-up" else 0
             dy = -int(h * progress) if kind == "push-up" else 0
@@ -620,7 +668,14 @@ class FrameRenderer:
                 canvas = apply_effects(canvas, effects, local)
                 continue
             if clip["kind"] == "image" and not clip.get("shaderId") and all(entry["id"] in GRADES for entry in effects):
-                key = (clip.get("mediaId"), repr(effects), clip.get("lutId"), clip.get("lutIntensity", 1), crop_box(clip), repr(clip.get("colour")))
+                key = (
+                    clip.get("mediaId"),
+                    repr(effects),
+                    clip.get("lutId"),
+                    clip.get("lutIntensity", 1),
+                    crop_box(clip),
+                    repr(clip.get("colour")),
+                )
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
                     still = apply_colour_panel(still, clip.get("colour"))
@@ -635,8 +690,7 @@ class FrameRenderer:
                 # never sees, so it is applied here from the measured path.
                 steady = clip.get("stabilise")
                 if steady and clip.get("mediaId"):
-                    image = stabilise_frame(image, str(clip["mediaId"]),
-                                            int(source_time(clip, local) * self.project["fps"]), steady)
+                    image = stabilise_frame(image, str(clip["mediaId"]), int(source_time(clip, local) * self.project["fps"]), steady)
                 scaled = self.scaled_effects(effects, clip)
                 image = apply_effects(image, scaled, local) if scaled else image
                 if clip.get("lutId"):

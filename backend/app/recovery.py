@@ -3,6 +3,7 @@
 Lives under DATA_DIR/recovery as one JSON file per key; the key is the project id or "unsaved" for a project that
 has never been saved. Mutating calls require the local header like every other write.
 """
+
 from __future__ import annotations
 
 import json
@@ -43,7 +44,14 @@ def list_journals() -> list[dict[str, Any]]:
             data = json.loads(file.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        out.append({"key": file.stem, "written": data.get("written"), "revision": data.get("revision", 0), "title": (data.get("document") or {}).get("title", "")})
+        out.append(
+            {
+                "key": file.stem,
+                "written": data.get("written"),
+                "revision": data.get("revision", 0),
+                "title": (data.get("document") or {}).get("title", ""),
+            }
+        )
     return out
 
 

@@ -24,6 +24,7 @@ def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
         alpha = _cache.get(signature)
         if alpha is None:
             import onnxruntime as ort
+
             if model not in _sessions:
                 path = ROOT / next(iter(MODELS[model]["files"]))
                 config = ort.SessionOptions()
@@ -114,5 +115,4 @@ def outline(alpha: np.ndarray, max_points: int = 48) -> list[dict]:
         if len(points) <= max_points:
             break
         tolerance *= 1.5
-    return [{"x": round(float(p[0][0]) / width, 5), "y": round(float(p[0][1]) / height, 5)}
-            for p in points]
+    return [{"x": round(float(p[0][0]) / width, 5), "y": round(float(p[0][1]) / height, 5)} for p in points]

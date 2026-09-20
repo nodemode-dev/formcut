@@ -58,11 +58,17 @@ def checked(body: RenderInput) -> dict:
 @router.get("/status")
 def capabilities():
     encoders = encoder_status()
-    return {"compositor": gpu.status(), "shared_preview_export": True, "formats": ["mp4", "webm"],
-            "frame_format": "png", "encoders": encoders,
-            "tenBit": {codec: supports_ten_bit(codec) for codec in ("h264", "hevc", "av1", "vp9")},
-            "sizes": list(SIZE_PRESETS), "rates": list(RATE_PRESETS),
-            "codecs": encoders["containers"]}
+    return {
+        "compositor": gpu.status(),
+        "shared_preview_export": True,
+        "formats": ["mp4", "webm"],
+        "frame_format": "png",
+        "encoders": encoders,
+        "tenBit": {codec: supports_ten_bit(codec) for codec in ("h264", "hevc", "av1", "vp9")},
+        "sizes": list(SIZE_PRESETS),
+        "rates": list(RATE_PRESETS),
+        "codecs": encoders["containers"],
+    }
 
 
 @router.post("/sessions", status_code=201)
@@ -79,6 +85,7 @@ def create_session(body: RenderInput):
                 item["renderer"].close()
         lock = threading.RLock()
         cache = FrameCache(project)
+
         def render_locked(at: float):
             # Read-ahead feeds playback, which may use proxies.
             with lock:
@@ -87,8 +94,14 @@ def create_session(body: RenderInput):
                     return renderer.frame(at)
                 finally:
                     renderer.allow_proxy = False
-        _sessions[session_id] = {"renderer": renderer, "lock": lock, "touched": time.monotonic(),
-                                 "cache": cache, "ahead": ReadAhead(render_locked, cache, project["fps"])}
+
+        _sessions[session_id] = {
+            "renderer": renderer,
+            "lock": lock,
+            "touched": time.monotonic(),
+            "cache": cache,
+            "ahead": ReadAhead(render_locked, cache, project["fps"]),
+        }
     return {"id": session_id, "width": renderer.width, "height": renderer.height, "duration": project["duration"]}
 
 
@@ -151,8 +164,7 @@ def frame(session_id: str, time: float = 0):
         item["ahead"].seek(time)
         output = io.BytesIO()
         Image.fromarray(pixels).save(output, format="PNG", compress_level=1)
-        return Response(output.getvalue(), media_type="image/png",
-                        headers={"Cache-Control": "no-store", "x-formcut-frame": served})
+        return Response(output.getvalue(), media_type="image/png", headers={"Cache-Control": "no-store", "x-formcut-frame": served})
     except Exception as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -185,8 +197,14 @@ def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) ->
 SIZE_PRESETS = {"720p": 720, "1080p": 1080, "1440p": 1440, "2160p": 2160}
 # X4: rates stored as exact fractions; integer rates stay acceptable.
 RATE_PRESETS = {
-    "23.976": (24000, 1001), "24": (24, 1), "25": (25, 1), "29.97": (30000, 1001),
-    "30": (30, 1), "50": (50, 1), "59.94": (60000, 1001), "60": (60, 1),
+    "23.976": (24000, 1001),
+    "24": (24, 1),
+    "25": (25, 1),
+    "29.97": (30000, 1001),
+    "30": (30, 1),
+    "50": (50, 1),
+    "59.94": (60000, 1001),
+    "60": (60, 1),
 }
 
 
@@ -205,8 +223,18 @@ def resize_for(project: dict, size: str | None) -> tuple[int, int]:
     return out_w - (out_w % 2), out_h - (out_h % 2)
 
 
-def export_media(project: dict, job_id: str, report, cancelled, format: str, quality: str, codec_name: str | None = None,
-                 ten_bit: bool = False, size: str | None = None, rate: str | None = None) -> dict:
+def export_media(
+    project: dict,
+    job_id: str,
+    report,
+    cancelled,
+    format: str,
+    quality: str,
+    codec_name: str | None = None,
+    ten_bit: bool = False,
+    size: str | None = None,
+    rate: str | None = None,
+) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     path = OUTPUTS / (job_id + "." + format)
     audio = OUTPUTS / (job_id + ".wav")
@@ -240,7 +268,38 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
         # An H.264 add-on the person installed runs from its own binary; the
         # bundled LGPL ffmpeg drives everything else.
         program = str(addon_binary_for(encoder) or "ffmpeg")
-        command = [program, "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2", "-r", out_rate, *codec, "-pix_fmt", pix, "-t", str(project["duration"]), str(path)]
+        command = [
+            program,
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgba",
+            "-s",
+            f"{renderer.width}x{renderer.height}",
+            "-r",
+            str(fps),
+            "-i",
+            "pipe:0",
+            "-i",
+            str(audio),
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            "-vf",
+            f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2",
+            "-r",
+            out_rate,
+            *codec,
+            "-pix_fmt",
+            pix,
+            "-t",
+            str(project["duration"]),
+            str(path),
+        ]
         with log.open("wb") as errors:
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=errors)
             # R5: render chunks on a bounded worker pool and feed the encoder in
@@ -270,8 +329,18 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
             process.wait(timeout=600)
         if process.returncode:
             raise ValueError(log.read_text(errors="replace")[-2000:])
-        return {"file": str(path), "name": "formcut-export." + format, "media_type": "video/mp4" if format == "mp4" else "video/webm", "frames": count, "width": out_w, "height": out_h, "codec": wanted, "encoder": encoder,
-                "pixelFormat": pix, "rate": out_rate}
+        return {
+            "file": str(path),
+            "name": "formcut-export." + format,
+            "media_type": "video/mp4" if format == "mp4" else "video/webm",
+            "frames": count,
+            "width": out_w,
+            "height": out_h,
+            "codec": wanted,
+            "encoder": encoder,
+            "pixelFormat": pix,
+            "rate": out_rate,
+        }
     except BaseException:
         if process and process.poll() is None:
             process.kill()
@@ -297,18 +366,26 @@ def export(body: RenderInput):
         allowed = encoder_status()["containers"].get(body.format, [])
         if body.codec not in allowed:
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
-    return jobs.submit("export", lambda job_id, report, cancelled: export_media(project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate))
+    return jobs.submit(
+        "export",
+        lambda job_id, report, cancelled: export_media(
+            project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate
+        ),
+    )
 
 
 @router.post("/audio", status_code=202)
 def audio(body: RenderInput):
     project = checked(body)
+
     def operation(job_id, report, cancelled):
         OUTPUTS.mkdir(parents=True, exist_ok=True)
         path = OUTPUTS / (job_id + ".wav")
         render_audio(project, path, cancelled)
         return {"file": str(path), "name": "formcut-preview.wav", "media_type": "audio/wav"}
+
     return jobs.submit("preview-audio", operation)
+
 
 class ClipAudioInput(BaseModel):
     clip: dict
@@ -326,9 +403,17 @@ def clip_audio(body: ClipAudioInput):
     media_id = str(clip.get("mediaId") or "")
     if not media_id:
         raise HTTPException(422, "Clip has no media")
-    signature = hashlib.sha1(json.dumps({k: clip.get(k) for k in
-        ("mediaId", "sourceIn", "duration", "extendOut", "speed", "speedCurve", "reversed", "audioEffects", "audioFx")},
-        sort_keys=True, default=str).encode(), usedforsecurity=False).hexdigest()[:20]
+    signature = hashlib.sha1(
+        json.dumps(
+            {
+                k: clip.get(k)
+                for k in ("mediaId", "sourceIn", "duration", "extendOut", "speed", "speedCurve", "reversed", "audioEffects", "audioFx")
+            },
+            sort_keys=True,
+            default=str,
+        ).encode(),
+        usedforsecurity=False,
+    ).hexdigest()[:20]
     CLIP_AUDIO.mkdir(parents=True, exist_ok=True)
     path = CLIP_AUDIO / f"{signature}.f32"
     if not path.is_file():
@@ -348,9 +433,11 @@ def clip_audio(body: ClipAudioInput):
         staging = path.with_suffix(".part")
         staging.write_bytes(np.ascontiguousarray(samples, dtype="<f4").tobytes())
         staging.replace(path)
-    return Response(path.read_bytes(), media_type="application/octet-stream",
-                    headers={"x-formcut-rate": str(RATE), "x-formcut-signature": signature,
-                             "Cache-Control": "no-store"})
+    return Response(
+        path.read_bytes(),
+        media_type="application/octet-stream",
+        headers={"x-formcut-rate": str(RATE), "x-formcut-signature": signature, "Cache-Control": "no-store"},
+    )
 
 
 class MatteInput(BaseModel):
@@ -376,10 +463,20 @@ def build_mattes(body: MatteInput):
 
     def operation(job_id, report, cancelled):
         from .segmentation import raw_alpha
-        renderer = FrameRenderer({"title": "matte", "width": 640, "height": 360, "fps": body.fps,
-                                  "duration": max(0.1, duration), "activeTimeline": 0,
-                                  "timelines": [{"id": "m", "name": "m", "tracks": [{"id": "t", "name": "V",
-                                      "clips": [{**clip, "start": 0, "cutout": None}]}]}]})
+
+        renderer = FrameRenderer(
+            {
+                "title": "matte",
+                "width": 640,
+                "height": 360,
+                "fps": body.fps,
+                "duration": max(0.1, duration),
+                "activeTimeline": 0,
+                "timelines": [
+                    {"id": "m", "name": "m", "tracks": [{"id": "t", "name": "V", "clips": [{**clip, "start": 0, "cutout": None}]}]}
+                ],
+            }
+        )
         try:
             for index, at in enumerate(times):
                 if cancelled():
@@ -417,6 +514,7 @@ def sample_frame(body: dict) -> dict:
     describe a look in words.
     """
     from .pixel_effects import reference_statistics
+
     project = validate_document(body.get("project") or {})
     renderer = FrameRenderer(project, 480)
     try:
@@ -436,15 +534,16 @@ def estimate(body: EstimateInput):
     # A video clip is only audible if its media actually carries sound; counting
     # every video clip as audible added 128 kbit/s that the export never spends.
     audible = any(
-        clip.get("kind") in ("audio", "video") and not clip.get("muted")
-        and clip.get("mediaId") and media_has_audio(str(clip["mediaId"]))
-        for timeline in project["timelines"] for track in timeline["tracks"] for clip in track["clips"]
+        clip.get("kind") in ("audio", "video") and not clip.get("muted") and clip.get("mediaId") and media_has_audio(str(clip["mediaId"]))
+        for timeline in project["timelines"]
+        for track in timeline["tracks"]
+        for clip in track["clips"]
     )
     codec = body.codec or ("h264" if body.format == "mp4" else "vp9")
     return {
-        "tiers": {
-            tier: estimate_size(codec, width, height, fps, tier, project["duration"], audible)
-            for tier in ("high", "medium", "low")
-        },
-        "width": width, "height": height, "fps": fps, "codec": codec,
+        "tiers": {tier: estimate_size(codec, width, height, fps, tier, project["duration"], audible) for tier in ("high", "medium", "low")},
+        "width": width,
+        "height": height,
+        "fps": fps,
+        "codec": codec,
     }

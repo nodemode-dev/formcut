@@ -6,6 +6,7 @@ user, which is why no operator gate is enforced here.
 Pexels guidelines require visible attribution and photographer credit;
 both travel in the normalized items and into imported media records.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -26,9 +27,12 @@ from .media import ingest_path
 
 router = APIRouter(prefix="/api/stock", tags=["stock"])
 
+
 # Overridable for a proxy, a mirror or a local stub; see providers.base_for.
 def _pexels_base() -> str:
     return providers.base_for("pexels")
+
+
 MAX_PER_PAGE = 80
 _MISSING_KEY = "Pexels API key not configured. Add it in Settings, AI providers, or set PEXELS_API_KEY in .env."
 
@@ -44,8 +48,7 @@ def _pexels_key() -> str:
 
 
 def best_mp4(video: dict[str, Any]) -> str | None:
-    files = [f for f in video.get("video_files", [])
-             if f.get("file_type") == "video/mp4" and f.get("width")]
+    files = [f for f in video.get("video_files", []) if f.get("file_type") == "video/mp4" and f.get("width")]
     if not files:
         return None
     return max(files, key=lambda f: (f.get("width") or 0) * (f.get("height") or 0)).get("link")
@@ -54,23 +57,32 @@ def best_mp4(video: dict[str, Any]) -> str | None:
 def normalize_photo(p: dict[str, Any]) -> dict[str, Any]:
     src = p.get("src", {})
     return {
-        "id": p.get("id"), "type": "photo",
+        "id": p.get("id"),
+        "type": "photo",
         "preview": src.get("medium"),
         "full": src.get("large2x") or src.get("original") or src.get("large"),
-        "width": p.get("width"), "height": p.get("height"),
-        "alt": p.get("alt"), "page_url": p.get("url"),
-        "credit": p.get("photographer"), "credit_url": p.get("photographer_url"),
+        "width": p.get("width"),
+        "height": p.get("height"),
+        "alt": p.get("alt"),
+        "page_url": p.get("url"),
+        "credit": p.get("photographer"),
+        "credit_url": p.get("photographer_url"),
     }
 
 
 def normalize_video(v: dict[str, Any]) -> dict[str, Any]:
     user = v.get("user") or {}
     return {
-        "id": v.get("id"), "type": "video",
-        "preview": v.get("image"), "full": best_mp4(v),
-        "width": v.get("width"), "height": v.get("height"),
-        "duration": v.get("duration"), "page_url": v.get("url"),
-        "credit": user.get("name"), "credit_url": user.get("url"),
+        "id": v.get("id"),
+        "type": "video",
+        "preview": v.get("image"),
+        "full": best_mp4(v),
+        "width": v.get("width"),
+        "height": v.get("height"),
+        "duration": v.get("duration"),
+        "page_url": v.get("url"),
+        "credit": user.get("name"),
+        "credit_url": user.get("url"),
     }
 
 
@@ -114,8 +126,7 @@ def pexels_search(body: SearchBody) -> dict[str, Any]:
         if body.locale:
             params["locale"] = body.locale.strip()[:8]
     try:
-        resp = httpx.get(f"{_pexels_base()}{ep}", params=params,
-                         headers={"Authorization": key}, timeout=30.0)
+        resp = httpx.get(f"{_pexels_base()}{ep}", params=params, headers={"Authorization": key}, timeout=30.0)
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Pexels request failed: {e}")
     if resp.status_code != 200:
@@ -125,8 +136,11 @@ def pexels_search(body: SearchBody) -> dict[str, Any]:
         if value is not None:
             _last_rate[name] = value
     data = resp.json()
-    items = ([normalize_photo(p) for p in data.get("photos", [])] if body.kind == "photo"
-             else [normalize_video(v) for v in data.get("videos", [])])
+    items = (
+        [normalize_photo(p) for p in data.get("photos", [])]
+        if body.kind == "photo"
+        else [normalize_video(v) for v in data.get("videos", [])]
+    )
     return {
         "items": items,
         "page": data.get("page", params["page"]),
@@ -144,8 +158,12 @@ def stock_status() -> dict[str, Any]:
     }
 
 
-_PEXELS_HOSTS = ("https://images.pexels.com/", "https://videos.pexels.com/",
-                 "https://static-videos.pexels.com/", "https://player.vimeo.com/external/")
+_PEXELS_HOSTS = (
+    "https://images.pexels.com/",
+    "https://videos.pexels.com/",
+    "https://static-videos.pexels.com/",
+    "https://player.vimeo.com/external/",
+)
 
 
 class PexelsImportBody(BaseModel):
@@ -170,10 +188,16 @@ def pexels_import(body: PexelsImportBody) -> dict[str, Any]:
     tmp = Path(tempfile.gettempdir()) / f"formcut_stock_{uuid.uuid4().hex}{ext}"
     tmp.write_bytes(resp.content)
     safe = "".join(ch for ch in body.name if ch.isalnum() or ch in " -_")[:60] or "pexels"
-    return ingest_path(tmp, f"{safe}{ext}", extra={
-        "source": "pexels", "credit": body.credit, "page_url": body.page_url,
-        "attribution": "Photos provided by Pexels",
-    })
+    return ingest_path(
+        tmp,
+        f"{safe}{ext}",
+        extra={
+            "source": "pexels",
+            "credit": body.credit,
+            "page_url": body.page_url,
+            "attribution": "Photos provided by Pexels",
+        },
+    )
 
 
 def _ytdlp_cmd() -> list[str] | None:
@@ -183,6 +207,7 @@ def _ytdlp_cmd() -> list[str] | None:
     if not getattr(sys, "frozen", False):
         try:
             import yt_dlp  # noqa: F401
+
             return [sys.executable, "-m", "yt_dlp"]
         except ImportError:
             pass
@@ -205,7 +230,18 @@ def _run_url_import(job_id: str, url: str) -> None:
             _jobs[job_id].update(status="error", error="yt-dlp is not installed")
         return
     workdir = Path(tempfile.mkdtemp(prefix="formcut_ytdlp_"))
-    args = [*cmd, "--no-playlist", "--restrict-filenames", "-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b", "--merge-output-format", "mp4", "-o", str(workdir / "%(title).60s.%(ext)s"), url]
+    args = [
+        *cmd,
+        "--no-playlist",
+        "--restrict-filenames",
+        "-f",
+        "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b",
+        "--merge-output-format",
+        "mp4",
+        "-o",
+        str(workdir / "%(title).60s.%(ext)s"),
+        url,
+    ]
     try:
         proc = subprocess.run(args, capture_output=True, text=True, check=False, timeout=600)
         if proc.returncode != 0:

@@ -134,8 +134,7 @@ def test_provider(name: str) -> dict:
     base = base_for(name)
     try:
         if name == "pexels":
-            response = httpx.get(f"{base}/v1/search", params={"query": "test", "per_page": 1},
-                                 headers={"Authorization": key}, timeout=20.0)
+            response = httpx.get(f"{base}/v1/search", params={"query": "test", "per_page": 1}, headers={"Authorization": key}, timeout=20.0)
             detail = f"{len(response.json().get('photos', []))} result returned" if response.status_code == 200 else ""
         else:
             response = httpx.get(f"{base}/v1/voices", headers={"xi-api-key": key}, timeout=20.0)

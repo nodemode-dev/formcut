@@ -51,11 +51,37 @@ class VideoSource:
         self.release()
         self.position = self.requested
         self.errors = tempfile.TemporaryFile()
-        self.process = subprocess.Popen([
-            "ffmpeg", "-v", "error", "-nostdin", "-threads", "0", *hwaccel_flags(), "-ss", str(self.position / self.fps),
-            "-i", self.path, "-map", "0:v:0", "-an", "-sn", "-dn", "-vf", f"fps={self.fps},scale={self.width}:{self.height}",
-            "-threads", "1", "-pix_fmt", "bgr24", "-f", "rawvideo", "pipe:1",
-        ], stdout=subprocess.PIPE, stderr=self.errors)
+        self.process = subprocess.Popen(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-nostdin",
+                "-threads",
+                "0",
+                *hwaccel_flags(),
+                "-ss",
+                str(self.position / self.fps),
+                "-i",
+                self.path,
+                "-map",
+                "0:v:0",
+                "-an",
+                "-sn",
+                "-dn",
+                "-vf",
+                f"fps={self.fps},scale={self.width}:{self.height}",
+                "-threads",
+                "1",
+                "-pix_fmt",
+                "bgr24",
+                "-f",
+                "rawvideo",
+                "pipe:1",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=self.errors,
+        )
 
     def read(self):
         if self.frame_count and self.requested >= self.frame_count:
@@ -125,10 +151,26 @@ def hwaccel_flags() -> list[str]:
                 if candidate not in names:
                     continue
                 probe = subprocess.run(
-                    ["ffmpeg", "-v", "error", "-hwaccel", candidate, "-f", "lavfi",
-                     "-i", "testsrc2=size=320x240:rate=30:duration=0.2", "-frames:v", "3",
-                     "-f", "null", "-"],
-                    capture_output=True, text=True, check=False, timeout=30,
+                    [
+                        "ffmpeg",
+                        "-v",
+                        "error",
+                        "-hwaccel",
+                        candidate,
+                        "-f",
+                        "lavfi",
+                        "-i",
+                        "testsrc2=size=320x240:rate=30:duration=0.2",
+                        "-frames:v",
+                        "3",
+                        "-f",
+                        "null",
+                        "-",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=30,
                 )
                 if probe.returncode == 0 and not probe.stderr.strip():
                     _HWACCEL = ["-hwaccel", candidate]

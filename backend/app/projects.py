@@ -46,11 +46,14 @@ def _summary(record: dict) -> dict:
     # rather than showing every project as never opened.
     stamp = float(record.get("updated") or record.get("saved") or 0)
     return {
-        "id": record.get("id"), "title": record.get("title") or "",
+        "id": record.get("id"),
+        "title": record.get("title") or "",
         "updated": stamp,
-        "clips": clips, "duration": round(duration, 2),
+        "clips": clips,
+        "duration": round(duration, 2),
         "timelines": len(timelines),
-        "width": document.get("width"), "height": document.get("height"),
+        "width": document.get("width"),
+        "height": document.get("height"),
         "cover": path.is_file(),
     }
 
@@ -76,6 +79,7 @@ def set_project_cover(project_id: str, body: dict) -> None:
 
     from .render_api import FrameRenderer
     from .render_document import validate_document
+
     document = validate_document(body.get("project") or {})
     COVERS.mkdir(parents=True, exist_ok=True)
     renderer = FrameRenderer(document, 480)

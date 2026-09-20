@@ -6,6 +6,7 @@ touches; everything else replays from memory at the project rate. Read-ahead
 renders a short run past the playhead on a single background worker per
 session, which keeps the decoder's sequential read pattern intact.
 """
+
 from __future__ import annotations
 
 import hashlib

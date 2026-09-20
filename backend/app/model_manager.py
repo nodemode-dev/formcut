@@ -16,12 +16,24 @@ router = APIRouter(prefix="/api/models", tags=["models"])
 ROOT = MODELS_DIR
 LEGACY = DATA_DIR / "models"
 MODELS = {
-    "object-cutout": {"name": "Object cutout (U2Net small)", "license": "Apache-2.0", "files": {"u2netp.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"}},
-    "person-cutout": {"name": "Person cutout (U2Net)", "license": "Apache-2.0", "files": {"u2net_human_seg.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx"}},
-    "local-speech": {"name": "Kokoro local speech", "license": "Apache-2.0", "files": {
-        "kokoro-v1.0.onnx": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx",
-        "voices-v1.0.bin": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
-    }},
+    "object-cutout": {
+        "name": "Object cutout (U2Net small)",
+        "license": "Apache-2.0",
+        "files": {"u2netp.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx"},
+    },
+    "person-cutout": {
+        "name": "Person cutout (U2Net)",
+        "license": "Apache-2.0",
+        "files": {"u2net_human_seg.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx"},
+    },
+    "local-speech": {
+        "name": "Kokoro local speech",
+        "license": "Apache-2.0",
+        "files": {
+            "kokoro-v1.0.onnx": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx",
+            "voices-v1.0.bin": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
+        },
+    },
 }
 _lock = threading.RLock()
 _downloading: set[str] = set()
@@ -33,7 +45,17 @@ def ready(model: str) -> bool:
 
 @router.get("")
 def list_models():
-    return [{"id": key, "name": spec["name"], "license": spec["license"], "ready": ready(key), "downloading": key in _downloading, "files": list(spec["files"])} for key, spec in MODELS.items()]
+    return [
+        {
+            "id": key,
+            "name": spec["name"],
+            "license": spec["license"],
+            "ready": ready(key),
+            "downloading": key in _downloading,
+            "files": list(spec["files"]),
+        }
+        for key, spec in MODELS.items()
+    ]
 
 
 def download(model: str, report, cancelled):
@@ -73,11 +95,11 @@ def download(model: str, report, cancelled):
                     # P8: a file that does not match its pin never lands. It is
                     # deleted and named, so a bad mirror cannot poison the cache.
                     temporary.unlink(missing_ok=True)
-                    raise ValueError(
-                        f"Checksum mismatch for {name}: expected {expected[:16]}..., got {digest.hexdigest()[:16]}..."
-                    )
+                    raise ValueError(f"Checksum mismatch for {name}: expected {expected[:16]}..., got {digest.hexdigest()[:16]}...")
                 temporary.replace(path)
-                path.with_suffix(path.suffix + ".json").write_text(json.dumps({"url": download_url, "sha256": digest.hexdigest(), "license": MODELS[model]["license"]}))
+                path.with_suffix(path.suffix + ".json").write_text(
+                    json.dumps({"url": download_url, "sha256": digest.hexdigest(), "license": MODELS[model]["license"]})
+                )
             finally:
                 temporary.unlink(missing_ok=True)
     return {"model": model, "ready": ready(model)}
@@ -127,7 +149,7 @@ def prepare(report, cancelled, fetch: bool) -> dict:
         except Exception as error:
             results.append({"model": model, "ready": False, "error": str(error)})
     hub = []
-    for model, paths in (HUB_PREFETCH.items() if fetch else ()):
+    for model, paths in HUB_PREFETCH.items() if fetch else ():
         for path in paths:
             if cancelled():
                 raise InterruptedError("Cancelled")
@@ -147,11 +169,26 @@ HUB = ROOT / "hub"
 # C1 offers tiny, base and small in English-only and multilingual form, so every
 # one of those must be allowed through the hub or the worker's request is refused.
 WHISPER_MODELS = (
-    "Xenova/whisper-tiny.en", "Xenova/whisper-base.en", "Xenova/whisper-small.en",
-    "onnx-community/whisper-tiny", "onnx-community/whisper-base", "onnx-community/whisper-small",
+    "Xenova/whisper-tiny.en",
+    "Xenova/whisper-base.en",
+    "Xenova/whisper-small.en",
+    "onnx-community/whisper-tiny",
+    "onnx-community/whisper-base",
+    "onnx-community/whisper-small",
 )
 HUB_MODELS = set(WHISPER_MODELS)
-HUB_PREFETCH = {model: ("config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json", "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx") for model in WHISPER_MODELS}
+HUB_PREFETCH = {
+    model: (
+        "config.json",
+        "generation_config.json",
+        "preprocessor_config.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "onnx/encoder_model_quantized.onnx",
+        "onnx/decoder_model_merged_quantized.onnx",
+    )
+    for model in WHISPER_MODELS
+}
 _hub_lock = threading.Lock()
 
 
@@ -293,8 +330,7 @@ def load_speech_models() -> None:
 
 @router.get("/speech")
 def list_speech_models() -> dict:
-    return {"models": [{"id": key, **entry} for key, entry in _speech_extra().items()],
-            "builtIn": "local-speech"}
+    return {"models": [{"id": key, **entry} for key, entry in _speech_extra().items()], "builtIn": "local-speech"}
 
 
 @router.post("/speech", status_code=201)

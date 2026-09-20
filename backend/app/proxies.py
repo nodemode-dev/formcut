@@ -12,6 +12,7 @@ previewed from a stale copy. And proxies get a worker of their own that stands
 aside while an export runs, because a background build that slows the export it
 is meant to support would be worse than no proxy at all.
 """
+
 from __future__ import annotations
 
 import json
@@ -98,17 +99,42 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
     staging = target.with_name(f"{media_id}.part.mp4")
     report(0.05)
     command = [
-        "ffmpeg", "-hide_banner", "-v", "error", "-y", "-i", str(source),
-        "-map", "0:v:0", "-an", "-sn", "-dn",
-        "-vf", f"scale=w={long_side}:h={long_side}:force_original_aspect_ratio=decrease:force_divisible_by=2",
+        "ffmpeg",
+        "-hide_banner",
+        "-v",
+        "error",
+        "-y",
+        "-i",
+        str(source),
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-dn",
+        "-vf",
+        f"scale=w={long_side}:h={long_side}:force_original_aspect_ratio=decrease:force_divisible_by=2",
         # The frame rate is pinned to the source's average because VideoSource
         # turns a time into a frame number with avg_frame_rate; if the proxy ran
         # at another rate, frame n would land at a different moment in each file.
-        "-r", rate,
-        "-c:v", "libx264", "-preset", "veryfast", "-tune", "fastdecode",
-        "-g", "1", "-crf", "23", "-pix_fmt", "yuv420p",
-        "-metadata:s:v:0", "rotate=0",
-        "-movflags", "+faststart", str(staging),
+        "-r",
+        rate,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-tune",
+        "fastdecode",
+        "-g",
+        "1",
+        "-crf",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
+        "-metadata:s:v:0",
+        "rotate=0",
+        "-movflags",
+        "+faststart",
+        str(staging),
     ]
     process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     while process.poll() is None:
@@ -124,15 +150,20 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
     staging.replace(target)
     made = _ffprobe(target)
     out = next((s for s in made.get("streams", []) if s.get("codec_type") == "video"), {})
-    sidecar_path(media_id).write_text(json.dumps({
-        "version": FORMAT_VERSION,
-        "source": source_stamp(source),
-        "width": int(out.get("width") or 0),
-        "height": int(out.get("height") or 0),
-        "fps": rate,
-        "encoder": "libx264",
-        "longSide": long_side,
-    }), encoding="utf-8")
+    sidecar_path(media_id).write_text(
+        json.dumps(
+            {
+                "version": FORMAT_VERSION,
+                "source": source_stamp(source),
+                "width": int(out.get("width") or 0),
+                "height": int(out.get("height") or 0),
+                "fps": rate,
+                "encoder": "libx264",
+                "longSide": long_side,
+            }
+        ),
+        encoding="utf-8",
+    )
     report(1.0)
     return target
 
@@ -189,8 +220,7 @@ def _run() -> None:
             # The progress callback binds this iteration's id rather than the
             # loop variable: without the default argument a later build would
             # report its progress against whichever media the loop had reached.
-            build_proxy(media_id, source, lambda value, which=media_id: _progress(which, value),
-                        lambda: False, long_side)
+            build_proxy(media_id, source, lambda value, which=media_id: _progress(which, value), lambda: False, long_side)
         except Exception as exc:
             with _lock:
                 _failed[media_id] = str(exc)[:200]

@@ -39,14 +39,20 @@ class LocalOnly:
                 allowed = headers.get("x-formcut-token") == remote_token()
         except ValueError:
             allowed = False
-        if scope["type"] == "http" and scope.get("method") in ("POST", "PUT", "PATCH", "DELETE") and scope.get("path", "").startswith("/api/"):
+        if (
+            scope["type"] == "http"
+            and scope.get("method") in ("POST", "PUT", "PATCH", "DELETE")
+            and scope.get("path", "").startswith("/api/")
+        ):
             allowed = allowed and headers.get("x-formcut-local") == "1"
         if not allowed:
             if scope["type"] == "websocket":
                 return await send({"type": "websocket.close", "code": 1008})
             return await PlainTextResponse("Local API request refused", status_code=403)(scope, receive, send)
+
         async def safe_send(message):
             if message["type"] == "http.response.start":
                 message.setdefault("headers", []).append((b"x-content-type-options", b"nosniff"))
             await send(message)
+
         await self.app(scope, receive, safe_send)

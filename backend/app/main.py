@@ -23,7 +23,7 @@ from .tts import router as tts_router
 
 prefer_bundled()
 
-APP_VERSION = "0.87.0"
+APP_VERSION = "0.88.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
@@ -44,6 +44,7 @@ async def _prepare_models() -> None:
     from .model_manager import auto_download
 
     auto_download()
+
 
 app.add_middleware(LocalOnly)
 app.include_router(projects_router)
@@ -78,6 +79,7 @@ LOGS = DATA_DIR / "logs"
 
 def _start_log() -> Path:
     import datetime
+
     LOGS.mkdir(parents=True, exist_ok=True)
     existing = sorted(LOGS.glob("engine-*.log"))
     for old in existing[:-9]:
@@ -97,8 +99,7 @@ RUN_LOG = _start_log()
 from .effect_packages import reload as _reload_packages
 
 _PACKAGE_STATE = _reload_packages()
-logging.getLogger("formcut").info("effect packages: %s loaded, %s failed",
-                                  len(_PACKAGE_STATE["loaded"]), len(_PACKAGE_STATE["failures"]))
+logging.getLogger("formcut").info("effect packages: %s loaded, %s failed", len(_PACKAGE_STATE["loaded"]), len(_PACKAGE_STATE["failures"]))
 
 SECRET_HINTS = ("key", "token", "secret", "password", "authorization")
 
@@ -107,6 +108,7 @@ SECRET_HINTS = ("key", "token", "secret", "password", "authorization")
 def locales() -> dict:
     """P6: locale files dropped into the data directory, with missing keys named."""
     import json as _json
+
     # Locales that ship with the app are read as well as ones a person dropped
     # in, otherwise a translation that ships is one nobody ever sees.
     bundled = Path(__file__).resolve().parents[2] / "frontend" / "public" / "locales"
@@ -134,16 +136,18 @@ def locales() -> dict:
                 out.append({"code": path.stem, "error": "the file is not an object of keys"})
                 continue
             missing = sorted(set(english) - set(data)) if english else []
-            out.append({
-                # A locale names itself, so a dropped-in language lists under its
-                # own name rather than a code the person does not recognise.
-                "code": path.stem,
-                "name": str(data.get("language.name") or path.stem),
-                "keys": len(data),
-                "missing": missing[:50],
-                "missingCount": len(missing),
-                "strings": data,
-            })
+            out.append(
+                {
+                    # A locale names itself, so a dropped-in language lists under its
+                    # own name rather than a code the person does not recognise.
+                    "code": path.stem,
+                    "name": str(data.get("language.name") or path.stem),
+                    "keys": len(data),
+                    "missing": missing[:50],
+                    "missingCount": len(missing),
+                    "strings": data,
+                }
+            )
     return {"locales": out}
 
 
@@ -151,14 +155,15 @@ def locales() -> dict:
 def proxy_settings() -> dict:
     from . import proxies
     from . import renderer as renderer_module
-    return {"enabled": renderer_module.PROXIES_ENABLED, "size": proxies.DEFAULT_LONG_SIDE,
-            "sizes": list(proxies.ALLOWED_SIZES)}
+
+    return {"enabled": renderer_module.PROXIES_ENABLED, "size": proxies.DEFAULT_LONG_SIDE, "sizes": list(proxies.ALLOWED_SIZES)}
 
 
 @app.post("/api/proxies/settings")
 def set_proxy_settings(body: dict) -> dict:
     from . import proxies
     from . import renderer as renderer_module
+
     if "enabled" in body:
         renderer_module.PROXIES_ENABLED = bool(body["enabled"])
     if "size" in body:
@@ -173,12 +178,14 @@ def set_proxy_settings(body: dict) -> dict:
 def packages() -> dict:
     """P3: loaded effect packages and, for Settings, any that failed with why."""
     from .effect_packages import entries, failures
+
     return {"packages": entries(), "failures": failures()}
 
 
 @app.post("/api/packages/reload")
 def packages_reload() -> dict:
     from .effect_packages import reload as reload_packages
+
     return reload_packages()
 
 
@@ -190,6 +197,7 @@ def diagnostics() -> dict:
     from . import gpu
     from .encoders import status as encoder_status
     from .model_manager import MODELS, ready
+
     environment = {
         name: ("set" if value else "unset")
         for name, value in os.environ.items()
@@ -197,8 +205,12 @@ def diagnostics() -> dict:
     }
     return {
         "version": APP_VERSION,
-        "platform": {"system": platform.system(), "release": platform.release(), "machine": platform.machine(),
-                     "python": platform.python_version()},
+        "platform": {
+            "system": platform.system(),
+            "release": platform.release(),
+            "machine": platform.machine(),
+            "python": platform.python_version(),
+        },
         "gpu": gpu.status(),
         "encoders": encoder_status()["containers"],
         "models": {name: ready(name) for name in MODELS},

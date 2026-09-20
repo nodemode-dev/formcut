@@ -13,7 +13,7 @@ from .paths import DATA_DIR
 from .processes import communicate
 
 router = APIRouter(prefix="/api/speech", tags=["speech"])
-WORKER = '''
+WORKER = """
 import json,sys,wave
 import numpy as np
 from kokoro_onnx import Kokoro
@@ -25,7 +25,7 @@ with wave.open(args["output"],"wb") as out:
  out.setsampwidth(2)
  out.setframerate(rate)
  out.writeframes(np.round(np.clip(audio,-1,1)*32767).astype("<i2").tobytes())
-'''
+"""
 
 
 _runtime: dict = {}
@@ -51,6 +51,7 @@ def voices():
     if not ready("local-speech"):
         return {"ready": False, "runtime": bool(interpreter()), "voices": []}
     import numpy as np
+
     with np.load(ROOT / "voices-v1.0.bin", allow_pickle=False) as data:
         return {"ready": True, "runtime": bool(interpreter()), "voices": [{"id": key, "name": key.replace("_", " ")} for key in data.files]}
 
@@ -69,10 +70,16 @@ def speak(body: SpeechInput):
     python = interpreter()
     if not python:
         raise HTTPException(409, "Run setup_local_ai to install the external speech runtime")
+
     def operation(job_id, report, cancelled):
         output = DATA_DIR / "speech" / (job_id + ".wav")
         output.parent.mkdir(parents=True, exist_ok=True)
-        args = {**body.model_dump(), "model": str(ROOT / "kokoro-v1.0.onnx"), "voices": str(ROOT / "voices-v1.0.bin"), "output": str(output)}
+        args = {
+            **body.model_dump(),
+            "model": str(ROOT / "kokoro-v1.0.onnx"),
+            "voices": str(ROOT / "voices-v1.0.bin"),
+            "output": str(output),
+        }
         process = subprocess.Popen([python, "-c", WORKER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
             _stdout, stderr = communicate(process, json.dumps(args), timeout=600, cancelled=cancelled)
@@ -88,4 +95,5 @@ def speak(body: SpeechInput):
                 process.kill()
                 process.wait()
             output.unlink(missing_ok=True)
+
     return jobs.submit("speech", operation)

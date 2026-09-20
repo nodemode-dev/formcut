@@ -56,10 +56,18 @@ def apply_edit(project: dict, command: dict):
         if not 0 < offset < clip["duration"]:
             raise ValueError("Split must be inside the clip")
         tail = copy.deepcopy(clip)
-        tail.update(id=uuid.uuid4().hex, start=clip["start"] + offset, duration=clip["duration"] - offset, sourceIn=source_time(clip, offset), fadeIn=0)
+        tail.update(
+            id=uuid.uuid4().hex,
+            start=clip["start"] + offset,
+            duration=clip["duration"] - offset,
+            sourceIn=source_time(clip, offset),
+            fadeIn=0,
+        )
         tail.pop("transitionIn", None)
         if clip.get("speedCurve"):
-            tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [{"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset]
+            tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+            ]
         tail["keyframes"] = [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])]
         clip["duration"] = offset
         clip["fadeOut"] = 0
@@ -127,10 +135,18 @@ def apply_edit(project: dict, command: dict):
             if not 0.1 <= offset <= clip["duration"] - 0.1:
                 continue
             tail = copy.deepcopy(clip)
-            tail.update(id=uuid.uuid4().hex, start=clip["start"] + offset, duration=clip["duration"] - offset, sourceIn=source_time(clip, offset), fadeIn=0)
+            tail.update(
+                id=uuid.uuid4().hex,
+                start=clip["start"] + offset,
+                duration=clip["duration"] - offset,
+                sourceIn=source_time(clip, offset),
+                fadeIn=0,
+            )
             tail.pop("transitionIn", None)
             if clip.get("speedCurve"):
-                tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [{"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset]
+                tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                    {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+                ]
             tail["keyframes"] = [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])]
             clip["duration"] = offset
             clip["fadeOut"] = 0
@@ -189,10 +205,18 @@ def apply_edit(project: dict, command: dict):
         if not 0.1 <= offset <= clip["duration"] - 0.1:
             raise ValueError("Place the time inside the clip")
         tail = copy.deepcopy(clip)
-        tail.update(id=uuid.uuid4().hex, start=clip["start"] + offset + hold, duration=clip["duration"] - offset, sourceIn=source_time(clip, offset), fadeIn=0)
+        tail.update(
+            id=uuid.uuid4().hex,
+            start=clip["start"] + offset + hold,
+            duration=clip["duration"] - offset,
+            sourceIn=source_time(clip, offset),
+            fadeIn=0,
+        )
         tail.pop("transitionIn", None)
         if clip.get("speedCurve"):
-            tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [{"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset]
+            tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+            ]
         tail["keyframes"] = [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])]
         clip["duration"] = offset
         clip["fadeOut"] = 0
@@ -200,7 +224,14 @@ def apply_edit(project: dict, command: dict):
         for other in track["clips"]:
             if other is not clip and other["start"] >= cut - 0.005:
                 other["start"] = round((other["start"] + hold) * 100) / 100
-        still = {"id": uuid.uuid4().hex, "kind": "image", "label": str(command.get("label", "Freeze frame")), "mediaId": str(command["mediaId"]), "start": cut, "duration": hold}
+        still = {
+            "id": uuid.uuid4().hex,
+            "kind": "image",
+            "label": str(command.get("label", "Freeze frame")),
+            "mediaId": str(command["mediaId"]),
+            "start": cut,
+            "duration": hold,
+        }
         if clip.get("transform"):
             still["transform"] = copy.deepcopy(clip["transform"])
         track["clips"].extend([still, tail])
@@ -210,8 +241,14 @@ def apply_edit(project: dict, command: dict):
             raise ValueError("Clip not found")
         _, clip = located
         audio = copy.deepcopy(clip)
-        audio.update(id=uuid.uuid4().hex, kind="audio", mediaId=str(command["mediaId"]),
-                     label=str(command.get("label", clip.get("label", "Audio"))), muted=False, detachedFrom=clip["id"])
+        audio.update(
+            id=uuid.uuid4().hex,
+            kind="audio",
+            mediaId=str(command["mediaId"]),
+            label=str(command.get("label", clip.get("label", "Audio"))),
+            muted=False,
+            detachedFrom=clip["id"],
+        )
         for key in ("effects", "effectId", "cutout", "shaderId", "lutId", "colour", "crop"):
             audio.pop(key, None)
         target = next((t for t in timeline["tracks"] if "audio" in str(t.get("name", "")).lower() and not t.get("locked")), None)
@@ -283,7 +320,13 @@ def apply_edit(project: dict, command: dict):
             raise ValueError("Keep at least one track")
         timeline["tracks"].pop(track_index)
     elif operation == "timeline.add":
-        project["timelines"].append({"id": uuid.uuid4().hex, "name": command.get("name", "Timeline"), "tracks": [{"id": uuid.uuid4().hex, "name": "Video", "clips": []}]})
+        project["timelines"].append(
+            {
+                "id": uuid.uuid4().hex,
+                "name": command.get("name", "Timeline"),
+                "tracks": [{"id": uuid.uuid4().hex, "name": "Video", "clips": []}],
+            }
+        )
     elif operation == "project.settings":
         allowed = {"title", "width", "height", "fps", "activeTimeline"}
         if set(command["patch"]) - allowed:
@@ -305,6 +348,7 @@ def dispatch(method: str, params: dict):
     if method == "media.scenes":
         from . import scenes as scene_module
         from .media import MEDIA_DIR, _find
+
         media_id = str(params.get("id") or "")
         _find(media_id)
         matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
@@ -314,6 +358,7 @@ def dispatch(method: str, params: dict):
     if method == "media.proxy":
         from . import proxies as proxy_module
         from .media import MEDIA_DIR, _find
+
         media_id = str(params.get("id") or "")
         _find(media_id)
         matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
@@ -348,16 +393,103 @@ def dispatch(method: str, params: dict):
         if state.get("status") != "done":
             return {"ready": False, "status": state.get("status"), "progress": state.get("progress")}
         result = state.get("result") or {}
-        return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
-                "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
+        return {
+            "ready": True,
+            "status": "done",
+            "file": result.get("file"),
+            "name": result.get("name"),
+            "media_type": result.get("media_type"),
+            "url": f"/api/jobs/{job_id}/file",
+        }
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "media.proxy", "media.scenes", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed", "crop", "colour", "animations", "volumeKeys", "lutIntensity", "pitchFollowsSpeed", "key", "mask", "fadeIn", "fadeOut", "label"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "clip.reattach", "clip.detach", "clip.ripple-delete", "clip.speed-curve", "clip.animations", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {
+            "methods": [
+                "capabilities",
+                "catalogue",
+                "session.hello",
+                "media.list",
+                "media.import",
+                "media.proxy",
+                "media.scenes",
+                "project.list",
+                "project.create",
+                "project.get",
+                "project.edit",
+                "project.undo",
+                "project.redo",
+                "project.export",
+                "job.result",
+                "job.status",
+                "job.cancel",
+            ],
+            "clip_properties": [
+                "transform",
+                "effects",
+                "audioEffects",
+                "speedCurve",
+                "sourceIn",
+                "keyframes",
+                "expressions",
+                "cutout",
+                "lutId",
+                "shaderId",
+                "transitionIn",
+                "textStyle",
+                "volume",
+                "pan",
+                "muted",
+                "reversed",
+                "crop",
+                "colour",
+                "animations",
+                "volumeKeys",
+                "lutIntensity",
+                "pitchFollowsSpeed",
+                "key",
+                "mask",
+                "fadeIn",
+                "fadeOut",
+                "label",
+            ],
+            "edit_commands": [
+                "clip.add",
+                "clip.remove",
+                "clip.update",
+                "clip.move",
+                "clip.split",
+                "clips.move",
+                "clips.remove",
+                "clips.duplicate",
+                "clips.add",
+                "clips.mute",
+                "clips.split",
+                "clip.rejoin",
+                "clip.freeze-insert",
+                "clip.reattach",
+                "clip.detach",
+                "clip.ripple-delete",
+                "clip.speed-curve",
+                "clip.animations",
+                "track.add",
+                "track.remove",
+                "timeline.add",
+                "project.settings",
+            ],
+        }
     if method == "catalogue":
         return catalogue()
     if method == "project.list":
         return store.list_projects()
     if method == "project.create":
-        project = params.get("project") or {"title": params.get("title", "Untitled project"), "width": 1920, "height": 1080, "fps": 30, "timelines": [{"id": uuid.uuid4().hex, "name": "Timeline 1", "tracks": [{"id": uuid.uuid4().hex, "name": "Video", "clips": []}]}]}
+        project = params.get("project") or {
+            "title": params.get("title", "Untitled project"),
+            "width": 1920,
+            "height": 1080,
+            "fps": 30,
+            "timelines": [
+                {"id": uuid.uuid4().hex, "name": "Timeline 1", "tracks": [{"id": uuid.uuid4().hex, "name": "Video", "clips": []}]}
+            ],
+        }
         project = validate_document(project)
         project.update(id=uuid.uuid4().hex, revision=1)
         return store.save_project(project)

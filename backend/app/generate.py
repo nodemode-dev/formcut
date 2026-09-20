@@ -10,6 +10,7 @@ A request for a provider with no key gets a clear, actionable refusal rather
 than a failed network call, which is the difference between "add a key in
 Settings" and a stack trace.
 """
+
 from __future__ import annotations
 
 import base64
@@ -67,12 +68,27 @@ GENERATORS: dict[str, dict] = {
 
 # Providers the generators need that the registry did not already carry.
 EXTRA_PROVIDERS = {
-    "openai": {"label": "OpenAI", "env": "OPENAI_API_KEY", "base_env": "OPENAI_BASE",
-               "base": "https://api.openai.com", "purpose": "generate"},
-    "stability": {"label": "Stability AI", "env": "STABILITY_API_KEY", "base_env": "STABILITY_BASE",
-                  "base": "https://api.stability.ai", "purpose": "generate"},
-    "replicate": {"label": "Replicate", "env": "REPLICATE_API_TOKEN", "base_env": "REPLICATE_BASE",
-                  "base": "https://api.replicate.com", "purpose": "generate"},
+    "openai": {
+        "label": "OpenAI",
+        "env": "OPENAI_API_KEY",
+        "base_env": "OPENAI_BASE",
+        "base": "https://api.openai.com",
+        "purpose": "generate",
+    },
+    "stability": {
+        "label": "Stability AI",
+        "env": "STABILITY_API_KEY",
+        "base_env": "STABILITY_BASE",
+        "base": "https://api.stability.ai",
+        "purpose": "generate",
+    },
+    "replicate": {
+        "label": "Replicate",
+        "env": "REPLICATE_API_TOKEN",
+        "base_env": "REPLICATE_BASE",
+        "base": "https://api.replicate.com",
+        "purpose": "generate",
+    },
 }
 for _name, _entry in EXTRA_PROVIDERS.items():
     PROVIDERS.setdefault(_name, _entry)
@@ -93,16 +109,18 @@ def catalogue() -> list[dict]:
     out = []
     for key, entry in GENERATORS.items():
         provider = entry["provider"]
-        out.append({
-            "id": key,
-            "label": entry["label"],
-            "kind": entry["kind"],
-            "provider": provider,
-            "providerLabel": PROVIDERS.get(provider, {}).get("label", provider),
-            "sizes": entry["sizes"],
-            "options": entry["options"],
-            "ready": bool(key_for(provider)),
-        })
+        out.append(
+            {
+                "id": key,
+                "label": entry["label"],
+                "kind": entry["kind"],
+                "provider": provider,
+                "providerLabel": PROVIDERS.get(provider, {}).get("label", provider),
+                "sizes": entry["sizes"],
+                "options": entry["options"],
+                "ready": bool(key_for(provider)),
+            }
+        )
     return out
 
 
@@ -116,23 +134,40 @@ def _payload(entry: dict, body: GenerateBody) -> tuple[dict, dict]:
     key = key_for(entry["provider"])
     size = body.size or (entry["sizes"][0] if entry["sizes"] else None)
     if entry["provider"] == "openai":
-        return ({"model": "gpt-image-1", "prompt": body.prompt, "size": size, "n": max(1, min(4, body.count))},
-                {"Authorization": f"Bearer {key}"})
+        return (
+            {"model": "gpt-image-1", "prompt": body.prompt, "size": size, "n": max(1, min(4, body.count))},
+            {"Authorization": f"Bearer {key}"},
+        )
     if entry["provider"] == "stability":
         width, _, height = (size or "1024x1024").partition("x")
-        return ({"prompt": body.prompt, "negative_prompt": body.negative,
-                 "width": int(width), "height": int(height),
-                 "steps": int(body.options.get("steps", 30))},
-                {"Authorization": f"Bearer {key}", "Accept": "application/json"})
+        return (
+            {
+                "prompt": body.prompt,
+                "negative_prompt": body.negative,
+                "width": int(width),
+                "height": int(height),
+                "steps": int(body.options.get("steps", 30)),
+            },
+            {"Authorization": f"Bearer {key}", "Accept": "application/json"},
+        )
     if entry["provider"] == "replicate":
         width, _, height = (size or "1280x720").partition("x")
-        return ({"input": {"prompt": body.prompt, "negative_prompt": body.negative,
-                           "width": int(width), "height": int(height),
-                           "num_frames": int(float(body.seconds or 5) * int(body.options.get("fps", 24)))}},
-                {"Authorization": f"Bearer {key}"})
-    return ({"text": body.prompt, "duration_seconds": float(body.seconds or 6),
-             "prompt_influence": float(body.options.get("influence", 0.3))},
-            {"xi-api-key": key})
+        return (
+            {
+                "input": {
+                    "prompt": body.prompt,
+                    "negative_prompt": body.negative,
+                    "width": int(width),
+                    "height": int(height),
+                    "num_frames": int(float(body.seconds or 5) * int(body.options.get("fps", 24))),
+                }
+            },
+            {"Authorization": f"Bearer {key}"},
+        )
+    return (
+        {"text": body.prompt, "duration_seconds": float(body.seconds or 6), "prompt_influence": float(body.options.get("influence", 0.3))},
+        {"xi-api-key": key},
+    )
 
 
 def _extract(entry: dict, response: httpx.Response) -> list[bytes]:
@@ -142,7 +177,7 @@ def _extract(entry: dict, response: httpx.Response) -> list[bytes]:
         return [response.content]
     data = response.json()
     out: list[bytes] = []
-    for item in (data.get("data") or data.get("artifacts") or data.get("images") or []):
+    for item in data.get("data") or data.get("artifacts") or data.get("images") or []:
         if isinstance(item, dict):
             encoded = item.get("b64_json") or item.get("base64") or item.get("image")
             if encoded:
@@ -170,11 +205,9 @@ def generate(body: GenerateBody):
         payload, headers = _payload(entry, body)
         report(0.1)
         with httpx.Client(timeout=600, follow_redirects=True) as client:
-            response = client.post(base_for(entry["provider"]).rstrip("/") + entry["path"],
-                                   json=payload, headers=headers)
+            response = client.post(base_for(entry["provider"]).rstrip("/") + entry["path"], json=payload, headers=headers)
             if response.status_code >= 400:
-                raise ValueError(f"{entry['label']} refused the request ({response.status_code}): "
-                                 f"{response.text[:300]}")
+                raise ValueError(f"{entry['label']} refused the request ({response.status_code}): {response.text[:300]}")
             report(0.6)
             blobs = _extract(entry, response)
         made = []
@@ -185,9 +218,13 @@ def generate(body: GenerateBody):
             staged = STAGING / f"{uuid.uuid4().hex}{suffix}"
             staged.write_bytes(blob)
             try:
-                made.append(ingest_path(staged, f"{body.prompt[:48]} ({entry['label']})",
-                                        extra={"source": "generated", "generator": body.generator,
-                                               "prompt": body.prompt}))
+                made.append(
+                    ingest_path(
+                        staged,
+                        f"{body.prompt[:48]} ({entry['label']})",
+                        extra={"source": "generated", "generator": body.generator, "prompt": body.prompt},
+                    )
+                )
             finally:
                 staged.unlink(missing_ok=True)
             report(0.6 + 0.4 * (index + 1) / len(blobs))

@@ -45,8 +45,8 @@ def time_stretch(samples: np.ndarray, clip: dict, count: int, cancelled=lambda: 
         source = source_delta(clip, target / RATE) * RATE / hop
         index = int(source)
         fraction = source - index
-        first = padded[index * hop:index * hop + window_size]
-        second = padded[(index + 1) * hop:(index + 1) * hop + window_size]
+        first = padded[index * hop : index * hop + window_size]
+        second = padded[(index + 1) * hop : (index + 1) * hop + window_size]
         if len(first) < window_size:
             break
         if len(second) < window_size:
@@ -57,21 +57,48 @@ def time_stretch(samples: np.ndarray, clip: dict, count: int, cancelled=lambda: 
             phase = np.angle(a)
         magnitude = abs(a) * (1 - fraction) + abs(b) * fraction
         transformed = np.fft.irfft(magnitude * np.exp(1j * phase), axis=0)
-        result[target:target + window_size] += transformed * window[:, None]
-        weights[target:target + window_size] += window ** 2
+        result[target : target + window_size] += transformed * window[:, None]
+        weights[target : target + window_size] += window**2
         delta = np.angle(b) - np.angle(a) - phase_step[:, None]
         delta -= 2 * math.pi * np.round(delta / (2 * math.pi))
         phase += phase_step[:, None] + delta
     result /= np.maximum(weights[:, None], 1e-8)
-    return result[window_size // 2:window_size // 2 + count].astype(np.float32)
+    return result[window_size // 2 : window_size // 2 + count].astype(np.float32)
 
 
 def filter_audio(samples: np.ndarray, chain: str, cancelled=lambda: False) -> np.ndarray:
-    process = subprocess.Popen(["ffmpeg", "-v", "error", "-f", "f32le", "-ar", str(RATE), "-ac", "2", "-i", "pipe:0", "-af", chain, "-f", "f32le", "-ar", str(RATE), "-ac", "2", "pipe:1"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-f",
+            "f32le",
+            "-ar",
+            str(RATE),
+            "-ac",
+            "2",
+            "-i",
+            "pipe:0",
+            "-af",
+            chain,
+            "-f",
+            "f32le",
+            "-ar",
+            str(RATE),
+            "-ac",
+            "2",
+            "pipe:1",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     output, error = communicate(process, samples.astype("<f4").tobytes(), cancelled=cancelled)
     if process.returncode:
         raise ValueError(error.decode(errors="replace")[-1000:])
     return np.frombuffer(output, "<f4").reshape(-1, 2).copy()
+
 
 def render_audio(project: dict, destination, cancelled=lambda: False):
     total = math.ceil(project["duration"] * RATE)
@@ -105,12 +132,13 @@ def render_audio(project: dict, destination, cancelled=lambda: False):
         offset = round(clip["start"] * RATE)
         count = min(count, total - offset)
         if count > 0:
-            mix[offset:offset + count] += samples[:count]
+            mix[offset : offset + count] += samples[:count]
     with wave.open(str(destination), "wb") as out:
         out.setnchannels(2)
         out.setsampwidth(2)
         out.setframerate(RATE)
         out.writeframes(np.round(np.clip(mix, -1, 1) * 32767).astype("<i2").tobytes())
+
 
 def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarray:
     """One clip's sound after speed and effects, before gain, fades and pan.
@@ -122,7 +150,29 @@ def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarra
     """
     duration = clip["duration"] + clip.get("extendOut", 0)
     span = source_delta(clip, duration)
-    process = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(clip.get("sourceIn") or 0), "-i", str(path), "-t", str(span), "-vn", "-f", "f32le", "-ar", str(RATE), "-ac", "2", "pipe:1"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-ss",
+            str(clip.get("sourceIn") or 0),
+            "-i",
+            str(path),
+            "-t",
+            str(span),
+            "-vn",
+            "-f",
+            "f32le",
+            "-ar",
+            str(RATE),
+            "-ac",
+            "2",
+            "pipe:1",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     output, error = communicate(process, cancelled=cancelled)
     if process.returncode:
         raise ValueError(error.decode(errors="replace")[-1000:])
@@ -133,12 +183,15 @@ def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarra
         effects.insert(0, {"id": clip["audioFx"], "amount": 1})
     for effect in effects:
         from .effect_packages import find as find_package
+
         if effect["id"] not in AUDIO_CHAINS and not find_package(effect["id"]):
             raise ValueError("Unknown audio processor")
         wet = filter_audio(samples, audio_chain(effect["id"], effect.get("params")), cancelled)
         count = max(len(samples), len(wet))
         amount = max(0, min(1, float(effect.get("amount", 1))))
-        samples = np.pad(samples, ((0, count - len(samples)), (0, 0))) * (1 - amount) + np.pad(wet, ((0, count - len(wet)), (0, 0))) * amount
+        samples = (
+            np.pad(samples, ((0, count - len(samples)), (0, 0))) * (1 - amount) + np.pad(wet, ((0, count - len(wet)), (0, 0))) * amount
+        )
     return samples
 
 

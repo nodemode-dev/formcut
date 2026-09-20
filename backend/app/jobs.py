@@ -29,7 +29,14 @@ def submit(kind: str, operation) -> dict:
                     Path(output).unlink(missing_ok=True)
                 del _jobs[key]
         job_id = uuid.uuid4().hex
-        _jobs[job_id] = {"id": job_id, "kind": kind, "status": "queued", "progress": 0.0, "cancel": threading.Event(), "created": time.time()}
+        _jobs[job_id] = {
+            "id": job_id,
+            "kind": kind,
+            "status": "queued",
+            "progress": 0.0,
+            "cancel": threading.Event(),
+            "created": time.time(),
+        }
 
     def run():
         try:
@@ -48,6 +55,7 @@ def submit(kind: str, operation) -> dict:
                 if job["progress"] - last_announced >= 0.05:
                     last_announced = job["progress"]
                     publish("job", job=job_id, job_kind=kind, status="running", progress=round(job["progress"], 3))
+
             result = operation(job_id, report, job["cancel"].is_set)
             with _lock:
                 if job["cancel"].is_set():
@@ -56,8 +64,7 @@ def submit(kind: str, operation) -> dict:
                         Path(result["file"]).unlink(missing_ok=True)
                 else:
                     job.update(status="done", progress=1, result=result)
-            publish("job", job=job_id, job_kind=kind, status=_jobs[job_id]["status"], progress=1.0,
-                    file=(result or {}).get("file"))
+            publish("job", job=job_id, job_kind=kind, status=_jobs[job_id]["status"], progress=1.0, file=(result or {}).get("file"))
         except InterruptedError:
             with _lock:
                 _jobs[job_id]["status"] = "cancelled"
@@ -66,6 +73,7 @@ def submit(kind: str, operation) -> dict:
             with _lock:
                 _jobs[job_id].update(status="error", error=str(exc))
             publish("job", job=job_id, job_kind=kind, status="error", error=str(exc))
+
     _pool.submit(run)
     return {"job_id": job_id}
 

@@ -75,7 +75,7 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
         f = np.clip(1 - ((u - 0.5) ** 2 + (v - 0.5) ** 2) * 2.2, 0, 1)
         return rgb * f[:, :, None]
     if effect == "grain":
-        rng = np.random.default_rng(int(local * 1000) % (2 ** 32))
+        rng = np.random.default_rng(int(local * 1000) % (2**32))
         return rgb + rng.normal(0, params.get("strength", 0.07), (h, w, 1))
     if effect == "glow":
         return rgb + cv2.GaussianBlur(np.maximum(rgb - 0.45, 0), (0, 0), radius * 3)
@@ -162,8 +162,15 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
         return np.float32([0.07, 0.09, 0.24]) * (1 - gray) + np.float32([1.0, 0.68, 0.17]) * gray
     if effect == "paint-wash":
         factor = max(1, round(min(w, h) / 360))
-        small = cv2.resize(np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8), (max(1, w // factor), max(1, h // factor)), interpolation=cv2.INTER_AREA)
-        smooth = cv2.resize(cv2.edgePreservingFilter(small, flags=cv2.RECURS_FILTER, sigma_s=60, sigma_r=0.45), (w, h), interpolation=cv2.INTER_CUBIC).astype(np.float32) / 255
+        small = cv2.resize(
+            np.round(np.clip(rgb, 0, 1) * 255).astype(np.uint8), (max(1, w // factor), max(1, h // factor)), interpolation=cv2.INTER_AREA
+        )
+        smooth = (
+            cv2.resize(
+                cv2.edgePreservingFilter(small, flags=cv2.RECURS_FILTER, sigma_s=60, sigma_r=0.45), (w, h), interpolation=cv2.INTER_CUBIC
+            ).astype(np.float32)
+            / 255
+        )
         gray = cv2.cvtColor(smooth, cv2.COLOR_RGB2GRAY)[:, :, None]
         canvas = cv2.GaussianBlur(np.random.default_rng(29).random((h, w)).astype(np.float32), (0, 0), 1.5)[:, :, None]
         return (gray + (smooth - gray) * 1.25) * (0.93 + 0.14 * canvas)
@@ -172,7 +179,7 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
         return cv2.cvtColor(cv2.applyColorMap(gray, cv2.COLORMAP_INFERNO), cv2.COLOR_BGR2RGB).astype(np.float32) / 255
     if effect == "night-vision":
         gray = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY)
-        noise = np.random.default_rng(int(local * 1000) % (2 ** 32)).normal(0, 0.05, (h, w))
+        noise = np.random.default_rng(int(local * 1000) % (2**32)).normal(0, 0.05, (h, w))
         lum = np.clip(gray * 1.6 + noise, 0, 1) * np.clip(1.25 - ((u - 0.5) ** 2 + (v - 0.5) ** 2) * 2.4, 0, 1)
         return np.stack([lum * 0.25, lum, lum * 0.3], axis=2).astype(np.float32)
     if effect == "ink-outline":
@@ -182,7 +189,11 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
     if effect == "crosshatch":
         gray = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY)
         period = max(4, size // 2)
-        ink = ((np.mod(x + y, period) < 1.2) & (gray < 0.75)) | ((np.mod(x - y, period) < 1.2) & (gray < 0.5)) | ((np.mod(x, period) < 1.2) & (gray < 0.28))
+        ink = (
+            ((np.mod(x + y, period) < 1.2) & (gray < 0.75))
+            | ((np.mod(x - y, period) < 1.2) & (gray < 0.5))
+            | ((np.mod(x, period) < 1.2) & (gray < 0.28))
+        )
         return np.repeat((1 - ink.astype(np.float32) * 0.9)[:, :, None], 3, 2)
     if effect == "swirl":
         dx, dy = x - w / 2, y - h / 2
@@ -213,13 +224,15 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
         r = np.clip(np.sqrt(dx * dx + dy * dy), 0, 1)
         return remap(rgb, (np.arctan2(dy, dx) / (2 * math.pi) + 0.5) * (w - 1), (1 - r) * (h - 1))
     if effect == "heat-haze":
-        return remap(rgb, x + np.sin(y / 11 + local * 5) * np.sin(x / 23 + local * 3) * size * 0.6, y + np.cos(x / 13 + local * 4) * size * 0.4)
+        return remap(
+            rgb, x + np.sin(y / 11 + local * 5) * np.sin(x / 23 + local * 3) * size * 0.6, y + np.cos(x / 13 + local * 4) * size * 0.4
+        )
     if effect == "film-scratches":
         out = rgb * 0.9 + np.float32([0.06, 0.045, 0.02])
         rng = np.random.default_rng(int(local * 12))
         for _ in range(14):
             col, top, bright = int(rng.random() * w), int(rng.random() * h * 0.6), 0.3 + 0.4 * rng.random()
-            out[top:, col:col + max(1, w // 320)] += bright
+            out[top:, col : col + max(1, w // 320)] += bright
         return out
     if effect == "light-leak":
         cx = 0.12 + 0.1 * math.sin(local * 0.7)
@@ -248,7 +261,7 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
             cv2.circle(spots, (int(px * w), int((py + local * 0.01) % 1 * h)), max(2, int(w * (0.03 + 0.05 * s))), (0.9, 0.7, 0.35), -1)
         return 1 - (1 - rgb) * (1 - cv2.GaussianBlur(spots, (0, 0), max(1.0, w / 200)) * 0.6)
     if effect == "chroma-noise":
-        noise = np.random.default_rng(int(local * 1000) % (2 ** 32)).normal(0, 1, (h, w, 3)).astype(np.float32)
+        noise = np.random.default_rng(int(local * 1000) % (2**32)).normal(0, 1, (h, w, 3)).astype(np.float32)
         return rgb + cv2.GaussianBlur(noise, (0, 0), 0.8) * float(params.get("strength", 0.15))
     raise ValueError(f"Unknown visual effect: {effect}")
 
@@ -268,9 +281,19 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
 # effect stack. Every control is neutral at its default, and a clip without a
 # `colour` object skips the stage entirely, so existing frames are untouched.
 COLOUR_PANEL = {
-    "temperature": 6500.0, "tint": 0.0, "saturation": 0.0, "exposure": 0.0, "brightness": 0.0,
-    "contrast": 0.0, "highlights": 0.0, "shadows": 0.0, "whites": 0.0, "blacks": 0.0,
-    "sharpen": 0.0, "fade": 0.0, "vignette": 0.0,
+    "temperature": 6500.0,
+    "tint": 0.0,
+    "saturation": 0.0,
+    "exposure": 0.0,
+    "brightness": 0.0,
+    "contrast": 0.0,
+    "highlights": 0.0,
+    "shadows": 0.0,
+    "whites": 0.0,
+    "blacks": 0.0,
+    "sharpen": 0.0,
+    "fade": 0.0,
+    "vignette": 0.0,
 }
 
 
@@ -291,8 +314,10 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
     """Apply the colour panel to linearish RGB in 0..1. Neutral is identity."""
     if not colour_active(panel):
         return rgb
+
     def value(k):
         return float(panel.get(k, COLOUR_PANEL[k]))
+
     out = rgb.astype(np.float32, copy=True)
     out *= _kelvin_gain(value("temperature"))
     tint = value("tint") / 100.0
@@ -308,7 +333,7 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
     low = np.clip(0.5 - luminance, 0, None) * 2.0
     out += high * (value("highlights") / 100.0)
     out += low * (value("shadows") / 100.0)
-    out += (luminance ** 3) * (value("whites") / 100.0)
+    out += (luminance**3) * (value("whites") / 100.0)
     out += ((1.0 - luminance) ** 3) * (value("blacks") / 100.0)
     saturation = 1.0 + value("saturation") / 100.0
     out = luminance + (out - luminance) * saturation
@@ -324,7 +349,7 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
         h, w = out.shape[:2]
         y, x = np.mgrid[:h, :w]
         radius = np.sqrt(((x - w / 2) / (w / 2)) ** 2 + ((y - h / 2) / (h / 2)) ** 2)
-        falloff = np.clip(1.0 - (radius ** 2) * vignette, 0, 1)[:, :, None]
+        falloff = np.clip(1.0 - (radius**2) * vignette, 0, 1)[:, :, None]
         out = out * falloff if vignette > 0 else out * (2 - falloff)
     return out
 
@@ -343,6 +368,7 @@ def apply_colour_panel(image: np.ndarray, panel) -> np.ndarray:
 # CapCut breadth: three repairs that work on the picture rather than styling it.
 # They live with the other effects so keyframes, masks and the parameter panel
 # come for free, and they are cheap enough to run on every frame.
+
 
 def _luma(rgb: np.ndarray) -> np.ndarray:
     return rgb[:, :, 0] * 0.2126 + rgb[:, :, 1] * 0.7152 + rgb[:, :, 2] * 0.0722

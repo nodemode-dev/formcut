@@ -59,11 +59,15 @@ _session: dict[str, str] = {}
 def _explain(error: Exception) -> str:
     """Turn a transport failure into something an agent can act on."""
     if isinstance(error, httpx.ConnectError):
-        return (f"The formcut engine is not answering at {ENGINE}. Start it with ./formcut in the "
-                "repository, or set FORMCUT_ENGINE if it listens elsewhere.")
+        return (
+            f"The formcut engine is not answering at {ENGINE}. Start it with ./formcut in the "
+            "repository, or set FORMCUT_ENGINE if it listens elsewhere."
+        )
     if isinstance(error, httpx.TimeoutException):
-        return (f"The engine at {ENGINE} did not answer within {TIMEOUT:.0f} s. A long render is "
-                "normal: submit with formcut_render and poll formcut_render_status instead of waiting.")
+        return (
+            f"The engine at {ENGINE} did not answer within {TIMEOUT:.0f} s. A long render is "
+            "normal: submit with formcut_render and poll formcut_render_status instead of waiting."
+        )
     return f"Could not reach the engine at {ENGINE}: {error.__class__.__name__}: {error}"
 
 
@@ -169,8 +173,9 @@ def formcut_list_media() -> str:
         return items
     if not items:
         return "The library is empty. Import a file with formcut_import_media."
-    rows = [f"{item['id']}  {item.get('kind', '?'):5}  {round(item.get('duration') or 0, 2):>8} s  {item.get('name', '')}"
-            for item in items]
+    rows = [
+        f"{item['id']}  {item.get('kind', '?'):5}  {round(item.get('duration') or 0, 2):>8} s  {item.get('name', '')}" for item in items
+    ]
     return "id, kind, duration, name:\n" + "\n".join(rows)
 
 
@@ -189,8 +194,9 @@ def formcut_import_media(
     ok, item = _rpc("media.import", {"path": path})
     if not ok:
         return item
-    return (f"imported {item.get('name')} as media {item.get('id')}\n"
-            f"kind {item.get('kind')}, duration {round(item.get('duration') or 0, 2)} s")
+    return (
+        f"imported {item.get('name')} as media {item.get('id')}\nkind {item.get('kind')}, duration {round(item.get('duration') or 0, 2)} s"
+    )
 
 
 @mcp.tool(
@@ -213,15 +219,22 @@ def formcut_create_project(
         return project
     project_id, revision = project.get("id"), project.get("revision")
     if (width, height, fps) != (1920, 1080, 30):
-        ok, edited = _rpc("project.edit", {"id": project_id, "revision": revision,
-                                           "commands": [{"op": "project.settings",
-                                                          "patch": {"width": width, "height": height, "fps": fps}}]})
+        ok, edited = _rpc(
+            "project.edit",
+            {
+                "id": project_id,
+                "revision": revision,
+                "commands": [{"op": "project.settings", "patch": {"width": width, "height": height, "fps": fps}}],
+            },
+        )
         if not ok:
             return f"created project {project_id} but the frame change failed: {edited}"
         revision = edited.get("revision")
-    return (f"created project {project_id} titled {title}\n"
-            f"frame {width}x{height} at {fps} fps, revision {revision}\n"
-            "pass this id and revision to formcut_add_clip")
+    return (
+        f"created project {project_id} titled {title}\n"
+        f"frame {width}x{height} at {fps} fps, revision {revision}\n"
+        "pass this id and revision to formcut_add_clip"
+    )
 
 
 @mcp.tool(
@@ -239,12 +252,21 @@ def formcut_get_project(
     if not ok:
         return project
     timeline = project.get("timelines", [{}])[project.get("activeTimeline", 0)]
-    lines = [f"{project.get('title')}  revision {project.get('revision')}",
-             (f"frame {project.get('width')}x{project.get('height')} at {project.get('fps')} fps, "
-              f"duration {round(project.get('duration') or 0, 2)} s")]
+    lines = [
+        f"{project.get('title')}  revision {project.get('revision')}",
+        (
+            f"frame {project.get('width')}x{project.get('height')} at {project.get('fps')} fps, "
+            f"duration {round(project.get('duration') or 0, 2)} s"
+        ),
+    ]
     for index, track in enumerate(timeline.get("tracks", [])):
-        clips = ", ".join(f"{clip.get('label', clip.get('id'))} at {clip.get('start')}s for {clip.get('duration')}s"
-                          for clip in track.get("clips", [])) or "empty"
+        clips = (
+            ", ".join(
+                f"{clip.get('label', clip.get('id'))} at {clip.get('start')}s for {clip.get('duration')}s"
+                for clip in track.get("clips", [])
+            )
+            or "empty"
+        )
         lines.append(f"track {index} ({track.get('name', 'track')}): {clips}")
     return "\n".join(lines)
 
@@ -287,19 +309,31 @@ def formcut_add_clip(
     if ok and isinstance(media, list):
         found = next((item for item in media if item.get("id") == media_id), None)
         if found is None:
-            return (f"No media with id {media_id}. Run formcut_list_media to see what the library holds, or "
-                    "import the file first with formcut_import_media.")
+            return (
+                f"No media with id {media_id}. Run formcut_list_media to see what the library holds, or "
+                "import the file first with formcut_import_media."
+            )
         kind = found.get("kind", "video")
         name = label or found.get("name", media_id)
-    clip = {"id": os.urandom(8).hex(), "kind": kind, "label": name, "mediaId": media_id,
-            "start": start, "duration": duration, "sourceIn": source_in}
-    ok, edited = _rpc("project.edit", {"id": project_id, "revision": revision,
-                                       "commands": [{"op": "clip.add", "track": track, "clip": clip}]})
+    clip = {
+        "id": os.urandom(8).hex(),
+        "kind": kind,
+        "label": name,
+        "mediaId": media_id,
+        "start": start,
+        "duration": duration,
+        "sourceIn": source_in,
+    }
+    ok, edited = _rpc(
+        "project.edit", {"id": project_id, "revision": revision, "commands": [{"op": "clip.add", "track": track, "clip": clip}]}
+    )
     if not ok:
-        return (f"{edited}\nIf the revision was stale, call formcut_get_project to read the current one and retry.")
-    return (f"added {name} to track {track} at {start} s for {duration} s\n"
-            f"project {project_id} is now revision {edited.get('revision')}, duration "
-            f"{round(edited.get('duration') or 0, 2)} s")
+        return f"{edited}\nIf the revision was stale, call formcut_get_project to read the current one and retry."
+    return (
+        f"added {name} to track {track} at {start} s for {duration} s\n"
+        f"project {project_id} is now revision {edited.get('revision')}, duration "
+        f"{round(edited.get('duration') or 0, 2)} s"
+    )
 
 
 @mcp.tool(
@@ -317,9 +351,14 @@ def formcut_set_frame(
     height: Annotated[int, Field(ge=16, le=4320, description="Frame height in pixels")],
     fps: Annotated[int, Field(ge=1, le=240, description="Frames per second")] = 30,
 ) -> str:
-    ok, edited = _rpc("project.edit", {"id": project_id, "revision": revision,
-                                       "commands": [{"op": "project.settings",
-                                                     "patch": {"width": width, "height": height, "fps": fps}}]})
+    ok, edited = _rpc(
+        "project.edit",
+        {
+            "id": project_id,
+            "revision": revision,
+            "commands": [{"op": "project.settings", "patch": {"width": width, "height": height, "fps": fps}}],
+        },
+    )
     if not ok:
         return f"{edited}\nCall formcut_get_project for the current revision and retry."
     return f"frame set to {width}x{height} at {fps} fps, revision {edited.get('revision')}"
@@ -347,8 +386,10 @@ def formcut_render(
     if not ok:
         return job
     job_id = job.get("job_id")
-    return (f"render started as job {job_id} ({file_format}, {quality})\n"
-            "poll formcut_render_status with this job id; a minute between polls is reasonable")
+    return (
+        f"render started as job {job_id} ({file_format}, {quality})\n"
+        "poll formcut_render_status with this job id; a minute between polls is reasonable"
+    )
 
 
 @mcp.tool(
@@ -366,8 +407,10 @@ def formcut_render_status(
     if not ok:
         return state
     if state.get("ready"):
-        return (f"render done\nfile: {state.get('file')}\nname: {state.get('name')}\n"
-                f"type: {state.get('media_type')}\nalso fetchable from {ENGINE}{state.get('url')}")
+        return (
+            f"render done\nfile: {state.get('file')}\nname: {state.get('name')}\n"
+            f"type: {state.get('media_type')}\nalso fetchable from {ENGINE}{state.get('url')}"
+        )
     status = state.get("status", "unknown")
     if status in ("cancelled", "error"):
         return f"render {status}. Start a new one with formcut_render when the cause is fixed."
@@ -416,8 +459,9 @@ def formcut_catalogue(
         entries = catalogue.get(family)
         if not isinstance(entries, list):
             continue
-        chosen = [entry for entry in entries
-                  if not group or (isinstance(entry, dict) and str(entry.get("group", "")).lower() == group.lower())]
+        chosen = [
+            entry for entry in entries if not group or (isinstance(entry, dict) and str(entry.get("group", "")).lower() == group.lower())
+        ]
         ids = [str(entry.get("id", entry)) if isinstance(entry, dict) else str(entry) for entry in chosen]
         groups = sorted({str(entry.get("group")) for entry in entries if isinstance(entry, dict) and entry.get("group")})
         head = f"{family} ({len(ids)} of {len(entries)})" if group else f"{family} ({len(ids)})"
@@ -439,7 +483,9 @@ def formcut_catalogue(
 def formcut_edit(
     project_id: Annotated[str, Field(description="Project id")],
     revision: Annotated[int, Field(ge=0, description="Revision last seen for this project")],
-    commands_json: Annotated[str, Field(description='A JSON array of edit commands, for example [{"op": "clip.split", "clipId": "abc", "time": 2.0}]')],
+    commands_json: Annotated[
+        str, Field(description='A JSON array of edit commands, for example [{"op": "clip.split", "clipId": "abc", "time": 2.0}]')
+    ],
 ) -> str:
     try:
         commands = json.loads(commands_json)

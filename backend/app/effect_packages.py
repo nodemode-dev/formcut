@@ -10,6 +10,7 @@ The filter allowlist is the security boundary: a chain template may only name
 filters the engine already uses, so a package cannot smuggle arbitrary ffmpeg
 (a file writer, a device input) into the render path.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,11 +24,43 @@ PACKAGES = DATA_DIR / "effects"
 # Filters a package may name. Everything the built-in chains use, and nothing
 # that reads or writes outside the stream it was handed.
 ALLOWED_FILTERS = {
-    "acompressor", "adeclick", "adelay", "aecho", "aemphasis", "afftdn", "aformat", "agate",
-    "alimiter", "allpass", "aphaser", "areverse", "asetrate", "atempo", "atrim", "bandpass",
-    "bandreject", "bass", "chorus", "compand", "crystalizer", "deesser", "dynaudnorm",
-    "equalizer", "extrastereo", "flanger", "highpass", "loudnorm", "lowpass", "rubberband",
-    "speechnorm", "stereotools", "stereowiden", "treble", "tremolo", "vibrato", "volume",
+    "acompressor",
+    "adeclick",
+    "adelay",
+    "aecho",
+    "aemphasis",
+    "afftdn",
+    "aformat",
+    "agate",
+    "alimiter",
+    "allpass",
+    "aphaser",
+    "areverse",
+    "asetrate",
+    "atempo",
+    "atrim",
+    "bandpass",
+    "bandreject",
+    "bass",
+    "chorus",
+    "compand",
+    "crystalizer",
+    "deesser",
+    "dynaudnorm",
+    "equalizer",
+    "extrastereo",
+    "flanger",
+    "highpass",
+    "loudnorm",
+    "lowpass",
+    "rubberband",
+    "speechnorm",
+    "stereotools",
+    "stereowiden",
+    "treble",
+    "tremolo",
+    "vibrato",
+    "volume",
 }
 
 PARAM_NAME = re.compile(r"^[a-z][a-z0-9_]{0,31}$")

@@ -57,7 +57,15 @@ GRADES = {
     "cross-process": {"shadows_b": 0.12, "highlights_r": 0.08, "highlights_g": 0.1, "contrast": 1.2, "saturation": 1.15},
     "push-process": {"contrast": 1.35, "saturation": 1.1, "exposure": 0.15, "lift": -0.02},
     "pull-process": {"contrast": 0.8, "saturation": 0.85, "lift": 0.05, "exposure": -0.1},
-    "expired-stock": {"temperature": 0.1, "tint": -0.06, "lift": 0.1, "saturation": 0.75, "shadows_g": 0.14, "highlights_r": 0.08, "contrast": 0.85},
+    "expired-stock": {
+        "temperature": 0.1,
+        "tint": -0.06,
+        "lift": 0.1,
+        "saturation": 0.75,
+        "shadows_g": 0.14,
+        "highlights_r": 0.08,
+        "contrast": 0.85,
+    },
     "tintype": {"saturation": 0, "sepia": 0.45, "contrast": 1.35, "exposure": -0.15},
     "cyanotype": {"saturation": 0, "temperature": -0.35, "tint": -0.05, "contrast": 1.1, "lift": 0.03},
     "night-print": {"exposure": -0.35, "contrast": 1.25, "temperature": -0.1, "saturation": 0.8},
@@ -80,20 +88,77 @@ GRADES = {
     "navy-blush": {"shadows_b": 0.24, "highlights_r": 0.18, "highlights_b": 0.08},
     "violet-gold": {"shadows_r": 0.14, "shadows_b": 0.22, "highlights_r": 0.16, "highlights_g": 0.14},
     "teal-magenta": {"shadows_g": 0.16, "shadows_b": 0.16, "highlights_r": 0.16, "highlights_b": 0.16},
-    "cocoa-cream": {"shadows_r": 0.18, "shadows_g": 0.1, "highlights_r": 0.08, "highlights_g": 0.08, "highlights_b": 0.06, "saturation": 0.45, "contrast": 0.95},
+    "cocoa-cream": {
+        "shadows_r": 0.18,
+        "shadows_g": 0.1,
+        "highlights_r": 0.08,
+        "highlights_g": 0.08,
+        "highlights_b": 0.06,
+        "saturation": 0.45,
+        "contrast": 0.95,
+    },
     "muted-split": {"saturation": 0.2, "shadows_b": 0.18, "highlights_r": 0.16, "highlights_g": 0.1},
 }
 
 VIDEO_EFFECTS = [
-    "deflicker", "denoise-picture", "colour-match",
-    "gaussian", "box", "directional-blur", "radial-blur", "sharpen", "edge", "emboss",
-    "invert", "posterize", "threshold", "solarize", "pixelate", "vignette", "grain",
-    "glow", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "scanlines",
-    "interference", "cartoon", "pencil", "rain", "dust", "camera-shake",
-    "tilt-shift", "spin-blur", "lens-blur", "median-soften", "soft-focus", "diagonal-blur", "ghost-trail",
-    "halftone", "duotone", "paint-wash", "thermal", "night-vision", "ink-outline", "crosshatch",
-    "swirl", "ripple", "pinch", "slice-glitch", "tile-repeat", "polar-wrap", "heat-haze",
-    "film-scratches", "light-leak", "aperture-grille", "paper-texture", "snowfall", "bokeh-spots", "chroma-noise",
+    "deflicker",
+    "denoise-picture",
+    "colour-match",
+    "gaussian",
+    "box",
+    "directional-blur",
+    "radial-blur",
+    "sharpen",
+    "edge",
+    "emboss",
+    "invert",
+    "posterize",
+    "threshold",
+    "solarize",
+    "pixelate",
+    "vignette",
+    "grain",
+    "glow",
+    "chromatic",
+    "fisheye",
+    "wave",
+    "mirror",
+    "kaleidoscope",
+    "scanlines",
+    "interference",
+    "cartoon",
+    "pencil",
+    "rain",
+    "dust",
+    "camera-shake",
+    "tilt-shift",
+    "spin-blur",
+    "lens-blur",
+    "median-soften",
+    "soft-focus",
+    "diagonal-blur",
+    "ghost-trail",
+    "halftone",
+    "duotone",
+    "paint-wash",
+    "thermal",
+    "night-vision",
+    "ink-outline",
+    "crosshatch",
+    "swirl",
+    "ripple",
+    "pinch",
+    "slice-glitch",
+    "tile-repeat",
+    "polar-wrap",
+    "heat-haze",
+    "film-scratches",
+    "light-leak",
+    "aperture-grille",
+    "paper-texture",
+    "snowfall",
+    "bokeh-spots",
+    "chroma-noise",
 ]
 
 AUDIO_CHAINS = {
@@ -147,28 +212,230 @@ AUDIO_CHAINS = {
     "deep-denoise": "afftdn=nf=-35:nr=20:tn=1",
 }
 
-TRANSITIONS = ["crossfade", "dip", "wipe-left", "wipe-right", "wipe-up", "wipe-down", "slide-left", "slide-right", "zoom", "iris", "dissolve", "push-up"]
+TRANSITIONS = [
+    "crossfade",
+    "dip",
+    "wipe-left",
+    "wipe-right",
+    "wipe-up",
+    "wipe-down",
+    "slide-left",
+    "slide-right",
+    "zoom",
+    "iris",
+    "dissolve",
+    "push-up",
+]
 
 EFFECT_GROUPS = {
-    "Blur": ["gaussian", "box", "directional-blur", "radial-blur", "glow", "tilt-shift", "spin-blur", "lens-blur", "median-soften", "soft-focus", "diagonal-blur", "ghost-trail"],
-    "Stylize": ["sharpen", "edge", "emboss", "posterize", "threshold", "solarize", "invert", "cartoon", "pencil", "halftone", "duotone", "paint-wash", "thermal", "night-vision", "ink-outline", "crosshatch"],
-    "Distort": ["pixelate", "chromatic", "fisheye", "wave", "mirror", "kaleidoscope", "camera-shake", "swirl", "ripple", "pinch", "slice-glitch", "tile-repeat", "polar-wrap", "heat-haze"],
-    "Texture": ["vignette", "grain", "scanlines", "interference", "rain", "dust", "film-scratches", "light-leak", "aperture-grille", "paper-texture", "snowfall", "bokeh-spots", "chroma-noise"],
+    "Blur": [
+        "gaussian",
+        "box",
+        "directional-blur",
+        "radial-blur",
+        "glow",
+        "tilt-shift",
+        "spin-blur",
+        "lens-blur",
+        "median-soften",
+        "soft-focus",
+        "diagonal-blur",
+        "ghost-trail",
+    ],
+    "Stylize": [
+        "sharpen",
+        "edge",
+        "emboss",
+        "posterize",
+        "threshold",
+        "solarize",
+        "invert",
+        "cartoon",
+        "pencil",
+        "halftone",
+        "duotone",
+        "paint-wash",
+        "thermal",
+        "night-vision",
+        "ink-outline",
+        "crosshatch",
+    ],
+    "Distort": [
+        "pixelate",
+        "chromatic",
+        "fisheye",
+        "wave",
+        "mirror",
+        "kaleidoscope",
+        "camera-shake",
+        "swirl",
+        "ripple",
+        "pinch",
+        "slice-glitch",
+        "tile-repeat",
+        "polar-wrap",
+        "heat-haze",
+    ],
+    "Texture": [
+        "vignette",
+        "grain",
+        "scanlines",
+        "interference",
+        "rain",
+        "dust",
+        "film-scratches",
+        "light-leak",
+        "aperture-grille",
+        "paper-texture",
+        "snowfall",
+        "bokeh-spots",
+        "chroma-noise",
+    ],
 }
 VIDEO_GROUPS_EXTRA = {"Repair": ["deflicker", "denoise-picture", "colour-match", "stabilise"]}
 
 FILTER_GROUPS = {
-    "Adjust": ["exposure", "contrast", "saturation", "vibrance", "highlight-rolloff", "shadow-detail", "low-key", "high-key", "soft-contrast", "crisp-mids", "lift-blacks", "crush-blacks", "half-stop-down", "desaturate", "brighten-mids"],
-    "Film": ["faded", "matte", "pastel", "paper", "bleach", "punch", "silver", "noir", "monochrome", "sepia", "cross-process", "push-process", "pull-process", "expired-stock", "tintype", "cyanotype", "night-print"],
-    "Warm": ["warmth", "copper", "amber-highlights", "sunrise", "autumn", "sand", "rose", "red-lift", "tungsten", "candlelit", "honey-glow", "terracotta", "peach-lift", "late-sun", "rust-shadows"],
-    "Cool": ["cooling", "cyan-shadows", "midnight", "arctic", "emerald", "forest", "lavender", "blue-lift", "green-lift", "overcast", "steel-blue", "moonlit", "mint-air", "deep-water", "frost-highlights", "slate-shade"],
-    "Split": ["teal-amber", "split-purple", "split-green", "red-cyan", "pine-sky", "navy-blush", "violet-gold", "teal-magenta", "cocoa-cream", "muted-split"],
+    "Adjust": [
+        "exposure",
+        "contrast",
+        "saturation",
+        "vibrance",
+        "highlight-rolloff",
+        "shadow-detail",
+        "low-key",
+        "high-key",
+        "soft-contrast",
+        "crisp-mids",
+        "lift-blacks",
+        "crush-blacks",
+        "half-stop-down",
+        "desaturate",
+        "brighten-mids",
+    ],
+    "Film": [
+        "faded",
+        "matte",
+        "pastel",
+        "paper",
+        "bleach",
+        "punch",
+        "silver",
+        "noir",
+        "monochrome",
+        "sepia",
+        "cross-process",
+        "push-process",
+        "pull-process",
+        "expired-stock",
+        "tintype",
+        "cyanotype",
+        "night-print",
+    ],
+    "Warm": [
+        "warmth",
+        "copper",
+        "amber-highlights",
+        "sunrise",
+        "autumn",
+        "sand",
+        "rose",
+        "red-lift",
+        "tungsten",
+        "candlelit",
+        "honey-glow",
+        "terracotta",
+        "peach-lift",
+        "late-sun",
+        "rust-shadows",
+    ],
+    "Cool": [
+        "cooling",
+        "cyan-shadows",
+        "midnight",
+        "arctic",
+        "emerald",
+        "forest",
+        "lavender",
+        "blue-lift",
+        "green-lift",
+        "overcast",
+        "steel-blue",
+        "moonlit",
+        "mint-air",
+        "deep-water",
+        "frost-highlights",
+        "slate-shade",
+    ],
+    "Split": [
+        "teal-amber",
+        "split-purple",
+        "split-green",
+        "red-cyan",
+        "pine-sky",
+        "navy-blush",
+        "violet-gold",
+        "teal-magenta",
+        "cocoa-cream",
+        "muted-split",
+    ],
 }
 AUDIO_GROUPS = {
-    "Voice": ["pitch_up", "pitch_down", "robot", "telephone", "radio", "vibrato", "tremolo", "octave-up", "octave-down", "double-voice", "jet-flange", "swirl-phase", "bullhorn", "two-way-radio"],
-    "Tone": ["bass", "treble", "distortion", "warm-lows", "presence-lift", "mid-scoop", "bit-crush", "tape-warmth", "crisp-detail", "lofi-band"],
-    "Space": ["echo", "room", "hall", "cathedral", "plate", "slapback", "wide-stage", "stereo-bloom", "long-tail", "tunnel", "small-booth", "far-away"],
-    "Clean": ["denoise", "voice-clean", "de-ess", "compress", "normalize", "noise-gate", "hiss-cut", "hum-remover", "rumble-cut", "level-rider", "peak-limiter", "deep-denoise"],
+    "Voice": [
+        "pitch_up",
+        "pitch_down",
+        "robot",
+        "telephone",
+        "radio",
+        "vibrato",
+        "tremolo",
+        "octave-up",
+        "octave-down",
+        "double-voice",
+        "jet-flange",
+        "swirl-phase",
+        "bullhorn",
+        "two-way-radio",
+    ],
+    "Tone": [
+        "bass",
+        "treble",
+        "distortion",
+        "warm-lows",
+        "presence-lift",
+        "mid-scoop",
+        "bit-crush",
+        "tape-warmth",
+        "crisp-detail",
+        "lofi-band",
+    ],
+    "Space": [
+        "echo",
+        "room",
+        "hall",
+        "cathedral",
+        "plate",
+        "slapback",
+        "wide-stage",
+        "stereo-bloom",
+        "long-tail",
+        "tunnel",
+        "small-booth",
+        "far-away",
+    ],
+    "Clean": [
+        "denoise",
+        "voice-clean",
+        "de-ess",
+        "compress",
+        "normalize",
+        "noise-gate",
+        "hiss-cut",
+        "hum-remover",
+        "rumble-cut",
+        "level-rider",
+        "peak-limiter",
+        "deep-denoise",
+    ],
 }
 
 
@@ -208,8 +475,18 @@ def declare(defaults: dict) -> list[dict]:
     out = []
     for key, value in defaults.items():
         spec = PARAM_SPECS[key]
-        out.append({"key": key, "labelKey": f"param.{key}", "min": spec["min"], "max": spec["max"],
-                    "default": value, "step": spec["step"], "unit": spec["unit"], "group": spec["group"]})
+        out.append(
+            {
+                "key": key,
+                "labelKey": f"param.{key}",
+                "min": spec["min"],
+                "max": spec["max"],
+                "default": value,
+                "step": spec["step"],
+                "unit": spec["unit"],
+                "group": spec["group"],
+            }
+        )
     return out
 
 
@@ -225,12 +502,30 @@ def clamp_params(params: dict) -> dict:
 
 
 NAMES = {
-    "gaussian": "Gaussian Blur", "box": "Box Blur", "edge": "Edge Detect", "chromatic": "Chromatic Aberration",
-    "grain": "Film Grain", "interference": "Signal Interference", "pencil": "Pencil Sketch", "de-ess": "De-ess",
-    "silver": "Halide Mono", "copper": "Burnished", "rose": "Blush Lift", "forest": "Moss Tint",
-    "midnight": "Nightfall", "sunrise": "First Light", "bleach": "Skip Bleach", "pastel": "Chalk Soft",
-    "punch": "Hard Snap", "emerald": "Jade Contrast", "lavender": "Lilac Haze", "sand": "Dune Wash",
-    "arctic": "Glacier Bright", "autumn": "Harvest", "noir": "Ink Shadow", "paper": "Newsprint",
+    "gaussian": "Gaussian Blur",
+    "box": "Box Blur",
+    "edge": "Edge Detect",
+    "chromatic": "Chromatic Aberration",
+    "grain": "Film Grain",
+    "interference": "Signal Interference",
+    "pencil": "Pencil Sketch",
+    "de-ess": "De-ess",
+    "silver": "Halide Mono",
+    "copper": "Burnished",
+    "rose": "Blush Lift",
+    "forest": "Moss Tint",
+    "midnight": "Nightfall",
+    "sunrise": "First Light",
+    "bleach": "Skip Bleach",
+    "pastel": "Chalk Soft",
+    "punch": "Hard Snap",
+    "emerald": "Jade Contrast",
+    "lavender": "Lilac Haze",
+    "sand": "Dune Wash",
+    "arctic": "Glacier Bright",
+    "autumn": "Harvest",
+    "noir": "Ink Shadow",
+    "paper": "Newsprint",
 }
 
 
@@ -240,7 +535,10 @@ def label(key: str) -> str:
 
 def _preview_version() -> str:
     try:
-        source = b"".join(Path(__file__).with_name(name).read_bytes() for name in ("catalogue.py", "effect_previews.py", "pixel_effects.py", "renderer.py"))
+        source = b"".join(
+            Path(__file__).with_name(name).read_bytes()
+            for name in ("catalogue.py", "effect_previews.py", "pixel_effects.py", "renderer.py")
+        )
     except OSError:
         source = str(Path(sys.executable).stat().st_mtime_ns).encode()
     return hashlib.sha1(source, usedforsecurity=False).hexdigest()[:12]
@@ -249,26 +547,84 @@ def _preview_version() -> str:
 PREVIEW_VERSION = _preview_version()
 
 
-EFFECT_DEFAULTS = {"gaussian": {"radius": 3}, "box": {"size": 12}, "directional-blur": {"size": 12}, "sharpen": {"radius": 3}, "posterize": {"levels": 5}, "threshold": {"threshold": 0.5}, "solarize": {"threshold": 0.5}, "pixelate": {"size": 12}, "grain": {"strength": 0.07}, "glow": {"radius": 3}, "chromatic": {"size": 12}, "wave": {"size": 12}, "interference": {"size": 12}, "pencil": {"radius": 3}, "camera-shake": {"size": 12}, "tilt-shift": {"radius": 3}, "lens-blur": {"radius": 3}, "median-soften": {"radius": 3}, "soft-focus": {"radius": 3}, "diagonal-blur": {"size": 12}, "ghost-trail": {"size": 12}, "halftone": {"size": 12}, "crosshatch": {"size": 12}, "ripple": {"size": 12}, "slice-glitch": {"size": 12}, "heat-haze": {"size": 12}, "chroma-noise": {"strength": 0.15}}
+EFFECT_DEFAULTS = {
+    "gaussian": {"radius": 3},
+    "box": {"size": 12},
+    "directional-blur": {"size": 12},
+    "sharpen": {"radius": 3},
+    "posterize": {"levels": 5},
+    "threshold": {"threshold": 0.5},
+    "solarize": {"threshold": 0.5},
+    "pixelate": {"size": 12},
+    "grain": {"strength": 0.07},
+    "glow": {"radius": 3},
+    "chromatic": {"size": 12},
+    "wave": {"size": 12},
+    "interference": {"size": 12},
+    "pencil": {"radius": 3},
+    "camera-shake": {"size": 12},
+    "tilt-shift": {"radius": 3},
+    "lens-blur": {"radius": 3},
+    "median-soften": {"radius": 3},
+    "soft-focus": {"radius": 3},
+    "diagonal-blur": {"size": 12},
+    "ghost-trail": {"size": 12},
+    "halftone": {"size": 12},
+    "crosshatch": {"size": 12},
+    "ripple": {"size": 12},
+    "slice-glitch": {"size": 12},
+    "heat-haze": {"size": 12},
+    "chroma-noise": {"strength": 0.15},
+}
 
 
 def package_entries(kind: str) -> list[dict]:
     from .effect_packages import entries
-    return [{"id": e["id"], "name": e["name"], "category": e.get("category", "Packages"),
-             "group": "Packages", "parameters": e["parameters"], "declarations": e["declarations"]}
-            for e in entries(kind)]
+
+    return [
+        {
+            "id": e["id"],
+            "name": e["name"],
+            "category": e.get("category", "Packages"),
+            "group": "Packages",
+            "parameters": e["parameters"],
+            "declarations": e["declarations"],
+        }
+        for e in entries(kind)
+    ]
 
 
 @router.get("")
 def catalogue() -> dict:
     return {
-        "video": [{"id": k, "name": label(k), "category": "Color", "group": group_of(k, FILTER_GROUPS), "parameters": GRADES[k], "declarations": declare(GRADES[k])} for k in GRADES]
-        + [{"id": k, "name": label(k), "category": "Effects", "group": group_of(k, EFFECT_GROUPS), "parameters": EFFECT_DEFAULTS.get(k, {}), "declarations": declare(EFFECT_DEFAULTS.get(k, {}))} for k in VIDEO_EFFECTS],
+        "video": [
+            {
+                "id": k,
+                "name": label(k),
+                "category": "Color",
+                "group": group_of(k, FILTER_GROUPS),
+                "parameters": GRADES[k],
+                "declarations": declare(GRADES[k]),
+            }
+            for k in GRADES
+        ]
+        + [
+            {
+                "id": k,
+                "name": label(k),
+                "category": "Effects",
+                "group": group_of(k, EFFECT_GROUPS),
+                "parameters": EFFECT_DEFAULTS.get(k, {}),
+                "declarations": declare(EFFECT_DEFAULTS.get(k, {})),
+            }
+            for k in VIDEO_EFFECTS
+        ],
         "audio": [{"id": k, "name": label(k), "group": group_of(k, AUDIO_GROUPS)} for k in AUDIO_CHAINS],
         "transitions": TRANSITIONS,
         "blendModes": ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"],
         "previewVersion": PREVIEW_VERSION,
     }
+
 
 # K7: declared strength parameters, templated into the chain inside the engine.
 # Clients send an id and numbers; filter text never crosses the boundary.
@@ -296,6 +652,7 @@ AUDIO_TEMPLATES: dict[str, str] = {
 
 def audio_chain(effect_id: str, params: dict | None) -> str:
     from .effect_packages import chain_for
+
     packaged = chain_for(effect_id, params)
     if packaged:
         return packaged
@@ -328,6 +685,7 @@ def audio_chain(effect_id: str, params: dict | None) -> str:
 def imported_looks() -> list[dict]:
     """K2: every imported .cube, offered as a library look under Filters."""
     from .assets import ROOT
+
     out = []
     if ROOT.is_dir():
         for record in sorted(ROOT.glob("*.json")):
