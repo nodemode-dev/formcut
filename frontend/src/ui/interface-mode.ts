@@ -37,11 +37,55 @@ function userProfiles(): Record<string, InterfaceProfile> {
 }
 
 export function allProfiles(): InterfaceProfile[] {
-  return [BUILT_IN.easy, BUILT_IN.advanced, ...Object.values(userProfiles())];
+  return [BUILT_IN.easy, BUILT_IN.advanced, ...Object.values(userProfiles()).map(withNewerDefaults)];
+}
+
+/** A saved profile, with anything added since it was saved filled in.
+ *
+ * A profile keeps the views and features that existed when a person made it.
+ * When a release adds a section, an old profile has no entry for it, and the
+ * section is then hidden under every subtab with nothing to say why: this is
+ * exactly how the Repair tab came to render an empty panel for anyone who had
+ * customised their layout. Anything the built-in profile has and the saved one
+ * does not is inherited; anything the person actually set is left alone.
+ */
+function withNewerDefaults(profile: InterfaceProfile): InterfaceProfile {
+  const base = BUILT_IN.advanced;
+  const merged: InterfaceProfile = {
+    ...profile,
+    features: { ...base.features, ...profile.features },
+  };
+  const baseInspector = (base as { inspector?: Record<string, unknown> }).inspector;
+  const ownInspector = (profile as { inspector?: Record<string, unknown> }).inspector;
+  if (baseInspector) {
+    const baseViews = (baseInspector.views ?? {}) as Record<string, string[]>;
+    const ownViews = (ownInspector?.views ?? {}) as Record<string, string[]>;
+    const views: Record<string, string[]> = { ...ownViews };
+    for (const [name, sections] of Object.entries(baseViews)) {
+      // A view the person never had is taken whole; one they have keeps their
+      // order, with any newly shipped sections appended rather than dropped.
+      views[name] = name in ownViews
+        ? [...ownViews[name], ...sections.filter((section) => !ownViews[name].includes(section))]
+        : sections;
+    }
+    const baseTabs = (baseInspector.subtabs ?? []) as string[];
+    const ownTabs = (ownInspector?.subtabs ?? []) as string[];
+    (merged as { inspector?: Record<string, unknown> }).inspector = {
+      ...(ownInspector ?? {}),
+      views,
+      subtabs: ownTabs.length
+        ? [...ownTabs, ...baseTabs.filter((tab) => !ownTabs.includes(tab))]
+        : baseTabs,
+    };
+  }
+  return merged;
 }
 
 export function profileById(id: string): InterfaceProfile | null {
-  return BUILT_IN[id] ?? userProfiles()[id] ?? null;
+  const built = BUILT_IN[id];
+  if (built) return built;
+  const saved = userProfiles()[id];
+  return saved ? withNewerDefaults(saved) : null;
 }
 
 export function activeProfile(): InterfaceProfile {

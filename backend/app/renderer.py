@@ -579,10 +579,19 @@ class FrameRenderer:
                 # why cutout appeared to be broken while the model sat ready.
                 try:
                     from .model_manager import ready as model_ready
-                    from .segmentation import cutout_alpha
+                    from .segmentation import raw_alpha
 
-                    if model_ready(options.get("model", "object-cutout")):
-                        alpha = cutout_alpha(out[:, :, :3].astype(np.float32) / 255, options)
+                    model = options.get("model", "object-cutout")
+                    if model_ready(model):
+                        # The model must see the clip's own pixels, the way the
+                        # precompute pass feeds it: a composited frame has the
+                        # clip already scaled, rotated and placed on the canvas,
+                        # so segmenting that finds whatever happens to be in the
+                        # frame rather than the subject. Feeding it the canvas
+                        # is what turned the cutout into a blob.
+                        source = self.media_frame(clip, self.matte_time)
+                        found = raw_alpha(source, model)
+                        alpha = cv2.resize(found, (w2, h2), interpolation=cv2.INTER_LINEAR)
                 except Exception:
                     alpha = None
             if alpha is None and (options.get("strokes") or []):

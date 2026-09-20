@@ -145,3 +145,53 @@ def test_preview_and_export_paths_agree():
 def test_every_mask_shape_renders(shape):
     document = make_project(clips=[text_clip(mask={"shape": shape, "x": 15, "y": 15, "w": 70, "h": 70, "feather": 2})])
     assert render_at(document, 1.0).shape == (180, 320, 4)
+
+
+def test_a_cutout_is_computed_from_the_clip_not_the_canvas(monkeypatch):
+    """The model must see the clip's own pixels.
+
+    A composited frame has the clip already scaled, rotated and placed on the
+    canvas, so segmenting that finds whatever is in the frame rather than the
+    subject. Handing over the canvas is what turned a person cutout into a blob.
+    """
+    import numpy as np
+    from app import model_manager, segmentation
+    from app.renderer import FrameRenderer
+
+    SOURCE = (120, 200)  # deliberately not the canvas size
+    seen: list[tuple[int, int]] = []
+
+    def fake_alpha(image, model):
+        seen.append(tuple(image.shape[:2]))
+        return np.ones(image.shape[:2], np.float32)
+
+    monkeypatch.setattr(segmentation, "raw_alpha", fake_alpha)
+    monkeypatch.setattr(model_manager, "ready", lambda model: True)
+    monkeypatch.setattr(FrameRenderer, "media_frame", lambda self, clip, at: np.zeros((*SOURCE, 3), np.uint8))
+
+    document = make_project(
+        clips=[
+            text_clip(
+                cutout={"model": "person-cutout", "threshold": 0.5, "feather": 0.1, "strokes": []},
+                transform={
+                    "scale": 40,
+                    "posX": 20,
+                    "posY": 10,
+                    "rotation": 25,
+                    "width": 100,
+                    "height": 100,
+                    "opacity": 100,
+                    "blendMode": "Normal",
+                    "flipH": False,
+                },
+            )
+        ]
+    )
+    renderer = FrameRenderer(document)
+    try:
+        renderer.frame(1.0)
+    finally:
+        renderer.close()
+
+    assert seen, "the model was never asked for a matte"
+    assert seen[0] == SOURCE, f"the model was handed {seen[0]}, not the clip's own pixels"
