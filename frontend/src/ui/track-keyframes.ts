@@ -267,6 +267,26 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     selected.clear();
     event.preventDefault();
   });
+  const addPointAt = (block: Block, index: number, event: PointerEvent, timeAt: (x: number) => number) => {
+    const [low, high] = RANGE[block.prop];
+    const box = block.graph.getBoundingClientRect();
+    const fraction = 1 - (event.clientY - box.top - 4) / (graphHeight(block.body) - 8);
+    const value = Math.round(Math.max(low, Math.min(high, low + fraction * (high - low))) * 10) / 10;
+    const time = timeAt(event.clientX);
+    // The graph is as wide as the lane, not as wide as the clip, so a click to
+    // the right of the last clip computed a time past its end, found no clip
+    // and returned without a word. Falling back to the selected clip, and
+    // clamping into it, means a click always lands somewhere sensible.
+    const selected = engine.snapshot.selectedClipId;
+    const clip = clipAt(index, time)
+      ?? (selected ? clipsOn(index).find((entry) => entry.id === selected) : undefined)
+      ?? clipsOn(index)[0];
+    if (!clip) return;
+    const within = Math.max(0, Math.min(clip.duration, time - clip.start));
+    engine.dispatch("clip.keyframe", {
+      clipId: clip.id, t: localTime(clip, within), set: { [block.prop]: value },
+    });
+  };
   const paintSelection = (block: Block) => {
     for (const dot of block.handles.querySelectorAll<SVGPathElement>(".kfb-handle")) {
       const id = dot.getAttribute("data-clip") ?? "";
@@ -484,8 +504,23 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         return;
       }
       if (!target.closest(".kfb-graph")) return;
-      // Empty graph space starts a marquee rather than doing nothing.
+      // Empty graph space is both a marquee and a place to add a keyframe, and
+      // which one it is can only be known when the pointer comes up: a drag
+      // selects, a click adds. Returning here unconditionally, as box selection
+      // first did, meant a click could never add a point again.
       if (!target.closest(".kfb-handle") && !target.closest(".kfb-ease-grip")) {
+        const startX = event.clientX;
+        const startY = event.clientY;
+        let dragged = false;
+        const watch = (move: PointerEvent) => {
+          if (Math.hypot(move.clientX - startX, move.clientY - startY) > 4) dragged = true;
+        };
+        window.addEventListener("pointermove", watch);
+        window.addEventListener("pointerup", () => {
+          window.removeEventListener("pointermove", watch);
+          if (dragged) return;                    // the marquee has it
+          addPointAt(block, index, event, timeAt);
+        }, { once: true });
         boxSelect(block, event);
         return;
       }
