@@ -1252,10 +1252,25 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
   align-content: start; padding: var(--sp-2) 0;
 }
+/* The home screen is panels, the same ones the editor uses: rounded, inset,
+   with the same border and background rather than a flat sheet of cards. */
 .home-card.is-project {
   position: relative; display: flex; flex-direction: column;
   border: 1px solid var(--edge); border-radius: var(--radius-l);
   background: var(--pane); overflow: hidden;
+  box-shadow: var(--panel-shadow, 0 1px 2px rgb(0 0 0 / 0.35));
+}
+.home-card-art { border-radius: calc(var(--radius-l) - 1px) calc(var(--radius-l) - 1px) 0 0; }
+/* The surface behind the cards is a panel too, so the page reads like the
+   editor's workspace instead of a page with cards dropped on it. */
+.home-body, .home-main {
+  border: 1px solid var(--edge); border-radius: var(--radius-l);
+  background: var(--pane-soft, var(--ground)); padding: var(--sp-4);
+  margin: var(--sp-3); min-height: 0;
+}
+.home-rail, .home-side {
+  border: 1px solid var(--edge); border-radius: var(--radius-l);
+  background: var(--pane); margin: var(--sp-3) 0 var(--sp-3) var(--sp-3);
 }
 .home-card.is-project:hover { border-color: var(--cue); }
 .home-card-open {

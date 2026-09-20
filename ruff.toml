@@ -44,6 +44,9 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
+# A test asserts. S101 exists to catch asserts used as runtime checks in
+# shipped code, which is not what these are.
+"tests/*" = ["S101"]
 # Catching everything is the design in these three places, and each one says so
 # where it does it: an effect package must never stop the engine starting, a
 # background job must never take the process down with it, and a frame must
