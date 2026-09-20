@@ -27,6 +27,21 @@ ffmpeg alone, because ffprobe is a separate program. formcut does not need it:
 when ffprobe is absent it reads the same facts from ffmpeg's own report. Adding
 an LGPL ffprobe here is supported and will be used in preference.
 
+## What is here
+
+| Target | Programs | Built how |
+| --- | --- | --- |
+| `aarch64-apple-darwin` | ffmpeg | supplied, `--disable-gpl --disable-nonfree --enable-videotoolbox` |
+| `x86_64-unknown-linux-gnu` | ffmpeg, ffprobe | built by `setup/build_ffmpeg_lgpl.sh`, shared libraries in `lib-x86_64-unknown-linux-gnu` |
+
+The Linux build is **shared** rather than static, which is deliberate: the LGPL
+expects you to be able to substitute your own build of the libraries, and shared
+objects beside the binary are what make that possible without relinking anything.
+
+Still to build, on the machine each one targets:
+
+    ./setup/build_ffmpeg_lgpl.sh        # x86_64 macOS, or Windows under MSYS2
+
 ## Source
 
 The LGPL requires that you can get the source for the binary you received.
