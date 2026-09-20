@@ -44,13 +44,13 @@ SOURCES: dict[str, dict] = {
         "configure": "run setup/build_ffmpeg_lgpl.sh on that platform",
     },
     "x86_64-unknown-linux-gnu": {
-        "url": "",
+        "url": "local:ffmpeg-x86_64-unknown-linux-gnu",
         "licence": "LGPL-2.1-or-later",
         "members": ("ffmpeg",),
         "configure": "run setup/build_ffmpeg_lgpl.sh on that platform",
     },
     "x86_64-pc-windows-msvc": {
-        "url": "",
+        "url": "local:ffmpeg-x86_64-pc-windows-msvc.exe",
         "licence": "LGPL-2.1-or-later",
         "members": ("ffmpeg.exe",),
         "configure": "run setup/build_ffmpeg_lgpl.sh on that platform",

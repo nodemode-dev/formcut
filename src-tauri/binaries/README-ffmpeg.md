@@ -32,15 +32,16 @@ an LGPL ffprobe here is supported and will be used in preference.
 | Target | Programs | Built how |
 | --- | --- | --- |
 | `aarch64-apple-darwin` | ffmpeg | supplied, `--disable-gpl --disable-nonfree --enable-videotoolbox` |
-| `x86_64-unknown-linux-gnu` | ffmpeg, ffprobe | built by `setup/build_ffmpeg_lgpl.sh`, shared libraries in `lib-x86_64-unknown-linux-gnu` |
+| `x86_64-unknown-linux-gnu` | ffmpeg, ffprobe | built LGPL, shared libraries in `lib-x86_64-unknown-linux-gnu` |
+| `x86_64-pc-windows-msvc` | ffmpeg.exe, ffprobe.exe | cross-built with mingw-w64, DLLs in `lib-x86_64-pc-windows-msvc` |
 
 The Linux build is **shared** rather than static, which is deliberate: the LGPL
 expects you to be able to substitute your own build of the libraries, and shared
 objects beside the binary are what make that possible without relinking anything.
 
-Still to build, on the machine each one targets:
+One target left, and it needs a Mac to build on because it needs Apple's SDK:
 
-    ./setup/build_ffmpeg_lgpl.sh        # x86_64 macOS, or Windows under MSYS2
+    ./setup/build_ffmpeg_lgpl.sh        # on an Intel Mac, for x86_64-apple-darwin
 
 ## Source
 
