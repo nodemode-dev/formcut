@@ -10,6 +10,7 @@ It is written for the release workflow and has not been run in this repository's
 development environment, which has no network access. Running it once per target
 before the first release is part of that release.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,7 +35,7 @@ SOURCES: dict[str, dict] = {
         "licence": "LGPL-2.1-or-later",
         "members": ("ffmpeg",),
         "configure": "--disable-gpl --disable-nonfree --enable-videotoolbox "
-                     "--disable-programs --enable-ffmpeg --disable-doc --disable-debug --arch=arm64",
+        "--disable-programs --enable-ffmpeg --disable-doc --disable-debug --arch=arm64",
     },
     "x86_64-apple-darwin": {
         "url": "",
@@ -72,11 +73,20 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def _record(out: Path, target: str, entry: dict, digest: str) -> None:
     """What was shipped, so the bundle can always say where it came from."""
-    (out / "ffmpeg-licence.json").write_text(json.dumps({
-        "target": target, "licence": entry["licence"], "configure": entry.get("configure", ""),
-        "programs": list(entry["members"]), "sha256": digest,
-        "source": "https://ffmpeg.org/download.html",
-    }, indent=2), encoding="utf-8")
+    (out / "ffmpeg-licence.json").write_text(
+        json.dumps(
+            {
+                "target": target,
+                "licence": entry["licence"],
+                "configure": entry.get("configure", ""),
+                "programs": list(entry["members"]),
+                "sha256": digest,
+                "source": "https://ffmpeg.org/download.html",
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     for name in ("LGPL-2.1.txt", "README-ffmpeg.md"):
         supplied = ROOT / "src-tauri" / "binaries" / name
         if supplied.is_file():
@@ -93,8 +103,12 @@ def fetch(target: str, out: Path, allow_gpl: bool) -> int:
         if not url:
             print(f"no GPL build recorded for {target}", file=sys.stderr)
             return 3
-        entry = {**entry, "url": url, "licence": "GPL-3.0",
-                 "members": entry["members"] + (("ffprobe.exe",) if target.endswith("msvc") else ("ffprobe",))}
+        entry = {
+            **entry,
+            "url": url,
+            "licence": "GPL-3.0",
+            "members": entry["members"] + (("ffprobe.exe",) if target.endswith("msvc") else ("ffprobe",)),
+        }
         print("shipping a GPL ffmpeg: the bundle you distribute is GPL-3.0, not Apache-2.0.", file=sys.stderr)
     source = str(entry.get("url") or "")
     if source.startswith("local:"):
@@ -118,7 +132,10 @@ def fetch(target: str, out: Path, allow_gpl: bool) -> int:
         return 3
     out.mkdir(parents=True, exist_ok=True)
     archive = out / f"ffmpeg-{target}"
-    urllib.request.urlretrieve(entry["url"], archive)
+    if not str(entry["url"]).startswith("https://"):
+        print("only https sources are fetched", file=sys.stderr)
+        return 5
+    urllib.request.urlretrieve(entry["url"], archive)  # noqa: S310 - https checked above
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     if zipfile.is_zipfile(archive):
         with zipfile.ZipFile(archive) as bundle:
@@ -142,9 +159,18 @@ def fetch(target: str, out: Path, allow_gpl: bool) -> int:
             print(f"{base} was not found in the archive", file=sys.stderr)
             return 4
         binary.chmod(0o755)
-    (out / "ffmpeg-licence.json").write_text(json.dumps({
-        "target": target, "url": entry["url"], "licence": entry["licence"], "sha256": digest,
-    }, indent=2), encoding="utf-8")
+    (out / "ffmpeg-licence.json").write_text(
+        json.dumps(
+            {
+                "target": target,
+                "url": entry["url"],
+                "licence": entry["licence"],
+                "sha256": digest,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     print(f"{target}: fetched {', '.join(entry['members'])} under {entry['licence']}")
     return 0
 

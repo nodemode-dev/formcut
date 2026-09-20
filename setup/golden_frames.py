@@ -23,6 +23,7 @@ Update the goldens on purpose, never to make the check pass:
 
     python setup/golden_frames.py --update
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,28 +45,102 @@ def scene(name: str) -> dict:
     if name == "title":
         clips = [{"id": "a", "kind": "text", "label": "t", "start": 0, "duration": 4, "textStyle": text}]
     elif name == "transform":
-        clips = [{"id": "a", "kind": "text", "label": "t", "start": 0, "duration": 4, "textStyle": text,
-                  "transform": {"scale": 60, "posX": 12, "posY": -8, "rotation": 15, "width": 100,
-                                "height": 100, "opacity": 90, "blendMode": "Normal", "flipH": False}}]
+        clips = [
+            {
+                "id": "a",
+                "kind": "text",
+                "label": "t",
+                "start": 0,
+                "duration": 4,
+                "textStyle": text,
+                "transform": {
+                    "scale": 60,
+                    "posX": 12,
+                    "posY": -8,
+                    "rotation": 15,
+                    "width": 100,
+                    "height": 100,
+                    "opacity": 90,
+                    "blendMode": "Normal",
+                    "flipH": False,
+                },
+            }
+        ]
     elif name == "keyframes":
-        clips = [{"id": "a", "kind": "text", "label": "t", "start": 0, "duration": 4, "textStyle": text,
-                  "keyframes": [{"t": 0, "props": {"scale": 40}, "interp": "ease"},
-                                {"t": 4, "props": {"scale": 120}, "interp": "linear"}]}]
+        clips = [
+            {
+                "id": "a",
+                "kind": "text",
+                "label": "t",
+                "start": 0,
+                "duration": 4,
+                "textStyle": text,
+                "keyframes": [{"t": 0, "props": {"scale": 40}, "interp": "ease"}, {"t": 4, "props": {"scale": 120}, "interp": "linear"}],
+            }
+        ]
     elif name == "mask":
-        clips = [{"id": "a", "kind": "text", "label": "t", "start": 0, "duration": 4, "textStyle": text,
-                  "mask": {"shape": "star", "x": 10, "y": 10, "w": 80, "h": 80, "feather": 4}}]
+        clips = [
+            {
+                "id": "a",
+                "kind": "text",
+                "label": "t",
+                "start": 0,
+                "duration": 4,
+                "textStyle": text,
+                "mask": {"shape": "star", "x": 10, "y": 10, "w": 80, "h": 80, "feather": 4},
+            }
+        ]
     elif name == "background":
-        return {**base, "background": {"type": "gradient", "from": "#101418", "to": "#2b3440"},
-                "timelines": [{"id": "x", "name": "x", "tracks": [{"id": "t", "name": "V", "clips": [
-                    {"id": "a", "kind": "text", "label": "t", "start": 0, "duration": 4, "textStyle": text,
-                     "transform": {"scale": 45, "posX": 0, "posY": 0, "rotation": 0, "width": 100,
-                                   "height": 100, "opacity": 100, "blendMode": "Normal", "flipH": False}}]}]}]}
+        return {
+            **base,
+            "background": {"type": "gradient", "from": "#101418", "to": "#2b3440"},
+            "timelines": [
+                {
+                    "id": "x",
+                    "name": "x",
+                    "tracks": [
+                        {
+                            "id": "t",
+                            "name": "V",
+                            "clips": [
+                                {
+                                    "id": "a",
+                                    "kind": "text",
+                                    "label": "t",
+                                    "start": 0,
+                                    "duration": 4,
+                                    "textStyle": text,
+                                    "transform": {
+                                        "scale": 45,
+                                        "posX": 0,
+                                        "posY": 0,
+                                        "rotation": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "opacity": 100,
+                                        "blendMode": "Normal",
+                                        "flipH": False,
+                                    },
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
     elif name == "transition":
-        clips = [{"id": "a", "kind": "text", "label": "a", "start": 0, "duration": 2,
-                  "textStyle": {**text, "content": "ONE"}},
-                 {"id": "b", "kind": "text", "label": "b", "start": 2, "duration": 2,
-                  "textStyle": {**text, "content": "TWO", "color": "#55aaff"},
-                  "transitionIn": {"type": "wipe-left", "duration": 1.0}}]
+        clips = [
+            {"id": "a", "kind": "text", "label": "a", "start": 0, "duration": 2, "textStyle": {**text, "content": "ONE"}},
+            {
+                "id": "b",
+                "kind": "text",
+                "label": "b",
+                "start": 2,
+                "duration": 2,
+                "textStyle": {**text, "content": "TWO", "color": "#55aaff"},
+                "transitionIn": {"type": "wipe-left", "duration": 1.0},
+            },
+        ]
     else:
         raise SystemExit(f"unknown scene: {name}")
     return {**base, "timelines": [{"id": "x", "name": "x", "tracks": [{"id": "t", "name": "V", "clips": clips}]}]}
@@ -89,6 +164,7 @@ def frame_hash(pixels) -> str:
 
 def render_all() -> dict:
     from app.renderer import FrameRenderer
+
     out: dict[str, str] = {}
     for name, moments in SCENES.items():
         project = scene(name)
@@ -105,13 +181,13 @@ def parity() -> list[tuple[str, float, float]]:
     """The preview path against the export path, at the same moments."""
     import cv2
     import numpy as np
-
     from app.renderer import FrameRenderer
+
     results = []
     for name, moments in SCENES.items():
         project = scene(name)
-        preview = FrameRenderer(project, 160)      # a decode limit: the preview path
-        export = FrameRenderer(project)            # no limit: the export path
+        preview = FrameRenderer(project, 160)  # a decode limit: the preview path
+        export = FrameRenderer(project)  # no limit: the export path
         try:
             for at in moments:
                 small = preview.frame(at)[:, :, :3].astype(np.float32)

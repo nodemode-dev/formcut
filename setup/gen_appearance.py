@@ -8,66 +8,107 @@ regenerate; do not hand-tune a single value in the output.
     python3 setup/gen_appearance.py frontend/src/styles/themes.css
 """
 
-import colorsys, pathlib, sys
-import colorsys, pathlib, sys
-def hexed(h, s, l):
-    l = max(0, min(100, l))
-    r, g, b = colorsys.hls_to_rgb(h / 360.0, l / 100.0, s / 100.0)
-    return "#%02x%02x%02x" % tuple(round(v * 255) for v in (r, g, b))
+import colorsys
+import pathlib
+import sys
+
+
+def hexed(h, s, lightness):
+    lightness = max(0, min(100, lightness))
+    r, g, b = colorsys.hls_to_rgb(h / 360.0, lightness / 100.0, s / 100.0)
+    return "#{:02x}{:02x}{:02x}".format(*(round(v * 255) for v in (r, g, b)))
+
 
 DARK = [
-    ("formcut-dark","formcut Dark",188,12,"dark","#ffae2b"),("high-contrast","High Contrast",0,0,"hard","#ffffff"),
-    ("obsidian","Obsidian",220,8,"deep","#7dd3fc"),("graphite","Graphite",210,6,"dark","#67e8f9"),
-    ("mono-ink","Mono Ink",0,0,"dark","#e5e5e5"),("github-dark","GitHub Dark",215,12,"dark","#58a6ff"),
-    ("slate","Slate",215,14,"dark","#94a3b8"),("rose-noir","Rose Noir",345,18,"deep","#fda4af"),
-    ("crimson","Crimson",0,24,"deep","#f87171"),("ember","Ember",22,24,"deep","#fb923c"),
-    ("copper","Copper",28,20,"dark","#fdba74"),("amber","Amber",45,22,"dark","#fbbf24"),
-    ("olive","Olive",70,18,"dark","#bef264"),("forest","Forest",150,20,"deep","#4ade80"),
-    ("terminal-green","Terminal Green",130,30,"hard","#86efac"),("aurora","Aurora",165,22,"deep","#5eead4"),
-    ("deep-ocean","Deep Ocean",205,26,"deep","#38bdf8"),("arctic","Arctic",200,16,"dark","#a5f3fc"),
-    ("midnight-blue","Midnight Blue",225,28,"deep","#818cf8"),("indigo","Indigo",245,26,"deep","#a5b4fc"),
-    ("violet-haze","Violet Haze",270,24,"deep","#c4b5fd"),("plum","Plum",295,22,"deep","#f0abfc"),
+    ("formcut-dark", "formcut Dark", 188, 12, "dark", "#ffae2b"),
+    ("high-contrast", "High Contrast", 0, 0, "hard", "#ffffff"),
+    ("obsidian", "Obsidian", 220, 8, "deep", "#7dd3fc"),
+    ("graphite", "Graphite", 210, 6, "dark", "#67e8f9"),
+    ("mono-ink", "Mono Ink", 0, 0, "dark", "#e5e5e5"),
+    ("github-dark", "GitHub Dark", 215, 12, "dark", "#58a6ff"),
+    ("slate", "Slate", 215, 14, "dark", "#94a3b8"),
+    ("rose-noir", "Rose Noir", 345, 18, "deep", "#fda4af"),
+    ("crimson", "Crimson", 0, 24, "deep", "#f87171"),
+    ("ember", "Ember", 22, 24, "deep", "#fb923c"),
+    ("copper", "Copper", 28, 20, "dark", "#fdba74"),
+    ("amber", "Amber", 45, 22, "dark", "#fbbf24"),
+    ("olive", "Olive", 70, 18, "dark", "#bef264"),
+    ("forest", "Forest", 150, 20, "deep", "#4ade80"),
+    ("terminal-green", "Terminal Green", 130, 30, "hard", "#86efac"),
+    ("aurora", "Aurora", 165, 22, "deep", "#5eead4"),
+    ("deep-ocean", "Deep Ocean", 205, 26, "deep", "#38bdf8"),
+    ("arctic", "Arctic", 200, 16, "dark", "#a5f3fc"),
+    ("midnight-blue", "Midnight Blue", 225, 28, "deep", "#818cf8"),
+    ("indigo", "Indigo", 245, 26, "deep", "#a5b4fc"),
+    ("violet-haze", "Violet Haze", 270, 24, "deep", "#c4b5fd"),
+    ("plum", "Plum", 295, 22, "deep", "#f0abfc"),
 ]
 LIGHT = [
-    ("light","Light",45,8,"light","#65a30d"),("sand","Sand",40,22,"light","#a16207"),
-    ("linen","Linen",35,16,"semi","#9a3412"),("mist","Mist",210,14,"semi","#0369a1"),
-    ("pearl","Pearl",220,6,"light","#4f46e5"),("dove-grey","Dove Grey",220,4,"semi","#334155"),
+    ("light", "Light", 45, 8, "light", "#65a30d"),
+    ("sand", "Sand", 40, 22, "light", "#a16207"),
+    ("linen", "Linen", 35, 16, "semi", "#9a3412"),
+    ("mist", "Mist", 210, 14, "semi", "#0369a1"),
+    ("pearl", "Pearl", 220, 6, "light", "#4f46e5"),
+    ("dove-grey", "Dove Grey", 220, 4, "semi", "#334155"),
 ]
-LADDER = {"dark":[8,10,13,17,20,24,28],"deep":[6,8,11,15,19,23,27],"hard":[0,2,5,9,13,18,23],
-          "light":[92,96,98,100,88,83,78],"semi":[86,90,94,97,82,77,72]}
-TEXT = {"dark":[96,66,45],"deep":[95,65,44],"hard":[100,78,58],"light":[14,34,52],"semi":[16,36,54]}
+LADDER = {
+    "dark": [8, 10, 13, 17, 20, 24, 28],
+    "deep": [6, 8, 11, 15, 19, 23, 27],
+    "hard": [0, 2, 5, 9, 13, 18, 23],
+    "light": [92, 96, 98, 100, 88, 83, 78],
+    "semi": [86, 90, 94, 97, 82, 77, 72],
+}
+TEXT = {"dark": [96, 66, 45], "deep": [95, 65, 44], "hard": [100, 78, 58], "light": [14, 34, 52], "semi": [16, 36, 54]}
+
 
 def values(hue, sat, kind, accent):
     ladder, text = LADDER[kind], TEXT[kind]
     light = kind in ("light", "semi")
     ss = min(sat, 18 if light else 12)
-    page, well, panel, raised, field, hover, active = (hexed(hue, ss, l) for l in ladder)
-    fg, muted, dim = (hexed(hue, min(sat, 12 if light else 8), l) for l in text)
-    ah, al, asat = colorsys.rgb_to_hls(*(int(accent.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)))
+    page, well, panel, raised, field, hover, active = (hexed(hue, ss, lightness) for lightness in ladder)
+    fg, muted, dim = (hexed(hue, min(sat, 12 if light else 8), lightness) for lightness in text)
+    ah, al, asat = colorsys.rgb_to_hls(*(int(accent.lstrip("#")[i : i + 2], 16) / 255 for i in (0, 2, 4)))
     return dict(
-        light=light, page=page, well=well, panel=panel, raised=raised, field=field, hover=hover, active=active,
-        fg=fg, muted=muted, dim=dim, accent=accent,
+        light=light,
+        page=page,
+        well=well,
+        panel=panel,
+        raised=raised,
+        field=field,
+        hover=hover,
+        active=active,
+        fg=fg,
+        muted=muted,
+        dim=dim,
+        accent=accent,
         accent_hover=hexed(ah * 360, asat * 100, min(100, max(0, al * 100 + (-8 if light else 10)))),
         line="rgb(0 0 0 / 0.12)" if light else ("rgb(255 255 255 / 0.32)" if kind == "hard" else "rgb(255 255 255 / 0.1)"),
         strong="rgb(0 0 0 / 0.22)" if light else ("rgb(255 255 255 / 0.5)" if kind == "hard" else "rgb(255 255 255 / 0.2)"),
-        lane=hexed(hue, ss, ladder[0] + (-3 if light else 3)), lane_alt=hexed(hue, ss, ladder[0] + (-6 if light else 4)),
-        ruler=hexed(hue, ss, ladder[0] - 1), stage="#1b1b1f" if light else "#000000",
+        lane=hexed(hue, ss, ladder[0] + (-3 if light else 3)),
+        lane_alt=hexed(hue, ss, ladder[0] + (-6 if light else 4)),
+        ruler=hexed(hue, ss, ladder[0] - 1),
+        stage="#1b1b1f" if light else "#000000",
         scrim="rgb(40 38 32 / 0.35)" if light else "rgb(0 0 0 / 0.55)",
         on_accent="#ffffff" if light else hexed(ah * 360, min(asat * 100, 70), 9),
-        accent_rgb=" ".join(str(int(accent.lstrip("#")[i:i + 2], 16)) for i in (0, 2, 4)),
+        accent_rgb=" ".join(str(int(accent.lstrip("#")[i : i + 2], 16)) for i in (0, 2, 4)),
     )
 
-out = ["""/* Appearance profiles. Each block overrides the semantic tokens in tokens.css;
+
+out = [
+    """/* Appearance profiles. Each block overrides the semantic tokens in tokens.css;
    nothing else in the app knows a colour. The accent a profile names is its
    default: a user's accent choice is written as an inline custom property on
    the root, which wins over these blocks, and clearing it falls back here.
    Generated by setup/gen_appearance.py from one ladder table so every profile keeps
    the same contrast relationships; regenerate rather than hand-tuning a value. */
-"""]
-previews = ["""
+"""
+]
+previews = [
+    """
 /* Card previews. Each swatch paints in its own profile's colours regardless of
    the active theme, so a preview cannot drift from the theme it names. */
-"""]
+"""
+]
 for spec in DARK + LIGHT:
     theme_id, label, hue, sat, kind, accent = spec
     v = values(hue, sat, kind, accent)
@@ -101,13 +142,13 @@ for spec in DARK + LIGHT:
 .theme-swatch[data-theme-preview="{theme_id}"] i:nth-child(2) {{ background: {v["muted"]}; }}
 .theme-swatch[data-theme-preview="{theme_id}"] i:nth-child(3) {{ background: {v["accent"]}; }}
 ''')
-previews.append('''.theme-swatch[data-theme-preview="crazy-click-random"] i:nth-child(1) { background: #f87171; }
+previews.append(""".theme-swatch[data-theme-preview="crazy-click-random"] i:nth-child(1) { background: #f87171; }
 .theme-swatch[data-theme-preview="crazy-click-random"] i:nth-child(2) { background: #60a5fa; }
 .theme-swatch[data-theme-preview="crazy-click-random"] i:nth-child(3) { background: #4ade80; }
 .theme-swatch[data-theme-preview="crazy-cycle-random"] i:nth-child(1) { background: #c4b5fd; }
 .theme-swatch[data-theme-preview="crazy-cycle-random"] i:nth-child(2) { background: #5eead4; }
 .theme-swatch[data-theme-preview="crazy-cycle-random"] i:nth-child(3) { background: #fbbf24; }
-''')
+""")
 target = pathlib.Path(sys.argv[1])
 target.write_text("\n".join(out) + "\n".join(previews))
 print("profiles:", len(DARK) + len(LIGHT), "| lines:", len(target.read_text().splitlines()))

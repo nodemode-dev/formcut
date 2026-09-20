@@ -450,6 +450,8 @@ def dispatch(method: str, params: dict):
                 "fadeIn",
                 "fadeOut",
                 "label",
+                "stabilise",
+                "smoothSlow",
             ],
             "edit_commands": [
                 "clip.add",
@@ -470,10 +472,12 @@ def dispatch(method: str, params: dict):
                 "clip.ripple-delete",
                 "clip.speed-curve",
                 "clip.animations",
+                "clip.scenes",
                 "track.add",
                 "track.remove",
                 "timeline.add",
                 "project.settings",
+                "project.background",
             ],
         }
     if method == "catalogue":

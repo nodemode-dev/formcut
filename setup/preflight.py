@@ -9,6 +9,7 @@ before shipping, the ffmpeg licence in particular, have been decided.
 
 Run it before tagging. A failure is a refusal, not a warning.
 """
+
 from __future__ import annotations
 
 import json
@@ -37,7 +38,7 @@ def check_versions() -> str | None:
     found["backend APP_VERSION"] = main.group(1) if main else ""
     tauri = json.loads(read(ROOT / "src-tauri/tauri.conf.json"))
     found["tauri.conf.json"] = tauri.get("version", "")
-    cargo = re.search(r'^version = "([^"]+)"', read(ROOT / "src-tauri/Cargo.toml"), re.M)
+    cargo = re.search(r'^version = "([^"]+)"', read(ROOT / "src-tauri/Cargo.toml"), re.MULTILINE)
     found["Cargo.toml"] = cargo.group(1) if cargo else ""
     lockfile = re.search(r'name = "formcut"\nversion = "([^"]+)"', read(ROOT / "src-tauri/Cargo.lock"))
     found["Cargo.lock"] = lockfile.group(1) if lockfile else ""
@@ -56,12 +57,17 @@ def check_versions() -> str | None:
 def check_files() -> None:
     """Everything the build refers to has to be there."""
     required = [
-        "backend/freeze.py", "backend/requirements.txt",
-        "src-tauri/tauri.conf.json", "src-tauri/Cargo.toml",
+        "backend/freeze.py",
+        "backend/requirements.txt",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/Cargo.toml",
         "setup/fetch_ffmpeg.py",
-        ".github/workflows/release.yml", ".github/workflows/checks.yml",
-        "frontend/package.json", "frontend/index.html",
-        "README.md", "LICENSE",
+        ".github/workflows/release.yml",
+        ".github/workflows/checks.yml",
+        "frontend/package.json",
+        "frontend/index.html",
+        "README.md",
+        "LICENSE",
     ]
     for relative in required:
         if not (ROOT / relative).exists():
@@ -86,7 +92,7 @@ def check_tauri() -> None:
     else:
         notes.append("the frozen engine is declared as an external binary")
     targets = bundle.get("targets")
-    notes.append(f"bundle targets: {targets if targets else 'all'}")
+    notes.append(f"bundle targets: {targets or 'all'}")
 
 
 def check_workflows() -> None:
@@ -108,16 +114,13 @@ def check_licences() -> None:
     text = read(licences)
     binaries = ROOT / "src-tauri/binaries"
     if not (binaries / "LGPL-2.1.txt").is_file():
-        problems.append("src-tauri/binaries/LGPL-2.1.txt is missing; an LGPL binary "
-                        "may not be distributed without its licence")
+        problems.append("src-tauri/binaries/LGPL-2.1.txt is missing; an LGPL binary may not be distributed without its licence")
     else:
         notes.append("the LGPL text ships beside the binaries")
     if not (binaries / "README-ffmpeg.md").is_file():
-        problems.append("src-tauri/binaries/README-ffmpeg.md is missing; "
-                        "the LGPL expects the binary to be replaceable and said so")
+        problems.append("src-tauri/binaries/README-ffmpeg.md is missing; the LGPL expects the binary to be replaceable and said so")
     if "ffmpeg" not in text.lower():
-        problems.append("Licences.md does not say which ffmpeg build is shipped; "
-                        "a GPL build imposes its terms on the bundle")
+        problems.append("Licences.md does not say which ffmpeg build is shipped; a GPL build imposes its terms on the bundle")
     else:
         notes.append("an ffmpeg licence is recorded")
     fetch = ROOT / "setup/fetch_ffmpeg.py"
@@ -128,8 +131,10 @@ def check_licences() -> None:
         # a preflight that crashes tells you less than one that fails.
         return
     if "--allow-gpl" in read(release):
-        problems.append("the release workflow passes --allow-gpl: that ships a GPL ffmpeg "
-                        "and makes the distributed bundle GPL-3.0 rather than Apache-2.0")
+        problems.append(
+            "the release workflow passes --allow-gpl: that ships a GPL ffmpeg "
+            "and makes the distributed bundle GPL-3.0 rather than Apache-2.0"
+        )
     else:
         notes.append("the release ships an LGPL ffmpeg, so the bundle stays Apache-2.0")
 
@@ -138,8 +143,8 @@ def check_engine() -> None:
     """The engine has to import before it can be frozen."""
     sys.path.insert(0, str(ROOT / "backend"))
     try:
-        from app.main import app  # noqa: F401
-    except Exception as exc:  # pragma: no cover - reported, not raised
+        from app.main import app
+    except Exception as exc:  # noqa: BLE001 - any import failure is the finding here
         problems.append(f"the engine does not import: {exc}")
         return
     notes.append(f"the engine imports, {len(app.routes)} routes mounted")
