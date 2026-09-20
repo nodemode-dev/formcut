@@ -514,6 +514,22 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     }
   });
   el.dataset.scale = String(PX_PER_SEC);
+  // F21: alt and the wheel, or alt and a pinch, zoom the tracks. The moment
+  // under the pointer is held still, so zooming feels like moving a lens over
+  // the timeline rather than jumping somewhere else.
+  const zoomScroller = el.querySelector<HTMLElement>(".tl-scroller");
+  zoomScroller?.addEventListener("wheel", (event) => {
+    if (!event.altKey && !event.ctrlKey) return;
+    event.preventDefault();
+    const box = zoomScroller.getBoundingClientRect();
+    const before = (zoomScroller.scrollLeft + event.clientX - box.left - HEAD_W) / PX_PER_SEC;
+    const step = event.deltaY > 0 ? 1 / 1.12 : 1.12;
+    zoom(step);
+    window.requestAnimationFrame(() => {
+      zoomScroller.scrollLeft = Math.max(0, before * PX_PER_SEC + HEAD_W - (event.clientX - box.left));
+    });
+  }, { passive: false });
+
   const tabControls = el.querySelector(".tl-tabs")!;
   tabControls.querySelector<HTMLButtonElement>('[data-ref="tl-add"]')!.addEventListener("click", () => engine.dispatch("timeline.add", {}));
   // Removing a timeline belongs with the tabs it removes, not in the clip tools.

@@ -25,7 +25,7 @@ from .tools import prefer_bundled
 
 prefer_bundled()
 
-APP_VERSION = "0.75.0"
+APP_VERSION = "0.76.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 

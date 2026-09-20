@@ -1,5 +1,6 @@
 import { easeAt } from "../engine/timing";
-import { KEYFRAME_PROPS, type Clip, type KeyframeProp } from "../engine/types";
+import { EASING_HANDLES } from "../engine/types";
+import { KEYFRAME_PROPS, type Clip, type Keyframe, type KeyframeProp } from "../engine/types";
 import { propPoints, samplePoints, sampledTransform } from "../engine/keyframes";
 import type { ProjectEngine } from "../engine/project";
 import { t } from "../i18n";
@@ -35,6 +36,7 @@ interface Block {
   spans: HTMLElement;
   rows: HTMLElement;
   graph: SVGSVGElement;
+  easing: SVGGElement;
   guides: SVGGElement;
   curves: SVGGElement;
   handles: SVGGElement;
@@ -179,6 +181,36 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
       setAttr(handle, "data-t", point.t.toFixed(4));
       setAttr(handle, "data-interp", point.interp);
     });
+    // F19: the easing handle for each segment, drawn where the curve's control
+    // point actually is and draggable, so the curve can be shaped rather than
+    // only chosen from a list of names.
+    const eased = marks.map(([, value]) => value).filter(({ clip, point }) => {
+      const list = propPoints(clip, block.prop);
+      const index = list.findIndex((entry) => Math.abs(entry.t - point.t) < 1e-4);
+      return index >= 0 && index < list.length - 1 && point.interp !== "hold";
+    });
+    patch(block.easing, eased.map((m) => [`${m.clip.id}:${m.point.t}`, m] as const),
+      () => svgNode("g", "kfb-ease"), (group, { clip, point }) => {
+        const list = propPoints(clip, block.prop);
+        const index = list.findIndex((entry) => Math.abs(entry.t - point.t) < 1e-4);
+        const next = list[index + 1];
+        if (!next) return;
+        const curve = point.handles ?? EASING_HANDLES[point.interp] ?? EASING_HANDLES.linear;
+        const x0 = (clip.start + point.t) * px, x1 = (clip.start + next.t) * px;
+        const y0 = yOf(point.v), y1 = yOf(next.v);
+        const hx = x0 + (x1 - x0) * curve[0];
+        const hy = y0 + (y1 - y0) * curve[1];
+        const hx2 = x0 + (x1 - x0) * curve[2];
+        const hy2 = y0 + (y1 - y0) * curve[3];
+        group.innerHTML =
+          `<line class="kfb-ease-arm" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}"></line>` +
+          `<line class="kfb-ease-arm" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${hx2.toFixed(1)}" y2="${hy2.toFixed(1)}"></line>` +
+          `<circle class="kfb-ease-grip" data-grip="out" cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="4"></circle>` +
+          `<circle class="kfb-ease-grip" data-grip="in" cx="${hx2.toFixed(1)}" cy="${hy2.toFixed(1)}" r="4"></circle>`;
+        setAttr(group, "data-clip", clip.id);
+        setAttr(group, "data-t", point.t.toFixed(4));
+        setAttr(group, "data-prop", block.prop);
+      });
   };
 
   const paint = (block: Block) => {
@@ -212,18 +244,40 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
   };
 
   const dragAlong = (start: PointerEvent, clip: Clip, from: number, prop: KeyframeProp, value: number, read: (event: PointerEvent) => { t: number; v: number }) => {
-    let lastTime = from;
-    let lastValue = value;
+    // The set as it was when the gesture began. Every move is computed from
+    // this rather than from the last state, so dragging across another
+    // keyframe leaves it alone; it is only replaced if the drag lands on it.
+    const original: Keyframe[] = (clip.keyframes ?? []).map((frame) => ({ ...frame, props: { ...frame.props } }));
+    const startedAt = from;
+    let first = true;
     const move = (event: PointerEvent) => {
       if (event.pointerId !== start.pointerId) return;
       const next = read(event);
       const time = localTime(clip, next.t);
-      const moved = Math.abs(time - lastTime) >= 1e-4;
-      if (!moved && next.v === lastValue) return;
-      if (moved) engine.dispatch("clip.keyframe", { clipId: clip.id, t: lastTime, remove: prop });
-      engine.dispatch("clip.keyframe", { clipId: clip.id, t: time, set: { [prop]: next.v } });
-      lastTime = time;
-      lastValue = next.v;
+      const rebuilt: Keyframe[] = [];
+      for (const frame of original) {
+        const isSource = Math.abs(frame.t - startedAt) < 1e-4;
+        const isLanding = Math.abs(frame.t - time) < 1e-4;
+        if (isSource) continue;                       // the one being dragged
+        if (isLanding && !isSource) {
+          // Landing on another keyframe replaces only this property on it.
+          const merged = { ...frame, props: { ...frame.props, [prop]: next.v } };
+          rebuilt.push(merged);
+          continue;
+        }
+        rebuilt.push({ ...frame, props: { ...frame.props } });
+      }
+      if (!rebuilt.some((frame) => Math.abs(frame.t - time) < 1e-4)) {
+        const source = original.find((frame) => Math.abs(frame.t - startedAt) < 1e-4);
+        rebuilt.push({
+          t: time,
+          props: { ...(source?.props ?? {}), [prop]: next.v },
+          ...(source?.interp ? { interp: source.interp } : {}),
+          ...(source?.handles ? { handles: source.handles } : {}),
+        });
+      }
+      engine.dispatch("clip.keyframes.replace", { clipId: clip.id, keyframes: rebuilt, quiet: !first });
+      first = false;
     };
     const end = (event: PointerEvent) => {
       if (event.pointerId !== start.pointerId) return;
@@ -301,6 +355,49 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         const value = propPoints(clip, prop).find((point) => Math.abs(point.t - from) < 1e-4)?.v;
         if (value === undefined) return;
         dragAlong(event, clip, from, prop, value, (moveEvent) => ({ t: timeAt(moveEvent.clientX) - clip.start, v: value }));
+        return;
+      }
+      // F19: dragging an easing grip reshapes the curve for that segment.
+      const grip = target.closest<SVGCircleElement>(".kfb-ease-grip");
+      if (grip) {
+        const group = grip.closest<SVGGElement>(".kfb-ease");
+        const clipId = group?.getAttribute("data-clip");
+        const at = Number(group?.getAttribute("data-t"));
+        const found = clipId ? engine.findClip(clipId) : null;
+        if (!found || !group) return;
+        const side = grip.getAttribute("data-grip") === "in" ? 1 : 0;
+        const list = propPoints(found.clip, block.prop);
+        const index = list.findIndex((entry) => Math.abs(entry.t - at) < 1e-4);
+        const next = list[index + 1];
+        if (!next) return;
+        const box = block.graph.getBoundingClientRect();
+        const x0 = (found.clip.start + list[index].t) * px, x1 = (found.clip.start + next.t) * px;
+        const [lowValue, highValue] = RANGE[block.prop];
+        const graphH = graphHeight(block.body);
+        const toY = (value: number) => graphH - ((value - lowValue) / (highValue - lowValue)) * graphH;
+        const y0 = toY(list[index].v), y1 = toY(next.v);
+        const start = (list[index].handles ?? EASING_HANDLES[list[index].interp] ?? EASING_HANDLES.linear).slice() as [number, number, number, number];
+        const move = (moveEvent: PointerEvent) => {
+          const gx = moveEvent.clientX - box.left;
+          const gy = moveEvent.clientY - box.top;
+          // Handles are fractions of the segment, so the curve keeps its shape
+          // when the keyframes either side move.
+          const fx = Math.max(0, Math.min(1, x1 === x0 ? 0 : (gx - x0) / (x1 - x0)));
+          const fy = y1 === y0 ? start[side ? 3 : 1] : (gy - y0) / (y1 - y0);
+          const handles = start.slice() as [number, number, number, number];
+          handles[side ? 2 : 0] = fx;
+          handles[side ? 3 : 1] = Math.max(-2, Math.min(3, fy));
+          const rebuilt = (found.clip.keyframes ?? []).map((frame) =>
+            Math.abs(frame.t - at) < 1e-4 ? { ...frame, interp: "bezier" as const, handles } : frame);
+          engine.dispatch("clip.keyframes.replace", { clipId: found.clip.id, keyframes: rebuilt, quiet: true });
+        };
+        const stop = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", stop);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", stop, { once: true });
+        event.preventDefault();
         return;
       }
       if (!target.closest(".kfb-graph")) return;
@@ -382,7 +479,8 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     const guides = svgNode("g", "kfb-guides");
     const curves = svgNode("g", "kfb-curves");
     const handles = svgNode("g", "kfb-handles");
-    graph.append(guides, curves, handles);
+    const easing = svgNode("g", "kfb-easings");
+    graph.append(guides, curves, easing, handles);
     body.append(graph);
     const select = head.querySelector<HTMLSelectElement>("select")!;
     select.value = "scale";
@@ -391,7 +489,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     const trackHeight = lane.style.getPropertyValue("--track-h");
     if (trackHeight) { head.style.setProperty("--track-h", trackHeight); body.style.setProperty("--track-h", trackHeight); }
     const block: Block = {
-      lane, toggle, head, body, select, graph, guides, curves, handles,
+      lane, toggle, head, body, select, graph, guides, curves, handles, easing,
       labels: head.querySelector<HTMLElement>(".kfb-labels")!,
       spans: body.querySelector<HTMLElement>(".kfb-spans")!,
       rows: body.querySelector<HTMLElement>(".kfb-rows")!,

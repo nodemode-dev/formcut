@@ -1157,3 +1157,14 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 /* F15: three tabs visible, none clipped, the rest scroll. */
 .tl-tab-strip { max-width: min(calc(3 * 124px), calc(100% - 660px)); }
+
+/* F19: the easing handles on the curve. */
+.kfb-ease-arm { stroke: var(--cue); stroke-width: 1; opacity: 0.55; }
+.kfb-ease-grip { fill: var(--ground); stroke: var(--cue); stroke-width: 1.5; cursor: grab; }
+.kfb-ease-grip:hover { fill: var(--cue); }
+
+/* F7: the keyframe and graph toggle share a height and a baseline. */
+.kfb-toggle { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: var(--radius-s); background: var(--inset); }
+.kfb-toggle > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: calc(var(--radius-s) - 1px); background: transparent; color: var(--ink-soft); }
+.kfb-toggle > button.is-active { background: var(--cue); color: var(--on-cue); }
+.kfb-toggle > button svg { width: 15px; height: 15px; }

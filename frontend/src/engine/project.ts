@@ -1,4 +1,5 @@
 import { MASK_SHAPES } from "./types";
+import type { Keyframe as ClipKeyframe } from "./types";
 import {
   defaultTextStyle,
   defaultTransform,
@@ -741,6 +742,23 @@ export class ProjectEngine {
           const local = Math.max(0, Math.min(found.clip.duration, kf.t));
           upsertKeyframe(found.clip, local, kf.props);
         }
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
+      case "clip.keyframes.replace": {
+        // The whole set at once, for a drag. Replacing rather than removing and
+        // re-adding is what stops a keyframe being destroyed because something
+        // was dragged across it; `quiet` keeps one history entry per gesture
+        // instead of one per pointer move.
+        const p = payload as { clipId: string; keyframes: ClipKeyframe[]; quiet?: boolean };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        if (!p.quiet) this.pushHistory();
+        found.clip.keyframes = p.keyframes
+          .filter((frame) => frame && frame.props && Object.keys(frame.props).length)
+          .map((frame) => ({ ...frame, t: Math.max(0, Math.min(found.clip.duration, frame.t)) }))
+          .sort((a, b) => a.t - b.t);
         s.saved = false;
         this.emit("clips");
         break;
