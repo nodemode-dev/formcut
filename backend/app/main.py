@@ -23,7 +23,7 @@ from .tts import router as tts_router
 
 prefer_bundled()
 
-APP_VERSION = "0.94.0"
+APP_VERSION = "0.95.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
@@ -93,6 +93,36 @@ def _start_log() -> Path:
     logging.getLogger("formcut").info("engine %s starting", APP_VERSION)
     return path
 
+
+class _QuietRoutine(logging.Filter):
+    """Keep the log for things that went wrong or that a person did.
+
+    The preview polls for frames many times a second and each one was logged,
+    so anything worth reading scrolled past in a second. Routine successful
+    reads are dropped; everything that failed, and every write, is kept.
+    """
+
+    ROUTINE = (
+        "/api/render/sessions/",
+        "/api/media/",
+        "/thumb",
+        "/filmstrip",
+        "/api/jobs/",
+        "/api/catalogue",
+        "/api/locales",
+        "/api/proxies",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        line = record.getMessage()
+        if " 200 " not in line and " 304 " not in line:
+            return True  # errors always stay
+        if '"GET ' not in line:
+            return True  # writes always stay
+        return not any(part in line for part in self.ROUTINE)
+
+
+logging.getLogger("uvicorn.access").addFilter(_QuietRoutine())
 
 RUN_LOG = _start_log()
 

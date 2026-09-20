@@ -58,9 +58,43 @@ def _summary(record: dict) -> dict:
     }
 
 
+def _ensure_cover(record: dict) -> None:
+    """Draw a cover if the project has none.
+
+    Four cards showing the same film icon tell a person nothing, which is what
+    the home screen looked like while covers were only made on request.
+    """
+    project_id = str(record.get("id") or "")
+    path = COVERS / f"{project_id}.jpg"
+    if not project_id or path.is_file():
+        return
+    document = record.get("document") or {}
+    if not document.get("timelines"):
+        return
+    try:
+        from PIL import Image
+
+        from .render_document import validate_document
+        from .renderer import FrameRenderer
+
+        valid = validate_document(document)
+        renderer = FrameRenderer(valid, 480)
+        try:
+            pixels = renderer.frame(min(1.0, float(valid.get("duration") or 1) / 3))
+        finally:
+            renderer.close()
+        COVERS.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(pixels[:, :, :3]).save(path, quality=80)
+    except Exception:  # noqa: BLE001 - a project without a cover is still a project
+        return
+
+
 @router.get("/summaries")
 def project_summaries() -> list[dict]:
-    items = [_summary(p) for p in store.list_projects()]
+    records = store.list_projects()
+    for record in records:
+        _ensure_cover(record)
+    items = [_summary(p) for p in records]
     return sorted(items, key=lambda entry: entry["updated"], reverse=True)
 
 

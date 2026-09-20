@@ -34,7 +34,13 @@ MODELS = {
     "click-select": {
         "name": "SAM 2 Hiera Tiny",
         "license": "Apache-2.0",
-        "files": {"sam2_hiera_tiny.onnx": "https://huggingface.co/facebook/sam2-hiera-tiny/resolve/main/sam2_hiera_tiny.onnx"},
+        # SAM 2 ships as PyTorch weights; these are the ONNX exports an engine
+        # running ONNX Runtime can load. The url here first was a file that does
+        # not exist, which is why it returned 404 rather than downloading.
+        "files": {
+            "sam2_hiera_tiny.encoder.onnx": "https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/resolve/main/sam2_hiera_tiny.encoder.onnx",
+            "sam2_hiera_tiny.decoder.onnx": "https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/resolve/main/sam2_hiera_tiny.decoder.onnx",
+        },
     },
     "object-cutout": {
         "name": "Object cutout (U2Net small)",

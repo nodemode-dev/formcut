@@ -571,6 +571,20 @@ class FrameRenderer:
             key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
             h2, w2 = out.shape[:2]
             alpha = read_matte(key, self.matte_time, (w2, h2))
+            if alpha is None and not self.allow_proxy:
+                # No matte has been computed for this moment. Rather than render
+                # the clip untouched and leave a person wondering why the cutout
+                # does nothing, compute it here and keep it. The precompute pass
+                # is a speed-up, not a precondition, and treating it as one is
+                # why cutout appeared to be broken while the model sat ready.
+                try:
+                    from .model_manager import ready as model_ready
+                    from .segmentation import cutout_alpha
+
+                    if model_ready(options.get("model", "object-cutout")):
+                        alpha = cutout_alpha(out[:, :, :3].astype(np.float32) / 255, options)
+                except Exception:
+                    alpha = None
             if alpha is None and (options.get("strokes") or []):
                 # A brush stroke is a person's own instruction, not part of the
                 # model's guess, so it has to apply whether or not a matte has
