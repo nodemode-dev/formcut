@@ -69,7 +69,13 @@ def scene(width: int, height: int, *, effects: list | None = None, mask: bool = 
 
 
 def time_frames(project: dict, count: int, width: int | None = None) -> tuple[float, float]:
-    """Mean and worst milliseconds per frame, cold cache."""
+    """Median and worst milliseconds per frame, cold cache.
+
+    Median rather than mean: on a busy or single-core machine one descheduled
+    frame drags a mean far enough to invent an improvement or hide one. A run
+    of this benchmark once showed the same code as 40 ms and 54 ms, which is
+    noise being read as a result.
+    """
     from app.renderer import FrameRenderer
 
     renderer = FrameRenderer(project, width) if width else FrameRenderer(project)
@@ -83,7 +89,7 @@ def time_frames(project: dict, count: int, width: int | None = None) -> tuple[fl
             samples.append((time.perf_counter() - start) * 1000)
     finally:
         renderer.close()
-    return statistics.mean(samples), max(samples)
+    return statistics.median(samples), max(samples)
 
 
 def main() -> int:
@@ -175,7 +181,8 @@ def main() -> int:
             continue
         print(f"  {width:>4}x{height:<4}  {took:5.1f} s for 3.0 s of output   {3.0 / took:4.2f}x real time   {90 / took:5.1f} frames/s")
 
-    print("\nNumbers move with the machine. Compare runs on one machine, not across them.")
+    print("\nNumbers move with the machine, and a single core moves them a lot.")
+    print("Compare runs on one machine, and treat a difference under about a fifth as noise.")
     return 0
 
 

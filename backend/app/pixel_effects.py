@@ -272,8 +272,22 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
         if entry["id"] not in GRADES and entry["id"] not in VIDEO_EFFECTS:
             raise ValueError("Unknown visual effect: " + entry["id"])
+        # An effect turned all the way down was still being computed in full and
+        # then blended away to nothing, so a chain of disabled effects cost as
+        # much as a chain of active ones.
+        if amount <= 0:
+            continue
         changed = process(result[:, :, :3], entry["id"], local, clamp_params(entry.get("params") or {}))
-        result[:, :, :3] = np.clip(result[:, :, :3] * (1 - amount) + changed * amount, 0, 1)
+        if amount >= 1:
+            # The common case. The blend below reduces to `changed` here, but
+            # spent two full-frame multiplies and an add to arrive at it.
+            np.clip(changed, 0, 1, out=changed)
+            result[:, :, :3] = changed
+            continue
+        changed *= amount
+        changed += result[:, :, :3] * (1 - amount)
+        np.clip(changed, 0, 1, out=changed)
+        result[:, :, :3] = changed
     return np.round(result * 255).astype(np.uint8)
 
 
