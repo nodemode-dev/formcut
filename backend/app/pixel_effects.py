@@ -310,6 +310,9 @@ def _kelvin_gain(kelvin: float) -> np.ndarray:
     return np.array([1.0 + 0.22 * shift, 1.0 + 0.02 * abs(shift) * 0.0, 1.0 - 0.22 * shift], np.float32)
 
 
+LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
+
+
 def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
     """Apply the colour panel to linearish RGB in 0..1. Neutral is identity."""
     if not colour_active(panel):
@@ -319,24 +322,58 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
         return float(panel.get(k, COLOUR_PANEL[k]))
 
     out = rgb.astype(np.float32, copy=True)
-    out *= _kelvin_gain(value("temperature"))
+    # Each step below allocates a full frame, so at 1280x720 a panel that ran
+    # every stage moved about 165 MB per frame whether the stage did anything
+    # or not. Neutral values are now skipped, which is most of them in ordinary
+    # use, and the work that remains is done in place.
+    temperature = value("temperature")
+    if abs(temperature - COLOUR_PANEL["temperature"]) > 1e-6:
+        out *= _kelvin_gain(temperature)
     tint = value("tint") / 100.0
-    out[:, :, 1] *= 1.0 + 0.25 * tint
-    out[:, :, 0] *= 1.0 - 0.10 * tint
-    out[:, :, 2] *= 1.0 - 0.10 * tint
-    out *= 2.0 ** value("exposure")
-    out += value("brightness") / 100.0
+    if tint:
+        out[:, :, 1] *= 1.0 + 0.25 * tint
+        out[:, :, 0] *= 1.0 - 0.10 * tint
+        out[:, :, 2] *= 1.0 - 0.10 * tint
+    exposure = value("exposure")
+    if exposure:
+        out *= 2.0**exposure
+    brightness = value("brightness") / 100.0
+    if brightness:
+        out += brightness
     contrast = 1.0 + value("contrast") / 100.0
-    out = (out - 0.5) * contrast + 0.5
-    luminance = np.sum(np.clip(out, 0, 4) * [0.2126, 0.7152, 0.0722], axis=2, keepdims=True)
-    high = np.clip(luminance - 0.5, 0, None) * 2.0
-    low = np.clip(0.5 - luminance, 0, None) * 2.0
-    out += high * (value("highlights") / 100.0)
-    out += low * (value("shadows") / 100.0)
-    out += (luminance**3) * (value("whites") / 100.0)
-    out += ((1.0 - luminance) ** 3) * (value("blacks") / 100.0)
-    saturation = 1.0 + value("saturation") / 100.0
-    out = luminance + (out - luminance) * saturation
+    if contrast != 1.0:
+        out -= 0.5
+        out *= contrast
+        out += 0.5
+    highlights = value("highlights") / 100.0
+    shadows = value("shadows") / 100.0
+    whites = value("whites") / 100.0
+    blacks = value("blacks") / 100.0
+    saturation_value = value("saturation")
+    needs_luminance = bool(highlights or shadows or whites or blacks) or saturation_value != 0.0
+    luminance = None
+    if needs_luminance:
+        # einsum writes one channel rather than a three-channel temporary that
+        # is then summed away.
+        luminance = np.einsum("ijk,k->ij", np.clip(out, 0, 4), LUMA).astype(np.float32)[:, :, None]
+    if highlights or shadows:
+        high = np.clip(luminance - 0.5, 0, None)
+        high *= 2.0
+        if highlights:
+            out += high * highlights
+        if shadows:
+            low = np.clip(0.5 - luminance, 0, None)
+            low *= 2.0
+            out += low * shadows
+    if whites:
+        out += (luminance**3) * whites
+    if blacks:
+        out += ((1.0 - luminance) ** 3) * blacks
+    saturation = 1.0 + saturation_value / 100.0
+    if saturation != 1.0 and luminance is not None:
+        out -= luminance
+        out *= saturation
+        out += luminance
     fade = value("fade") / 100.0
     if fade:
         out = out * (1.0 - 0.35 * fade) + 0.12 * fade
