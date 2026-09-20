@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from .paths import DATA_DIR
 from . import jobs
+from . import proxies
 MEDIA_DIR = DATA_DIR / "media"
 THUMB_DIR = DATA_DIR / "thumbs"
 INDEX_FILE = DATA_DIR / "media.json"
@@ -126,6 +127,10 @@ def ingest_path(src: Path, name: str, extra: dict | None = None) -> dict:
         **info,
         **(extra or {}),
     }
+    # P3: heavy footage earns a proxy as it arrives, so the first scrub is
+    # already cheap rather than the first scrub paying for the build.
+    if proxies.wants_proxy(item):
+        proxies.enqueue(media_id, stored)
     with _lock:
         items = _read()
         items.append(item)
@@ -235,6 +240,32 @@ def build_reversed(media_id: str, source: Path, report, cancelled) -> Path:
             raise ValueError("Could not join the reversed segments: " + cat.stderr[-300:])
         shutil.move(str(joined), str(final))
     return final
+
+
+@router.get("/{media_id}/proxy")
+def proxy_status(media_id: str) -> dict:
+    _find(media_id)
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    return proxies.status(media_id, matches[0] if matches else None)
+
+
+@router.post("/{media_id}/proxy", status_code=202)
+def build_media_proxy(media_id: str, size: int = proxies.DEFAULT_LONG_SIDE) -> dict:
+    record = _find(media_id)
+    if record["kind"] != "video":
+        raise HTTPException(status_code=400, detail="only video media can have a proxy")
+    if size not in proxies.ALLOWED_SIZES:
+        raise HTTPException(status_code=422, detail="unknown proxy size")
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="media file missing")
+    return proxies.enqueue(media_id, matches[0], size)
+
+
+@router.delete("/{media_id}/proxy", status_code=204)
+def delete_media_proxy(media_id: str) -> None:
+    _find(media_id)
+    proxies.remove(media_id)
 
 
 @router.post("/{media_id}/reverse", status_code=202)
@@ -360,6 +391,7 @@ def delete_media(media_id: str):
     for path in MEDIA_DIR.glob(f"{media_id}.*"):
         path.unlink(missing_ok=True)
     (THUMB_DIR / f"{media_id}.jpg").unlink(missing_ok=True)
+    proxies.remove(media_id)
 
 
 _audio_streams: dict[str, bool] = {}

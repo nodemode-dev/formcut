@@ -20,6 +20,7 @@ AREAS = [
     ("media", "media", False),
     ("projects", "projects", False),
     ("templates", "templates", False),
+    ("proxies", "proxies", True),
     ("renders", "renders", True),
     ("thumbnails", "thumbs", True),
     ("waveforms", "peaks", True),

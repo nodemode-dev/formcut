@@ -12,6 +12,11 @@ from .assets import apply_lut, asset_path
 from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
+from .proxies import usable as proxy_for
+
+# Proxies may be switched off wholesale; the switch lives here so one import
+# covers both the preview path and the reverse builder.
+PROXIES_ENABLED = True
 from .pixel_effects import apply_effects, apply_colour_panel, COLOUR_PANEL
 from .render_document import flatten, validate_document
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
@@ -213,6 +218,12 @@ class FrameRenderer:
             paths = [candidate]
         else:
             paths = list(MEDIA_DIR.glob(f"{media_id}.*"))
+            # P5: a preview may read a proxy; an export never does, because it
+            # builds a renderer with no decode limit and this returns None.
+            if paths and PROXIES_ENABLED:
+                stand_in = proxy_for(media_id, paths[0], self.decode_limit)
+                if stand_in is not None:
+                    paths = [stand_in]
         if not paths:
             raise ValueError("Media file is missing: " + media_id)
         record = _find(media_id)
