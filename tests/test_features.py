@@ -153,3 +153,30 @@ def test_an_effect_at_full_amount_changes_the_picture():
     image = (rng.random((60, 80, 4)) * 255).astype(np.uint8)
     on = apply_effects(image.copy(), [{"id": "gaussian", "amount": 1, "params": {"radius": 6}}], 0.5)
     assert not np.array_equal(on, image)
+
+
+def test_pointing_at_one_thing_keeps_only_that_thing():
+    """A matte with two objects, and a click choosing between them."""
+    import numpy as np
+    from app.segmentation import pick_region, region_count
+
+    matte = np.zeros((180, 320), np.float32)
+    matte[40:120, 30:90] = 1.0  # left
+    matte[40:120, 200:280] = 1.0  # right
+    assert region_count(matte) == 2
+
+    left = pick_region(matte, 60 / 320, 80 / 180)
+    right = pick_region(matte, 240 / 320, 80 / 180)
+    assert left[:, 160:].sum() == 0, "pointing left kept something on the right"
+    assert right[:, :160].sum() == 0, "pointing right kept something on the left"
+    assert left.sum() > 0 and right.sum() > 0
+
+
+def test_pointing_at_the_background_still_keeps_something():
+    """An empty result looks exactly like a broken tool, so it takes the nearest."""
+    import numpy as np
+    from app.segmentation import pick_region
+
+    matte = np.zeros((180, 320), np.float32)
+    matte[40:120, 30:90] = 1.0
+    assert pick_region(matte, 0.5, 0.95).sum() > 0

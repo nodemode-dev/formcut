@@ -591,6 +591,13 @@ class FrameRenderer:
                         # is what turned the cutout into a blob.
                         source = self.media_frame(clip, self.matte_time)
                         found = raw_alpha(source, model)
+                        # A click says which of the things the model found was
+                        # meant. Without it a frame with two people keeps both.
+                        chosen = options.get("point")
+                        if isinstance(chosen, dict):
+                            from .segmentation import pick_region
+
+                            found = pick_region(found, float(chosen.get("x", 0.5)), float(chosen.get("y", 0.5)))
                         alpha = cv2.resize(found, (w2, h2), interpolation=cv2.INTER_LINEAR)
                 except Exception:
                     alpha = None

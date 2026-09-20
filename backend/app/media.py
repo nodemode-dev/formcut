@@ -458,6 +458,48 @@ def media_ducking(media_id: str, body: dict) -> dict:
     )
 
 
+@router.post("/{media_id}/cutout-preview")
+def cutout_preview(media_id: str, body: dict) -> dict:
+    """Run the cutout once and report what it found.
+
+    This exists so the interface can say something true before anything is
+    applied: whether the model is there, how long it took, how much of the frame
+    it kept, and how many separate things it found, which is what tells a person
+    whether they need to point at one.
+    """
+    import time as _time
+
+    from .model_manager import ready as model_ready
+    from .render_document import validate_document
+    from .renderer import FrameRenderer
+    from .segmentation import pick_region, raw_alpha, region_count
+
+    _find(media_id)
+    model = str(body.get("model") or "person-cutout")
+    if not model_ready(model):
+        raise HTTPException(status_code=409, detail=f"{model} is not downloaded yet")
+    project = validate_document(body.get("project") or {})
+    renderer = FrameRenderer(project, 640)
+    started = _time.perf_counter()
+    try:
+        frame = renderer.frame(max(0.0, float(body.get("time") or 0)))
+    finally:
+        renderer.close()
+    alpha = raw_alpha(frame[:, :, :3], model)
+    found = region_count(alpha)
+    point = body.get("point")
+    if isinstance(point, dict):
+        alpha = pick_region(alpha, float(point.get("x", 0.5)), float(point.get("y", 0.5)))
+    kept = float((alpha > 0.5).mean())
+    return {
+        "model": model,
+        "regions": found,
+        "kept": round(kept, 4),
+        "seconds": round(_time.perf_counter() - started, 2),
+        "empty": kept < 0.002,
+    }
+
+
 @router.get("/{media_id}/scenes")
 def media_scenes(media_id: str, sensitivity: float = 0.5, minimum: float = 1.0) -> dict:
     """B5: where the shots change, so a long clip can become short ones."""

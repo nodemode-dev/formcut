@@ -254,6 +254,20 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.cutout": {
+        // There was no such command. Everything that dispatched it, the brush
+        // clear and the cutout flow, did nothing at all and said nothing, which
+        // is the quietest way for a feature to be missing.
+        const p = payload as { clipId: string; cutout: Record<string, unknown> | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.cutout) found.clip.cutout = p.cutout as never;
+        else delete found.clip.cutout;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.mask-track": {
         // A tracked mask is stored as anchors over time, so it stays editable:
         // a person can move a point on any frame afterwards.

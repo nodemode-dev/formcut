@@ -1368,3 +1368,24 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .kfb-head > * { flex: 0 0 auto; }
 .kfb-head select { height: 24px; padding: 0 var(--sp-2); }
 .kfb-head .kfb-toggle { margin: 0; }
+
+
+/* The cutout steps. Numbered because the order matters: a model, then a run,
+   then a choice. A step that has been done says so rather than looking the
+   same as one that has not. */
+.cut-steps { list-style: none; margin: 0; padding: var(--sp-2) 0 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cut-step { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.cut-num {
+  flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px;
+  display: grid; place-items: center;
+  border: 1px solid var(--edge); border-radius: 50%;
+  font-size: 10px; line-height: 1; color: var(--ink-soft); background: var(--inset);
+}
+.cut-step.is-done .cut-num { background: var(--cue); border-color: var(--cue); color: var(--on-cue); }
+.cut-body { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; }
+.cut-body > strong { font-size: 12px; font-weight: 600; flex: 1 1 100%; }
+.cut-note { color: var(--ink-faint); font-size: 11px; flex: 1 1 auto; min-width: 0; }
+.cut-step.is-done .cut-note { color: var(--ink-soft); }
+/* While picking, the picture says so. */
+.stage[data-pick-cutout="on"] { cursor: crosshair; }
+.stage[data-pick-cutout="on"] .preview-canvas { outline: 2px solid var(--cue); outline-offset: -2px; }

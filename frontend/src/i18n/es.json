@@ -601,5 +601,21 @@
   "frame.apply": "Reencuadrar",
   "filler.find": "Buscar muletillas",
   "filler.cut": "Quitarlas",
-  "filler.nocaptions": "crea subtítulos primero"
+  "filler.nocaptions": "crea subtítulos primero",
+  "cut.step1": "Obtener el modelo",
+  "cut.step2": "Quitar el fondo",
+  "cut.step3": "Elegir qué conservar",
+  "cut.remove": "Quitar fondo",
+  "cut.notrun": "sin ejecutar",
+  "cut.working": "Analizando el fotograma",
+  "cut.kept": "del fotograma conservado",
+  "cut.nothing": "no encontró nada",
+  "cut.failed": "no se pudo",
+  "cut.several": "elementos; elige uno",
+  "cut.justone": "un elemento",
+  "cut.pick": "Señalar",
+  "cut.pickhint": "ejecútalo primero",
+  "cut.clicknow": "haz clic en la vista previa",
+  "cut.picked": "conservado lo señalado",
+  "cut.whole": "Conservar todo"
 }

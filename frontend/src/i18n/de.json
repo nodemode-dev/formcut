@@ -601,5 +601,21 @@
   "frame.apply": "Zuschneiden",
   "filler.find": "Füllwörter finden",
   "filler.cut": "Entfernen",
-  "filler.nocaptions": "zuerst Untertitel erstellen"
+  "filler.nocaptions": "zuerst Untertitel erstellen",
+  "cut.step1": "Modell holen",
+  "cut.step2": "Hintergrund entfernen",
+  "cut.step3": "Auswählen, was bleibt",
+  "cut.remove": "Hintergrund entfernen",
+  "cut.notrun": "noch nicht ausgeführt",
+  "cut.working": "Bild wird analysiert",
+  "cut.kept": "des Bildes behalten",
+  "cut.nothing": "nichts gefunden",
+  "cut.failed": "fehlgeschlagen",
+  "cut.several": "Objekte; eines wählen",
+  "cut.justone": "ein Objekt",
+  "cut.pick": "Darauf zeigen",
+  "cut.pickhint": "zuerst ausführen",
+  "cut.clicknow": "im Vorschaubild klicken",
+  "cut.picked": "Auswahl übernommen",
+  "cut.whole": "Alles behalten"
 }

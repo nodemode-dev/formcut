@@ -116,3 +116,46 @@ def outline(alpha: np.ndarray, max_points: int = 48) -> list[dict]:
             break
         tolerance *= 1.5
     return [{"x": round(float(p[0][0]) / width, 5), "y": round(float(p[0][1]) / height, 5)} for p in points]
+
+
+def pick_region(alpha: np.ndarray, x: float, y: float, grow: float = 0.0) -> np.ndarray:
+    """Keep only the part of a matte the person pointed at.
+
+    A cutout model answers "what is foreground", not "which of these". When a
+    frame holds two people, or a person and a chair, the matte contains both and
+    there has been no way to say which one was meant. Pointing at one and
+    keeping the piece it belongs to is that way, and it needs no extra model:
+    the regions are already separate in the matte.
+    """
+    height, width = alpha.shape[:2]
+    solid = (alpha > 0.5).astype(np.uint8)
+    count, labels = cv2.connectedComponents(solid)
+    if count <= 1:
+        return alpha
+    column = int(round(max(0.0, min(1.0, x)) * (width - 1)))
+    row = int(round(max(0.0, min(1.0, y)) * (height - 1)))
+    chosen = int(labels[row, column])
+    if chosen == 0:
+        # Pointed at background. Take the nearest region rather than returning
+        # nothing, because an empty result looks exactly like a broken tool.
+        marks = np.argwhere(solid > 0)
+        if not len(marks):
+            return alpha
+        nearest = marks[np.argmin(((marks - (row, column)) ** 2).sum(axis=1))]
+        chosen = int(labels[nearest[0], nearest[1]])
+    kept = (labels == chosen).astype(np.float32)
+    if grow > 0:
+        size = max(3, int(grow * min(height, width)) | 1)
+        kept = cv2.dilate(kept, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size)))
+    return (alpha * kept).astype(np.float32)
+
+
+def region_count(alpha: np.ndarray) -> int:
+    """How many separate things the matte found, so the interface can say so."""
+    solid = (alpha > 0.5).astype(np.uint8)
+    count, labels = cv2.connectedComponents(solid)
+    keep = 0
+    for index in range(1, count):
+        if int((labels == index).sum()) > solid.size * 0.002:
+            keep += 1
+    return keep

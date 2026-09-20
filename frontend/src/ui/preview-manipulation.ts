@@ -394,6 +394,21 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     }
     return kept.slice(0, 80);
   };
+  // Anything that needs a point on the picture listens for this: the cutout
+  // picker, and whatever comes after it. Sent in picture coordinates, not
+  // screen ones, so a listener does not need to know how the stage is laid out.
+  stage.addEventListener("click", (event) => {
+    const box = stage.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    stage.dispatchEvent(new CustomEvent("formcut:stage-click"));
+    document.dispatchEvent(new CustomEvent("formcut:stage-click", {
+      detail: {
+        x: Math.max(0, Math.min(1, (event.clientX - box.left) / box.width)),
+        y: Math.max(0, Math.min(1, (event.clientY - box.top) / box.height)),
+      },
+    }));
+  });
+
   pen.addEventListener("pointerdown", (event) => {
     const current = maskOf();
     if (!current) return;

@@ -242,6 +242,36 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       </div>
       <div class="section" data-section="removebg" data-feature="section.removebg">
         <div class="section-head">${t("bg.title")} ${icon("chevD")}</div>
+        <!-- A cutout is three questions in order: is the model here, what did
+             it find, and is that the thing you meant. The controls used to be
+             a flat pile that answered none of them. -->
+        <ol class="cut-steps" data-ref="cut-steps">
+          <li class="cut-step" data-step="model">
+            <span class="cut-num">1</span>
+            <div class="cut-body">
+              <strong>${t("cut.step1")}</strong>
+              <span class="cut-note" data-ref="cut-model-state">${t("bg.checking")}</span>
+              <button class="tool-chip" data-ref="cut-model-get" hidden>${t("bg.download")}</button>
+            </div>
+          </li>
+          <li class="cut-step" data-step="run">
+            <span class="cut-num">2</span>
+            <div class="cut-body">
+              <strong>${t("cut.step2")}</strong>
+              <span class="cut-note" data-ref="cut-run-state">${t("cut.notrun")}</span>
+              <button class="tool-chip is-primary" data-ref="cut-run">${t("cut.remove")}</button>
+            </div>
+          </li>
+          <li class="cut-step" data-step="pick">
+            <span class="cut-num">3</span>
+            <div class="cut-body">
+              <strong>${t("cut.step3")}</strong>
+              <span class="cut-note" data-ref="cut-pick-state">${t("cut.pickhint")}</span>
+              <button class="tool-chip" data-ref="cut-pick" aria-pressed="false">${t("cut.pick")}</button>
+              <button class="tool-chip" data-ref="cut-clear-point" hidden>${t("cut.whole")}</button>
+            </div>
+          </li>
+        </ol>
         <div class="prop-row">
           <span>${t("bg.mode")}</span>
           <select class="mini-select" data-ref="bg-mode">
@@ -915,6 +945,127 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const cut = el.querySelector<HTMLElement>('[data-ref="filler-cut"]');
     if (cut) cut.hidden = true;
   });
+
+  // The cutout flow. Each step reports what actually happened rather than
+  // leaving a person to infer it from the picture.
+  const cut = <T extends HTMLElement>(name: string) => el.querySelector<T>(`[data-ref="${name}"]`);
+  const cutClip = () => {
+    const id = engine.snapshot.selectedClipId;
+    return id ? engine.findClip(id) : null;
+  };
+  const chosenModel = () => el.querySelector<HTMLSelectElement>('[data-ref="bg-model"]')?.value
+    ?? cut<HTMLSelectElement>("cut-model")?.value ?? "person-cutout";
+
+  const refreshCutModels = async () => {
+    const state = cut<HTMLElement>("cut-model-state");
+    const get = cut<HTMLButtonElement>("cut-model-get");
+    if (!state) return;
+    try {
+      const listed = await fetch("/api/models").then((r) => r.json());
+      const wanted = listed.filter((m: { id: string }) => ["object-cutout", "person-cutout"].includes(m.id));
+      const missing = wanted.filter((m: { ready?: boolean }) => !m.ready);
+      state.textContent = missing.length ? `${missing.length} ${t("bg.missing")}` : t("bg.ready");
+      if (get) get.hidden = missing.length === 0;
+      el.querySelector('[data-step="model"]')?.classList.toggle("is-done", missing.length === 0);
+    } catch {
+      state.textContent = t("bg.offline");
+    }
+  };
+  cut<HTMLButtonElement>("cut-model-get")?.addEventListener("click", () => void (async () => {
+    const state = cut<HTMLElement>("cut-model-state");
+    if (!state) return;
+    state.textContent = t("bg.getting");
+    for (const id of ["object-cutout", "person-cutout"]) {
+      try {
+        const started = await fetch(`/api/models/${id}/download`, {
+          method: "POST", headers: { "x-formcut-local": "1" },
+        }).then((r) => r.json());
+        if (started.job_id) {
+          for (let waited = 0; waited < 900; waited += 1) {
+            const job = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
+            if (["done", "error", "failed"].includes(job.status)) break;
+            state.textContent = `${t("bg.getting")} ${Math.round((job.progress ?? 0) * 100)}%`;
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        }
+      } catch { /* reported by the refresh below */ }
+    }
+    await refreshCutModels();
+  })());
+
+  cut<HTMLButtonElement>("cut-run")?.addEventListener("click", () => void (async () => {
+    const state = cut<HTMLElement>("cut-run-state");
+    const found = cutClip();
+    if (!found?.clip.mediaId || !state) return;
+    const model = chosenModel();
+    state.textContent = t("cut.working");
+    try {
+      const reply = await fetch(`/api/media/${found.clip.mediaId}/cutout-preview`, {
+        method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
+        body: JSON.stringify({ project: engine.snapshot, time: engine.snapshot.playhead, model }),
+      }).then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json()).detail))));
+      if (reply.empty) {
+        state.textContent = t("cut.nothing");
+        return;
+      }
+      engine.dispatch("clip.cutout", {
+        clipId: found.clip.id,
+        cutout: { ...(found.clip.cutout ?? {}), model, threshold: 0.5, feather: 0.1,
+                  strokes: found.clip.cutout?.strokes ?? [] },
+      });
+      const percent = Math.round(reply.kept * 100);
+      state.textContent = `${percent}% ${t("cut.kept")} · ${reply.seconds}s`;
+      el.querySelector('[data-step="run"]')?.classList.add("is-done");
+      const pick = cut<HTMLElement>("cut-pick-state");
+      if (pick) {
+        pick.textContent = reply.regions > 1
+          ? `${reply.regions} ${t("cut.several")}`
+          : t("cut.justone");
+      }
+    } catch (error) {
+      state.textContent = error instanceof Error ? error.message : t("cut.failed");
+    }
+  })());
+
+  const pickButton = cut<HTMLButtonElement>("cut-pick");
+  pickButton?.addEventListener("click", () => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (!stage) return;
+    const on = stage.dataset.pickCutout !== "on";
+    if (on) stage.dataset.pickCutout = "on"; else delete stage.dataset.pickCutout;
+    pickButton.classList.toggle("is-on", on);
+    pickButton.setAttribute("aria-pressed", String(on));
+    const note = cut<HTMLElement>("cut-pick-state");
+    if (note && on) note.textContent = t("cut.clicknow");
+  });
+  // Clicking the preview while picking chooses which thing to keep.
+  document.addEventListener("formcut:stage-click", (event) => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (stage?.dataset.pickCutout !== "on") return;
+    const at = (event as CustomEvent).detail as { x: number; y: number };
+    const found = cutClip();
+    if (!found?.clip.cutout) return;
+    engine.dispatch("clip.cutout", {
+      clipId: found.clip.id, cutout: { ...found.clip.cutout, point: { x: at.x, y: at.y } },
+    });
+    const note = cut<HTMLElement>("cut-pick-state");
+    if (note) note.textContent = t("cut.picked");
+    cut<HTMLElement>("cut-clear-point")!.hidden = false;
+    el.querySelector('[data-step="pick"]')?.classList.add("is-done");
+    delete stage!.dataset.pickCutout;
+    pickButton?.classList.remove("is-on");
+  });
+  cut<HTMLButtonElement>("cut-clear-point")?.addEventListener("click", () => {
+    const found = cutClip();
+    if (!found?.clip.cutout) return;
+    const next = { ...found.clip.cutout };
+    delete (next as { point?: unknown }).point;
+    engine.dispatch("clip.cutout", { clipId: found.clip.id, cutout: next });
+    const note = cut<HTMLElement>("cut-pick-state");
+    if (note) note.textContent = t("cut.pickhint");
+    cut<HTMLElement>("cut-clear-point")!.hidden = true;
+  });
+  void refreshCutModels();
 
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {

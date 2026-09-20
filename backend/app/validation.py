@@ -170,6 +170,12 @@ def clip_values(clip):
             raise ValueError("Unknown cutout model")
         number(cutout.get("threshold", 0.5), "cutout threshold", 0, 1)
         number(cutout.get("feather", 0.1), "cutout feather", 0.005, 0.5)
+        chosen = cutout.get("point")
+        if chosen is not None:
+            if not isinstance(chosen, dict):
+                raise ValueError("Cutout point must be an object")
+            number(chosen.get("x", 0.5), "cutout point x", 0, 1)
+            number(chosen.get("y", 0.5), "cutout point y", 0, 1)
         for stroke in cutout.get("strokes", []):
             if stroke.get("mode") not in ("keep", "erase"):
                 raise ValueError("Invalid brush mode")

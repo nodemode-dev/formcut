@@ -601,5 +601,21 @@
   "frame.apply": "Reframe",
   "filler.find": "Find filler words",
   "filler.cut": "Remove them",
-  "filler.nocaptions": "make captions first"
+  "filler.nocaptions": "make captions first",
+  "cut.step1": "Get the model",
+  "cut.step2": "Remove the background",
+  "cut.step3": "Choose what to keep",
+  "cut.remove": "Remove background",
+  "cut.notrun": "not run yet",
+  "cut.working": "Looking at this frame",
+  "cut.kept": "of the frame kept",
+  "cut.nothing": "found nothing to keep here",
+  "cut.failed": "could not run",
+  "cut.several": "things found; pick one",
+  "cut.justone": "one thing found",
+  "cut.pick": "Point at it",
+  "cut.pickhint": "run it first",
+  "cut.clicknow": "click the thing in the preview",
+  "cut.picked": "kept what you pointed at",
+  "cut.whole": "Keep everything"
 }
