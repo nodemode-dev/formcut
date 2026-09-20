@@ -20,7 +20,33 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     <div data-group="effects" hidden><label>Category <select data-effect-group></select></label><label>Effect <select data-effect></select></label><button class="tool-chip" data-action="effect-add">Add effect</button><div data-effect-list></div></div>
     <div data-group="audio" hidden><label>Volume <input data-volume type="range" min="0" max="2" step="0.01" value="1"></label><label>Pan <input data-pan type="range" min="-1" max="1" step="0.01" value="0"></label><label>Processor <select data-audio></select></label><button class="tool-chip" data-action="audio-add">Add processor</button><div data-audio-list></div></div>
     <div data-group="transition" hidden><label>Transition <select data-transition><option value="">None</option>${TRANSITIONS.map(k => `<option value="${k}">${k === "crossfade" ? "Crossfade" : k === "dip" ? "Dip to black" : k.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>`).join("")}</select></label><label>Seconds <input data-transition-duration type="number" value="0.6" min="0.1" step="0.1"></label><button class="tool-chip" data-action="transition">Apply transition</button></div>
-    <div data-group="cutout" hidden><label>Model <select data-cutout-model><option value="object-cutout">Object cutout</option><option value="person-cutout">Person cutout</option></select></label><label>Threshold <input data-cutout-threshold type="range" min="0" max="1" step="0.01" value="0.5"></label><label>Edge softness <input data-cutout-feather type="range" min="0.005" max="0.5" step="0.005" value="0.1"></label><button class="tool-chip" data-action="cutout">Enable cutout</button><button class="tool-chip" data-action="cutout-clear">Remove cutout</button><label>Brush <select data-brush><option value="off">Off</option><option value="keep">Restore</option><option value="erase">Erase</option></select></label><label>Brush radius <input data-brush-radius type="range" min="0.005" max="0.15" step="0.005" value="0.02"></label><button class="tool-chip" data-action="brush-undo">Remove last stroke</button><p>Paint on the preview. Brush edits use source coordinates and are saved with the clip.</p></div>
+    <div data-group="cutout" hidden>
+      <!-- This is the panel people actually reach for, so the whole flow lives
+           here as well: what the model is, the action that removes a
+           background, and the way to say which thing was meant. "Enable cutout"
+           was the only control that removed a background and its name said
+           nothing about that. -->
+      <div class="cut-flow">
+        <div class="cut-line">
+          <strong>Background removal</strong>
+          <span class="cut-note" data-cut-model-state>checking for the model</span>
+          <button class="tool-chip" data-action="cutout-models" hidden>Download models</button>
+        </div>
+        <label>Model <select data-cutout-model><option value="object-cutout">Anything (object)</option><option value="person-cutout">A person</option></select></label>
+        <div class="cut-line">
+          <button class="tool-chip is-primary" data-action="cutout">Remove background</button>
+          <button class="tool-chip" data-action="cutout-pick" aria-pressed="false">Point at what to keep</button>
+          <button class="tool-chip" data-action="cutout-clear">Put it back</button>
+        </div>
+        <p class="cut-note" data-cut-state>Nothing removed yet.</p>
+      </div>
+      <label>Edge tightness <input data-cutout-threshold type="range" min="0" max="1" step="0.01" value="0.5"></label>
+      <label>Edge softness <input data-cutout-feather type="range" min="0.005" max="0.5" step="0.005" value="0.1"></label>
+      <label>Brush <select data-brush><option value="off">Off</option><option value="keep">Restore</option><option value="erase">Erase</option></select></label>
+      <label>Brush radius <input data-brush-radius type="range" min="0.005" max="0.15" step="0.005" value="0.02"></label>
+      <button class="tool-chip" data-action="brush-undo">Remove last stroke</button>
+      <p>Paint on the preview to correct the edges. Brush edits are saved with the clip.</p>
+    </div>
     <div data-group="advanced" hidden><label>3D LUT <input data-lut type="file" accept=".cube"></label><button class="tool-chip" data-action="lut-clear">Remove LUT</button><label>WGSL shader <input data-shader type="file" accept=".wgsl"></label><button class="tool-chip" data-action="shader-clear">Remove shader</button><label>Animated property <select data-expression-prop>${[["posX", "Position X"], ["posY", "Position Y"], ["scale", "Scale"], ["rotation", "Rotation"], ["opacity", "Opacity"]].map(([k, label]) => `<option value="${k}">${label}</option>`).join("")}</select></label><textarea data-expression rows="3" placeholder="value + 10 * sin(t * 2 * pi)"></textarea><button class="tool-chip" data-action="expression">Apply expression</button><p>Variables: t, duration, value, pi. Arithmetic and sin, cos, tan, abs, min, max, sqrt, floor, ceil.</p></div>
     <p class="creator-status" role="status"></p>`;
   const status = root.querySelector<HTMLElement>(".creator-status")!;
@@ -120,11 +146,60 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       if (action === "effect-add") patch({ effects: [...(clip.effects ?? []), { id: query<HTMLSelectElement>("effect").value, amount: 1 }] });
       if (action === "audio-add") patch({ audioEffects: [...(clip.audioEffects ?? []), { id: query<HTMLSelectElement>("audio").value, amount: 1 }] });
       if (action === "transition") engine.dispatch("clip.transition", { clipId: clip.id, transition: query<HTMLSelectElement>("transition").value ? { type: query<HTMLSelectElement>("transition").value, duration: Number(query("transition-duration").value) } : null });
+      if (action === "cutout-models") {
+        const state = root.querySelector<HTMLElement>("[data-cut-model-state]");
+        if (state) state.textContent = "downloading";
+        for (const id of ["object-cutout", "person-cutout"]) {
+          try {
+            const started = await api<{ job_id?: string }>(`/api/models/${id}/download`, {});
+            if (started.job_id) {
+              for (let waited = 0; waited < 900; waited += 1) {
+                const job = await api<{ status: string; progress?: number }>(`/api/jobs/${started.job_id}`);
+                if (["done", "error", "failed"].includes(job.status)) break;
+                if (state) state.textContent = `downloading ${Math.round((job.progress ?? 0) * 100)}%`;
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
+            }
+          } catch { /* the refresh below reports it */ }
+        }
+        await refreshCutoutModels();
+        return;
+      }
+      if (action === "cutout-pick") {
+        const stage = document.querySelector<HTMLElement>(".stage");
+        const button = root.querySelector<HTMLElement>('[data-action="cutout-pick"]');
+        if (!stage || !button) return;
+        const on = stage.dataset.pickCutout !== "on";
+        if (on) stage.dataset.pickCutout = "on"; else delete stage.dataset.pickCutout;
+        button.classList.toggle("is-on", on);
+        button.setAttribute("aria-pressed", String(on));
+        const state = root.querySelector<HTMLElement>("[data-cut-state]");
+        if (state && on) state.textContent = "Click the thing you want to keep in the preview.";
+        return;
+      }
       if (action === "cutout") {
         const model = query<HTMLSelectElement>("cutout-model").value;
         const models = await api<Array<{ id: string; ready: boolean }>>("/api/models");
         if (!models.find(m => m.id === model)?.ready) throw new Error("Download this model using Studio > Local models first");
+        const state = root.querySelector<HTMLElement>("[data-cut-state]");
+        if (state) state.textContent = "Looking at this frame...";
         patch({ cutout: { model, threshold: Number(query("cutout-threshold").value), feather: Number(query("cutout-feather").value), strokes: clip.cutout?.strokes ?? [] } }, clip.id);
+        // Say what the model actually found, rather than leaving a person to
+        // guess from a picture that may not have changed much.
+        try {
+          const reply = await api<{ kept: number; regions: number; seconds: number; empty: boolean }>(
+            `/api/media/${clip.mediaId}/cutout-preview`,
+            { project: engine.snapshot, time: engine.snapshot.playhead, model });
+          if (state) {
+            state.textContent = reply.empty
+              ? "Found nothing to keep in this frame."
+              : `Kept ${Math.round(reply.kept * 100)}% of the frame in ${reply.seconds}s` +
+                (reply.regions > 1 ? ` · ${reply.regions} things found, point at one` : "");
+          }
+        } catch (error) {
+          if (state) state.textContent = error instanceof Error ? error.message : "Could not run the model.";
+        }
+        return;
       }
       if (action === "cutout-clear") patch({ cutout: undefined });
       if (action === "brush-undo" && clip.cutout) patch({ cutout: { ...clip.cutout, strokes: clip.cutout.strokes.slice(0, -1) } });
@@ -145,6 +220,35 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     const file = query("shader").files?.[0], clipId = selected()?.id; if (!file || !clipId) return;
     patch({ shaderId: (await api("/api/assets/shader", { name: file.name, source: await file.text() })).id }, clipId);
   }));
+  // Model readiness, reported where the cutout is used.
+  const refreshCutoutModels = async () => {
+    const state = root.querySelector<HTMLElement>("[data-cut-model-state]");
+    const get = root.querySelector<HTMLElement>('[data-action="cutout-models"]');
+    if (!state) return;
+    try {
+      const listed = await api<Array<{ id: string; ready?: boolean }>>("/api/models");
+      const missing = listed.filter((m) => ["object-cutout", "person-cutout"].includes(m.id) && !m.ready);
+      state.textContent = missing.length ? `${missing.length} model(s) to download first` : "model ready";
+      if (get) get.hidden = missing.length === 0;
+    } catch {
+      state.textContent = "engine unreachable";
+    }
+  };
+  void refreshCutoutModels();
+  // A click on the preview while picking chooses which thing to keep.
+  document.addEventListener("formcut:stage-click", (event) => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (stage?.dataset.pickCutout !== "on") return;
+    const at = (event as CustomEvent).detail as { x: number; y: number };
+    const clip = selected();
+    if (!clip?.cutout) return;
+    engine.dispatch("clip.cutout", { clipId: clip.id, cutout: { ...clip.cutout, point: at } });
+    const state = root.querySelector<HTMLElement>("[data-cut-state]");
+    if (state) state.textContent = "Kept what you pointed at.";
+    delete stage!.dataset.pickCutout;
+    root.querySelector('[data-action="cutout-pick"]')?.classList.remove("is-on");
+  });
+
   void api<typeof catalog>("/api/catalogue").then(result => {
     catalog = result;
     // One flat list of eighty-odd entries is a scroll, not a choice. The

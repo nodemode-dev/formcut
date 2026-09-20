@@ -125,16 +125,19 @@ build_one() {
     --disable-libx264 --disable-libx265 --disable-libxvid --disable-librav1e \
     --extra-cflags="-arch $arch -mmacosx-version-min=11.0" \
     --extra-ldflags="-arch $arch -mmacosx-version-min=11.0" \
-    $cross $EXTRA
+    $cross $EXTRA 2>&1 | tee "$WORK/configure-$arch.log"
 
   # Read the licence back from what configure decided, not from the flags I
-  # passed it. They are not the same claim.
-  if ! grep -q "License: LGPL version 2.1 or later" ffbuild/config.log; then
-    echo "REFUSING: configure did not report LGPL-2.1. What it reported:" >&2
-    grep -m1 "^License:" ffbuild/config.log >&2 || true
-    return 4
-  fi
-  echo "configure reports: LGPL version 2.1 or later"
+  # passed it, because those are not the same claim. configure prints this to
+  # its own output, which is why it is captured above: it is not in config.log,
+  # and grepping there reported a failure while the build was perfectly fine.
+  local reported
+  reported="$(grep -m1 '^License:' "$WORK/configure-$arch.log" || true)"
+  case "$reported" in
+    *"LGPL version 2.1"*) echo "configure reports: $reported" ;;
+    "") echo "REFUSING: configure printed no licence line at all" >&2; return 4 ;;
+    *) echo "REFUSING: configure reported $reported" >&2; return 4 ;;
+  esac
 
   say "building $arch (this takes a while)"
   make -j"$JOBS"
