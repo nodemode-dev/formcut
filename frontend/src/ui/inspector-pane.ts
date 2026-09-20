@@ -641,9 +641,12 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const found = id ? engine.findClip(id) : null;
     if (!found || !foundCuts.length) return;
     // Split from the end backwards, so each cut's time still means what it
-    // meant when it was measured.
+    // meant when it was measured. The command takes `time`, not `at`: passing
+    // the wrong name made every split a silent no-op.
     for (const at of [...foundCuts].sort((a, b) => b - a)) {
-      engine.dispatch("clips.split", { at: found.clip.start + at, clipIds: [found.clip.id] });
+      const current = engine.findClip(found.clip.id);
+      if (!current) break;
+      engine.dispatch("clips.split", { time: current.clip.start + at, clipIds: [current.clip.id] });
     }
     if (sceneState) sceneState.textContent = `${foundCuts.length} ${t("scene.done")}`;
     sceneSplit.hidden = true;

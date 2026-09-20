@@ -158,6 +158,8 @@
     "set.interface": true,
     "set.providers": true,
     "set.connections": false,
-    "set.advanced": false
+    "set.advanced": false,
+    "section.scenes": false,
+    "section.repair": true
   }
 }
