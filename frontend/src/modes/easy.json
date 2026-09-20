@@ -41,7 +41,8 @@
       "video:basic": [
         "transform",
         "timing",
-        "text"
+        "text",
+        "canvas"
       ],
       "video:speed": [
         "timing",
@@ -166,6 +167,7 @@
     "set.advanced": false,
     "section.scenes": false,
     "section.repair": true,
-    "subtab.repair": true
+    "subtab.repair": true,
+    "section.canvas": true
   }
 }

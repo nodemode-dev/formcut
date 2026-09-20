@@ -43,7 +43,8 @@
         "transform",
         "timing",
         "blend",
-        "text"
+        "text",
+        "canvas"
       ],
       "video:speed": [
         "timing",
@@ -177,6 +178,7 @@
     "set.advanced": true,
     "section.scenes": true,
     "section.repair": true,
-    "subtab.repair": true
+    "subtab.repair": true,
+    "section.canvas": true
   }
 }

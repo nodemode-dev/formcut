@@ -276,6 +276,29 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux" data-ref="scene-state"></span>
         </div>
       </div>
+      <div class="section" data-section="canvas" data-feature="section.canvas">
+        <div class="section-head">${t("canvas.title")} ${icon("chevD")}</div>
+        <div class="prop-row">
+          <span>${t("canvas.kind")}</span>
+          <select class="mini-select" data-ref="canvas-kind">
+            <option value="">${t("canvas.none")}</option>
+            <option value="colour">${t("canvas.colour")}</option>
+            <option value="gradient">${t("canvas.gradient")}</option>
+            <option value="blur">${t("canvas.blur")}</option>
+          </select>
+          <span class="prop-aux"></span>
+        </div>
+        <div class="prop-row" data-ref="canvas-colours" hidden>
+          <span>${t("canvas.colours")}</span>
+          <input type="color" data-ref="canvas-from" value="#101418">
+          <input type="color" data-ref="canvas-to" value="#2b3440">
+        </div>
+        <div class="prop-row" data-ref="canvas-amount-row" hidden>
+          <span>${t("canvas.amount")}</span>
+          <input type="range" class="slider" data-ref="canvas-amount" min="5" max="120" step="5" value="40">
+          <span class="prop-aux" data-ref="canvas-amount-value">40</span>
+        </div>
+      </div>
       <div class="section" data-section="repair" data-feature="section.repair">
         <div class="section-head">${t("rep.title")} ${icon("chevD")}</div>
         <div class="prop-row">
@@ -323,7 +346,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     </div>`;
 
   const TAB_VIEWS: Record<string, { sections: string[]; pages: string[] }> = {
-    "video:basic": { sections: ["transform", "text", "blend"], pages: [] },
+    "video:basic": { sections: ["transform", "text", "blend", "canvas"], pages: [] },
     "video:speed": { sections: ["timing"], pages: ["speed"] },
     "video:animation": { sections: ["track"], pages: ["motion"] },
     // Repair is a subtab of its own: stabilisation, flicker, noise, colour match
@@ -341,7 +364,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   let activeSubtab = "basic";
   let showAll = false;
   const everything = {
-    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg"],
+    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas"],
     pages: ["speed", "motion", "effects", "audio", "transition", "cutout", "advanced"],
   };
   const showAllChip = el.querySelector<HTMLButtonElement>('[data-ref="show-all"]')!;
@@ -714,6 +737,37 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     }
   })());
   void refreshModels();
+
+  // The renderer has drawn colour, gradient, image and blurred backgrounds
+  // since 0.70.0 with no way to choose one; this is that way.
+  const canvasKind = el.querySelector<HTMLSelectElement>('[data-ref="canvas-kind"]');
+  const writeCanvas = () => {
+    const kind = canvasKind?.value ?? "";
+    const rows = {
+      colours: el.querySelector<HTMLElement>('[data-ref="canvas-colours"]'),
+      amount: el.querySelector<HTMLElement>('[data-ref="canvas-amount-row"]'),
+    };
+    if (rows.colours) rows.colours.hidden = !(kind === "colour" || kind === "gradient");
+    if (rows.amount) rows.amount.hidden = kind !== "blur";
+    const from = el.querySelector<HTMLInputElement>('[data-ref="canvas-from"]')?.value ?? "#101418";
+    const to = el.querySelector<HTMLInputElement>('[data-ref="canvas-to"]')?.value ?? "#2b3440";
+    const amount = Number(el.querySelector<HTMLInputElement>('[data-ref="canvas-amount"]')?.value ?? 40);
+    const background = kind === "colour" ? { type: "colour", colour: from }
+      : kind === "gradient" ? { type: "gradient", from, to }
+      : kind === "blur" ? { type: "blur", amount }
+      : null;
+    engine.dispatch("project.background", { background });
+  };
+  canvasKind?.addEventListener("change", writeCanvas);
+  for (const ref of ["canvas-from", "canvas-to", "canvas-amount"]) {
+    el.querySelector(`[data-ref="${ref}"]`)?.addEventListener("input", (event) => {
+      if (ref === "canvas-amount") {
+        const label = el.querySelector<HTMLElement>('[data-ref="canvas-amount-value"]');
+        if (label) label.textContent = (event.target as HTMLInputElement).value;
+      }
+      writeCanvas();
+    });
+  }
 
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {

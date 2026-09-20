@@ -1,0 +1,15 @@
+{
+ "language.name": "Hrvatski",
+ "menu.file": "Datoteka",
+ "menu.edit": "Uredi",
+ "menu.view": "Prikaz",
+ "export.start": "Pokreni izvoz",
+ "home.title": "Natrag na početni zaslon",
+ "cap.cancel": "Odustani",
+ "tl.add": "Dodaj vremensku crtu",
+ "tl.remove": "Ukloni ovu vremensku crtu",
+ "rep.title": "Popravak",
+ "mask.brush": "Kist",
+ "canvas.title": "Pozadina platna",
+ "gen.image": "Stvori sliku"
+}

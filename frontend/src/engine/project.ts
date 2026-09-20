@@ -244,6 +244,16 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "project.background": {
+        const p = payload as { background: Record<string, unknown> | null };
+        this.pushHistory();
+        if (p.background) (s as unknown as Record<string, unknown>).background = p.background;
+        else delete (s as unknown as Record<string, unknown>).background;
+        s.saved = false;
+        this.emit("project");
+        this.emit("clips");
+        break;
+      }
       case "clip.smooth-slow": {
         const p = payload as { clipId: string; on: boolean };
         const found = this.findClip(p.clipId);
@@ -596,7 +606,10 @@ export class ProjectEngine {
         if (!found) break;
         this.pushHistory();
         if (p.speed !== undefined) {
-          found.clip.speed = Math.min(4, Math.max(0.25, p.speed)) || 1;
+          // The engine accepts 0.05x to 100x and the renderer honours it; the
+          // interface was capping at 4x, so most of the range could not be
+          // reached from the app at all.
+          found.clip.speed = Math.min(100, Math.max(0.05, p.speed)) || 1;
         }
         const half = found.clip.duration / 2;
         if (p.fadeIn !== undefined) found.clip.fadeIn = Math.min(half, Math.max(0, p.fadeIn));

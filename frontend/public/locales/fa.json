@@ -1,0 +1,15 @@
+{
+ "language.name": "فارسی",
+ "menu.file": "پرونده",
+ "menu.edit": "ویرایش",
+ "menu.view": "نما",
+ "export.start": "شروع خروجی",
+ "home.title": "بازگشت به صفحه آغاز",
+ "cap.cancel": "لغو",
+ "tl.add": "افزودن خط زمانی",
+ "tl.remove": "حذف این خط زمانی",
+ "rep.title": "ترمیم",
+ "mask.brush": "قلم‌مو",
+ "canvas.title": "پس‌زمینه بوم",
+ "gen.image": "ساخت تصویر"
+}

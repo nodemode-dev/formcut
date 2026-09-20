@@ -23,7 +23,7 @@ from .tts import router as tts_router
 
 prefer_bundled()
 
-APP_VERSION = "0.86.0"
+APP_VERSION = "0.87.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
@@ -54,6 +54,9 @@ app.include_router(presets_router)
 from .generate import router as generate_router
 
 app.include_router(generate_router)
+from .addons import router as addons_router
+
+app.include_router(addons_router)
 app.include_router(track_router)
 app.include_router(features_router)
 app.include_router(brush_router)
@@ -104,7 +107,10 @@ SECRET_HINTS = ("key", "token", "secret", "password", "authorization")
 def locales() -> dict:
     """P6: locale files dropped into the data directory, with missing keys named."""
     import json as _json
-    folder = DATA_DIR / "locales"
+    # Locales that ship with the app are read as well as ones a person dropped
+    # in, otherwise a translation that ships is one nobody ever sees.
+    bundled = Path(__file__).resolve().parents[2] / "frontend" / "public" / "locales"
+    folders = [f for f in (bundled, DATA_DIR / "locales") if f.is_dir()]
     english: dict = {}
     base = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n" / "en.json"
     if base.is_file():
@@ -113,8 +119,12 @@ def locales() -> dict:
         except ValueError:
             english = {}
     out = []
-    if folder.is_dir():
-        for path in sorted(folder.glob("*.json")):
+    seen: set[str] = set()
+    for path in sorted(p for f in folders for p in f.glob("*.json")):
+        if path.stem in seen:
+            continue
+        seen.add(path.stem)
+        if path.is_file():
             try:
                 data = _json.loads(path.read_text(encoding="utf-8"))
             except ValueError as exc:

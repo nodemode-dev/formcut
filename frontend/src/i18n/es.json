@@ -574,5 +574,13 @@
   "mask.subject": "Seleccionar sujeto",
   "mask.looking": "Buscando el sujeto",
   "mask.traced": "Trazado, puntos:",
-  "mask.failed": "No se pudo trazar"
+  "mask.failed": "No se pudo trazar",
+  "canvas.title": "Fondo del lienzo",
+  "canvas.kind": "Fondo",
+  "canvas.none": "Ninguno",
+  "canvas.colour": "Color",
+  "canvas.gradient": "Degradado",
+  "canvas.blur": "Clip desenfocado",
+  "canvas.colours": "Colores",
+  "canvas.amount": "Cantidad"
 }

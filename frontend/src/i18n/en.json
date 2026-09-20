@@ -574,5 +574,13 @@
   "mask.subject": "Select subject",
   "mask.looking": "Finding the subject",
   "mask.traced": "Traced, anchors:",
-  "mask.failed": "Could not trace that"
+  "mask.failed": "Could not trace that",
+  "canvas.title": "Canvas background",
+  "canvas.kind": "Background",
+  "canvas.none": "None",
+  "canvas.colour": "Colour",
+  "canvas.gradient": "Gradient",
+  "canvas.blur": "Blurred clip",
+  "canvas.colours": "Colours",
+  "canvas.amount": "Blur amount"
 }

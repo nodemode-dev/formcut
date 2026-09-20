@@ -84,7 +84,26 @@ def detect(refresh: bool = False) -> dict[str, list[str]]:
 def choose(codec: str) -> str | None:
     """The encoder we would use for a codec, or None if none works here."""
     options = detect().get(codec) or []
-    return options[0] if options else None
+    if options:
+        return options[0]
+    if codec == "h264":
+        # Nothing built in can encode H.264, which is the expected state for an
+        # LGPL ffmpeg on a machine with no hardware encoder. An add-on the
+        # person installed themselves is asked last, never bundled.
+        from .addons import h264_encoder
+        found = h264_encoder()
+        if found:
+            return found[1]
+    return None
+
+
+def addon_binary_for(encoder: str):
+    """The binary to run for an encoder, when it is not the bundled ffmpeg."""
+    from .addons import h264_encoder
+    found = h264_encoder()
+    if found and found[1] == encoder:
+        return found[0]
+    return None
 
 
 def tier_flags(encoder: str, quality: str) -> list[str]:

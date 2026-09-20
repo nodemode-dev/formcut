@@ -302,6 +302,15 @@ def dispatch(method: str, params: dict):
         note_operation(session_id, method, {"project": params.get("id")} if isinstance(params, dict) and params.get("id") else None)
     if method == "session.hello":
         return open_session(SessionInput(name=str(params.get("name") or "orchestrator"), agent=params.get("agent")))
+    if method == "media.scenes":
+        from . import scenes as scene_module
+        from .media import MEDIA_DIR, _find
+        media_id = str(params.get("id") or "")
+        _find(media_id)
+        matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+        if not matches:
+            raise ValueError("Media file is missing")
+        return scene_module.scenes(matches[0], float(params.get("sensitivity") or 0.5))
     if method == "media.proxy":
         from . import proxies as proxy_module
         from .media import MEDIA_DIR, _find
@@ -342,7 +351,7 @@ def dispatch(method: str, params: dict):
         return {"ready": True, "status": "done", "file": result.get("file"), "name": result.get("name"),
                 "media_type": result.get("media_type"), "url": f"/api/jobs/{job_id}/file"}
     if method == "capabilities":
-        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "media.proxy", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed", "crop", "colour", "animations", "volumeKeys", "lutIntensity", "pitchFollowsSpeed", "key", "mask", "fadeIn", "fadeOut", "label"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "clip.reattach", "clip.detach", "clip.ripple-delete", "clip.speed-curve", "clip.animations", "track.add", "track.remove", "timeline.add", "project.settings"]}
+        return {"methods": ["capabilities", "catalogue", "session.hello", "media.list", "media.import", "media.proxy", "media.scenes", "project.list", "project.create", "project.get", "project.edit", "project.undo", "project.redo", "project.export", "job.result", "job.status", "job.cancel"], "clip_properties": ["transform", "effects", "audioEffects", "speedCurve", "sourceIn", "keyframes", "expressions", "cutout", "lutId", "shaderId", "transitionIn", "textStyle", "volume", "pan", "muted", "reversed", "crop", "colour", "animations", "volumeKeys", "lutIntensity", "pitchFollowsSpeed", "key", "mask", "fadeIn", "fadeOut", "label"], "edit_commands": ["clip.add", "clip.remove", "clip.update", "clip.move", "clip.split", "clips.move", "clips.remove", "clips.duplicate", "clips.add", "clips.mute", "clips.split", "clip.rejoin", "clip.freeze-insert", "clip.reattach", "clip.detach", "clip.ripple-delete", "clip.speed-curve", "clip.animations", "track.add", "track.remove", "timeline.add", "project.settings"]}
     if method == "catalogue":
         return catalogue()
     if method == "project.list":

@@ -1,0 +1,15 @@
+{
+ "language.name": "العربية",
+ "menu.file": "ملف",
+ "menu.edit": "تحرير",
+ "menu.view": "عرض",
+ "export.start": "ابدأ التصدير",
+ "home.title": "العودة إلى شاشة البدء",
+ "cap.cancel": "إلغاء",
+ "tl.add": "إضافة مخطط زمني",
+ "tl.remove": "حذف هذا المخطط",
+ "rep.title": "إصلاح",
+ "mask.brush": "فرشاة",
+ "canvas.title": "خلفية اللوحة",
+ "gen.image": "إنشاء صورة"
+}

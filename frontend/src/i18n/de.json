@@ -574,5 +574,13 @@
   "mask.subject": "Motiv auswählen",
   "mask.looking": "Motiv wird gesucht",
   "mask.traced": "Nachgezeichnet, Punkte:",
-  "mask.failed": "Nachzeichnen nicht möglich"
+  "mask.failed": "Nachzeichnen nicht möglich",
+  "canvas.title": "Hintergrund",
+  "canvas.kind": "Hintergrund",
+  "canvas.none": "Keiner",
+  "canvas.colour": "Farbe",
+  "canvas.gradient": "Verlauf",
+  "canvas.blur": "Unscharfer Clip",
+  "canvas.colours": "Farben",
+  "canvas.amount": "Stärke"
 }

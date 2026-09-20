@@ -17,8 +17,8 @@ from pydantic import BaseModel, Field
 
 from . import gpu, jobs
 from .audio_render import RATE, processed_clip_audio, render_audio
+from .encoders import addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
-from .encoders import estimate_size, pixel_format, supports_ten_bit, tier_flags
 from .encoders import status as encoder_status
 from .frame_cache import FrameCache, ReadAhead
 from .matte_cache import matte_key, sample_times
@@ -237,7 +237,10 @@ def export_media(project: dict, job_id: str, report, cancelled, format: str, qua
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags]
         count = math.ceil(project["duration"] * fps)
-        command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2", "-r", out_rate, *codec, "-pix_fmt", pix, "-t", str(project["duration"]), str(path)]
+        # An H.264 add-on the person installed runs from its own binary; the
+        # bundled LGPL ffmpeg drives everything else.
+        program = str(addon_binary_for(encoder) or "ffmpeg")
+        command = [program, "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-i", str(audio), "-map", "0:v", "-map", "1:a", "-vf", f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2", "-r", out_rate, *codec, "-pix_fmt", pix, "-t", str(project["duration"]), str(path)]
         with log.open("wb") as errors:
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=errors)
             # R5: render chunks on a bounded worker pool and feed the encoder in
