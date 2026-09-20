@@ -550,5 +550,15 @@
   "home.never": "not opened yet",
   "home.minutes": "minutes ago",
   "home.hours": "hours ago",
-  "home.cover": "Use this frame as the cover"
+  "home.cover": "Use this frame as the cover",
+  "time.smooth": "Smooth slow motion",
+  "time.smooth.hint": "makes the frames between",
+  "scene.title": "Scenes",
+  "scene.sensitivity": "Sensitivity",
+  "scene.find": "Find cuts",
+  "scene.split": "Split there",
+  "scene.looking": "Looking",
+  "scene.found": "cuts found",
+  "scene.done": "splits made",
+  "scene.failed": "Could not read that clip"
 }

@@ -550,5 +550,15 @@
   "home.never": "sin abrir",
   "home.minutes": "minutos",
   "home.hours": "horas",
-  "home.cover": "Usar este fotograma como portada"
+  "home.cover": "Usar este fotograma como portada",
+  "time.smooth": "Cámara lenta suave",
+  "time.smooth.hint": "crea los fotogramas intermedios",
+  "scene.title": "Escenas",
+  "scene.sensitivity": "Sensibilidad",
+  "scene.find": "Buscar cortes",
+  "scene.split": "Dividir ahí",
+  "scene.looking": "Buscando",
+  "scene.found": "cortes",
+  "scene.done": "divisiones",
+  "scene.failed": "No se pudo leer el clip"
 }

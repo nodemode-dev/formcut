@@ -1016,7 +1016,13 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* The section's own container goes fullscreen, not the popout around it: the
    rail steps aside and the open section covers the window. */
 .set-head-actions { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
-.studio-modal.is-full .studio-pair { width: 100vw; height: 100vh; max-width: none; max-height: none; border-radius: 0; gap: 0; }
+/* The scrim keeps padding for the windowed size; in fullscreen that padding
+   pushes the section off the corner and out of the bottom, so it goes. */
+.studio-modal.is-full { padding: 0; align-items: stretch; justify-items: stretch; }
+.studio-modal.is-full .studio-pair {
+  width: 100vw; height: 100vh; max-width: none; max-height: none;
+  border-radius: 0; gap: 0; margin: 0;
+}
 .studio-modal.is-full .studio-rail { display: none; }
 .studio-modal.is-full .set-window { max-height: none; width: 100vw; height: 100vh; border-radius: 0; }
 .studio-modal.is-full .set-view { max-height: none; }
@@ -1284,3 +1290,34 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   border: 1px solid var(--cue); border-radius: var(--radius-s);
   background: var(--ground); color: var(--ink); font: inherit; outline: none;
 }
+
+/* F18: track headers. The name takes the room it has and stops with an
+   ellipsis, the icons sit on one line at a fixed size, and nothing wraps to a
+   second row however long a track is called. */
+.track-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+}
+.track-head > .name, .track-head .track-name {
+  min-width: 0; max-width: 9ch;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.track-head .track-tools, .track-head > .tools {
+  display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+}
+.track-head .iconbtn { width: 22px; height: 22px; flex: 0 0 auto; }
+.track-head .iconbtn svg { width: 14px; height: 14px; }
+
+/* F23: nothing pokes out of a row. Labels shorten, values keep their width, and
+   a row never grows a second line because a language is longer. */
+.prop-row { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; flex-wrap: nowrap; }
+.prop-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prop-row > .prop-aux { flex: 0 0 auto; white-space: nowrap; }
+.panel-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-width: 0; }
+.panel-section-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-section-head > small { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.stock-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
+.stock-row > input[type="search"], .stock-row > input[type="url"] { flex: 1 1 160px; min-width: 0; }

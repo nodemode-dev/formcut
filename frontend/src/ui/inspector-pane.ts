@@ -126,6 +126,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux"></span>
         </div>
         <div class="prop-row">
+          <span>${t("time.smooth")}</span>
+          <button class="toggle" data-ref="smooth-slow" aria-pressed="false" aria-label="${t("time.smooth")}"></button>
+          <span class="prop-aux">${t("time.smooth.hint")}</span>
+        </div>
+        <div class="prop-row">
           <span>Fade in</span>
           <span class="num-field"><input data-tkey="fadeIn" value="0" /><span class="unit">s</span></span>
           <span class="prop-aux"></span>
@@ -245,6 +250,19 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span>${t("bg.brushsize")}</span>
           <input type="range" class="slider" data-ref="bg-brush" min="1" max="20" step="1" value="4" />
           <span class="prop-aux" data-ref="bg-brush-value">4</span>
+        </div>
+      </div>
+      <div class="section" data-section="scenes" data-feature="section.scenes">
+        <div class="section-head">${t("scene.title")} ${icon("chevD")}</div>
+        <div class="prop-row">
+          <span>${t("scene.sensitivity")}</span>
+          <input type="range" class="slider" data-ref="scene-sens" min="0" max="100" step="5" value="50" />
+          <span class="prop-aux" data-ref="scene-sens-value">50</span>
+        </div>
+        <div class="prop-row">
+          <button class="tool-chip" data-ref="scene-find">${t("scene.find")}</button>
+          <button class="tool-chip is-primary" data-ref="scene-split" hidden>${t("scene.split")}</button>
+          <span class="prop-aux" data-ref="scene-state"></span>
         </div>
       </div>
       <div class="section" data-section="repair" data-feature="section.repair">
@@ -573,6 +591,64 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       state.textContent = t("rep.failed");
     }
   })());
+
+  // F11: making the frames between rather than repeating them is a property of
+  // the clip's speed, so it sits with speed rather than in a document field.
+  const smoothToggle = el.querySelector<HTMLButtonElement>('[data-ref="smooth-slow"]');
+  smoothToggle?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    if (!found) return;
+    const on = smoothToggle.getAttribute("aria-pressed") !== "true";
+    smoothToggle.setAttribute("aria-pressed", String(on));
+    smoothToggle.classList.toggle("is-on", on);
+    engine.dispatch("clip.smooth-slow", { clipId: found.clip.id, on });
+  });
+
+  // F10: scene detection as something a person does to a clip, rather than an
+  // endpoint nobody can reach. Finding the cuts and acting on them are two
+  // steps, because a person should see how many were found before a long clip
+  // is chopped into pieces.
+  let foundCuts: number[] = [];
+  const sceneState = el.querySelector<HTMLElement>('[data-ref="scene-state"]');
+  const sceneSplit = el.querySelector<HTMLButtonElement>('[data-ref="scene-split"]');
+  el.querySelector('[data-ref="scene-sens"]')?.addEventListener("input", (event) => {
+    const label = el.querySelector<HTMLElement>('[data-ref="scene-sens-value"]');
+    if (label) label.textContent = (event.target as HTMLInputElement).value;
+  });
+  el.querySelector('[data-ref="scene-find"]')?.addEventListener("click", () => void (async () => {
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    if (!found?.clip.mediaId || !sceneState) return;
+    const sensitivity = Number(el.querySelector<HTMLInputElement>('[data-ref="scene-sens"]')?.value ?? 50) / 100;
+    sceneState.textContent = t("scene.looking");
+    try {
+      const reply = await fetch(`/api/media/${found.clip.mediaId}/scenes?sensitivity=${sensitivity}`)
+        .then((r) => r.json());
+      // Only cuts inside what this clip actually uses are worth offering.
+      const from = found.clip.sourceIn ?? 0;
+      foundCuts = (reply.cuts ?? [])
+        .map((cut: { at: number }) => cut.at - from)
+        .filter((at: number) => at > 0.2 && at < found.clip.duration - 0.2);
+      sceneState.textContent = `${foundCuts.length} ${t("scene.found")}`;
+      if (sceneSplit) sceneSplit.hidden = foundCuts.length === 0;
+    } catch {
+      sceneState.textContent = t("scene.failed");
+    }
+  })());
+  sceneSplit?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    const found = id ? engine.findClip(id) : null;
+    if (!found || !foundCuts.length) return;
+    // Split from the end backwards, so each cut's time still means what it
+    // meant when it was measured.
+    for (const at of [...foundCuts].sort((a, b) => b - a)) {
+      engine.dispatch("clips.split", { at: found.clip.start + at, clipIds: [found.clip.id] });
+    }
+    if (sceneState) sceneState.textContent = `${foundCuts.length} ${t("scene.done")}`;
+    sceneSplit.hidden = true;
+    foundCuts = [];
+  });
 
   const drawToggle = el.querySelector<HTMLElement>('[data-ref="mask-draw"]');
   drawToggle?.addEventListener("click", () => {

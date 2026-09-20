@@ -550,5 +550,15 @@
   "home.never": "noch nicht geöffnet",
   "home.minutes": "Minuten",
   "home.hours": "Stunden",
-  "home.cover": "Dieses Bild als Titelbild"
+  "home.cover": "Dieses Bild als Titelbild",
+  "time.smooth": "Weiche Zeitlupe",
+  "time.smooth.hint": "erzeugt Zwischenbilder",
+  "scene.title": "Szenen",
+  "scene.sensitivity": "Empfindlichkeit",
+  "scene.find": "Schnitte finden",
+  "scene.split": "Dort teilen",
+  "scene.looking": "Wird gesucht",
+  "scene.found": "Schnitte",
+  "scene.done": "Teilungen",
+  "scene.failed": "Clip nicht lesbar"
 }

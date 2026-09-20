@@ -244,6 +244,16 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.smooth-slow": {
+        const p = payload as { clipId: string; on: boolean };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.on) found.clip.smoothSlow = true; else delete found.clip.smoothSlow;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.effects": {
         const p = payload as { clipId: string; effects: Array<{ id: string; amount?: number; params?: Record<string, number> }> };
         const found = this.findClip(p.clipId);
