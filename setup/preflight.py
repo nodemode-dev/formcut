@@ -112,6 +112,35 @@ def check_licences() -> None:
         problems.append("missing .docs/wiki/Licences.md")
         return
     text = read(licences)
+    # A workflow that does not parse is not a failing check, it is no check at
+    # all: GitHub refuses the file and reports a failure with no duration and no
+    # logs. That is how a release went out with the checks silently not running,
+    # so the files are parsed here before anything can be tagged.
+    try:
+        import yaml
+    except ImportError:
+        problems.append("pyyaml is not installed, so the workflows cannot be checked; pip install pyyaml")
+    else:
+        for path in sorted((ROOT / ".github/workflows").glob("*.yml")):
+            try:
+                loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+            except yaml.YAMLError as exc:
+                problems.append(f"{path.name} is not valid yaml: {str(exc)[:90]}")
+                continue
+            jobs = (loaded or {}).get("jobs") or {}
+            if not jobs:
+                problems.append(f"{path.name} declares no jobs")
+                continue
+            for name, job in jobs.items():
+                for step in job.get("steps") or []:
+                    if not (step.get("run") or step.get("uses")):
+                        problems.append(f"{path.name}: a step in {name} does nothing")
+            notes.append(f"{path.name} parses, {len(jobs)} job(s)")
+        # The suite has to be wired in, not merely present in the repository.
+        checks = ROOT / ".github/workflows/checks.yml"
+        if checks.is_file() and "pytest tests" not in checks.read_text(encoding="utf-8"):
+            problems.append("checks.yml does not run the test suite")
+
     binaries = ROOT / "src-tauri/binaries"
     if not (binaries / "LGPL-2.1.txt").is_file():
         problems.append("src-tauri/binaries/LGPL-2.1.txt is missing; an LGPL binary may not be distributed without its licence")

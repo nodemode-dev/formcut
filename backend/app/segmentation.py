@@ -132,8 +132,8 @@ def pick_region(alpha: np.ndarray, x: float, y: float, grow: float = 0.0) -> np.
     count, labels = cv2.connectedComponents(solid)
     if count <= 1:
         return alpha
-    column = int(round(max(0.0, min(1.0, x)) * (width - 1)))
-    row = int(round(max(0.0, min(1.0, y)) * (height - 1)))
+    column = round(max(0.0, min(1.0, x)) * (width - 1))
+    row = round(max(0.0, min(1.0, y)) * (height - 1))
     chosen = int(labels[row, column])
     if chosen == 0:
         # Pointed at background. Take the nearest region rather than returning

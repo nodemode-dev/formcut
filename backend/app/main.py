@@ -23,7 +23,7 @@ from .tts import router as tts_router
 
 prefer_bundled()
 
-APP_VERSION = "0.98.0"
+APP_VERSION = "0.98.3"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 

@@ -9,3 +9,5 @@ numpy>=2.0.2,<2.3
 wgpu==0.31.1
 onnxruntime==1.23.2
 grpcio>=1.70,<2
+# Used by setup/preflight.py to parse the workflow files before a tag.
+PyYAML>=6.0
