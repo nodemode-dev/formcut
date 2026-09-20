@@ -50,16 +50,16 @@ def _kind(ext: str) -> str | None:
 
 
 def _ffprobe(path: Path) -> dict:
+    """Stream and format facts.
+
+    Routed through tools.probe, which uses ffprobe when the bundle carries one
+    and reads ffmpeg's own report when it does not: an LGPL build configured
+    with --disable-programs --enable-ffmpeg ships ffmpeg alone.
+    """
+    from .tools import probe
     try:
-        out = subprocess.run(
-            [
-                "ffprobe", "-v", "quiet", "-print_format", "json",
-                "-show_format", "-show_streams", str(path),
-            ],
-            capture_output=True, timeout=30,
-        )
-        return json.loads(out.stdout or b"{}")
-    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        return probe(path)
+    except Exception:
         return {}
 
 

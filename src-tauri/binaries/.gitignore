@@ -1,2 +1,6 @@
+# Binaries are fetched at build time by setup/fetch_ffmpeg.py, not committed.
+# The licence documents that must ship beside them are tracked.
 *
 !.gitignore
+!LGPL-2.1.txt
+!README-ffmpeg.md

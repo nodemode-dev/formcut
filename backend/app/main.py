@@ -19,7 +19,13 @@ from .presets import router as presets_router
 from .track import router as track_router
 from .tts import router as tts_router
 
-APP_VERSION = "0.73.0"
+# The bundled ffmpeg, if there is one, goes to the front of the search path so
+# a binary a person has replaced is the one that runs.
+from .tools import prefer_bundled
+
+prefer_bundled()
+
+APP_VERSION = "0.74.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 

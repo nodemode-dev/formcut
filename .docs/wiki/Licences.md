@@ -34,20 +34,38 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 
 ## ffmpeg in a release bundle
 
-Running formcut from a clone uses whatever ffmpeg is on the machine, and its
-licence is that machine's concern. A release is different: `setup/fetch_ffmpeg.py`
-puts ffmpeg and ffprobe inside the bundle, and the licence of the build chosen
-then applies to what is distributed.
+formcut is **Apache-2.0** and stays Apache-2.0 in a release, because it runs
+ffmpeg as a **separate program** rather than linking against it. The two meet at
+a process boundary, and neither licence reaches across it.
 
-The builds currently recorded in that script are all GPL-3.0. Shipping them
-makes the bundle GPL-3.0, which is a decision rather than an oversight, so the
-script refuses to fetch one unless `--allow-gpl` is passed, and the release
-workflow passes it. To ship under other terms, record an LGPL build in
-`SOURCES` in that script and drop the flag from the workflow.
+The builds shipped are **LGPL-2.1** (`--disable-gpl --disable-nonfree`).
+`setup/fetch_ffmpeg.py` will only assemble a bundle from an LGPL build unless
+someone passes `--allow-gpl`, which is deliberate: a GPL ffmpeg inside the
+bundle would make the distributed whole GPL-3.0, and formcut's own terms would
+no longer describe what was shipped.
 
-Whichever is used, the fetcher writes `ffmpeg-licence.json` beside the binaries
-recording the source URL, the licence and the archive's SHA-256, so a shipped
-bundle can always say where its ffmpeg came from.
+Three things ship beside the binary, and all three are required rather than
+courtesies:
+
+| File | Why |
+| --- | --- |
+| `LGPL-2.1.txt` | the licence itself, as the LGPL requires |
+| `ffmpeg-licence.json` | version, configure line, programs and SHA-256 of what was shipped |
+| `README-ffmpeg.md` | how to replace the binary, per platform |
+
+**Replacement is the point.** The LGPL exists so a person can substitute their
+own build of the library, and a bundle that made that difficult would satisfy
+the letter and miss the purpose. formcut puts its `binaries` folder at the front
+of its search path, so a replaced binary is the one that runs, everywhere,
+without rebuilding anything. On macOS that is *Show Package Contents* and
+`Contents/Resources/binaries/`. `FORMCUT_FFMPEG_DIR` points it elsewhere
+entirely.
+
+**ffprobe.** An LGPL build made with `--disable-programs --enable-ffmpeg`
+contains ffmpeg alone, since ffprobe is a separate program. formcut does not
+require one: when ffprobe is absent it reads the same facts from ffmpeg's own
+report, verified to agree on dimensions, codec, duration and frame rate. An
+LGPL ffprobe placed in the folder is used in preference.
 
 ## Icons and assets
 

@@ -65,7 +65,7 @@ jobs:
       # user's PATH. Pin a build whose licence permits redistribution and record
       # which one in .docs/wiki/Licences.md before the first release.
       - name: fetch ffmpeg for the bundle
-        run: python setup/fetch_ffmpeg.py --target ${{ matrix.target }} --out src-tauri/binaries --allow-gpl
+        run: python setup/fetch_ffmpeg.py --target ${{ matrix.target }} --out src-tauri/binaries
         continue-on-error: false
 
       - name: freeze the engine

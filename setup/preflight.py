@@ -106,6 +106,15 @@ def check_licences() -> None:
         problems.append("missing .docs/wiki/Licences.md")
         return
     text = read(licences)
+    binaries = ROOT / "src-tauri/binaries"
+    if not (binaries / "LGPL-2.1.txt").is_file():
+        problems.append("src-tauri/binaries/LGPL-2.1.txt is missing; an LGPL binary "
+                        "may not be distributed without its licence")
+    else:
+        notes.append("the LGPL text ships beside the binaries")
+    if not (binaries / "README-ffmpeg.md").is_file():
+        problems.append("src-tauri/binaries/README-ffmpeg.md is missing; "
+                        "the LGPL expects the binary to be replaceable and said so")
     if "ffmpeg" not in text.lower():
         problems.append("Licences.md does not say which ffmpeg build is shipped; "
                         "a GPL build imposes its terms on the bundle")
@@ -118,8 +127,11 @@ def check_licences() -> None:
         # would end the run with a traceback instead of a list of problems, and
         # a preflight that crashes tells you less than one that fails.
         return
-    if "--allow-gpl" in read(release) and "GPL" in read(fetch):
-        notes.append("the release fetches a GPL ffmpeg knowingly; confirm that is intended")
+    if "--allow-gpl" in read(release):
+        problems.append("the release workflow passes --allow-gpl: that ships a GPL ffmpeg "
+                        "and makes the distributed bundle GPL-3.0 rather than Apache-2.0")
+    else:
+        notes.append("the release ships an LGPL ffmpeg, so the bundle stays Apache-2.0")
 
 
 def check_engine() -> None:
