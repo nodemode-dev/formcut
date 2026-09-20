@@ -79,8 +79,13 @@ def create_session(body: RenderInput):
         lock = threading.RLock()
         cache = FrameCache(project)
         def render_locked(at: float):
+            # Read-ahead feeds playback, which may use proxies.
             with lock:
-                return renderer.frame(at)
+                renderer.allow_proxy = True
+                try:
+                    return renderer.frame(at)
+                finally:
+                    renderer.allow_proxy = False
         _sessions[session_id] = {"renderer": renderer, "lock": lock, "touched": time.monotonic(),
                                  "cache": cache, "ahead": ReadAhead(render_locked, cache, project["fps"])}
     return {"id": session_id, "width": renderer.width, "height": renderer.height, "duration": project["duration"]}
@@ -131,13 +136,17 @@ def frame(session_id: str, time: float = 0):
         raise HTTPException(422, "Invalid frame time")
     try:
         cache = item["cache"]
-        pixels = cache.get(time)
+        # A still frame is the one a person judges the export by, so it is drawn
+        # from the original; the tag keeps those frames apart from proxy frames.
+        tag = "orig"
+        pixels = cache.get(time, tag)
         served = "hit"
         if pixels is None:
             served = "miss"
             with item["lock"]:
+                item["renderer"].allow_proxy = False
                 pixels = item["renderer"].frame(time)
-            cache.put(time, pixels)
+            cache.put(time, pixels, tag)
         item["ahead"].seek(time)
         output = io.BytesIO()
         Image.fromarray(pixels).save(output, format="PNG", compress_level=1)

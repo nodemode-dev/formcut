@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.64.0-ffae2b" alt="version v0.64.0" />
+  <img src="https://img.shields.io/badge/version-v0.65.0-ffae2b" alt="version v0.65.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -28,6 +28,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 - **Captions and speech**: Whisper in the browser in tiny, base or small, English-only or multilingual, on WebGPU where the browser offers it, with placement, size and words-per-caption controls, typed captions, and local speech that accepts models beyond the bundled one.
 - **Studio**: project settings, Pexels stock, a media downloader for any site yt-dlp supports, generate image, video and audio through your own provider keys, timeline templates, local video and image browsers, local speech and local models, in a popout with a collapsible rail and a per-section fullscreen view.
 - **Export**: H.264, HEVC, AV1 and VP9 with hardware encoders preferred and confirmed by encoding, not by listing; 10-bit where the encoder supports it; size and frame-rate presets stored as exact fractions; and a live size estimate fitted to real output.
+- **Proxy editing**: heavy footage gets a small, fast-decoding copy built in the background and used only while editing, so scrubbing 4K stops decoding 4K. Exports always read the originals, proven by identical framemd5 digests with proxies on and off.
 - **Speed**: a content-keyed preview frame cache with read-ahead, per-clip audio cached and mixed live so a volume change is heard at once, probed hardware decode, and a bounded worker pool for export.
 - **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, covering every edit the interface can make, with optimistic concurrency on every edit.
 - **MCP server**: workflow tools over stdio in `mcp/`, so an agent can import media, build a project, render it and collect the file without touching the interface.
@@ -190,8 +191,8 @@ Shipped so far:
 | 0.60.0 | background-removal groundwork and export: licence gate, matte cache, Easy removal surface, HEVC, AV1, 10-bit, size and rate presets, live size estimates |
 | 0.61.0 | platform: effect packages, templates carrying their own media, pinned model downloads, per-run logs and diagnostics, drop-in locales, token-gated remote access, a complete RPC surface |
 | 0.62.0 | movable panes that stack as tabs, per profile |
-| 0.64.0 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
-| 0.64.0 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
+| 0.65.0 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
+| 0.65.0 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 

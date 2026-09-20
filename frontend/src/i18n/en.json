@@ -491,5 +491,12 @@
   "tl.remove": "Remove this timeline",
   "Back half a second": "Back half a second",
   "Forward half a second": "Forward half a second",
-  "layout.mode": "Interface mode"
+  "layout.mode": "Interface mode",
+  "proxy.queued": "Proxy queued",
+  "proxy.building": "Building proxy",
+  "proxy.ready": "Proxy ready",
+  "proxy.failed": "Proxy failed",
+  "proxy.stale": "Proxy out of date",
+  "proxy.title": "Proxies",
+  "proxy.hint": "Preview heavy footage from small copies; exports always read the originals"
 }

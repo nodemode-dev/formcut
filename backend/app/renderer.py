@@ -195,6 +195,9 @@ class FrameRenderer:
         self.frame_numbers = {}
         self.frames = {}
         self.decode_scale = {}
+        # P6: a paused still shows what the export will produce, so it reads the
+        # original; playback and scrubbing set this and read the proxy.
+        self.allow_proxy = False
         self.matte_time = 0.0
         self.closed = False
 
@@ -220,7 +223,7 @@ class FrameRenderer:
             paths = list(MEDIA_DIR.glob(f"{media_id}.*"))
             # P5: a preview may read a proxy; an export never does, because it
             # builds a renderer with no decode limit and this returns None.
-            if paths and PROXIES_ENABLED:
+            if paths and PROXIES_ENABLED and self.allow_proxy:
                 stand_in = proxy_for(media_id, paths[0], self.decode_limit)
                 if stand_in is not None:
                     paths = [stand_in]

@@ -2,7 +2,7 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +19,7 @@ from .presets import router as presets_router
 from .track import router as track_router
 from .tts import router as tts_router
 
-APP_VERSION = "0.64.0"
+APP_VERSION = "0.65.0"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
@@ -130,6 +130,28 @@ def locales() -> dict:
                 "strings": data,
             })
     return {"locales": out}
+
+
+@app.get("/api/proxies/settings")
+def proxy_settings() -> dict:
+    from . import proxies
+    from . import renderer as renderer_module
+    return {"enabled": renderer_module.PROXIES_ENABLED, "size": proxies.DEFAULT_LONG_SIDE,
+            "sizes": list(proxies.ALLOWED_SIZES)}
+
+
+@app.post("/api/proxies/settings")
+def set_proxy_settings(body: dict) -> dict:
+    from . import proxies
+    from . import renderer as renderer_module
+    if "enabled" in body:
+        renderer_module.PROXIES_ENABLED = bool(body["enabled"])
+    if "size" in body:
+        size = int(body["size"])
+        if size not in proxies.ALLOWED_SIZES:
+            raise HTTPException(422, "unknown proxy size")
+        proxies.DEFAULT_LONG_SIDE = size
+    return proxy_settings()
 
 
 @app.get("/api/packages")

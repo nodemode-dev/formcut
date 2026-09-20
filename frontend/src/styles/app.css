@@ -1081,3 +1081,15 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 }
 .titlebar-logo { width: 34px; height: 34px; }
 .titlebar-logo svg { width: 24px; height: 24px; }
+
+/* A proxy's state on its media card. */
+.bin-card { position: relative; }
+.proxy-badge {
+  position: absolute; left: 4px; bottom: 22px;
+  padding: 1px 6px; border-radius: 999px;
+  background: var(--ground); color: var(--ink-soft);
+  font-size: 10px; line-height: 16px; pointer-events: none;
+}
+.proxy-badge[data-state="ready"] { color: var(--cue); }
+.proxy-badge[data-state="failed"], .proxy-badge[data-state="stale"] { color: var(--warn, #e0806a); }
+.proxy-badge[hidden] { display: none; }

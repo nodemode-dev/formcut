@@ -491,5 +491,12 @@
   "tl.remove": "Quitar esta línea de tiempo",
   "Back half a second": "Retroceder medio segundo",
   "Forward half a second": "Avanzar medio segundo",
-  "layout.mode": "Modo de interfaz"
+  "layout.mode": "Modo de interfaz",
+  "proxy.queued": "Proxy en cola",
+  "proxy.building": "Creando proxy",
+  "proxy.ready": "Proxy listo",
+  "proxy.failed": "Proxy falló",
+  "proxy.stale": "Proxy desactualizado",
+  "proxy.title": "Proxies",
+  "proxy.hint": "Previsualiza material pesado desde copias pequeñas; la exportación siempre usa los originales"
 }

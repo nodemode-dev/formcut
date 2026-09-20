@@ -601,6 +601,14 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const cardFor = (item: MediaItem): HTMLElement => {
     const card = document.createElement("div");
     card.className = `effect-card bin-card k-${item.kind}`;
+    // P9: video cards carry their proxy's state, so a person can see what is
+    // queued, building or ready without opening anything.
+    if (item.kind === "video") {
+      const badge = document.createElement("span");
+      badge.className = "proxy-badge";
+      badge.dataset.proxy = item.id;
+      card.append(badge);
+    }
     card.addEventListener("click", () => {
       // Touch layouts have no HTML5 drag and drop; a tap appends the media
       // at the playhead on the matching lane instead.
@@ -652,7 +660,28 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     empty.hidden = bin.count() > 0;
   };
 
+  // One poll refreshes every visible badge; it only runs while video cards are
+  // on screen and something is still being built.
+  const paintProxies = async () => {
+    const badges = [...el.querySelectorAll<HTMLElement>("[data-proxy]")];
+    if (!badges.length) return;
+    for (const badge of badges) {
+      try {
+        const state = await fetch(`/api/media/${badge.dataset.proxy}/proxy`).then((r) => r.json());
+        const label: Record<string, string> = {
+          missing: "", stale: t("proxy.stale"), queued: t("proxy.queued"),
+          building: `${t("proxy.building")} ${Math.round((state.progress ?? 0) * 100)}%`,
+          ready: t("proxy.ready"), failed: t("proxy.failed"),
+        };
+        badge.textContent = label[state.state] ?? "";
+        badge.dataset.state = state.state;
+        badge.hidden = !badge.textContent;
+      } catch { badge.hidden = true; }
+    }
+  };
+  window.setInterval(() => void paintProxies(), 4000);
   bin.subscribe((items, added) => {
+    void paintProxies();
     if (added) {
       grid.append(cardFor(added));
     } else {

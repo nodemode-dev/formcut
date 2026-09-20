@@ -491,5 +491,12 @@
   "tl.remove": "Diese Zeitleiste entfernen",
   "Back half a second": "Eine halbe Sekunde zurück",
   "Forward half a second": "Eine halbe Sekunde vor",
-  "layout.mode": "Oberflächenmodus"
+  "layout.mode": "Oberflächenmodus",
+  "proxy.queued": "Proxy in Warteschlange",
+  "proxy.building": "Proxy wird erstellt",
+  "proxy.ready": "Proxy bereit",
+  "proxy.failed": "Proxy fehlgeschlagen",
+  "proxy.stale": "Proxy veraltet",
+  "proxy.title": "Proxys",
+  "proxy.hint": "Schweres Material aus kleinen Kopien vorschauen; Exporte lesen immer die Originale"
 }

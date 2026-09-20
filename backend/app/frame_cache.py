@@ -41,14 +41,16 @@ class FrameCache:
         self.misses = 0
         self.rendered = 0
 
-    def key(self, at: float) -> tuple[int, str]:
+    def key(self, at: float, tag: str = "") -> tuple[int, str]:
         stamp = round(at * 1000)
         parts = sorted(clip_signature(clip) for clip in covering(self.project, at))
-        return (stamp, "-".join(parts))
+        # The tag separates frames decoded from a proxy from frames decoded from
+        # the original, so one scrub can never return a mixture of the two.
+        return (stamp, tag + "|" + "-".join(parts))
 
-    def get(self, at: float):
+    def get(self, at: float, tag: str = ""):
         with self.lock:
-            key = self.key(at)
+            key = self.key(at, tag)
             frame = self.frames.get(key)
             if frame is None:
                 self.misses += 1
@@ -57,10 +59,10 @@ class FrameCache:
             self.hits += 1
             return frame
 
-    def put(self, at: float, frame) -> None:
+    def put(self, at: float, frame, tag: str = "") -> None:
         with self.lock:
-            self.frames[self.key(at)] = frame
-            self.frames.move_to_end(self.key(at))
+            self.frames[self.key(at, tag)] = frame
+            self.frames.move_to_end(self.key(at, tag))
             self.rendered += 1
             while len(self.frames) > self.limit:
                 self.frames.popitem(last=False)

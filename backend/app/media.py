@@ -279,7 +279,11 @@ def reverse_media(media_id: str) -> dict:
     if reversed_path(media_id).is_file():
         return {"status": "ready", "media_id": media_id}
     def operation(job_id, report, cancelled):
-        build_reversed(media_id, matches[0], report, cancelled)
+        # P8: reversing re-encodes every frame, so it reads the proxy when one
+        # is ready; the reversed copy is a preview artefact either way.
+        stand_in = proxies.proxy_path(media_id)
+        source = stand_in if proxies.status(media_id, matches[0]).get("state") == "ready" else matches[0]
+        build_reversed(media_id, source, report, cancelled)
         return {"media_id": media_id, "status": "ready"}
     return jobs.submit("reverse-media", operation)
 
