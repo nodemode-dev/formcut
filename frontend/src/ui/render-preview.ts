@@ -63,6 +63,12 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
   };
   const ensureSession = async (snapshot: typeof engine.snapshot, current: number): Promise<string> => {
     if (readyRevision === current && session) return session;
+    // An empty document has nothing to render and the engine rightly refuses to
+    // validate it. Asking anyway logged a 422 on every boot, and a console that
+    // is always complaining is one nobody reads when something real breaks.
+    const hasClips = snapshot.timelines.some((timeline) =>
+      timeline.tracks.some((track) => track.clips.length > 0));
+    if (!hasClips) return "";
     const next = await api("/api/render/sessions", { project: snapshot, width: Number(resolution.value) || snapshot.width });
     const old = session;
     session = next.id;
@@ -84,6 +90,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     const snapshot = structuredClone(engine.snapshot);
     try {
       const id = await ensureSession(snapshot, current);
+      if (!id) return;                       // nothing to play yet
       const response = await fetch(`/api/render/sessions/${id}/stream?start=${from}&fps=${snapshot.fps}`, { signal: controller.signal });
       if (!response.ok || !response.body) throw new Error("Playback stream failed");
       const reader = response.body.getReader();
@@ -133,7 +140,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     const snapshot = structuredClone(engine.snapshot);
     const time = Math.min(snapshot.playhead, Math.max(0, snapshot.duration - 1 / snapshot.fps));
     try {
-      if (readyRevision !== current) await ensureSession(snapshot, current);
+      if (readyRevision !== current && !(await ensureSession(snapshot, current))) return;
       const frame = Math.round(time * snapshot.fps);
       if (lastFrame === frame && current === readyRevision && !wanted && canvas.dataset.revision === String(current)) return;
       const response = await fetch(`/api/render/sessions/${session}/frame?time=${time}`);
