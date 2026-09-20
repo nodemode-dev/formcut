@@ -90,6 +90,12 @@ def flatten(project: dict) -> list[dict]:
                     clip["transitionLength"] = length
                     if adjacent:
                         previous["extendOut"] = length
+                        # T1: the outgoing clip is not a still backdrop. It keeps
+                        # drawing through the band and takes the other half of
+                        # the move, so a wipe uncovers it, a slide carries it off
+                        # and a zoom pushes it away, rather than it sitting
+                        # motionless while only the incoming clip animates.
+                        previous["transitionOut"] = {"type": kind, "length": length}
                         if kind == "push-up":
                             previous["pushOut"] = length
                     if kind == "crossfade":

@@ -15,7 +15,7 @@ export function speedPoints(clip: Clip): SpeedPoint[] {
   const points = new Map<number, number>();
   for (const p of clip.speedCurve ?? []) {
     if (Number.isFinite(p.t) && Number.isFinite(p.speed)) {
-      points.set(Math.max(0, p.t), Math.max(0.05, Math.min(16, p.speed)));
+      points.set(Math.max(0, p.t), Math.max(0.05, Math.min(100, p.speed)));
     }
   }
   if (!points.size) return [{ t: 0, speed: clip.speed ?? 1 }];

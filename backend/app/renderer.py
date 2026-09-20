@@ -449,9 +449,61 @@ class FrameRenderer:
             image[:, :, 3] *= threshold < progress
         return image
 
+    def transition_out(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
+        """The outgoing half of a transition (T1).
+
+        The incoming clip is revealed by `transition`; this moves or hides the
+        clip underneath it over the same band, so both sides animate. Each kind
+        is the mirror of its incoming counterpart: a wipe hides what the
+        incoming clip has already covered, a slide leaves in the same direction,
+        a zoom grows away, an iris closes, a dissolve thins out.
+        """
+        out = clip.get("transitionOut")
+        if not out:
+            return image
+        length = float(out.get("length") or 0)
+        duration = clip["duration"]
+        if length <= 0 or local < duration - 0.0001:
+            return image
+        progress = min(1.0, max(0.0, (local - duration) / length))
+        kind = out["type"]
+        h, w = image.shape[:2]
+        if kind.startswith("wipe"):
+            if kind == "wipe-left":
+                image[:, :int(w * progress), 3] = 0
+            elif kind == "wipe-right":
+                image[:, int(w * (1 - progress)):, 3] = 0
+            elif kind == "wipe-up":
+                image[:int(h * progress), :, 3] = 0
+            else:
+                image[int(h * (1 - progress)):, :, 3] = 0
+        elif kind in ("slide-left", "slide-right", "push-up"):
+            dx = int(w * progress) * (-1 if kind == "slide-left" else 1) if kind != "push-up" else 0
+            dy = -int(h * progress) if kind == "push-up" else 0
+            image = cv2.warpAffine(image, np.float32([[1, 0, dx], [0, 1, dy]]), (w, h))
+        elif kind == "zoom":
+            matrix = cv2.getRotationMatrix2D((w / 2, h / 2), 0, 1 + progress)
+            image = cv2.warpAffine(image, matrix, (w, h))
+        elif kind == "iris":
+            y, x = np.mgrid[:h, :w]
+            image[:, :, 3] *= ((x - w / 2) ** 2 + (y - h / 2) ** 2) >= (math.hypot(w, h) / 2 * progress) ** 2
+        elif kind == "dissolve":
+            y, x = np.mgrid[:h, :w]
+            threshold = np.mod(np.sin(x * 12.9898 + y * 78.233) * 43758.5453, 1)
+            image[:, :, 3] *= threshold >= progress
+        return image
+
     def frame(self, time: float) -> np.ndarray:
         canvas = np.zeros((self.height, self.width, 4), np.uint8)
         canvas[:, :, 3] = 255
+        # T3: what shows behind footage that does not fill the frame. Black is
+        # the default, so a project without a background renders as before.
+        fill = self.project.get("background")
+        if fill:
+            try:
+                canvas[:, :, :3] = np.array(ImageColor.getrgb(str(fill)), np.uint8)
+            except ValueError:
+                pass
         for clip in sorted(self.clips, key=lambda c: (-c["trackIndex"], c["start"])):
             local = time - clip["start"]
             if clip.get("trackHidden") or clip["kind"] == "audio" or local < 0 or local >= clip["duration"] + clip.get("extendOut", 0):
@@ -516,6 +568,7 @@ class FrameRenderer:
             image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(np.uint8)
             layer = cv2.warpAffine(image, matrix, (self.width, self.height), flags=cv2.INTER_LINEAR)
             layer = self.transition(layer, clip, local)
+            layer = self.transition_out(layer, clip, local)
             if clip.get("pushOut") and local >= clip["duration"]:
                 shift = self.height * min(1, (local - clip["duration"]) / clip["pushOut"])
                 layer = cv2.warpAffine(layer, np.float32([[1, 0, 0], [0, 1, -shift]]), (self.width, self.height))

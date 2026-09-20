@@ -8,8 +8,14 @@ def number(value, name, low=-100000, high=100000):
         raise ValueError('Invalid ' + name)
 
 
+def project_values(project):
+    fill = project.get('background')
+    if fill is not None and not (isinstance(fill, str) and len(fill) <= 32):
+        raise ValueError('Invalid background')
+
+
 def clip_values(clip):
-    for name, low, high in [('sourceIn', 0, 86400), ('speed', 0.05, 16), ('volume', 0, 4), ('pan', -1, 1), ('fadeIn', 0, 86400), ('fadeOut', 0, 86400)]:
+    for name, low, high in [('sourceIn', 0, 86400), ('speed', 0.05, 100), ('volume', 0, 4), ('pan', -1, 1), ('fadeIn', 0, 86400), ('fadeOut', 0, 86400)]:
         if clip.get(name) is not None:
             number(clip[name], name, low, high)
     for edge in ('left', 'top', 'right', 'bottom'):
@@ -56,7 +62,7 @@ def clip_values(clip):
             number(style[name], 'title ' + name, low, high)
     for point in clip.get('speedCurve') or []:
         number(point['t'], 'curve time', 0, 86400)
-        number(point['speed'], 'curve speed', 0.05, 16)
+        number(point['speed'], 'curve speed', 0.05, 100)
     transform = clip.get('transform') or {}
     for prop in ('posX', 'posY', 'scale', 'rotation', 'opacity', 'width', 'height'):
         if prop in transform:
