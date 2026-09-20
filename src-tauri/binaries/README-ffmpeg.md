@@ -39,9 +39,17 @@ The Linux build is **shared** rather than static, which is deliberate: the LGPL
 expects you to be able to substitute your own build of the libraries, and shared
 objects beside the binary are what make that possible without relinking anything.
 
-One target left, and it needs a Mac to build on because it needs Apple's SDK:
+macOS builds have their own script, because macOS needs more than a configure
+line: a shared build records absolute paths to its own dylibs, so the bundle
+will not move, and will not accept a replaced library, until those are rewritten
+to `@loader_path`. It handles that, re-signs what it edits, and can cross-build
+Intel from Apple silicon so one machine is enough:
 
-    ./setup/build_ffmpeg_lgpl.sh        # on an Intel Mac, for x86_64-apple-darwin
+    ./setup/build_ffmpeg_macos.sh                 # this Mac's architecture
+    ./setup/build_ffmpeg_macos.sh --arch x86_64   # Intel, from Apple silicon
+    ./setup/build_ffmpeg_macos.sh --arch both     # both, plus a universal binary
+
+Linux and Windows use `./setup/build_ffmpeg_lgpl.sh` on the machine they target.
 
 ## Source
 
