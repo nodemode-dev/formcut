@@ -15,6 +15,7 @@ import { buildLibraryView } from "./library-view";
 import { openUpscale } from "./upscale-dialog";
 import { openTikTok } from "./tiktok-dialog";
 import { openInstagram } from "./instagram";
+import { openCloudBrowser } from "./cloud";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -159,6 +160,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
           <span class="spacer"></span>
           <button class="tool-chip" data-ref="stock">${icon("search")}${t("chip.stock")}</button>
           <button class="tool-chip" data-ref="import">${icon("plus")}${t("chip.import")}</button>
+          <button class="tool-chip" data-ref="cloud">${icon("grid")}${t("cloud.import")}</button>
           <input type="file" data-ref="file" multiple hidden
             accept="video/*,audio/*,image/*" />
         </div>
@@ -733,6 +735,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     applyFilter();
   });
   el.querySelector('[data-ref="import"]')!.addEventListener("click", () => fileInput.click());
+  el.querySelector('[data-ref="cloud"]')!.addEventListener("click", () => openCloudBrowser(bin));
   fileInput.addEventListener("change", async () => {
     const files = Array.from(fileInput.files ?? []);
     fileInput.value = "";

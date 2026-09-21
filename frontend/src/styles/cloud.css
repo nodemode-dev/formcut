@@ -1,0 +1,13 @@
+/* The cloud browser and the save-to-cloud dialog. Tokens only, so every theme applies. */
+.cloud-dialog { width: min(560px, calc(100vw - 32px)); }
+.cloud-path { display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; margin: var(--sp-2) 0; color: var(--ink-soft); font-size: 12px; overflow-wrap: anywhere; }
+.cloud-list { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.cloud-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2); min-height: 36px; padding: var(--sp-1) var(--sp-2); border-radius: var(--radius-s); }
+.cloud-row:not(:has(.cloud-kind)) { grid-template-columns: minmax(0, 1fr) auto auto; }
+.cloud-row:hover { background: var(--control); }
+.cloud-row.is-folder { cursor: pointer; }
+.cloud-kind { display: inline-grid; color: var(--ink-soft); }
+.cloud-kind svg { width: 14px; height: 14px; }
+.cloud-name { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-size { color: var(--ink-faint); font: 11px/1 var(--font-mono); white-space: nowrap; }
+.cloud-row .post-button { padding: 4px 10px; }
