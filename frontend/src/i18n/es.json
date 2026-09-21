@@ -569,6 +569,8 @@
   "bg.failed": "la descarga falló",
   "export.codec": "Códec",
   "export.codec.auto": "Auto",
+  "export.encoderUses": "Codifica como {codec} con {encoder}",
+  "export.mpeg4Warning": "En este equipo no funciona ningún codificador H.264 ni HEVC, así que MP4 usa MPEG-4 Part 2, que Instagram y algunos reproductores rechazan.",
   "export.size": "Tamaño",
   "export.size.timeline": "Línea de tiempo",
   "export.tenbit": "Color de 10 bits",

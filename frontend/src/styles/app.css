@@ -965,6 +965,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .title-card.is-active .effect-name { color: var(--ink); }
 
 .export-estimate { color: var(--ink-soft); font-size: 12px; }
+.export-encoder.is-warning { color: var(--warn, #e0806a); }
 
 /* Title styles are pictures of a whole frame, so their tiles keep the frame's
    shape and show all of it: at 4/3 with `cover` the rendered 16/9 previews were

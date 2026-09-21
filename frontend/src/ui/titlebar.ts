@@ -228,6 +228,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
         <span>${t("export.codec")}</span>
         <div class="seg" data-ref="codec"><button class="is-active" data-val="">${t("export.codec.auto")}</button></div>
       </div>
+      <div class="modal-row export-estimate export-encoder" data-ref="encoder" aria-live="polite"></div>
       <div class="modal-row">
         <span>${t("export.size")}</span>
         <div class="seg" data-ref="size">
@@ -257,16 +258,33 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   const estimateRow = modal.querySelector<HTMLElement>('[data-ref="estimate"]')!;
   const codecSeg = modal.querySelector<HTMLElement>('[data-ref="codec"]')!;
   let available: Record<string, string[]> = {};
+  let encoders: Record<string, { encoder?: string | null }> = {};
   void fetch("/api/render/status").then((r) => r.json()).then((status) => {
     available = status.encoders?.containers ?? {};
+    encoders = status.encoders?.codecs ?? {};
     paintCodecs();
     void refreshEstimate();
   }).catch(() => {});
+  const CODEC_NAMES: Record<string, string> = { h264: "H.264", hevc: "HEVC", av1: "AV1", vp9: "VP9", mpeg4: "MPEG-4 Part 2" };
+  const encoderRow = modal.querySelector<HTMLElement>('[data-ref="encoder"]')!;
+  // What Auto, or the codec picked, will actually encode with; and a warning
+  // when MP4 can only be MPEG-4 Part 2 here, which Instagram refuses.
+  const paintEncoder = () => {
+    const list = available[segValue("fmt")] ?? [];
+    const codec = segValue("codec") || list[0] || "";
+    const encoder = encoders[codec]?.encoder;
+    const fallback = segValue("fmt") === "mp4" && codec === "mpeg4" && !list.some((name) => name === "h264" || name === "hevc");
+    const text = !codec || !encoder ? "" : fallback ? t("export.mpeg4Warning")
+      : t("export.encoderUses").replace("{codec}", CODEC_NAMES[codec] ?? codec.toUpperCase()).replace("{encoder}", encoder);
+    if (encoderRow.textContent !== text) encoderRow.textContent = text;
+    encoderRow.classList.toggle("is-warning", fallback);
+  };
   const paintCodecs = () => {
     const format = segValue("fmt");
     const list = available[format] ?? [];
     codecSeg.innerHTML = `<button class="is-active" data-val="">${t("export.codec.auto")}</button>` +
-      list.map((codec) => `<button data-val="${codec}">${codec.toUpperCase()}</button>`).join("");
+      list.map((codec) => `<button data-val="${codec}">${CODEC_NAMES[codec] ?? codec.toUpperCase()}</button>`).join("");
+    paintEncoder();
   };
   const refreshEstimate = async () => {
     // An empty project has nothing to estimate and the engine rightly refuses
@@ -296,6 +314,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   modal.addEventListener("click", (ev) => {
     if (!(ev.target as HTMLElement).closest(".seg, [data-ref=tenbit]")) return;
     if ((ev.target as HTMLElement).closest('[data-ref="fmt"]')) paintCodecs();
+    else if ((ev.target as HTMLElement).closest('[data-ref="codec"]')) paintEncoder();
     void refreshEstimate();
   });
 
