@@ -8,6 +8,7 @@ import { api } from "../engine/api";
 import { icon } from "./icons";
 import { t } from "../i18n";
 import { buildModePanel } from "./mode-popout";
+import { openTikTok } from "./tiktok-dialog";
 import { activeProfile, onInterfaceMode, type InterfaceProfile } from "./interface-mode";
 
 export interface AppActions {
@@ -239,6 +240,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       </div>
       <div class="modal-row export-estimate" data-ref="estimate"></div>
       <div class="modal-actions">
+        <button class="tool-chip" data-ref="post" hidden>${icon("export")}${t("tiktok.lastExport")}</button>
         <button class="tool-chip" data-ref="cancel">${t("export.cancel")}</button>
         <button class="btn-export" data-ref="start">${icon("export")}${t("export.start")}</button>
       </div>
@@ -332,6 +334,13 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     // as it was when the sheet was built.
     void refreshEstimate();
   });
+  let lastExport: { jobId: string; name: string } | null = null;
+  const postLast = modal.querySelector<HTMLButtonElement>('[data-ref="post"]')!;
+  postLast.addEventListener("click", () => {
+    if (!lastExport) return;
+    modal.hidden = true;
+    openTikTok(lastExport);
+  });
   modal.querySelector('[data-ref="start"]')!.addEventListener("click", async () => {
     if (exporting) return;
     modal.hidden = true;
@@ -343,12 +352,14 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     cancelExport.hidden = false;
     showToast("Exporting 0%");
     try {
-      await exportProject(state, format, quality, showToast, exportController.signal, {
+      const jobId = await exportProject(state, format, quality, showToast, exportController.signal, {
         codec: segValue("codec") || null,
         tenBit: modal.querySelector('[data-ref="tenbit"]')!.classList.contains("is-on"),
         size: segValue("size") || null,
       });
       showToast("Export complete");
+      lastExport = { jobId, name: `formcut-export.${format}` };
+      if (postLast.hidden) postLast.hidden = false;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Export failed");
     } finally {

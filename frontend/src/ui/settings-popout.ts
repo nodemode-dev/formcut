@@ -12,6 +12,7 @@ import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearanc
 import { api } from "../engine/api";
 import { buildModePanel } from "./mode-popout";
 import { buildWebhooks } from "./webhooks-settings";
+import { buildTikTokSettings } from "./tiktok-settings";
 import { autosaveEnabled, setAutosaveEnabled } from "../engine/persistence";
 
 const PAGES = [
@@ -269,6 +270,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   // only be tested is not much use: the same path the Studio speech page takes
   // for the local runtime, through the hosted endpoint.
   buildWebhooks(group(providersView, "hooks.title", "hooks.use"));
+  buildTikTokSettings(group(providersView, "TikTok", "prov.tiktok.use"));
   const speechRows = group(providersView, "prov.generate", "prov.generate.hint");
   const speechText = document.createElement("input");
   speechText.type = "text";

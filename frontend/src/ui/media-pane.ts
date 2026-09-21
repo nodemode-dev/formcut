@@ -13,6 +13,7 @@ import { categoryIcon } from "./category-icons";
 import { api } from "../engine/api";
 import { buildLibraryView } from "./library-view";
 import { openUpscale } from "./upscale-dialog";
+import { openTikTok } from "./tiktok-dialog";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -653,12 +654,17 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         ${item.thumb ? `<img src="${thumbUrl(item)}" alt="" loading="lazy" draggable="false" />` : `<span class="bin-glyph">${icon(item.kind === "audio" ? "speaker" : "pip")}</span>`}
         <span class="dur-chip">${mm}:${ss}</span>
         ${upscalable ? `<button type="button" class="bin-upscale" title="${escapeHtml(t("upscale.action"))}" aria-label="${escapeHtml(t("upscale.action"))}">${icon("fullscreen")}</button>` : ""}
+        ${item.kind === "video" ? `<button type="button" class="bin-post" title="${escapeHtml(t("tiktok.action"))}" aria-label="${escapeHtml(t("tiktok.action"))}">${icon("export")}</button>` : ""}
       </div>
       <div class="effect-name">${escapeHtml(item.name)}</div>`;
     card.querySelector(".bin-upscale")?.addEventListener("click", (ev) => {
       // The card's own click adds it to the timeline on touch layouts.
       ev.stopPropagation();
       openUpscale(item, bin);
+    });
+    card.querySelector(".bin-post")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      openTikTok({ mediaId: item.id, name: item.name });
     });
     card.addEventListener("dragstart", (ev) => {
       ev.dataTransfer?.setData("application/x-formcut-media", item.id);

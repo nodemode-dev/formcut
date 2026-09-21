@@ -8,7 +8,7 @@ export interface ExportOptions {
   rate?: string | null;
 }
 
-export async function exportProject(project: ProjectState, format: string, quality: string, status: (text: string) => void, signal: AbortSignal, options: ExportOptions = {}): Promise<void> {
+export async function exportProject(project: ProjectState, format: string, quality: string, status: (text: string) => void, signal: AbortSignal, options: ExportOptions = {}): Promise<string> {
   const created = await api("/api/render/export", {
     project: structuredClone(project), format, quality,
     codec: options.codec || null, tenBit: Boolean(options.tenBit),
@@ -19,4 +19,5 @@ export async function exportProject(project: ProjectState, format: string, quali
   link.href = `/api/jobs/${created.job_id}/file`;
   link.download = `formcut-export.${format}`;
   link.click();
+  return created.job_id;
 }
