@@ -498,6 +498,11 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .track-head .iconbtn.is-accent { color: var(--cue); }
 .track-head .iconbtn.is-off { color: var(--ink-faint); opacity: 0.45; }
 .track-head .iconbtn.is-off:hover { opacity: 1; }
+/* The keyframe toggle among the track's controls: sized and coloured like its
+   neighbours rather than as the segmented bar .kfb-toggle also styles, and in
+   the accent while its lane is open. */
+.track-head .kfb-toggle { display: inline-grid; place-items: center; gap: 0; padding: 0; background: none; }
+.track-head .kfb-toggle[aria-expanded="true"] { color: var(--cue); }
 .track-grip {
   position: absolute; left: 0; right: 0; bottom: -3px; height: 7px;
   cursor: row-resize;

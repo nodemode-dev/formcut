@@ -607,10 +607,10 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     body.append(graph);
     const select = head.querySelector<HTMLSelectElement>("select")!;
     select.value = "scale";
-    // The toggle used to be appended to whatever element happened to precede the
-    // lane, which is why it floated above the row at a different size instead of
-    // sitting with the controls it belongs to. It goes at the head's start.
-    head.prepend(toggle);
+    // The toggle belongs with the track's own controls, after Magnetic. Inside
+    // the keyframe head it was hidden whenever the lane was closed, so there
+    // was no way to open it at all; sync puts it back if the head is redrawn.
+    lane.previousElementSibling?.append(toggle);
     lane.after(head, body);
     const trackHeight = lane.style.getPropertyValue("--track-h");
     if (trackHeight) { head.style.setProperty("--track-h", trackHeight); body.style.setProperty("--track-h", trackHeight); }
@@ -643,6 +643,8 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         blocks.set(lane, block);
       }
       if (lane.style.width && block.body.style.width !== lane.style.width) block.body.style.width = lane.style.width;
+      const controls = lane.previousElementSibling;
+      if (controls && block.toggle.parentElement !== controls) controls.append(block.toggle);
       show(block);
     }
   };
