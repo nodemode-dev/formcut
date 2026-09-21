@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.24.0-ffae2b" alt="version v1.24.0" />
+  <img src="https://img.shields.io/badge/version-v1.25.0-ffae2b" alt="version v1.25.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -231,6 +231,7 @@ Shipped so far:
 | 1.22.0 | the exact render path exports 15 to 30 percent faster with identical pictures: layers moved by whole pixels skip resampling in the Rust kernel, and its blend rounds without a call per value |
 | 1.23.0 | a graded clip exports through the exact render path by default, as fast as before and with the grade the preview shows; projects that use one file at two moments, like a picture in picture of the same shot or a crossfade within one clip, render about 3.5 times faster on the exact path |
 | 1.24.0 | the exact render path spends 40 percent less of its own time per frame, pictures identical: opaque layers skip the blend in the Rust kernel, and frames are no longer copied where nothing shares them |
+| 1.25.0 | formcut on phones, in portrait and landscape, on tablets and in narrow windows: nothing off the screen, every Settings tab reachable, controls sized for fingers on touch screens, and the preview and timeline side by side on a landscape phone |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
