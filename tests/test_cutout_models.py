@@ -227,7 +227,7 @@ def test_first_launch_never_fetches_copyleft_weights(monkeypatch):
         model_manager, "_tracked", lambda model, report, cancelled: fetched.append(model) or {"model": model, "ready": True}
     )
     monkeypatch.setattr(model_manager, "hub_fetch", lambda model, path: None)
-    model_manager.prepare(lambda fraction: None, lambda: False, True)
+    model_manager.prepare(lambda fraction: None, lambda: False, True, True)
     assert "video-matting" not in fetched and "sharp-cutout" in fetched and "click-select" in fetched
 
 
