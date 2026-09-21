@@ -1090,7 +1090,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     delete (next as { point?: unknown }).point;
     engine.dispatch("clip.cutout", { clipId: found.clip.id, cutout: next });
     // The preview never runs a model itself; it shows the mattes this job fills in.
-    void api("/api/render/mattes", { clip: { ...found.clip, cutout: next }, fps: engine.snapshot.fps });
+    void api("/api/render/mattes", { clip: { ...found.clip, cutout: next }, fps: engine.snapshot.fps, width: engine.snapshot.width, height: engine.snapshot.height });
     const chosen = el.querySelector<HTMLSelectElement>('[data-ref="bg-model"]');
     if (chosen) chosen.value = "click-select";
     const note = cut<HTMLElement>("cut-pick-state");
@@ -1472,7 +1472,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const cutout = { model: "person-cutout", threshold: 0.5, feather, strokes: clip.cutout?.strokes ?? [] };
     engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout } });
     bgProgress.textContent = t("bg.working");
-    void api("/api/render/mattes", { clip: { ...clip, cutout }, fps: engine.snapshot.fps })
+    void api("/api/render/mattes", { clip: { ...clip, cutout }, fps: engine.snapshot.fps, width: engine.snapshot.width, height: engine.snapshot.height })
       .then(async (reply) => {
         if (reply.status === "ready") { bgProgress.textContent = t("bg.ready"); return; }
         for (let waited = 0; waited < 900; waited += 1) {

@@ -462,6 +462,10 @@ def clip_audio(body: ClipAudioInput):
 class MatteInput(BaseModel):
     clip: dict
     fps: float = 30.0
+    # The canvas the clip is placed on, so a prompt made on the picture can be
+    # carried back to the clip's own pixels. Without it prompts are used as sent.
+    width: int | None = None
+    height: int | None = None
 
 
 @router.post("/mattes", status_code=202)
@@ -481,6 +485,7 @@ def build_mattes(body: MatteInput):
         return {"status": "ready", **done}
 
     def operation(job_id, report, cancelled):
+        from .prompt_space import to_source
         from .segmentation import VideoMatter, prompts, raw_alpha
 
         matter = VideoMatter() if model == "video-matting" else None
@@ -503,7 +508,10 @@ def build_mattes(body: MatteInput):
                 if cancelled():
                     raise InterruptedError("Cancelled")
                 frame = renderer.media_frame(clip, at)
-                matte_store(key, at, matter(frame) if matter else raw_alpha(frame, model, points, box))
+                here, there = points, box
+                if body.width and body.height and (points or box):
+                    here, there = to_source(clip, (body.width, body.height), (frame.shape[1], frame.shape[0]), points, box)
+                matte_store(key, at, matter(frame) if matter else raw_alpha(frame, model, here, there))
                 report((index + 1) / len(times))
         finally:
             renderer.close()

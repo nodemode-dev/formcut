@@ -277,7 +277,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     delete (next as { point?: unknown }).point;
     engine.dispatch("clip.cutout", { clipId: clip.id, cutout: next });
     // The preview never runs a model itself; it shows the mattes this job fills in.
-    void api("/api/render/mattes", { clip: { ...clip, cutout: next }, fps: engine.snapshot.fps });
+    void api("/api/render/mattes", { clip: { ...clip, cutout: next }, fps: engine.snapshot.fps, width: engine.snapshot.width, height: engine.snapshot.height });
     const model = root.querySelector<HTMLSelectElement>("[data-cutout-model]");
     if (model) model.value = "click-select";
     const state = root.querySelector<HTMLElement>("[data-cut-state]");

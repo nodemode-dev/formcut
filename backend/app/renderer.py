@@ -590,14 +590,18 @@ class FrameRenderer:
                         # frame rather than the subject. Feeding it the canvas
                         # is what turned the cutout into a blob.
                         source = self.media_frame(clip, self.matte_time)
-                        found = raw_alpha(source, model, *prompts(options)) if model == "click-select" else raw_alpha(source, model)
+                        # Prompts are stored where the person pointed, on the
+                        # picture; the model sees the clip's own pixels.
+                        from .prompt_space import to_source
+
+                        points, box = to_source(clip, (self.width, self.height), (source.shape[1], source.shape[0]), *prompts(options))
+                        found = raw_alpha(source, model, points, box) if model == "click-select" else raw_alpha(source, model)
                         # A click says which of the things the model found was
                         # meant. Without it a frame with two people keeps both.
-                        chosen = options.get("point")
-                        if isinstance(chosen, dict):
+                        if points and model != "click-select":
                             from .segmentation import pick_region
 
-                            found = pick_region(found, float(chosen.get("x", 0.5)), float(chosen.get("y", 0.5)))
+                            found = pick_region(found, float(points[0]["x"]), float(points[0]["y"]))
                         alpha = cv2.resize(found, (w2, h2), interpolation=cv2.INTER_LINEAR)
                 except Exception:
                     alpha = None
