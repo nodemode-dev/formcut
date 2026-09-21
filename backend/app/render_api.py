@@ -481,8 +481,10 @@ def build_mattes(body: MatteInput):
         return {"status": "ready", **done}
 
     def operation(job_id, report, cancelled):
-        from .segmentation import raw_alpha
+        from .segmentation import VideoMatter, raw_alpha
 
+        matter = VideoMatter() if model == "video-matting" else None
+        points = options.get("points") or []
         renderer = FrameRenderer(
             {
                 "title": "matte",
@@ -501,7 +503,7 @@ def build_mattes(body: MatteInput):
                 if cancelled():
                     raise InterruptedError("Cancelled")
                 frame = renderer.media_frame(clip, at)
-                matte_store(key, at, raw_alpha(frame, model))
+                matte_store(key, at, matter(frame) if matter else raw_alpha(frame, model, points))
                 report((index + 1) / len(times))
         finally:
             renderer.close()

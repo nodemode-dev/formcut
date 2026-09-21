@@ -485,11 +485,17 @@ def cutout_preview(media_id: str, body: dict) -> dict:
         frame = renderer.frame(max(0.0, float(body.get("time") or 0)))
     finally:
         renderer.close()
-    alpha = raw_alpha(frame[:, :, :3], model)
-    found = region_count(alpha)
     point = body.get("point")
-    if isinstance(point, dict):
-        alpha = pick_region(alpha, float(point.get("x", 0.5)), float(point.get("y", 0.5)))
+    if model == "click-select":
+        if not isinstance(point, dict):
+            raise HTTPException(status_code=422, detail="Point at what to keep first")
+        alpha = raw_alpha(frame[:, :, :3], model, [point])
+        found = region_count(alpha)
+    else:
+        alpha = raw_alpha(frame[:, :, :3], model)
+        found = region_count(alpha)
+        if isinstance(point, dict):
+            alpha = pick_region(alpha, float(point.get("x", 0.5)), float(point.get("y", 0.5)))
     kept = float((alpha > 0.5).mean())
     return {
         "model": model,

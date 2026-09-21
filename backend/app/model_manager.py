@@ -163,7 +163,7 @@ def adopt_legacy() -> list[str]:
 
 def prepare(report, cancelled, fetch: bool) -> dict:
     adopted = adopt_legacy()
-    missing = [model for model in MODELS if not ready(model)] if fetch else []
+    missing = [model for model in MODELS if not ready(model) and "GPL" not in MODELS[model]["license"]] if fetch else []
     results = []
     for i, model in enumerate(missing):
         if cancelled():
