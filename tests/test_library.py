@@ -6,14 +6,13 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from app import library
+from app.main import app
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app import library
-from app.main import app
-
 client = TestClient(app, headers={"x-formcut-local": "1"})
-I18N = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n"
+I18N = Path(__file__).resolve().parents[1] / "frontend" / "src" / "i18n"
 
 
 @pytest.fixture
@@ -104,7 +103,17 @@ def test_every_label_the_view_shows_is_translated():
     english = json.loads((I18N / "en.json").read_text(encoding="utf-8"))
     rows = (I18N / "language-pack.ts").read_text(encoding="utf-8").split("`")[1].splitlines()
     packed = {row.split("|")[0] for row in rows if row}
-    keys = ["tab.stickers", "tab.music", "tab.sounds", "library.add", "library.added", "library.play", "library.stop", "library.preparing", "library.licence"]
+    keys = [
+        "tab.stickers",
+        "tab.music",
+        "tab.sounds",
+        "library.add",
+        "library.added",
+        "library.play",
+        "library.stop",
+        "library.preparing",
+        "library.licence",
+    ]
     keys += [f"library.cat.{item.category}" for items in library.KINDS.values() for item in items]
     keys += [f"library.sound.{item.id}" for item in library.SOUNDS]
     for code in ("en", "de", "es"):
