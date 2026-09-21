@@ -1,5 +1,7 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Fine edges (IS-Net)|Contours fins (IS-Net)|Bordi precisi (IS-Net)|精細なエッジ (IS-Net)|정밀한 가장자리 (IS-Net)|Bordas finas (IS-Net)|Точные края (IS-Net)|İnce kenarlar (IS-Net)|精细边缘 (IS-Net)|精細邊緣 (IS-Net)
+const rows = `A person|Une personne|Una persona|人物|사람|Uma pessoa|Человек|Bir kişi|人物|人物
+Anything (object)|N'importe quoi (objet)|Qualsiasi cosa (oggetto)|何でも (物体)|무엇이든 (물체)|Qualquer coisa (objeto)|Что угодно (объект)|Herhangi bir şey (nesne)|任意事物 (物体)|任意事物 (物體)
+Fine edges (IS-Net)|Contours fins (IS-Net)|Bordi precisi (IS-Net)|精細なエッジ (IS-Net)|정밀한 가장자리 (IS-Net)|Bordas finas (IS-Net)|Точные края (IS-Net)|İnce kenarlar (IS-Net)|精细边缘 (IS-Net)|精細邊緣 (IS-Net)
 Video matting (people)|Détourage vidéo (personnes)|Scontorno video (persone)|動画マッティング (人物)|동영상 매팅 (인물)|Recorte de vídeo (pessoas)|Видеоматтинг (люди)|Video maskeleme (kişiler)|视频抠像 (人物)|影片摳像 (人物)
 Point to select (SAM 2)|Pointer pour sélectionner (SAM 2)|Punta per selezionare (SAM 2)|ポイントして選択 (SAM 2)|가리켜서 선택 (SAM 2)|Apontar para selecionar (SAM 2)|Выбор указанием (SAM 2)|İşaretleyerek seç (SAM 2)|点选对象 (SAM 2)|點選物件 (SAM 2)
 Media|Médias|Media|メディア|미디어|Mídia|Медиа|Medya|媒体|媒體
