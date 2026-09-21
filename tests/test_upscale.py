@@ -2,11 +2,13 @@
 
 import hashlib
 import json
+import re
 import subprocess
 import threading
 import time
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import cv2
 import pytest
@@ -220,3 +222,20 @@ def test_the_key_test_creates_nothing(topaz, monkeypatch):
     refused = providers.test_provider("topaz")
     assert refused["ok"] is False and "rejected" in refused["detail"]
     assert topaz["polls"] == 0 and "create" not in topaz
+
+
+def test_every_label_the_dialog_shows_is_translated_with_its_placeholders():
+    folder = Path(__file__).resolve().parents[1] / "frontend" / "src" / "i18n"
+    english = json.loads((folder / "en.json").read_text(encoding="utf-8"))
+    rows = [row.split("|") for row in (folder / "language-pack.ts").read_text(encoding="utf-8").split("`")[1].splitlines() if row]
+    packed = {row[0]: row[1:] for row in rows}
+    keys = [key for key in english if key.startswith("upscale.")] + ["btn.close", "export.cancel", "library.added"]
+    assert len(keys) == 21
+    for code in ("de", "es"):
+        strings = json.loads((folder / f"{code}.json").read_text(encoding="utf-8"))
+        assert not [key for key in keys if key not in strings], code
+        assert all(set(re.findall(r"\{\w+\}", strings[key])) == set(re.findall(r"\{\w+\}", english[key])) for key in keys), code
+    assert not [english[key] for key in keys if english[key] not in packed]
+    for key in keys:
+        wanted = set(re.findall(r"\{\w+\}", english[key]))
+        assert all(set(re.findall(r"\{\w+\}", text)) == wanted for text in packed[english[key]]), key
