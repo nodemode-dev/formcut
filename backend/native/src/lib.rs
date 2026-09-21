@@ -85,11 +85,40 @@ fn draw(
         *slot = (level as f64 * alpha).round_ties_even().clamp(0.0, 255.0) as u8;
     }
     let (left, top, right, bottom) = reach(&forward, source_w, source_h, canvas_w, canvas_h);
+    // An integer translation, the identity included, samples every source pixel
+    // at its own position: the fractional weights are 0, so the bilinear sum is
+    // the pixel times 32768 and shifts back to the pixel itself. Fetching it
+    // directly is the same number without the arithmetic.
+    let shift = (forward[0] == 1.0
+        && forward[1] == 0.0
+        && forward[3] == 0.0
+        && forward[4] == 1.0
+        && forward[2].fract() == 0.0
+        && forward[5].fract() == 0.0)
+        .then_some((forward[2] as i64, forward[5] as i64));
     canvas.par_chunks_mut(canvas_w * 4).enumerate().for_each(|(y, row)| {
         for x in 0..canvas_w {
             row[x * 4 + 3] = 255;
         }
         if y < top || y >= bottom {
+            return;
+        }
+        if let Some((tx, ty)) = shift {
+            let sy = y as i64 - ty;
+            if sy < 0 || sy >= source_h as i64 {
+                return;
+            }
+            for x in left..right {
+                let sx = x as i64 - tx;
+                if sx < 0 || sx >= source_w as i64 {
+                    continue;
+                }
+                let at = (sy as usize * source_w + sx as usize) * 4;
+                let layer = [source[at] as i32, source[at + 1] as i32, source[at + 2] as i32, opacity[source[at + 3] as usize] as i32];
+                if layer[3] != 0 {
+                    blend(row, x, layer);
+                }
+            }
             return;
         }
         let x0 = round_int((m[1] * y as f64 + m[2]) * AB_SCALE) + ROUND_DELTA;
@@ -116,20 +145,28 @@ fn draw(
                 }
             }
             let layer = sum.map(|value| ((value + (1 << (COEF_BITS - 1))) >> COEF_BITS).clamp(0, 255));
-            if layer[3] == 0 {
-                continue;
-            }
-            // The Normal blend in float32, in the Python code's order of operations.
-            let a = layer[3] as f32 / 255.0;
-            let keep = 1.0f32 - a;
-            for channel in 0..3 {
-                let base = row[x * 4 + channel] as f32 / 255.0;
-                let front = layer[channel] as f32 / 255.0;
-                let mixed = (base * keep + front * a).clamp(0.0, 1.0);
-                row[x * 4 + channel] = (mixed * 255.0).round_ties_even() as u8;
+            if layer[3] != 0 {
+                blend(row, x, layer);
             }
         }
     });
+}
+
+/// The Normal blend of one warped pixel onto the canvas row, in float32 in the
+/// Python code's order of operations. The result is 0 to 255, where adding and
+/// removing 2^23 rounds half to even as round_ties_even does, without the
+/// library call per value that the baseline x86-64 build makes of it.
+#[inline]
+fn blend(row: &mut [u8], x: usize, layer: [i32; 4]) {
+    const HALF_EVEN: f32 = 8_388_608.0;
+    let a = layer[3] as f32 / 255.0;
+    let keep = 1.0f32 - a;
+    for channel in 0..3 {
+        let base = row[x * 4 + channel] as f32 / 255.0;
+        let front = layer[channel] as f32 / 255.0;
+        let mixed = (base * keep + front * a).clamp(0.0, 1.0);
+        row[x * 4 + channel] = ((mixed * 255.0 + HALF_EVEN) - HALF_EVEN) as u8;
+    }
 }
 
 /// Warp an RGBA source onto an RGBA canvas through a forward affine matrix, at
