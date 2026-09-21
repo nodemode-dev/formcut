@@ -133,7 +133,7 @@ def _strip(src: Path, dest: Path, kind: str, duration: float, frames: int) -> bo
     if kind != "image":
         from .proxies import usable as proxy_for
 
-        stand_in = proxy_for(src.stem)
+        stand_in = proxy_for(src.stem, src, STRIP_WIDTH)
         if stand_in is not None:
             src = stand_in
     if kind == "image":
