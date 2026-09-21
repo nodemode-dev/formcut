@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -26,35 +27,104 @@ from functools import lru_cache
 from pathlib import Path
 
 
+def host_triple() -> str:
+    """The target triple the bundled programs carry for this machine."""
+    arch = "aarch64" if platform.machine().lower() in ("arm64", "aarch64") else "x86_64"
+    if sys.platform == "darwin":
+        return f"{arch}-apple-darwin"
+    if os.name == "nt":
+        return f"{arch}-pc-windows-msvc"
+    return f"{arch}-unknown-linux-gnu"
+
+
+def user_ffmpeg_dir() -> Path:
+    """The per-person folder formcut looks in, outside the app.
+
+    A signed macOS app refuses to open once a file is added inside it, so this
+    is where a person puts ffmpeg by hand, and where a download lands.
+    """
+    if sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    elif os.name == "nt":
+        base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+    else:
+        base = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+    return base / "formcut" / "ffmpeg"
+
+
+def _names(program: str) -> tuple[str, str]:
+    suffix = ".exe" if os.name == "nt" else ""
+    return f"{program}{suffix}", f"{program}-{host_triple()}{suffix}"
+
+
+def _holds_ffmpeg(folder: Path) -> bool:
+    return any((folder / name).is_file() for name in _names("ffmpeg"))
+
+
 def bundle_dir() -> Path | None:
-    """Where a packaged build keeps its binaries, if this is one."""
+    """formcut's own ffmpeg, if one has been put where it looks.
+
+    In order: FORMCUT_FFMPEG_DIR, beside a packaged app, the per-person
+    folder, and src-tauri/binaries in a clone. A folder counts if it holds
+    ffmpeg under its plain name or under this machine's target triple. With
+    none of these, formcut runs whatever ffmpeg is on PATH, the person's own.
+    """
     explicit = os.environ.get("FORMCUT_FFMPEG_DIR")
-    if explicit and Path(explicit).is_dir():
+    if explicit and _holds_ffmpeg(Path(explicit)):
         return Path(explicit)
+    candidates: list[Path] = []
     if getattr(sys, "frozen", False):
         here = Path(sys.executable).resolve().parent
-        for candidate in (here, here / "binaries", here.parent / "Resources" / "binaries"):
-            if (candidate / "ffmpeg").exists() or (candidate / "ffmpeg.exe").exists():
-                return candidate
-    local = Path(__file__).resolve().parents[2] / "src-tauri" / "binaries"
-    if (local / "ffmpeg").exists() or (local / "ffmpeg.exe").exists():
-        return local
-    return None
+        candidates += [here, here / "binaries", here.parent / "Resources" / "binaries"]
+    candidates += [user_ffmpeg_dir(), Path(__file__).resolve().parents[2] / "src-tauri" / "binaries"]
+    return next((c for c in candidates if _holds_ffmpeg(c)), None)
+
+
+def _plain_names(folder: Path) -> None:
+    """Give triple-named programs the plain names the backend runs them by.
+
+    The name sits in the same folder as the program, so the folder its
+    libraries are found from does not change. A symlink follows a replaced
+    program; Windows gets a hard link, or a copy where links are refused. A
+    file already under the plain name is never touched.
+    """
+    for program in ("ffmpeg", "ffprobe"):
+        plain, tripled = (folder / name for name in _names(program))
+        if plain.exists() or plain.is_symlink() or not tripled.is_file():
+            continue
+        with contextlib.suppress(OSError):
+            if os.name != "nt":
+                plain.symlink_to(tripled.name)
+            else:
+                try:
+                    os.link(tripled, plain)
+                except OSError:
+                    shutil.copy2(tripled, plain)
 
 
 def prefer_bundled() -> Path | None:
-    """Put the bundled directory first on PATH, so every call finds it.
+    """Put formcut's own ffmpeg first on PATH, so every call finds it.
 
-    Doing it here rather than at each of the thirty-odd call sites means a
-    replaced binary is picked up everywhere at once, including by code that
-    spells the program's name as a plain string.
+    Doing it here rather than at each call site means a replaced binary is
+    picked up everywhere at once, including by code that spells the program's
+    name as a plain string, and by yt-dlp. Windows has no rpath: a program
+    finds its DLLs beside itself or on PATH, and the bundle keeps them in
+    lib-<triple>, so on Windows that folder goes on PATH as well. A folder
+    that cannot be given the plain name is not adopted.
     """
     folder = bundle_dir()
     if not folder:
         return None
-    current = os.environ.get("PATH", "")
-    if str(folder) not in current.split(os.pathsep):
-        os.environ["PATH"] = os.pathsep.join([str(folder), current])
+    _plain_names(folder)
+    if not (folder / _names("ffmpeg")[0]).is_file():
+        return None
+    first = [folder]
+    if os.name == "nt":
+        first += sorted(d for d in folder.glob("lib-*") if d.is_dir())
+    parts = [x for x in os.environ.get("PATH", "").split(os.pathsep) if x]
+    missing = [str(d) for d in first if str(d) not in parts]
+    if missing:
+        os.environ["PATH"] = os.pathsep.join(missing + parts)
     return folder
 
 
