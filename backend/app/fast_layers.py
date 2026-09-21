@@ -81,6 +81,39 @@ class Plan:
     layers: list[Layer] = field(default_factory=list)
 
 
+def prefers_exact(plan: Plan) -> bool:
+    """Whether the exact frame path should render this plan instead.
+
+    One full-frame video layer graded by the colour panel alone, with the Rust
+    colour kernel present: measured on four kinds of footage at 1280x720 and
+    1920x1080 with two grade strengths, the frame path took 0.90 to 1.00 times
+    the layered graph's time, and it renders the grade exactly where the graph
+    bakes it into a cube (48 dB apart). Nothing wider was measured, so nothing
+    wider moves: several layers, a LUT, fades, placement, stills and sharpen
+    (which the kernel leaves to NumPy) keep the graph.
+    """
+    from .pixel_effects import _native_colour
+
+    if len(plan.layers) != 1 or _native_colour() is None:
+        return False
+    layer = plan.layers[0]
+    grade = layer.grade or {}
+    colour = grade.get("colour") or {}
+    return (
+        bool(colour)
+        and not grade.get("lutId")
+        and float(colour.get("sharpen", 0) or 0) == 0
+        and not layer.still
+        and layer.fade_in == 0
+        and layer.fade_out == 0
+        and layer.opacity >= 1
+        and layer.angle == 0
+        and not layer.flip_h
+        and not layer.flip_v
+        and (layer.x, layer.y, layer.w, layer.h) == (0, 0, plan.width, plan.height)
+    )
+
+
 def _refuse(clip: dict) -> str | None:
     """Why this clip needs the frame path, or None when it can be layered here."""
     if clip.get("kind") not in ("video", "image"):

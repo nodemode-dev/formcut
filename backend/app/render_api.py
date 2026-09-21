@@ -290,6 +290,11 @@ def export_media(
                 "renderPath": "native",
             }
         layered = None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" else fast_layers.plan(project, count)
+        if layered is not None and os.environ.get("FORMCUT_EXPORT_PATH") != "layered" and fast_layers.prefers_exact(layered):
+            # Measured as fast through the exact path, which renders the grade the
+            # preview shows rather than a cube of it. FORMCUT_EXPORT_PATH=layered
+            # keeps the graph.
+            layered = None
         if layered is not None:
             fast_layers.run(
                 layered,
