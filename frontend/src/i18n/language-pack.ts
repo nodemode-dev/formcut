@@ -1,5 +1,8 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Media|Médias|Media|メディア|미디어|Mídia|Медиа|Medya|媒体|媒體
+const rows = `Fine edges (IS-Net)|Contours fins (IS-Net)|Bordi precisi (IS-Net)|精細なエッジ (IS-Net)|정밀한 가장자리 (IS-Net)|Bordas finas (IS-Net)|Точные края (IS-Net)|İnce kenarlar (IS-Net)|精细边缘 (IS-Net)|精細邊緣 (IS-Net)
+Video matting (people)|Détourage vidéo (personnes)|Scontorno video (persone)|動画マッティング (人物)|동영상 매팅 (인물)|Recorte de vídeo (pessoas)|Видеоматтинг (люди)|Video maskeleme (kişiler)|视频抠像 (人物)|影片摳像 (人物)
+Point to select (SAM 2)|Pointer pour sélectionner (SAM 2)|Punta per selezionare (SAM 2)|ポイントして選択 (SAM 2)|가리켜서 선택 (SAM 2)|Apontar para selecionar (SAM 2)|Выбор указанием (SAM 2)|İşaretleyerek seç (SAM 2)|点选对象 (SAM 2)|點選物件 (SAM 2)
+Media|Médias|Media|メディア|미디어|Mídia|Медиа|Medya|媒体|媒體
 Video effects|Effets vidéo|Effetti video|動画エフェクト|비디오 효과|Efeitos de vídeo|Видеоэффекты|Video efektleri|视频效果|影片效果
 Audio effects|Effets audio|Effetti audio|オーディオエフェクト|오디오 효과|Efeitos de áudio|Аудиоэффекты|Ses efektleri|音频效果|音訊效果
 Blur|Flou|Sfocatura|ぼかし|흐림|Desfoque|Размытие|Bulanıklık|模糊|模糊

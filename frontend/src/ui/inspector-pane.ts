@@ -284,6 +284,13 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         </div>
         <div class="prop-row" data-ref="bg-model-row">
           <span>${t("bg.model")}</span>
+          <select data-ref="bg-model">
+            <option value="person-cutout">${text("A person")}</option>
+            <option value="object-cutout">${text("Anything (object)")}</option>
+            <option value="sharp-cutout">${text("Fine edges (IS-Net)")}</option>
+            <option value="video-matting">${text("Video matting (people)")}</option>
+            <option value="click-select">${text("Point to select (SAM 2)")}</option>
+          </select>
           <span class="prop-aux" data-ref="bg-model-state">${t("bg.checking")}</span>
           <button class="tool-chip" data-ref="bg-model-get" hidden>${t("bg.download")}</button>
         </div>
@@ -756,7 +763,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   // nothing at all and say nothing about why, which is exactly what happened.
   const modelState = el.querySelector<HTMLElement>('[data-ref="bg-model-state"]');
   const modelGet = el.querySelector<HTMLButtonElement>('[data-ref="bg-model-get"]');
-  const CUTOUT_MODELS = ["object-cutout", "person-cutout"];
+  const CUTOUT_MODELS = ["object-cutout", "person-cutout", "sharp-cutout", "click-select"];
   const refreshModels = async () => {
     if (!modelState) return;
     try {

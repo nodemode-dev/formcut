@@ -32,7 +32,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
           <span class="cut-note" data-cut-model-state>checking for the model</span>
           <button class="tool-chip" data-action="cutout-models" hidden>Download models</button>
         </div>
-        <label>Model <select data-cutout-model><option value="object-cutout">Anything (object)</option><option value="person-cutout">A person</option></select></label>
+        <label>Model <select data-cutout-model><option value="object-cutout">Anything (object)</option><option value="person-cutout">A person</option><option value="sharp-cutout">Fine edges (IS-Net)</option><option value="video-matting">Video matting (people)</option><option value="click-select">Point to select (SAM 2)</option></select></label>
         <div class="cut-line">
           <button class="tool-chip is-primary" data-action="cutout">Remove background</button>
           <button class="tool-chip" data-action="cutout-pick" aria-pressed="false">Point at what to keep</button>
@@ -149,7 +149,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       if (action === "cutout-models") {
         const state = root.querySelector<HTMLElement>("[data-cut-model-state]");
         if (state) state.textContent = "downloading";
-        for (const id of ["object-cutout", "person-cutout"]) {
+        for (const id of new Set(["object-cutout", "person-cutout", query<HTMLSelectElement>("cutout-model").value])) {
           try {
             const started = await api<{ job_id?: string }>(`/api/models/${id}/download`, {});
             if (started.job_id) {
@@ -227,7 +227,8 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     if (!state) return;
     try {
       const listed = await api<Array<{ id: string; ready?: boolean }>>("/api/models");
-      const missing = listed.filter((m) => ["object-cutout", "person-cutout"].includes(m.id) && !m.ready);
+      const chosen = root.querySelector<HTMLSelectElement>("[data-cutout-model]")?.value ?? "object-cutout";
+      const missing = listed.filter((m) => ["object-cutout", "person-cutout", chosen].includes(m.id) && !m.ready);
       state.textContent = missing.length ? `${missing.length} model(s) to download first` : "model ready";
       if (get) get.hidden = missing.length === 0;
     } catch {
