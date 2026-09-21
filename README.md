@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.15.0-ffae2b" alt="version v1.15.0" />
+  <img src="https://img.shields.io/badge/version-v1.16.0-ffae2b" alt="version v1.16.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -222,6 +222,7 @@ Shipped so far:
 | 1.13.0 | signed webhooks: every finished export can be sent, with or without the video, to Make, Zapier, n8n or your own server to pass on to TikTok, Instagram and elsewhere; a Topaz key panel in Settings |
 | 1.14.0 | posting to TikTok from a bin video or the last export: a draft to your TikTok inbox, or a direct post with the privacy levels your account allows; sign in through your browser, set up in Settings |
 | 1.15.0 | posting Reels to Instagram from a bin video or the last export, as the professional account behind the access token you connect in Settings; video that is not H.264 or HEVC is caught before upload |
+| 1.16.0 | Google Drive and Dropbox: browse and add files to the bin, save exports to a formcut folder; connect in Settings |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
