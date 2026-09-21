@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.26.0-ffae2b" alt="version v1.26.0" />
+  <img src="https://img.shields.io/badge/version-v1.27.0-ffae2b" alt="version v1.27.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -233,6 +233,7 @@ Shipped so far:
 | 1.24.0 | the exact render path spends 40 percent less of its own time per frame, pictures identical: opaque layers skip the blend in the Rust kernel, and frames are no longer copied where nothing shares them |
 | 1.25.0 | formcut on phones, in portrait and landscape, on tablets and in narrow windows: nothing off the screen, every Settings tab reachable, controls sized for fingers on touch screens, and the preview and timeline side by side on a landscape phone |
 | 1.26.0 | the TikTok, Instagram and cloud dialogs take you straight to their section in Settings when a service needs setting up; every dialog checked on phones and desktops in light and dark themes |
+| 1.27.0 | the keyframe button is back in every track's controls, so keyframe lanes open again; each applied effect shows its name and switches on and off, keeping its settings |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
