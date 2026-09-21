@@ -21,6 +21,7 @@ from .stock import router as stock_router
 from .tools import prefer_bundled
 from .track import router as track_router
 from .tts import router as tts_router
+from .upscale import router as upscale_router
 
 prefer_bundled()
 
@@ -65,6 +66,7 @@ app.include_router(track_router)
 app.include_router(features_router)
 app.include_router(brush_router)
 app.include_router(library_router)
+app.include_router(upscale_router)
 
 
 @app.get("/api/health")

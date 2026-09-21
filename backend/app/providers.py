@@ -40,6 +40,13 @@ PROVIDERS = {
         "base": "https://api.elevenlabs.io",
         "purpose": "speech",
     },
+    "topaz": {
+        "label": "Topaz Labs",
+        "env": "TOPAZ_API_KEY",
+        "base_env": "TOPAZ_BASE",
+        "base": "https://api.topazlabs.com",
+        "purpose": "upscale",
+    },
 }
 
 
@@ -136,6 +143,13 @@ def test_provider(name: str) -> dict:
         if name == "pexels":
             response = httpx.get(f"{base}/v1/search", params={"query": "test", "per_page": 1}, headers={"Authorization": key}, timeout=20.0)
             detail = f"{len(response.json().get('photos', []))} result returned" if response.status_code == 200 else ""
+        elif name == "topaz":
+            # A status query for a request that cannot exist: a rejected key is
+            # answered 401 or 403 and an accepted one 404, and nothing is created.
+            response = httpx.get(f"{base}/video/00000000-0000-0000-0000-000000000000/status", headers={"X-API-Key": key}, timeout=20.0)
+            if response.status_code in (200, 404):
+                return {**_state(name), "ok": True, "detail": "Topaz accepted the key"}
+            detail = ""
         else:
             response = httpx.get(f"{base}/v1/voices", headers={"xi-api-key": key}, timeout=20.0)
             detail = f"{len(response.json().get('voices', []))} voices available" if response.status_code == 200 else ""
