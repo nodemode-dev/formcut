@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.3.0-ffae2b" alt="version v1.3.0" />
+  <img src="https://img.shields.io/badge/version-v1.4.0-ffae2b" alt="version v1.4.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -210,6 +210,7 @@ Shipped so far:
 | 1.1.0 | IS-Net, video matting and SAM 2 pass validation and reach render and export; SAM 2 takes points or a box; golden mattes; installed builds show every language; a benchmark on real clips |
 | 1.2.0 | the macOS and Windows installers carry formcut's LGPL ffmpeg from the formcut-binaries release, checked file by file against the record |
 | 1.3.0 | first launch fetches 4.4 MB instead of about 1.4 GB, every other model on first use; the cutout labels in all twelve languages, checked in the running editor |
+| 1.4.0 | draw a box on the preview to tell SAM 2 what to keep; timeline filmstrips for video clips work again |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
