@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v0.98.8-ffae2b" alt="version v0.98.8" />
+  <img src="https://img.shields.io/badge/version-v0.98.9-ffae2b" alt="version v0.98.9" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -203,6 +203,7 @@ Shipped so far:
 | 0.98.7 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
 | 0.98.7 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
 | 0.98.8 | LGPL ffmpeg for all four desktop targets, with its record and notices; found in a per-person folder or a clone under the names it ships with |
+| 0.98.9 | the portable Linux build runs from the repo root and starts with ffmpeg from formcut-binaries; first Linux release tarball |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
