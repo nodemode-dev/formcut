@@ -61,7 +61,7 @@ def check_files() -> None:
         "backend/requirements.txt",
         "src-tauri/tauri.conf.json",
         "src-tauri/Cargo.toml",
-        "setup/fetch_ffmpeg.py",
+        "src-tauri/binaries/ffmpeg-licence.json",
         ".github/workflows/release.yml",
         ".github/workflows/checks.yml",
         "frontend/package.json",
@@ -152,20 +152,20 @@ def check_licences() -> None:
         problems.append("Licences.md does not say which ffmpeg build is shipped; a GPL build imposes its terms on the bundle")
     else:
         notes.append("an ffmpeg licence is recorded")
-    fetch = ROOT / "setup/fetch_ffmpeg.py"
     release = ROOT / ".github/workflows/release.yml"
-    if not fetch.is_file() or not release.is_file():
-        # check_files has already named whichever is missing; reading it here
-        # would end the run with a traceback instead of a list of problems, and
-        # a preflight that crashes tells you less than one that fails.
+    if not release.is_file():
+        # check_files has already named it; reading it here would end the run
+        # with a traceback instead of a list of problems, and a preflight that
+        # crashes tells you less than one that fails.
         return
-    if "--allow-gpl" in read(release):
+    workflow = read(release)
+    if "--allow-gpl" in workflow or "fetch_ffmpeg" in workflow:
         problems.append(
-            "the release workflow passes --allow-gpl: that ships a GPL ffmpeg "
-            "and makes the distributed bundle GPL-3.0 rather than Apache-2.0"
+            "the release workflow fetches an ffmpeg of its own; the app fetches formcut's LGPL build on first run, "
+            "and a GPL build in the bundle would make it GPL-3.0 rather than Apache-2.0"
         )
     else:
-        notes.append("the release ships an LGPL ffmpeg, so the bundle stays Apache-2.0")
+        notes.append("the release bundles no ffmpeg; the app fetches formcut's LGPL build and checks it against the record")
 
 
 def check_engine() -> None:

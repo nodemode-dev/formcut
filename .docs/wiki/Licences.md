@@ -38,11 +38,14 @@ formcut is **Apache-2.0** and stays Apache-2.0 in a release, because it runs
 ffmpeg as a **separate program** rather than linking against it. The two meet at
 a process boundary, and neither licence reaches across it.
 
-The builds shipped are **LGPL-2.1** (`--disable-gpl --disable-nonfree`).
-`setup/fetch_ffmpeg.py` will only assemble a bundle from an LGPL build unless
-someone passes `--allow-gpl`, which is deliberate: a GPL ffmpeg inside the
-bundle would make the distributed whole GPL-3.0, and formcut's own terms would
-no longer describe what was shipped.
+The builds are **LGPL-2.1** (`--disable-gpl --disable-nonfree`), published one
+archive per target on the formcut-binaries release. The installers carry no
+ffmpeg: on first run, when none is found, the app fetches the archive for its
+machine and checks every file against the SHA-256 recorded in
+`ffmpeg-licence.json`, which it carries; if one file differs, nothing is
+installed. A GPL ffmpeg inside the bundle would make the distributed whole
+GPL-3.0, so preflight fails any release workflow that fetches an ffmpeg of its
+own.
 
 Three things ship beside the binary, and all three are required rather than
 courtesies:

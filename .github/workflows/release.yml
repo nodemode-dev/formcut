@@ -69,23 +69,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 
-      # ffmpeg and ffprobe travel inside the bundle so nothing has to be on the
-      # user's PATH. Pin a build whose licence permits redistribution and record
-      # which one in .docs/wiki/Licences.md before the first release.
-      - name: fetch ffmpeg for the bundle
-        run: python setup/fetch_ffmpeg.py --target ${{ matrix.target }} --out src-tauri/binaries
-        continue-on-error: false
-
-      - name: freeze the engine
-        run: |
-          pip install -r backend/requirements.txt pyinstaller
-          python backend/freeze.py
-
+      # The interface is built first because the frozen engine carries it.
       - name: build the interface
         run: |
           npm ci
           npm run build
         working-directory: frontend
+
+      # PyPI's OpenCV brings its own FFmpeg, which freeze.py refuses, so OpenCV
+      # is rebuilt without it first. The engine is frozen to one file and put
+      # where externalBin looks for it. ffmpeg is not bundled: on first run the
+      # app fetches formcut's LGPL build and checks every file against the
+      # record it carries.
+      - name: freeze the engine
+        shell: bash
+        run: |
+          pip install -r backend/requirements.txt pyinstaller
+          python backend/prepare_cv.py
+          python backend/freeze.py --onefile
+          suffix=""
+          if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
+          built=$(ls dist/formcut-engine$suffix backend/dist/formcut-engine$suffix 2>/dev/null | head -1)
+          test -n "$built"
+          mkdir -p src-tauri/binaries
+          cp "$built" "src-tauri/binaries/formcut-engine-${{ matrix.target }}$suffix"
 
       - name: build the app
         uses: tauri-apps/tauri-action@v0
