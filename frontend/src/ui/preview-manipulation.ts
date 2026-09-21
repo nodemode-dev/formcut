@@ -409,6 +409,54 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     }));
   });
 
+  // Box: dragging a rectangle on the picture tells SAM 2 what to keep. The
+  // rectangle is one element made once and only moved and sized while the
+  // pointer drags, at most once a frame, so nothing else is written or redrawn.
+  // It is sent when the drag ends, in the same picture coordinates as a click.
+  const boxMark = document.createElement("div");
+  boxMark.className = "stage-box";
+  boxMark.hidden = true;
+  stage.append(boxMark);
+  stage.addEventListener("pointerdown", (event) => {
+    if (stage.dataset.boxCutout !== "on" || event.button !== 0) return;
+    const frame = stage.getBoundingClientRect();
+    if (!frame.width || !frame.height) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const clamp = (value: number) => Math.max(0, Math.min(1, value));
+    const at = (next: PointerEvent) => ({ x: clamp((next.clientX - frame.left) / frame.width), y: clamp((next.clientY - frame.top) / frame.height) });
+    const start = at(event);
+    let end = start;
+    let queued = false;
+    const corners = () => ({ x0: Math.min(start.x, end.x), y0: Math.min(start.y, end.y), x1: Math.max(start.x, end.x), y1: Math.max(start.y, end.y) });
+    const place = () => {
+      queued = false;
+      const box = corners();
+      boxMark.style.transform = `translate(${box.x0 * frame.width}px, ${box.y0 * frame.height}px)`;
+      boxMark.style.width = `${(box.x1 - box.x0) * frame.width}px`;
+      boxMark.style.height = `${(box.y1 - box.y0) * frame.height}px`;
+    };
+    place();
+    boxMark.hidden = false;
+    stage.setPointerCapture(event.pointerId);
+    const move = (next: PointerEvent) => {
+      end = at(next);
+      if (!queued) { queued = true; requestAnimationFrame(place); }
+    };
+    const release = (last: PointerEvent) => {
+      stage.removeEventListener("pointermove", move);
+      boxMark.hidden = true;
+      end = at(last);
+      const box = corners();
+      if (box.x1 - box.x0 > 0.01 && box.y1 - box.y0 > 0.01) {
+        document.dispatchEvent(new CustomEvent("formcut:stage-box", { detail: box }));
+      }
+    };
+    stage.addEventListener("pointermove", move);
+    stage.addEventListener("pointerup", release, { once: true });
+    stage.addEventListener("pointercancel", release, { once: true });
+  }, true);
+
   pen.addEventListener("pointerdown", (event) => {
     const current = maskOf();
     if (!current) return;

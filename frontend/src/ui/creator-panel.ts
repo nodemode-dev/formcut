@@ -36,6 +36,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
         <div class="cut-line">
           <button class="tool-chip is-primary" data-action="cutout">Remove background</button>
           <button class="tool-chip" data-action="cutout-pick" aria-pressed="false">Point at what to keep</button>
+          <button class="tool-chip" data-action="cutout-box" aria-pressed="false">Draw a box around it</button>
           <button class="tool-chip" data-action="cutout-clear">Put it back</button>
         </div>
         <p class="cut-note" data-cut-state>Nothing removed yet.</p>
@@ -165,6 +166,22 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
         await refreshCutoutModels();
         return;
       }
+      if (action === "cutout-box") {
+        const stage = document.querySelector<HTMLElement>(".stage");
+        const button = root.querySelector<HTMLElement>('[data-action="cutout-box"]');
+        if (!stage || !button) return;
+        const on = stage.dataset.boxCutout !== "on";
+        if (on) {
+          stage.dataset.boxCutout = "on";
+          delete stage.dataset.pickCutout;
+          root.querySelector('[data-action="cutout-pick"]')?.classList.remove("is-on");
+        } else delete stage.dataset.boxCutout;
+        button.classList.toggle("is-on", on);
+        button.setAttribute("aria-pressed", String(on));
+        const state = root.querySelector<HTMLElement>("[data-cut-state]");
+        if (state && on) state.textContent = phrase("Drag a box around what to keep");
+        return;
+      }
       if (action === "cutout-pick") {
         const stage = document.querySelector<HTMLElement>(".stage");
         const button = root.querySelector<HTMLElement>('[data-action="cutout-pick"]');
@@ -248,6 +265,27 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     if (state) state.textContent = "Kept what you pointed at.";
     delete stage!.dataset.pickCutout;
     root.querySelector('[data-action="cutout-pick"]')?.classList.remove("is-on");
+  });
+  // A box drawn on the preview tells SAM 2 what to keep, so it chooses SAM 2.
+  document.addEventListener("formcut:stage-box", (event) => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (stage?.dataset.boxCutout !== "on") return;
+    const box = (event as CustomEvent).detail as { x0: number; y0: number; x1: number; y1: number };
+    const clip = selected();
+    if (!clip) return;
+    const next = { ...(clip.cutout ?? { threshold: 0.5, feather: 0.1 }), model: "click-select", box };
+    delete (next as { point?: unknown }).point;
+    engine.dispatch("clip.cutout", { clipId: clip.id, cutout: next });
+    // The preview never runs a model itself; it shows the mattes this job fills in.
+    void api("/api/render/mattes", { clip: { ...clip, cutout: next }, fps: engine.snapshot.fps });
+    const model = root.querySelector<HTMLSelectElement>("[data-cutout-model]");
+    if (model) model.value = "click-select";
+    const state = root.querySelector<HTMLElement>("[data-cut-state]");
+    if (state) state.textContent = phrase("Kept what is in the box");
+    delete stage!.dataset.boxCutout;
+    const button = root.querySelector<HTMLElement>('[data-action="cutout-box"]');
+    button?.classList.remove("is-on");
+    button?.setAttribute("aria-pressed", "false");
   });
 
   void api<typeof catalog>("/api/catalogue").then(result => {

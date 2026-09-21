@@ -1,5 +1,8 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `A person|Une personne|Una persona|人物|사람|Uma pessoa|Человек|Bir kişi|人物|人物
+const rows = `Draw a box around it|Tracer un cadre autour|Disegna un riquadro attorno|枠で囲む|상자로 감싸기|Desenhar uma caixa em volta|Обвести рамкой|Etrafına kutu çiz|框选|框選
+Drag a box around what to keep|Tracez un cadre autour de ce qu'il faut garder|Trascina un riquadro attorno a ciò da tenere|残したいものを枠で囲んでください|남길 대상을 상자로 감싸세요|Arraste uma caixa em volta do que manter|Обведите рамкой то, что нужно оставить|Tutulacak şeyin etrafına bir kutu çizin|拖出一个框，框住要保留的内容|拖出一個框，框住要保留的內容
+Kept what is in the box|Gardé ce qui est dans le cadre|Tenuto ciò che è nel riquadro|枠内のものを残しました|상자 안의 대상을 남겼습니다|Mantido o que está na caixa|Оставлено то, что в рамке|Kutunun içindeki tutuldu|已保留框内的内容|已保留框內的內容
+A person|Une personne|Una persona|人物|사람|Uma pessoa|Человек|Bir kişi|人物|人物
 Anything (object)|N'importe quoi (objet)|Qualsiasi cosa (oggetto)|何でも (物体)|무엇이든 (물체)|Qualquer coisa (objeto)|Что угодно (объект)|Herhangi bir şey (nesne)|任意事物 (物体)|任意事物 (物體)
 Fine edges (IS-Net)|Contours fins (IS-Net)|Bordi precisi (IS-Net)|精細なエッジ (IS-Net)|정밀한 가장자리 (IS-Net)|Bordas finas (IS-Net)|Точные края (IS-Net)|İnce kenarlar (IS-Net)|精细边缘 (IS-Net)|精細邊緣 (IS-Net)
 Video matting (people)|Détourage vidéo (personnes)|Scontorno video (persone)|動画マッティング (人物)|동영상 매팅 (인물)|Recorte de vídeo (pessoas)|Видеоматтинг (люди)|Video maskeleme (kişiler)|视频抠像 (人物)|影片摳像 (人物)

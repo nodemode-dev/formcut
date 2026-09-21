@@ -268,6 +268,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
               <strong>${t("cut.step3")}</strong>
               <span class="cut-note" data-ref="cut-pick-state">${t("cut.pickhint")}</span>
               <button class="tool-chip" data-ref="cut-pick" aria-pressed="false">${t("cut.pick")}</button>
+              <button class="tool-chip" data-ref="cut-box" aria-pressed="false">${text("Draw a box around it")}</button>
               <button class="tool-chip" data-ref="cut-clear-point" hidden>${t("cut.whole")}</button>
             </div>
           </li>
@@ -1062,11 +1063,50 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     delete stage!.dataset.pickCutout;
     pickButton?.classList.remove("is-on");
   });
+  // A box drawn on the preview tells SAM 2 what to keep. It means nothing to
+  // the other models, so drawing one chooses SAM 2, and it replaces a point.
+  const boxButton = cut<HTMLButtonElement>("cut-box");
+  boxButton?.addEventListener("click", () => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (!stage) return;
+    const on = stage.dataset.boxCutout !== "on";
+    if (on) {
+      stage.dataset.boxCutout = "on";
+      delete stage.dataset.pickCutout;
+      pickButton?.classList.remove("is-on");
+    } else delete stage.dataset.boxCutout;
+    boxButton.classList.toggle("is-on", on);
+    boxButton.setAttribute("aria-pressed", String(on));
+    const note = cut<HTMLElement>("cut-pick-state");
+    if (note && on) note.textContent = text("Drag a box around what to keep");
+  });
+  document.addEventListener("formcut:stage-box", (event) => {
+    const stage = document.querySelector<HTMLElement>(".stage");
+    if (stage?.dataset.boxCutout !== "on") return;
+    const box = (event as CustomEvent).detail as { x0: number; y0: number; x1: number; y1: number };
+    const found = cutClip();
+    if (!found) return;
+    const next = { ...(found.clip.cutout ?? { threshold: 0.5, feather: 0.1 }), model: "click-select", box };
+    delete (next as { point?: unknown }).point;
+    engine.dispatch("clip.cutout", { clipId: found.clip.id, cutout: next });
+    // The preview never runs a model itself; it shows the mattes this job fills in.
+    void api("/api/render/mattes", { clip: { ...found.clip, cutout: next }, fps: engine.snapshot.fps });
+    const chosen = el.querySelector<HTMLSelectElement>('[data-ref="bg-model"]');
+    if (chosen) chosen.value = "click-select";
+    const note = cut<HTMLElement>("cut-pick-state");
+    if (note) note.textContent = text("Kept what is in the box");
+    cut<HTMLElement>("cut-clear-point")!.hidden = false;
+    el.querySelector('[data-step="pick"]')?.classList.add("is-done");
+    delete stage!.dataset.boxCutout;
+    boxButton?.classList.remove("is-on");
+    boxButton?.setAttribute("aria-pressed", "false");
+  });
   cut<HTMLButtonElement>("cut-clear-point")?.addEventListener("click", () => {
     const found = cutClip();
     if (!found?.clip.cutout) return;
     const next = { ...found.clip.cutout };
     delete (next as { point?: unknown }).point;
+    delete (next as { box?: unknown }).box;
     engine.dispatch("clip.cutout", { clipId: found.clip.id, cutout: next });
     const note = cut<HTMLElement>("cut-pick-state");
     if (note) note.textContent = t("cut.pickhint");
