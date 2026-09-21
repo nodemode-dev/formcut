@@ -852,6 +852,11 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   margin-bottom: var(--sp-3);
   color: var(--ink-soft);
 }
+/* The options wrap within their column rather than running past the dialog's
+   edge, which the longer codec names made them do at every size; a row of text
+   alone, like the estimate or the encoder note, takes the dialog's width. */
+.modal-row > .seg { min-width: 0; flex-wrap: wrap; }
+.modal-row.export-estimate { display: block; }
 .modal-actions {
   display: flex; justify-content: flex-end; gap: var(--sp-2);
   margin-top: var(--sp-4);
@@ -896,7 +901,8 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 /* mobile layout: stage and timeline stack; media and inspector become sheets */
 .mobile-bar { display: none; }
-@media (max-width: 768px) {
+/* The compact layout: the condition in ui/compact.ts, kept identical by a test. */
+@media (max-width: 940px), (max-height: 500px) {
   .workspace {
     display: flex;
     flex-direction: column;
@@ -908,7 +914,8 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   .titlebar-center { min-width: 0; }
   .titlebar-center .project-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .titlebar-center .save-state { display: none; }
-  .titlebar-right .iconbtn { display: none; }
+  /* Settings stays: pairing, providers and cloud storage live there. */
+  .titlebar-right .iconbtn:not([data-ref="settings"]) { display: none; }
   .titlebar .menu-item, .titlebar-right .tool-chip { padding: 0 var(--sp-1); font-size: 12px; }
   .btn-export { padding: 0 var(--sp-2); }
   #app .pane-preview .stage { min-width: 0; }
@@ -968,6 +975,27 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 .export-estimate { color: var(--ink-soft); font-size: 12px; }
 .export-encoder.is-warning { color: var(--warn, #e0806a); }
+
+/* Touch: controls at least 32px across, the title bar's 36px, so a fingertip
+   can hit them; WCAG 2.5.8 asks for 24. Measured on a phone before this, the
+   menus were 14px tall, Export 16px and the icon buttons 20px. A mouse or a
+   trackpad keeps the desktop's density. */
+@media (pointer: coarse) {
+  .iconbtn, .fav-star, .playhead-grab { min-width: 32px; min-height: 32px; }
+  .work-grip { min-width: 24px; min-height: 24px; }
+  .titlebar .menu-item, .titlebar .btn-export, .titlebar-right .tool-chip { min-height: 36px; }
+  .tool-chip, .seg > button, .pane-tab, .mini-select { min-height: 32px; }
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select { min-height: 32px; }
+}
+
+/* A landscape phone: the preview and the timeline side by side, each the full
+   height. Stacked into 390px, the timeline had room for its toolbar and ruler
+   and not one track. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .workspace { flex-direction: row; }
+  .pane-preview { flex: 0 0 42%; min-width: 0; }
+  .pane-timeline { flex: 1 1 0; min-width: 0; min-height: 0; }
+}
 
 /* Title styles are pictures of a whole frame, so their tiles keep the frame's
    shape and show all of it: at 4/3 with `cover` the rendered 16/9 previews were
@@ -1336,7 +1364,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .prop-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prop-row > .prop-aux { flex: 0 0 auto; white-space: nowrap; }
 .panel-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-width: 0; }
-.panel-section-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-section-head > span { flex: 0 0 auto; max-width: 70%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .panel-section-head > small { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
 .stock-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
 .stock-row > input[type="search"], .stock-row > input[type="url"] { flex: 1 1 160px; min-width: 0; }

@@ -108,7 +108,7 @@
 .pane-divider:focus-visible { outline: 2px solid var(--cue); outline-offset: -1px; background: var(--cue-wash); }
 .pane-divider[hidden] { display: none; }
 
-@media (max-width: 768px) { .pane-divider { display: none; } }
+@media (max-width: 940px), (max-height: 500px) { .pane-divider { display: none; } }
 
 /* --- keyframes under each track ------------------------------------------- */
 
@@ -284,7 +284,7 @@
 .home-card-tools .tool-chip { font-size: 11px; padding: 2px 6px; }
 .home-rows { background: var(--inset); border: 1px solid var(--edge); border-radius: var(--radius-m); }
 
-@media (max-width: 768px) {
+@media (max-width: 940px), (max-height: 500px) {
   .start-overlay { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .home-rail { flex-direction: row; align-items: center; gap: var(--sp-2); border-right: 0; border-bottom: 1px solid var(--edge); padding: var(--sp-2); overflow-x: auto; }
   .home-rail .start-brand span { display: none; }

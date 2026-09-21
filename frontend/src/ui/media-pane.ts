@@ -16,6 +16,7 @@ import { openUpscale } from "./upscale-dialog";
 import { openTikTok } from "./tiktok-dialog";
 import { openInstagram } from "./instagram";
 import { openCloudBrowser } from "./cloud";
+import { compact } from "./compact";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -630,7 +631,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     card.addEventListener("click", () => {
       // Touch layouts have no HTML5 drag and drop; a tap appends the media
       // at the playhead on the matching lane instead.
-      if (window.innerWidth > 768) return;
+      if (!compact()) return;
       const state = engine.snapshot;
       const timeline = state.timelines[state.activeTimeline];
       const trackIndex = Math.min(item.kind === "audio" ? 3 : 2, timeline.tracks.length - 1);

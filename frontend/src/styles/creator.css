@@ -99,7 +99,8 @@
 .guide-line[data-axis="y"] { left: 0; right: 0; height: 1px; transform: translateY(-0.5px); }
 
 .workspace[data-focus="true"] > .pane:not(.pane-preview) { display: none; }
-@media (min-width: 769px) {
+/* The desktop layout: exactly where the compact condition in ui/compact.ts does not hold. */
+@media (min-width: 941px) and (min-height: 501px) {
   .workspace[data-media-hidden="true"] > .pane-media,
   .workspace[data-inspector-hidden="true"] > .pane-inspector,
   .workspace[data-timeline-hidden="true"] > .pane-timeline { display: none; }
