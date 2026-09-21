@@ -15,6 +15,7 @@ from .presets import router as presets_router
 from .projects import router as projects_router
 from .security import LocalOnly
 from .stock import router as stock_router
+from .tiktok import router as tiktok_router
 
 # The bundled ffmpeg, if there is one, goes to the front of the search path so
 # a binary a person has replaced is the one that runs.
@@ -69,6 +70,7 @@ app.include_router(brush_router)
 app.include_router(library_router)
 app.include_router(upscale_router)
 app.include_router(webhooks_router)
+app.include_router(tiktok_router)
 
 
 @app.get("/api/health")
