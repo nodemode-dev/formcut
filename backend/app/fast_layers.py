@@ -1,28 +1,30 @@
 """Export layered, placed, faded and graded timelines without Python in the frame loop.
 
 The native cut path takes plain video one clip at a time. This takes more:
-video on several tracks at once, overlapping, each scaled, stretched, moved and
-flipped where the renderer places it, at an opacity, fading in and out, graded
+video and still images on several tracks at once, overlapping, each scaled,
+stretched, moved, flipped and rotated where the renderer places it, at an
+opacity, fading in and out, crossfading or dipping into the next clip, graded
 by the colour panel or a LUT, over a solid background. ffmpeg composites the
 clips in the renderer's order, bottom track first.
 
 The grade is not rewritten as ffmpeg filters. The renderer's own colour panel
 and LUT code is run over a 33-point cube of colours, and ffmpeg applies that
 cube, so the grade is formcut's, interpolated. Frames are chosen as the cut
-path chooses them, sought and rate-normalised as the decoder does. Rotation,
-blend modes, effects, masks, text, images, transitions and keyframed motion
-keep the frame path.
+path chooses them, sought and rate-normalised as the decoder does. Blend
+modes, effects, masks, text, transitions other than crossfade and dip, and
+keyframed motion keep the frame path.
 """
 
 from __future__ import annotations
 
+import math
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-from PIL import ImageColor
+from PIL import Image, ImageColor, ImageOps
 
 from . import fast_export
 from .media import MEDIA_DIR
@@ -31,7 +33,11 @@ from .renderer import DEFAULTS
 from .timing import source_time
 from .video_source import VideoSource
 
-ALLOWED = {"colour", "lutId", "fadeIn", "fadeOut"}
+ALLOWED = {"colour", "lutId", "fadeIn", "fadeOut", "rampIn", "rampOut", "extendOut", "transitionIn", "transitionOut", "transitionLength"}
+# The renderer draws these two as alpha ramps alone: a crossfade ramps the
+# incoming clip in over the outgoing one, which keeps playing; a dip ramps one
+# out and the other in through the background.
+TRANSITIONS = ("crossfade", "dip")
 LIMIT = 32
 CUBE = 33
 
@@ -59,6 +65,10 @@ class Layer:
     fade_in: float
     fade_out: float
     grade: dict | None
+    still: bool = False
+    angle: float = 0.0
+    turned_w: int = 0
+    turned_h: int = 0
 
 
 @dataclass
@@ -73,18 +83,20 @@ class Plan:
 
 def _refuse(clip: dict) -> str | None:
     """Why this clip needs the frame path, or None when it can be layered here."""
-    if clip.get("kind") != "video":
+    if clip.get("kind") not in ("video", "image"):
         return f"a {clip.get('kind')} clip"
     if not clip.get("mediaId"):
         return "a clip without media"
     for key in fast_export.ABSENT:
         if key not in ALLOWED and clip.get(key):
             return key
+    for key in ("transitionIn", "transitionOut"):
+        kind = (clip.get(key) or {}).get("type")
+        if kind and kind not in TRANSITIONS:
+            return "transition"
     if float(clip.get("speed") or 1) != 1:
         return "speed"
     transform = {**DEFAULTS, **(clip.get("transform") or {})}
-    if float(transform["rotation"]) % 360:
-        return "rotation"
     if str(transform["blendMode"]) != "Normal":
         return "blendMode"
     if any(prop in (k.get("props") or {}) for k in clip.get("keyframes") or [] for prop in fast_export.MOTION):
@@ -142,7 +154,9 @@ def plan(project: dict, count: int) -> Plan | None:
     fps, width, height = int(project["fps"]), int(project["width"]), int(project["height"])
     result = Plan(width, height, fps, count, _background(project) or (0, 0, 0))
     for clip in sorted(_visible(project), key=lambda c: (-c["trackIndex"], c["start"])):
-        first, end = fast_export._span(clip, fps, count)
+        # An outgoing crossfade keeps drawing through its extension, as the renderer draws it.
+        drawn = {**clip, "duration": float(clip["duration"]) + float(clip.get("extendOut") or 0)}
+        first, end = fast_export._span(drawn, fps, count)
         transform = {**DEFAULTS, **(clip.get("transform") or {})}
         opacity = max(0.0, min(1.0, float(transform["opacity"]) / 100))
         if end <= first or opacity <= 0:
@@ -150,43 +164,58 @@ def plan(project: dict, count: int) -> Plan | None:
         paths = list(MEDIA_DIR.glob(f"{clip['mediaId']}.*"))
         if not paths:
             return None
-        source = VideoSource(paths[0])
-        rate = source.fps
-        lead = first / fps - float(clip["start"])
-        start = source_time(clip, lead)
-        index = max(0, int(start * rate + 1e-7))
-        if source.frame_count:
-            index = min(source.frame_count - 1, index)
         frames = end - first
-        fit = min(width / source.width, height / source.height)
-        drawn_w = abs(fit * float(transform["scale"]) / 100 * float(transform["width"]) / 100) * source.width
-        drawn_h = abs(fit * float(transform["scale"]) / 100 * float(transform["height"]) / 100) * source.height
+        lead = first / fps - float(clip["start"])
+        still = clip["kind"] == "image"
+        if still:
+            with Image.open(paths[0]) as picture:
+                source_w, source_h = ImageOps.exif_transpose(picture).size
+            rate, seek, shift, span = float(fps), 0.0, 0.0, frames / fps
+        else:
+            source = VideoSource(paths[0])
+            rate, source_w, source_h = source.fps, source.width, source.height
+            start = source_time(clip, lead)
+            index = max(0, int(start * rate + 1e-7))
+            if source.frame_count:
+                index = min(source.frame_count - 1, index)
+            seek, shift, span = index / rate, start - index / rate + 1e-7 / rate, start + frames / fps - index / rate + 2 / rate
+        fit = min(width / source_w, height / source_h)
+        drawn_w = abs(fit * float(transform["scale"]) / 100 * float(transform["width"]) / 100) * source_w
+        drawn_h = abs(fit * float(transform["scale"]) / 100 * float(transform["height"]) / 100) * source_h
         if round(drawn_w) < 1 or round(drawn_h) < 1:
             continue
+        # A rotated layer is placed by the box around it, centred where the clip's centre falls.
+        angle = math.radians(float(transform["rotation"]) % 360)
+        turned_w = abs(drawn_w * math.cos(angle)) + abs(drawn_h * math.sin(angle))
+        turned_h = abs(drawn_w * math.sin(angle)) + abs(drawn_h * math.cos(angle))
         cx, cy = width * (0.5 + float(transform["posX"]) / 100), height * (0.5 + float(transform["posY"]) / 100)
         result.layers.append(
             Layer(
                 paths[0],
                 rate,
-                source.width,
-                source.height,
-                index / rate,
-                start - index / rate + 1e-7 / rate,
-                start + frames / fps - index / rate + 2 / rate,
+                source_w,
+                source_h,
+                seek,
+                shift,
+                span,
                 first,
                 frames,
                 lead,
                 float(clip["duration"]),
-                round(cx - drawn_w / 2),
-                round(cy - drawn_h / 2),
+                round(cx - turned_w / 2),
+                round(cy - turned_h / 2),
                 round(drawn_w),
                 round(drawn_h),
                 bool(transform["flipH"]),
                 bool(transform.get("flipV")),
                 opacity,
-                float(clip.get("fadeIn") or 0),
-                float(clip.get("fadeOut") or 0),
+                max(float(clip.get("fadeIn") or 0), float(clip.get("rampIn") or 0)),
+                max(float(clip.get("fadeOut") or 0), float(clip.get("rampOut") or 0)),
                 _grade(clip),
+                still,
+                angle,
+                max(1, round(turned_w)),
+                max(1, round(turned_h)),
             )
         )
     return result
@@ -208,10 +237,21 @@ def bake(grade: dict, path: Path) -> Path:
     return path
 
 
-def inputs(plan: Plan) -> list[str]:
+def _still(source: Path, path: Path) -> Path:
+    """The still as the renderer decodes it: upright by its EXIF orientation, alpha kept."""
+    with Image.open(source) as picture:
+        ImageOps.exif_transpose(picture).convert("RGBA").save(path)
+    return path
+
+
+def inputs(plan: Plan, stills: dict[int, Path] | None = None) -> list[str]:
     args: list[str] = []
-    for layer in plan.layers:
-        args += ["-ss", str(layer.seek), "-t", f"{layer.span:.6f}", "-i", str(layer.source)]
+    for number, layer in enumerate(plan.layers):
+        if layer.still:
+            args += ["-loop", "1", "-framerate", str(plan.fps), "-t", f"{layer.span + 2 / plan.fps:.6f}"]
+            args += ["-i", str((stills or {})[number])]
+        else:
+            args += ["-ss", str(layer.seek), "-t", f"{layer.span:.6f}", "-i", str(layer.source)]
     return args
 
 
@@ -222,12 +262,15 @@ def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
         f"color=c=0x{red:02x}{green:02x}{blue:02x}:s={plan.width}x{plan.height}:r={plan.fps},format=rgba,trim=end_frame={plan.count},setsar=1[base0]"
     ]
     for number, layer in enumerate(plan.layers):
-        ticks = fast_export._timebase(layer.rate, plan.fps)
-        steps = [
-            f"[{number}:v:0]fps={layer.rate},scale={layer.width}:{layer.height},format=bgr24,format=rgba",
-            f"settb=1/{ticks},setpts=PTS-{round(layer.shift * ticks)},tpad=stop_mode=clone:stop=-1",
-            f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={layer.frames}",
-        ]
+        if layer.still:
+            steps = [f"[{number}:v:0]format=rgba,trim=end_frame={layer.frames},setpts=PTS-STARTPTS"]
+        else:
+            ticks = fast_export._timebase(layer.rate, plan.fps)
+            steps = [
+                f"[{number}:v:0]fps={layer.rate},scale={layer.width}:{layer.height},format=bgr24,format=rgba",
+                f"settb=1/{ticks},setpts=PTS-{round(layer.shift * ticks)},tpad=stop_mode=clone:stop=-1",
+                f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={layer.frames}",
+            ]
         if number in cubes:
             steps.append(f"lut3d=file='{cubes[number].as_posix()}':interp=trilinear")
         if (layer.w, layer.h) != (layer.width, layer.height):
@@ -236,6 +279,8 @@ def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
             steps.append("hflip")
         if layer.flip_v:
             steps.append("vflip")
+        if layer.angle:
+            steps.append(f"rotate=a={layer.angle:.8f}:ow={layer.turned_w}:oh={layer.turned_h}:c=none:bilinear=1")
         if layer.opacity < 1:
             steps.append(f"colorchannelmixer=aa={layer.opacity:.6f}")
         if layer.fade_in > 0 or layer.fade_out > 0:
@@ -271,13 +316,16 @@ def run(
     """Encode the layered plan with the frame path's audio and output settings."""
     with tempfile.TemporaryDirectory(prefix="formcut-grades-") as folder:
         cubes = {number: bake(layer.grade, Path(folder) / f"grade{number}.cube") for number, layer in enumerate(plan.layers) if layer.grade}
+        stills = {
+            number: _still(layer.source, Path(folder) / f"still{number}.png") for number, layer in enumerate(plan.layers) if layer.still
+        }
         command = [
             program,
             "-v",
             "error",
             "-y",
             "-nostdin",
-            *inputs(plan),
+            *inputs(plan, stills),
             "-i",
             str(audio),
             "-filter_complex",
