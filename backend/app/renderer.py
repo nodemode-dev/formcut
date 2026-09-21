@@ -409,7 +409,7 @@ class FrameRenderer:
             if not ok:
                 return None
             self.frame_numbers[cursor] = wanted + 1
-            self.frames[cursor] = cv2.cvtColor(second, cv2.COLOR_BGR2RGBA)
+            self.frames[cursor] = second
             grey_a = cv2.cvtColor(first, cv2.COLOR_BGR2GRAY)
             grey_b = cv2.cvtColor(second, cv2.COLOR_BGR2GRAY)
             flow = cv2.calcOpticalFlowFarneback(grey_a, grey_b, None, 0.5, 3, 21, 3, 5, 1.2, 0)
@@ -480,7 +480,10 @@ class FrameRenderer:
                 return apply_crop(made, clip)
         current = self.frame_numbers.get(cursor, -2)
         if wanted == current:
-            return apply_crop(self.frames[cursor].copy(), clip)
+            # The cache holds the decoded frame, which nothing writes to; each use
+            # converts it afresh, so what a caller receives is its own to change,
+            # without copying every frame to protect the cache.
+            return apply_crop(cv2.cvtColor(self.frames[cursor], cv2.COLOR_BGR2RGBA), clip)
         if wanted != current + 1:
             capture.seek(wanted)
         ok, frame = capture.read()
@@ -488,10 +491,10 @@ class FrameRenderer:
             raise ValueError("Could not decode source frame")
         result = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
         self.frame_numbers[cursor] = wanted
-        self.frames[cursor] = result
+        self.frames[cursor] = frame
         if native:
             self.decode_scale[media_id] = max(result.shape[0], result.shape[1]) / native
-        return apply_crop(result.copy(), clip)
+        return apply_crop(result, clip)
 
     def scaled_effects(self, effects: list[dict], clip: dict) -> list[dict]:
         """Pixel-measured parameters follow the resolution actually decoded.
@@ -563,6 +566,11 @@ class FrameRenderer:
         return np.array(image)
 
     def mask_frame(self, image: np.ndarray, clip: dict) -> np.ndarray:
+        # Only a key, a mask or a cutout changes the picture below; without them
+        # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
+        # one caller replaces its frame with the result, so no one shares it.
+        if not (clip.get("key") or clip.get("mask") or clip.get("cutout")):
+            return image
         out = image.copy()
         h, w = out.shape[:2]
         box = crop_box(clip)
