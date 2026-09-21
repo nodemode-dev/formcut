@@ -1,5 +1,21 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Stickers|Autocollants|Adesivi|ステッカー|스티커|Figurinhas|Стикеры|Çıkartmalar|贴纸|貼紙
+const rows = `Add a Topaz key in Settings to use Topaz|Ajoutez une clé Topaz dans les réglages pour utiliser Topaz|Aggiungi una chiave Topaz nelle impostazioni per usare Topaz|Topaz を使うには、設定で Topaz のキーを追加してください|Topaz를 사용하려면 설정에서 Topaz 키를 추가하세요|Adicione uma chave da Topaz nas configurações para usar o Topaz|Чтобы использовать Topaz, добавьте ключ Topaz в настройках|Topaz'ı kullanmak için Ayarlar'da bir Topaz anahtarı ekleyin|要使用 Topaz，请在设置中添加 Topaz 密钥|要使用 Topaz，請在設定中新增 Topaz 金鑰
+Upscale…|Augmenter la résolution…|Aumenta risoluzione…|アップスケール…|업스케일…|Aumentar resolução…|Увеличить разрешение…|Çözünürlüğü artır…|提升分辨率…|提升解析度…
+Upscale|Augmenter la résolution|Aumenta risoluzione|アップスケール|업스케일|Aumentar resolução|Увеличить разрешение|Çözünürlüğü artır|提升分辨率|提升解析度
+Method|Méthode|Metodo|方式|방식|Método|Метод|Yöntem|方法|方法
+Lanczos|Lanczos|Lanczos|Lanczos|Lanczos|Lanczos|Lanczos|Lanczos|Lanczos|Lanczos
+Lanczos, sharpened|Lanczos, accentué|Lanczos, più nitido|Lanczos（シャープ）|Lanczos, 선명하게|Lanczos, com nitidez|Lanczos с резкостью|Lanczos, keskinleştirilmiş|Lanczos（锐化）|Lanczos（銳化）
+Bicubic|Bicubique|Bicubico|バイキュービック|바이큐빅|Bicúbico|Бикубический|Bikübik|双三次|雙三次
+Topaz AI|Topaz AI|Topaz AI|Topaz AI|Topaz AI|Topaz AI|Topaz AI|Topaz AI|Topaz AI|Topaz AI
+Result: {size}|Résultat : {size}|Risultato: {size}|出力：{size}|결과: {size}|Resultado: {size}|Результат: {size}|Sonuç: {size}|结果：{size}|結果：{size}
+Up to {limit} pixels on the long side here|Jusqu'à {limit} pixels sur le grand côté ici|Fino a {limit} pixel sul lato lungo qui|ここでは長辺 {limit} ピクセルまで|여기서는 긴 변 {limit}픽셀까지|Até {limit} pixels no lado maior aqui|Здесь до {limit} пикселей по длинной стороне|Burada uzun kenarda en fazla {limit} piksel|此处长边最多 {limit} 像素|此處長邊最多 {limit} 像素
+Get estimate|Obtenir une estimation|Ottieni una stima|見積もりを取得|견적 받기|Obter estimativa|Получить оценку|Tahmin al|获取估算|取得估算
+Estimate: {credits} credits, about {minutes} min|Estimation : {credits} crédits, environ {minutes} min|Stima: {credits} crediti, circa {minutes} min|見積もり：{credits} クレジット、約 {minutes} 分|견적: {credits} 크레딧, 약 {minutes}분|Estimativa: {credits} créditos, cerca de {minutes} min|Оценка: {credits} кредитов, около {minutes} мин|Tahmin: {credits} kredi, yaklaşık {minutes} dk|估算：{credits} 点数，约 {minutes} 分钟|估算：{credits} 點數，約 {minutes} 分鐘
+Upscale for {credits} credits|Lancer pour {credits} crédits|Avvia per {credits} crediti|{credits} クレジットで実行|{credits} 크레딧으로 실행|Executar por {credits} créditos|Запустить за {credits} кредитов|{credits} krediyle başlat|花费 {credits} 点数开始|花費 {credits} 點數開始
+Topaz works on video|Topaz traite la vidéo|Topaz lavora sui video|Topaz は動画専用です|Topaz는 동영상 전용입니다|Topaz funciona com vídeo|Topaz работает только с видео|Topaz yalnızca videoda çalışır|Topaz 仅适用于视频|Topaz 僅適用於影片
+Upscaling|Augmentation de la résolution|Aumento della risoluzione|アップスケール中|업스케일 중|Aumentando a resolução|Увеличение разрешения|Çözünürlük artırılıyor|正在提升分辨率|正在提升解析度
+Runs in Topaz Labs' cloud with your key; you see the credits before anything is charged.|S'exécute dans le cloud de Topaz Labs avec votre clé ; vous voyez les crédits avant tout débit.|Viene eseguito nel cloud di Topaz Labs con la tua chiave; vedi i crediti prima di qualsiasi addebito.|あなたのキーで Topaz Labs のクラウドで処理されます。課金前にクレジット数を確認できます。|내 키로 Topaz Labs 클라우드에서 실행됩니다. 청구 전에 크레딧을 확인할 수 있습니다.|Roda na nuvem da Topaz Labs com a sua chave; você vê os créditos antes de qualquer cobrança.|Выполняется в облаке Topaz Labs с вашим ключом; стоимость в кредитах видна до списания.|Anahtarınızla Topaz Labs bulutunda çalışır; ücretlendirmeden önce krediyi görürsünüz.|使用你的密钥在 Topaz Labs 云端运行；扣费前会先显示所需点数。|使用你的金鑰在 Topaz Labs 雲端執行；扣款前會先顯示所需點數。
+Stickers|Autocollants|Adesivi|ステッカー|스티커|Figurinhas|Стикеры|Çıkartmalar|贴纸|貼紙
 Music|Musique|Musica|音楽|음악|Música|Музыка|Müzik|音乐|音樂
 Sounds|Sons|Suoni|効果音|효과음|Sons|Звуки|Sesler|音效|音效
 Add to Media|Ajouter aux médias|Aggiungi ai media|メディアに追加|미디어에 추가|Adicionar à mídia|Добавить в медиа|Medyaya ekle|添加到媒体|新增至媒體

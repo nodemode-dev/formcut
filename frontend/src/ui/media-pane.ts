@@ -12,6 +12,7 @@ import { icon } from "./icons";
 import { categoryIcon } from "./category-icons";
 import { api } from "../engine/api";
 import { buildLibraryView } from "./library-view";
+import { openUpscale } from "./upscale-dialog";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -646,12 +647,19 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     card.dataset.media = item.id;
     const mm = Math.floor(item.duration / 60);
     const ss = String(Math.floor(item.duration % 60)).padStart(2, "0");
+    const upscalable = item.kind === "video" || item.kind === "image";
     card.innerHTML = `
       <div class="effect-thumb bin-thumb">
         ${item.thumb ? `<img src="${thumbUrl(item)}" alt="" loading="lazy" draggable="false" />` : `<span class="bin-glyph">${icon(item.kind === "audio" ? "speaker" : "pip")}</span>`}
         <span class="dur-chip">${mm}:${ss}</span>
+        ${upscalable ? `<button type="button" class="bin-upscale" title="${escapeHtml(t("upscale.action"))}" aria-label="${escapeHtml(t("upscale.action"))}">${icon("fullscreen")}</button>` : ""}
       </div>
       <div class="effect-name">${escapeHtml(item.name)}</div>`;
+    card.querySelector(".bin-upscale")?.addEventListener("click", (ev) => {
+      // The card's own click adds it to the timeline on touch layouts.
+      ev.stopPropagation();
+      openUpscale(item, bin);
+    });
     card.addEventListener("dragstart", (ev) => {
       ev.dataTransfer?.setData("application/x-formcut-media", item.id);
       ev.dataTransfer!.effectAllowed = "copy";
