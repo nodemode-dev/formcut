@@ -15,7 +15,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import fast_export, fast_layers, gpu, jobs
+from . import fast_export, fast_layers, gpu, jobs, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import CONTAINERS, addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -417,12 +417,13 @@ def export(body: RenderInput):
         allowed = encoder_status()["containers"].get(body.format, [])
         if body.codec not in allowed:
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
-    return jobs.submit(
-        "export",
-        lambda job_id, report, cancelled: export_media(
-            project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate
-        ),
-    )
+
+    def operation(job_id, report, cancelled):
+        result = export_media(project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate)
+        webhooks.announce_export(result, project)
+        return result
+
+    return jobs.submit("export", operation)
 
 
 @router.post("/audio", status_code=202)
