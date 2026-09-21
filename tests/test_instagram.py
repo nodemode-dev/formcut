@@ -156,3 +156,22 @@ def test_posting_needs_an_account_and_disconnecting_forgets_the_token(tmp_path, 
     client.put("/api/connect/instagram", json={"token": "user-token"})
     assert client.delete("/api/connect/instagram").json()["connected"] is False
     assert "user-token" not in instagram.STORE.read_text()
+
+
+def _i18n(name):
+    with open(os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "i18n", name), encoding="utf-8") as handle:
+        return handle.read()
+
+
+def test_every_instagram_label_is_translated_and_keeps_its_placeholder():
+    english = json.loads(_i18n("en.json"))
+    rows = _i18n("language-pack.ts").split("`")[1].splitlines()
+    packed = {row.split("|")[0]: row.split("|")[1:] for row in rows if row}
+    keys = [key for key in english if key.startswith("instagram.")] + ["prov.instagram.use"]
+    assert len(keys) == 13
+    for code in ("de", "es"):
+        strings = json.loads(_i18n(f"{code}.json"))
+        assert not [key for key in keys if key not in strings], code
+        assert "{name}" in strings["instagram.as"], code
+    assert not [english[key] for key in keys if english[key] not in packed]
+    assert all("{name}" in text for text in packed[english["instagram.as"]])
