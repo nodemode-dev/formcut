@@ -15,6 +15,7 @@ import { buildWebhooks } from "./webhooks-settings";
 import { buildTikTokSettings } from "./tiktok-settings";
 import { buildInstagramSettings } from "./instagram";
 import { buildCloudSettings } from "./cloud";
+import { buildRemoteSettings } from "./remote-settings";
 import { autosaveEnabled, setAutosaveEnabled } from "../engine/persistence";
 
 const PAGES = [
@@ -276,6 +277,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   buildInstagramSettings(group(providersView, "Instagram", "prov.instagram.use"));
   buildCloudSettings(group(providersView, "Google Drive", "prov.google.use"), "google");
   buildCloudSettings(group(providersView, "Dropbox", "prov.dropbox.use"), "dropbox");
+  buildRemoteSettings(group(providersView, "remote.title", "prov.remote.use"));
   const speechRows = group(providersView, "prov.generate", "prov.generate.hint");
   const speechText = document.createElement("input");
   speechText.type = "text";

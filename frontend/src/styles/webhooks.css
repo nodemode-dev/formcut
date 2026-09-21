@@ -11,3 +11,4 @@
 .hook-last[data-state="delivered"] { color: var(--ink); }
 .hook-last[data-state="failed"] { color: var(--fault); }
 .hook-entry input { flex: 1; min-width: 0; }
+.remote-code { margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--cue); border-radius: var(--radius-m); color: var(--ink); font: 600 18px/1.3 var(--font-mono); letter-spacing: 0.06em; }
