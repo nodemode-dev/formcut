@@ -1,3 +1,4 @@
+import functools
 import math
 
 import cv2
@@ -29,6 +30,31 @@ def remap(rgb: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return cv2.remap(rgb, x.astype(np.float32), y.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT_101)
 
 
+@functools.lru_cache(maxsize=4)
+def _grid(h: int, w: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Pixel coordinates and their 0..1 centres for one frame size.
+
+    They depend on the size alone, yet were rebuilt for every effect on every
+    frame, whether the effect used them or not: 9 to 18 ms a frame at 1280x720.
+    Computed once, exactly as before, and read-only, so an effect that tried to
+    change them in place would fail instead of corrupting later frames.
+    """
+    y, x = np.mgrid[:h, :w].astype(np.float32)
+    u, v = (x + 0.5) / w, (y + 0.5) / h
+    for array in (y, x, u, v):
+        array.flags.writeable = False
+    return y, x, u, v
+
+
+@functools.lru_cache(maxsize=4)
+def _vignette_falloff(h: int, w: int) -> np.ndarray:
+    """The vignette's falloff, which depends only on the frame size."""
+    _, _, u, v = _grid(h, w)
+    falloff = np.clip(1 - ((u - 0.5) ** 2 + (v - 0.5) ** 2) * 2.2, 0, 1)[:, :, None]
+    falloff.flags.writeable = False
+    return falloff
+
+
 def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndarray:
     if effect in GRADES:
         return grade(rgb, {**GRADES[effect], **params})
@@ -39,8 +65,7 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
     if effect == "colour-match":
         return colour_match(rgb, params)
     h, w = rgb.shape[:2]
-    y, x = np.mgrid[:h, :w].astype(np.float32)
-    u, v = (x + 0.5) / w, (y + 0.5) / h
+    y, x, u, v = _grid(h, w)
     radius = max(0.1, min(100, float(params.get("radius", 3))))
     size = max(1, int(params.get("size", 12)))
     if effect == "gaussian":
@@ -72,8 +97,7 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
         small = cv2.resize(rgb, (max(1, w // size), max(1, h // size)), interpolation=cv2.INTER_AREA)
         return cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
     if effect == "vignette":
-        f = np.clip(1 - ((u - 0.5) ** 2 + (v - 0.5) ** 2) * 2.2, 0, 1)
-        return rgb * f[:, :, None]
+        return rgb * _vignette_falloff(h, w)
     if effect == "grain":
         rng = np.random.default_rng(int(local * 1000) % (2**32))
         return rgb + rng.normal(0, params.get("strength", 0.07), (h, w, 1))
@@ -267,7 +291,13 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
 
 
 def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.ndarray:
-    result = image.astype(np.float32) / 255
+    to_float, to_bytes = _native_kernel("unit_float"), _native_kernel("to_bytes")
+    if to_float is not None and image.dtype == np.uint8 and image.ndim == 3 and image.flags.c_contiguous:
+        # The same float32 values as the NumPy line below, in one parallel pass.
+        result = np.empty(image.shape, np.float32)
+        to_float(image, result)
+    else:
+        result = image.astype(np.float32) / 255
     for entry in effects:
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
         if entry["id"] not in GRADES and entry["id"] not in VIDEO_EFFECTS:
@@ -288,6 +318,11 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         changed += result[:, :, :3] * (1 - amount)
         np.clip(changed, 0, 1, out=changed)
         result[:, :, :3] = changed
+    if to_bytes is not None and result.flags.c_contiguous:
+        # np.round(result * 255).astype(np.uint8), to the bit, in one parallel pass.
+        out = np.empty(result.shape, np.uint8)
+        to_bytes(result, out)
+        return out
     return np.round(result * 255).astype(np.uint8)
 
 
@@ -427,8 +462,8 @@ NATIVE_COLOUR = (
 )
 
 
-def _native_colour():
-    """The Rust colour kernel, unless unbuilt, too old to have it, or switched off with FORMCUT_NATIVE=0."""
+def _native_kernel(name: str):
+    """A Rust kernel by name, unless unbuilt, too old to have it, or switched off with FORMCUT_NATIVE=0."""
     import os
 
     if os.environ.get("FORMCUT_NATIVE", "").strip() == "0":
@@ -437,7 +472,12 @@ def _native_colour():
         import formcut_native
     except ImportError:
         return None
-    return getattr(formcut_native, "colour_panel", None)
+    return getattr(formcut_native, name, None)
+
+
+def _native_colour():
+    """The Rust colour kernel, on the same terms as every native kernel."""
+    return _native_kernel("colour_panel")
 
 
 def apply_colour_panel(image: np.ndarray, panel) -> np.ndarray:
