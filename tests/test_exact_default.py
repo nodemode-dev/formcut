@@ -87,7 +87,19 @@ def test_an_export_takes_the_exact_path_and_the_override_keeps_the_graph(tmp_pat
     from conftest import make_project
 
     clip = tmp_path / "clip.mp4"
-    command = ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=30:duration=2", "-pix_fmt", "yuv420p", str(clip)]
+    command = [
+        "ffmpeg",
+        "-v",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=320x180:rate=30:duration=2",
+        "-pix_fmt",
+        "yuv420p",
+        str(clip),
+    ]
     subprocess.run(command, check=True)
     media_id = media.ingest_path(clip, "clip.mp4")["id"]
     graded = {"id": "a", "kind": "video", "label": "a", "mediaId": media_id, "start": 0, "duration": 1.0, "sourceIn": 0.0, "colour": GRADE}
