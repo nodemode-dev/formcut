@@ -221,6 +221,37 @@ def mask_polygon(mask: dict) -> list[tuple[float, float]]:
     return [tuple(p) for p in MASK_SHAPES.get(str(mask.get("shape")), MASK_SHAPES["rect"])]
 
 
+_NATIVE: list = []
+
+
+def _native():
+    """The Rust kernels, where built, unless FORMCUT_NATIVE=0 turns them off."""
+    from os import environ
+
+    if environ.get("FORMCUT_NATIVE") == "0":
+        return None
+    if not _NATIVE:
+        try:
+            import formcut_native
+        except ImportError:
+            formcut_native = None
+        _NATIVE.append(formcut_native)
+    return _NATIVE[0]
+
+
+def _plainly_blended(clip: dict, local: float, transform: dict) -> bool:
+    """True when this moment of the layer is only warped and blended normally, which the kernel reproduces to the bit."""
+    if str(transform["blendMode"]).lower() != "normal":
+        return False
+    length = clip.get("transitionLength", 0)
+    if length and local < length:
+        return False
+    out = clip.get("transitionOut")
+    if out and float(out.get("length") or 0) > 0 and local >= clip["duration"] - 0.0001:
+        return False
+    return not (clip.get("pushOut") and local >= clip["duration"])
+
+
 def transform_at(clip: dict, local: float) -> dict:
     """The clip's transform at a local time: base, then keyframes and expressions, then animation slots.
 
@@ -782,6 +813,12 @@ class FrameRenderer:
             matrix = np.float32([[a, b, cx - a * w / 2 - b * h / 2], [d, e, cy - d * w / 2 - e * h / 2]])
             visual_fade = {**clip, "extendOut": 0}
             alpha = max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
+            native = _native()
+            if native is not None and _plainly_blended(clip, local, transform):
+                # Warp and blend in one Rust pass, identical to the Python path below.
+                canvas = np.ascontiguousarray(canvas)
+                native.composite_affine(canvas, np.ascontiguousarray(image), [float(v) for v in matrix.ravel()], float(alpha))
+                continue
             image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(np.uint8)
             layer = cv2.warpAffine(image, matrix, (self.width, self.height), flags=cv2.INTER_LINEAR)
             layer = self.transition(layer, clip, local)
