@@ -1054,7 +1054,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const found = cutClip();
     if (!found?.clip.cutout) return;
     engine.dispatch("clip.cutout", {
-      clipId: found.clip.id, cutout: { ...found.clip.cutout, point: { x: at.x, y: at.y } },
+      clipId: found.clip.id, cutout: { ...found.clip.cutout, point: { x: at.x, y: at.y, t: Math.max(0, engine.snapshot.playhead - found.clip.start) } },
     });
     const note = cut<HTMLElement>("cut-pick-state");
     if (note) note.textContent = t("cut.picked");
@@ -1086,7 +1086,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const box = (event as CustomEvent).detail as { x0: number; y0: number; x1: number; y1: number };
     const found = cutClip();
     if (!found) return;
-    const next = { ...(found.clip.cutout ?? { threshold: 0.5, feather: 0.1 }), model: "click-select", box };
+    const next = { ...(found.clip.cutout ?? { threshold: 0.5, feather: 0.1 }), model: "click-select", box: { ...box, t: Math.max(0, engine.snapshot.playhead - found.clip.start) } };
     delete (next as { point?: unknown }).point;
     engine.dispatch("clip.cutout", { clipId: found.clip.id, cutout: next });
     // The preview never runs a model itself; it shows the mattes this job fills in.

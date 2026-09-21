@@ -260,7 +260,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     const at = (event as CustomEvent).detail as { x: number; y: number };
     const clip = selected();
     if (!clip?.cutout) return;
-    engine.dispatch("clip.cutout", { clipId: clip.id, cutout: { ...clip.cutout, point: at } });
+    engine.dispatch("clip.cutout", { clipId: clip.id, cutout: { ...clip.cutout, point: { ...at, t: Math.max(0, engine.snapshot.playhead - clip.start) } } });
     const state = root.querySelector<HTMLElement>("[data-cut-state]");
     if (state) state.textContent = "Kept what you pointed at.";
     delete stage!.dataset.pickCutout;
@@ -273,7 +273,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     const box = (event as CustomEvent).detail as { x0: number; y0: number; x1: number; y1: number };
     const clip = selected();
     if (!clip) return;
-    const next = { ...(clip.cutout ?? { threshold: 0.5, feather: 0.1 }), model: "click-select", box };
+    const next = { ...(clip.cutout ?? { threshold: 0.5, feather: 0.1 }), model: "click-select", box: { ...box, t: Math.max(0, engine.snapshot.playhead - clip.start) } };
     delete (next as { point?: unknown }).point;
     engine.dispatch("clip.cutout", { clipId: clip.id, cutout: next });
     // The preview never runs a model itself; it shows the mattes this job fills in.

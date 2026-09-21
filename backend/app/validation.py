@@ -176,6 +176,7 @@ def clip_values(clip):
                 raise ValueError("Cutout point must be an object")
             number(chosen.get("x", 0.5), "cutout point x", 0, 1)
             number(chosen.get("y", 0.5), "cutout point y", 0, 1)
+            number(chosen.get("t", 0), "cutout point time", 0, 86400)
         points = cutout.get("points") or []
         if not isinstance(points, list) or len(points) > 16:
             raise ValueError("Cutout points must be a list of at most 16")
@@ -184,12 +185,14 @@ def clip_values(clip):
                 raise ValueError("Cutout point must be an object")
             number(entry.get("x", 0.5), "cutout point x", 0, 1)
             number(entry.get("y", 0.5), "cutout point y", 0, 1)
+            number(entry.get("t", 0), "cutout point time", 0, 86400)
         box = cutout.get("box")
         if box is not None:
             if not isinstance(box, dict):
                 raise ValueError("Cutout box must be an object")
             for side in ("x0", "y0", "x1", "y1"):
                 number(box.get(side), "cutout box " + side, 0, 1)
+            number(box.get("t", 0), "cutout box time", 0, 86400)
             if not (box["x0"] < box["x1"] and box["y0"] < box["y1"]):
                 raise ValueError("Cutout box must have a size")
         for stroke in cutout.get("strokes", []):
