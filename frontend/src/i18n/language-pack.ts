@@ -1,5 +1,45 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `SAM 2.1 video tracking|Suivi vidéo SAM 2.1|Tracciamento video SAM 2.1|SAM 2.1 動画トラッキング|SAM 2.1 동영상 추적|Rastreamento de vídeo SAM 2.1|Видеотрекинг SAM 2.1|SAM 2.1 video izleme|SAM 2.1 视频跟踪|SAM 2.1 影片追蹤
+const rows = `Stickers|Autocollants|Adesivi|ステッカー|스티커|Figurinhas|Стикеры|Çıkartmalar|贴纸|貼紙
+Music|Musique|Musica|音楽|음악|Música|Музыка|Müzik|音乐|音樂
+Sounds|Sons|Suoni|効果音|효과음|Sons|Звуки|Sesler|音效|音效
+Add to Media|Ajouter aux médias|Aggiungi ai media|メディアに追加|미디어에 추가|Adicionar à mídia|Добавить в медиа|Medyaya ekle|添加到媒体|新增至媒體
+Added to Media|Ajouté aux médias|Aggiunto ai media|メディアに追加しました|미디어에 추가됨|Adicionado à mídia|Добавлено в медиа|Medyaya eklendi|已添加到媒体|已新增至媒體
+Play|Écouter|Ascolta|再生|재생|Ouvir|Воспроизвести|Çal|播放|播放
+Stop|Arrêter|Ferma|停止|정지|Parar|Остановить|Durdur|停止|停止
+Preparing the library|Préparation de la bibliothèque|Preparazione della libreria|ライブラリを準備中|라이브러리 준비 중|Preparando a biblioteca|Подготовка библиотеки|Kütüphane hazırlanıyor|正在准备素材库|正在準備素材庫
+Made by formcut: free to use in any video, no credit needed|Créé par formcut : libre d'utilisation dans toute vidéo, sans mention requise|Creato da formcut: libero da usare in qualsiasi video, senza citazione|formcut 製：どの動画でも無料で使え、クレジット表記は不要です|formcut 제작: 모든 동영상에서 무료로 사용 가능, 출처 표기 불필요|Feito pelo formcut: uso livre em qualquer vídeo, sem necessidade de crédito|Создано formcut: можно бесплатно использовать в любом видео без указания автора|formcut tarafından yapıldı: her videoda ücretsiz kullanılabilir, kaynak belirtmek gerekmez|由 formcut 制作：可在任何视频中免费使用，无需署名|由 formcut 製作：可在任何影片中免費使用，無需署名
+Shapes|Formes|Forme|図形|도형|Formas|Фигуры|Şekiller|形状|形狀
+Arrows|Flèches|Frecce|矢印|화살표|Setas|Стрелки|Oklar|箭头|箭頭
+Callouts|Bulles et repères|Fumetti e richiami|吹き出し・強調|말풍선·강조|Balões e destaques|Выноски|Belirtme öğeleri|标注|標註
+Labels|Étiquettes|Etichette|ラベル|라벨|Rótulos|Метки|Etiketler|标签|標籤
+Faces|Visages|Facce|顔|표정|Rostos|Лица|Yüzler|表情|表情
+Icons|Icônes|Icone|アイコン|아이콘|Ícones|Значки|Simgeler|图标|圖示
+Whooshes|Sons de transition|Suoni di transizione|トランジション音|전환 효과음|Sons de transição|Звуки переходов|Geçiş sesleri|转场音效|轉場音效
+Interface|Interface|Interfaccia|UI効果音|인터페이스|Interface|Интерфейс|Arayüz|界面|介面
+Impacts|Impacts|Impatti|インパクト|임팩트|Impactos|Удары|Darbeler|冲击|衝擊
+Everyday|Quotidien|Quotidiano|日常音|생활 소리|Cotidiano|Бытовые|Günlük|日常|日常
+Calm|Calme|Calmo|穏やか|차분함|Calmo|Спокойное|Sakin|舒缓|舒緩
+Upbeat|Entraînant|Vivace|アップビート|경쾌함|Animado|Бодрое|Hareketli|欢快|歡快
+Dramatic|Dramatique|Drammatico|ドラマチック|극적임|Dramático|Драматичное|Dramatik|戏剧性|戲劇性
+Retro|Rétro|Retrò|レトロ|레트로|Retrô|Ретро|Retro|复古|復古
+Whoosh|Whoosh|Whoosh|ヒュッ|휙|Whoosh|Свист|Whoosh|嗖|嗖
+Swoosh|Swoosh|Swoosh|シュッ|쉭|Swoosh|Взмах|Swoosh|唰|唰
+Riser|Montée|Crescendo|ライザー|라이저|Subida|Нарастание|Yükselen|上升音效|上升音效
+Downlifter|Descente|Discesa|ダウンリフター|다운리프터|Descida|Спад|Alçalan|下降音效|下降音效
+Pop|Pop|Pop|ポン|뽁|Pop|Хлопок|Pıt|啵|啵
+Click|Clic|Clic|クリック|클릭|Clique|Щелчок|Tık|点击|點擊
+Tick|Tic|Tic|カチッ|틱|Tique|Тик|Tik|嘀嗒|嘀嗒
+Ding|Ding|Din|チーン|딩|Ding|Дзинь|Ding|叮|叮
+Chime|Carillon|Rintocco|チャイム|차임|Sininho|Перезвон|Çan sesi|铃声|鈴聲
+Success|Réussite|Successo|成功|성공|Sucesso|Успех|Başarı|成功|成功
+Error|Erreur|Errore|エラー|오류|Erro|Ошибка|Hata|错误|錯誤
+Coin|Pièce|Moneta|コイン|코인|Moeda|Монета|Jeton|金币|金幣
+Boom|Boum|Bum|ドーン|쾅|Bum|Бум|Bum|轰|轟
+Heartbeat|Battement de cœur|Battito|心臓の鼓動|심장 박동|Batimento|Сердцебиение|Kalp atışı|心跳|心跳
+Glitch|Glitch|Glitch|グリッチ|글리치|Glitch|Глитч|Glitch|故障音|故障音
+Camera shutter|Obturateur|Otturatore|シャッター音|카메라 셔터|Obturador|Затвор камеры|Deklanşör|快门声|快門聲
+Typewriter|Machine à écrire|Macchina da scrivere|タイプライター|타자기|Máquina de escrever|Пишущая машинка|Daktilo|打字机|打字機
+SAM 2.1 video tracking|Suivi vidéo SAM 2.1|Tracciamento video SAM 2.1|SAM 2.1 動画トラッキング|SAM 2.1 동영상 추적|Rastreamento de vídeo SAM 2.1|Видеотрекинг SAM 2.1|SAM 2.1 video izleme|SAM 2.1 视频跟踪|SAM 2.1 影片追蹤
 Import SAM 2.1 video tracking|Importer le suivi vidéo SAM 2.1|Importa il tracciamento video SAM 2.1|SAM 2.1 動画トラッキングを読み込む|SAM 2.1 동영상 추적 가져오기|Importar rastreamento de vídeo SAM 2.1|Импортировать видеотрекинг SAM 2.1|SAM 2.1 video izlemeyi içe aktar|导入 SAM 2.1 视频跟踪|匯入 SAM 2.1 影片追蹤
 Draw a box around it|Tracer un cadre autour|Disegna un riquadro attorno|枠で囲む|상자로 감싸기|Desenhar uma caixa em volta|Обвести рамкой|Etrafına kutu çiz|框选|框選
 Drag a box around what to keep|Tracez un cadre autour de ce qu'il faut garder|Trascina un riquadro attorno a ciò da tenere|残したいものを枠で囲んでください|남길 대상을 상자로 감싸세요|Arraste uma caixa em volta do que manter|Обведите рамкой то, что нужно оставить|Tutulacak şeyin etrafına bir kutu çizin|拖出一个框，框住要保留的内容|拖出一個框，框住要保留的內容

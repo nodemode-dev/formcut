@@ -11,6 +11,7 @@ import { text } from "../i18n/text";
 import { icon } from "./icons";
 import { categoryIcon } from "./category-icons";
 import { api } from "../engine/api";
+import { buildLibraryView } from "./library-view";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -19,6 +20,9 @@ const TABS: Array<[string, string]> = [
   ["Effects", "tab.effects"],
   ["Filters", "tab.filters"],
   ["Templates", "tab.templates"],
+  ["Stickers", "tab.stickers"],
+  ["Music", "tab.music"],
+  ["Sounds", "tab.sounds"],
 ];
 const EFFECT_GROUPS: Array<[string, string[]]> = [
   ["Video effects", ["Blur", "Stylize", "Distort", "Texture", "Mask", "Cutout"]],
@@ -393,6 +397,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const textView = el.querySelector<HTMLElement>('[data-view="text"]')!;
   const transView = el.querySelector<HTMLElement>('[data-view="transitions"]')!;
   const tmplView = el.querySelector<HTMLElement>('[data-view="templates"]')!;
+  const libraries = (["stickers", "music", "sounds"] as const).map((kind) => buildLibraryView(kind, bin));
+  tmplView.after(...libraries.map((library) => library.el));
   tabs.addEventListener("click", (ev) => {
     const hit = (ev.target as HTMLElement).closest<HTMLElement>(".pane-tab");
     if (!hit) return;
@@ -401,12 +407,19 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     const wantText = tab === "Text";
     const wantTrans = tab === "Transitions";
     const wantTmpl = tab === "Templates";
-    const wantEffects = !wantMedia && !wantText && !wantTrans && !wantTmpl;
+    const wantLibrary = libraries.find((library) => library.tab === tab);
+    const wantEffects = !wantMedia && !wantText && !wantTrans && !wantTmpl && !wantLibrary;
     if (mediaView.hidden !== !wantMedia) mediaView.hidden = !wantMedia;
     if (textView.hidden !== !wantText) textView.hidden = !wantText;
     if (transView.hidden !== !wantTrans) transView.hidden = !wantTrans;
     if (tmplView.hidden !== !wantTmpl) tmplView.hidden = !wantTmpl;
     if (effectsView.hidden !== !wantEffects) effectsView.hidden = !wantEffects;
+    for (const library of libraries) {
+      const hide = library !== wantLibrary;
+      if (library.el.hidden !== hide) library.el.hidden = hide;
+      if (hide) library.pause();
+    }
+    if (wantLibrary) void wantLibrary.load();
     if (wantTmpl) void loadPresets();
     if (wantEffects) {
       const next = tab === "Filters" ? "filter" : "effect";

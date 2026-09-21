@@ -1,0 +1,20 @@
+/* The library tabs: stickers, music and sounds. Tokens only, so every theme applies. */
+.library-view { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) 0; min-height: 0; overflow-y: auto; }
+.library-note { margin: 0; min-height: 1.3em; color: var(--ink-soft); font-size: 12px; }
+.library-heading { margin: var(--sp-3) 0 var(--sp-1); color: var(--ink-soft); font: 600 11px/1.3 var(--font-ui); letter-spacing: 0.04em; text-transform: uppercase; }
+.library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--sp-2); }
+.library-sticker { aspect-ratio: 1; padding: var(--sp-1); border: 1px solid var(--edge); border-radius: var(--radius-m); background: var(--control); cursor: pointer; }
+.library-sticker:hover { border-color: var(--edge-strong); background: var(--control-hover); }
+.library-sticker:active { background: var(--control-press); }
+.library-sticker:disabled, .library-add:disabled { opacity: 0.5; cursor: progress; }
+.library-sticker img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.library-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.library-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); border-radius: var(--radius-s); }
+.library-row:hover { background: var(--control); }
+.library-play, .library-add { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--edge); border-radius: 50%; background: var(--control); color: var(--ink); cursor: pointer; }
+.library-play:hover, .library-add:hover { background: var(--control-hover); }
+.library-play.is-playing { border-color: var(--cue); background: var(--cue); color: var(--on-cue); }
+.library-play svg, .library-add svg { width: 14px; height: 14px; }
+.library-name { overflow: hidden; color: var(--ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.library-meta { color: var(--ink-faint); font: 11px/1 var(--font-mono); white-space: nowrap; }
+.library-licence { margin: var(--sp-3) 0 0; color: var(--ink-faint); font-size: 11px; }
