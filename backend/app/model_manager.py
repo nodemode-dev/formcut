@@ -161,9 +161,17 @@ def adopt_legacy() -> list[str]:
     return moved
 
 
-def prepare(report, cancelled, fetch: bool) -> dict:
+# What first launch fetches: the Creator panel's default cutout, a few megabytes.
+# Everything else downloads when it is first used, from the button beside it,
+# or for Whisper through the hub route the moment the transcriber asks.
+FIRST_LAUNCH = ("object-cutout",)
+
+
+def prepare(report, cancelled, fetch: bool, everything: bool = False) -> dict:
+    """Fetch the first-launch models; with everything, every permissively licensed model and the Whisper files."""
     adopted = adopt_legacy()
-    missing = [model for model in MODELS if not ready(model) and "GPL" not in MODELS[model]["license"]] if fetch else []
+    wanted = [model for model in MODELS if "GPL" not in MODELS[model]["license"]] if everything else list(FIRST_LAUNCH)
+    missing = [model for model in wanted if not ready(model)] if fetch else []
     results = []
     for i, model in enumerate(missing):
         if cancelled():
@@ -175,7 +183,7 @@ def prepare(report, cancelled, fetch: bool) -> dict:
         except Exception as error:
             results.append({"model": model, "ready": False, "error": str(error)})
     hub = []
-    for model, paths in HUB_PREFETCH.items() if fetch else ():
+    for model, paths in HUB_PREFETCH.items() if fetch and everything else ():
         for path in paths:
             if cancelled():
                 raise InterruptedError("Cancelled")
@@ -187,8 +195,8 @@ def prepare(report, cancelled, fetch: bool) -> dict:
 
 
 def auto_download() -> dict:
-    fetch = os.environ.get("FORMCUT_MODELS_AUTO", "1") != "0"
-    return jobs.submit("model-setup", lambda _id, report, cancelled: prepare(report, cancelled, fetch))
+    mode = os.environ.get("FORMCUT_MODELS_AUTO", "1")
+    return jobs.submit("model-setup", lambda _id, report, cancelled: prepare(report, cancelled, mode != "0", mode == "all"))
 
 
 HUB = ROOT / "hub"

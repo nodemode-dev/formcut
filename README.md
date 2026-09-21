@@ -87,7 +87,7 @@ Everything lives in `.env` beside the launcher, never committed. The template is
 | `ELEVENLABS_API_KEY` | Hosted speech; local speech needs no key. Also settable in Settings, AI providers |
 | `FORMCUT_DATA_DIR` | Where media, projects, templates and renders live; defaults to the platform data directory |
 | `FORMCUT_MODELS_DIR` | Where AI models live; defaults to `models/` at the repository root, or the data directory's `models` folder in the packaged app |
-| `FORMCUT_MODELS_AUTO` | `0` stops missing models downloading in the background at engine start; they can still be installed from the Studio panel |
+| `FORMCUT_MODELS_AUTO` | `1` (default) fetches only the default cutout model at engine start, a few megabytes; every other model downloads when first used. `all` fetches every permissively licensed model and the Whisper files, for a machine that will be offline. `0` fetches nothing |
 | `FORMCUT_DEMO_DIR` | Demo media folder, if not `examples/demo` |
 | `FORMCUT_FONT_PATH` | Fallback font for rendered text |
 | `FORMCUT_PORT` | Engine port; `0` picks a free one, which the desktop and portable builds use |
