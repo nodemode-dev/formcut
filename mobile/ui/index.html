@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>formcut</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #16181a; color: #e9e9e7; font: 16px/1.45 system-ui, -apple-system, sans-serif; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  main { display: grid; gap: 14px; width: min(340px, 88vw); }
+  h1 { margin: 0; font-size: 28px; }
+  p { margin: 0; color: #b9b9b4; }
+  label { font-size: 14px; color: #b9b9b4; }
+  input, button { padding: 13px; border-radius: 10px; border: 1px solid #3a3d40; background: #222528; color: inherit; font: inherit; }
+  button { background: #ffae2b; border-color: #ffae2b; color: #16181a; font-weight: 600; }
+  #note { min-height: 1.4em; color: #ff8a80; }
+  #help { font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>formcut</h1>
+  <p id="lead"></p>
+  <form id="go">
+    <label for="address" id="label"></label>
+    <input id="address" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="192.168.1.20:8977" required>
+    <button id="connect"></button>
+    <p id="note"></p>
+  </form>
+  <p id="help"></p>
+</main>
+<script>
+  const WORDS = {
+    en: ["Open formcut from the computer it runs on.", "Your computer's address", "Connect", "On the computer, open Settings, then Phones and other computers. Turn access on and press Pair a device; the address is shown there.", "Enter the address shown in formcut's Settings, such as 192.168.1.20:8977."],
+    de: ["formcut vom Computer öffnen, auf dem es läuft.", "Adresse des Computers", "Verbinden", "Auf dem Computer die Einstellungen öffnen, dann Telefone und andere Computer. Zugriff einschalten und Gerät koppeln drücken; dort steht die Adresse.", "Die Adresse aus den formcut-Einstellungen eingeben, etwa 192.168.1.20:8977."],
+    es: ["formcut desde el ordenador en el que se ejecuta.", "Dirección del ordenador", "Conectar", "En el ordenador, abrir Ajustes y luego Teléfonos y otros ordenadores. Activar el acceso y pulsar Vincular un dispositivo; ahí aparece la dirección.", "Introducir la dirección que aparece en los Ajustes de formcut, por ejemplo 192.168.1.20:8977."],
+    fr: ["Ouvrez formcut depuis l'ordinateur où il tourne.", "Adresse de votre ordinateur", "Connecter", "Sur l'ordinateur, ouvrez les réglages, puis Téléphones et autres ordinateurs. Activez l'accès et appuyez sur Associer un appareil ; l'adresse y est affichée.", "Saisissez l'adresse affichée dans les réglages de formcut, par exemple 192.168.1.20:8977."],
+    it: ["Apri formcut dal computer su cui è in esecuzione.", "Indirizzo del tuo computer", "Collega", "Sul computer, apri le impostazioni, poi Telefoni e altri computer. Attiva l'accesso e premi Associa un dispositivo: l'indirizzo è indicato lì.", "Inserisci l'indirizzo mostrato nelle impostazioni di formcut, per esempio 192.168.1.20:8977."],
+    ja: ["formcut が動いているコンピューターから開きます。", "コンピューターのアドレス", "接続", "コンピューターで設定を開き、「スマートフォンとほかのコンピューター」でアクセスをオンにして「デバイスをペアリング」を押します。アドレスはそこに表示されます。", "formcut の設定に表示されているアドレス（例：192.168.1.20:8977）を入力してください。"],
+    ko: ["formcut가 실행 중인 컴퓨터에서 엽니다.", "컴퓨터 주소", "연결", "컴퓨터에서 설정을 열고 '휴대폰 및 다른 컴퓨터'에서 액세스를 켠 뒤 '기기 페어링'을 누르세요. 주소는 그곳에 표시됩니다.", "formcut 설정에 표시된 주소를 입력하세요(예: 192.168.1.20:8977)."],
+    "pt-BR": ["Abra o formcut a partir do computador em que ele roda.", "Endereço do seu computador", "Conectar", "No computador, abra as configurações e depois Celulares e outros computadores. Ative o acesso e toque em Parear um dispositivo; o endereço aparece ali.", "Digite o endereço mostrado nas configurações do formcut, como 192.168.1.20:8977."],
+    ru: ["Откройте formcut с компьютера, на котором он работает.", "Адрес вашего компьютера", "Подключиться", "На компьютере откройте настройки, затем «Телефоны и другие компьютеры». Включите доступ и нажмите «Сопрячь устройство»: там будет указан адрес.", "Введите адрес из настроек formcut, например 192.168.1.20:8977."],
+    tr: ["formcut'ı çalıştığı bilgisayardan açın.", "Bilgisayarınızın adresi", "Bağlan", "Bilgisayarda Ayarlar'ı, ardından Telefonlar ve diğer bilgisayarlar'ı açın. Erişimi açıp Cihaz eşle'ye basın; adres orada gösterilir.", "formcut Ayarları'nda gösterilen adresi girin, örneğin 192.168.1.20:8977."],
+    "zh-Hans": ["从运行 formcut 的电脑打开它。", "电脑的地址", "连接", "在电脑上打开设置，进入“手机和其他电脑”，打开访问并点击“配对设备”，地址会显示在那里。", "请输入 formcut 设置中显示的地址，例如 192.168.1.20:8977。"],
+    "zh-Hant": ["從執行 formcut 的電腦開啟它。", "電腦的位址", "連結", "在電腦上開啟設定，進入「手機和其他電腦」，開啟存取並點選「配對裝置」，位址會顯示在那裡。", "請輸入 formcut 設定中顯示的位址，例如 192.168.1.20:8977。"],
+  };
+
+  function language() {
+    const tag = ((navigator.languages && navigator.languages[0]) || navigator.language || "en").toLowerCase();
+    if (tag.startsWith("zh")) return /(tw|hk|mo|hant)/.test(tag) ? "zh-Hant" : "zh-Hans";
+    if (tag.startsWith("pt")) return "pt-BR";
+    const base = tag.split("-")[0];
+    return WORDS[base] ? base : "en";
+  }
+
+  // A plain host and port, the port defaulting to the engine's network listener.
+  function normalize(raw) {
+    let value = raw.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+    if (!value) return "";
+    if (!/:\d+$/.test(value)) value += ":8977";
+    return /^[a-z0-9.-]+:\d{2,5}$/i.test(value) ? value : "";
+  }
+
+  const words = WORDS[language()];
+  document.documentElement.lang = language();
+  for (const [id, index] of [["lead", 0], ["label", 1], ["connect", 2], ["help", 3]]) document.getElementById(id).textContent = words[index];
+  const field = document.getElementById("address");
+  try {
+    field.value = localStorage.getItem("formcut.computer") || "";
+  } catch (error) {
+    field.value = "";
+  }
+  document.getElementById("go").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const address = normalize(field.value);
+    if (!address) {
+      document.getElementById("note").textContent = words[4];
+      return;
+    }
+    try {
+      localStorage.setItem("formcut.computer", address);
+    } catch (error) {
+      // Without storage the address is simply asked for again next time.
+    }
+    location.href = `http://${address}/`;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "The local address page needs no native access, and the computer's pages get none.",
+  "windows": ["main"],
+  "permissions": []
+}

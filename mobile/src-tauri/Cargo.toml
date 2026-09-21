@@ -1,0 +1,20 @@
+[package]
+name = "formcut-mobile"
+version = "1.0.0"
+description = "formcut on phones: a shell that opens the formcut running on your computer"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+# Its own workspace, so cargo never folds it into another crate in this repository.
+[workspace]
+
+[lib]
+name = "formcut_mobile_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

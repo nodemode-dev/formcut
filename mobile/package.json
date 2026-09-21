@@ -1,0 +1,13 @@
+{
+  "name": "formcut-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "formcut on phones: a shell that opens the formcut running on your computer",
+  "license": "Apache-2.0",
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
