@@ -230,3 +230,23 @@ def test_an_expiring_token_is_refreshed_first_and_unknown_services_are_refused(f
     assert fake["gets"][-1][2] == "Bearer act.2"
     assert client.get("/api/cloud/onedrive/files").status_code == 404
     assert client.get("/api/cloud/dropbox/files").status_code == 502
+
+
+def _i18n(name):
+    with open(os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "i18n", name), encoding="utf-8") as handle:
+        return handle.read()
+
+
+def test_every_cloud_label_is_translated_and_keeps_its_placeholders():
+    english = json.loads(_i18n("en.json"))
+    rows = _i18n("language-pack.ts").split("`")[1].splitlines()
+    packed = {row.split("|")[0]: row.split("|")[1:] for row in rows if row}
+    keys = [key for key in english if key.startswith("cloud.")] + ["prov.google.use", "prov.dropbox.use"]
+    assert len(keys) == 22
+    marks = lambda text: sorted(part.split("}")[0] for part in text.split("{")[1:])  # noqa: E731
+    for code in ("de", "es"):
+        strings = json.loads(_i18n(f"{code}.json"))
+        assert not [key for key in keys if key not in strings], code
+        assert all(marks(strings[key]) == marks(english[key]) for key in keys), code
+    assert not [english[key] for key in keys if english[key] not in packed]
+    assert all(marks(text) == marks(english[key]) for key in keys for text in packed[english[key]])
