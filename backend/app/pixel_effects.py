@@ -379,10 +379,14 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
             low = np.clip(0.5 - luminance, 0, None)
             low *= 2.0
             out += low * shadows
+    # Cubes by multiplication, not **3: NumPy computes float32 powers with SVML
+    # on AVX-512 machines and libm elsewhere, which differ in the last bit, so
+    # a render would depend on the CPU. Plain products are the same everywhere.
     if whites:
-        out += (luminance**3) * whites
+        out += (luminance * luminance * luminance) * whites
     if blacks:
-        out += ((1.0 - luminance) ** 3) * blacks
+        dark = 1.0 - luminance
+        out += (dark * dark * dark) * blacks
     saturation = 1.0 + saturation_value / 100.0
     if saturation != 1.0 and luminance is not None:
         out -= luminance
@@ -405,10 +409,51 @@ def colour_panel(rgb: np.ndarray, panel: dict) -> np.ndarray:
     return out
 
 
+# The Rust kernel's order for the panel's controls. Sharpen is not among them:
+# it blurs with OpenCV, so a panel with sharpen on keeps the Python path.
+NATIVE_COLOUR = (
+    "temperature",
+    "tint",
+    "exposure",
+    "brightness",
+    "contrast",
+    "highlights",
+    "shadows",
+    "whites",
+    "blacks",
+    "saturation",
+    "fade",
+    "vignette",
+)
+
+
+def _native_colour():
+    """The Rust colour kernel, unless unbuilt, too old to have it, or switched off with FORMCUT_NATIVE=0."""
+    import os
+
+    if os.environ.get("FORMCUT_NATIVE", "").strip() == "0":
+        return None
+    try:
+        import formcut_native
+    except ImportError:
+        return None
+    return getattr(formcut_native, "colour_panel", None)
+
+
 def apply_colour_panel(image: np.ndarray, panel) -> np.ndarray:
     """RGBA uint8 in, RGBA uint8 out; alpha untouched."""
     if not colour_active(panel):
         return image
+    native = _native_colour()
+    if native is not None and float(panel.get("sharpen", 0.0)) == 0.0 and image.ndim == 3 and image.shape[2] == 4:
+        out = np.array(image, dtype=np.uint8, order="C", copy=True)
+        native(out, [float(panel.get(key, COLOUR_PANEL[key])) for key in NATIVE_COLOUR])
+        return out
+    return python_colour_panel(image, panel)
+
+
+def python_colour_panel(image: np.ndarray, panel) -> np.ndarray:
+    """The colour panel in NumPy: the reference the Rust kernel reproduces to the bit."""
     rgb = image[:, :, :3].astype(np.float32) / 255.0
     graded = colour_panel(rgb, panel)
     out = image.copy()
