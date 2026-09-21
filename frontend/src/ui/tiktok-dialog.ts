@@ -2,6 +2,7 @@ import { api } from "../engine/api";
 import { t } from "../i18n";
 import { icon } from "./icons";
 import { escapeHtml } from "./safe-text";
+import { openSettings } from "./settings-link";
 import "../styles/tiktok.css";
 
 export interface TikTokState {
@@ -80,6 +81,7 @@ export function openTikTok(target: PostTarget): void {
     <a class="post-link" data-ref="link" target="_blank" rel="noopener" hidden></a>
     <div class="post-foot">
       <button type="button" class="post-button" data-ref="cancel">${escapeHtml(t("btn.close"))}</button>
+      <button type="button" class="post-button is-primary" data-ref="settings" hidden>${escapeHtml(t("set.title"))}</button>
       <button type="button" class="post-button is-primary" data-ref="go" disabled></button>
     </div>`;
   const ref = <T extends HTMLElement = HTMLElement>(name: string) => dialog.querySelector<T>(`[data-ref="${name}"]`)!;
@@ -113,9 +115,14 @@ export function openTikTok(target: PostTarget): void {
     const labels = { loading: "", setup: "", connect: t("tiktok.connect"), waiting: t("tiktok.connect"), form: t("tiktok.send"), sending: t("tiktok.send"), done: t("btn.close") };
     setText(go, labels[phase]);
     show(go, phase !== "loading" && phase !== "setup");
+    show(ref("settings"), phase === "setup");
     show(ref("cancel"), phase !== "done");
     go.disabled = phase === "waiting" || phase === "sending" || (phase === "form" && mode === "direct" && (!creator || !privacy));
   };
+  ref("settings").addEventListener("click", () => {
+    dialog.close();
+    openSettings("providers", "TikTok");
+  });
 
   const loadCreator = async () => {
     try {

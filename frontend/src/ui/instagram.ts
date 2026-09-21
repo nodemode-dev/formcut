@@ -2,6 +2,7 @@ import { api } from "../engine/api";
 import { t } from "../i18n";
 import { icon } from "./icons";
 import { escapeHtml } from "./safe-text";
+import { openSettings } from "./settings-link";
 import type { PostTarget } from "./tiktok-dialog";
 import "../styles/tiktok.css";
 
@@ -40,9 +41,14 @@ export function openInstagram(target: PostTarget): void {
     <p class="post-note" data-ref="note" aria-live="polite"></p>
     <div class="post-foot">
       <button type="button" class="post-button" data-ref="cancel">${escapeHtml(t("btn.close"))}</button>
+      <button type="button" class="post-button is-primary" data-ref="settings" hidden>${escapeHtml(t("set.title"))}</button>
       <button type="button" class="post-button is-primary" data-ref="go" hidden></button>
     </div>`;
   const ref = <T extends HTMLElement = HTMLElement>(name: string) => dialog.querySelector<T>(`[data-ref="${name}"]`)!;
+  ref("settings").addEventListener("click", () => {
+    dialog.close();
+    openSettings("providers", "Instagram");
+  });
   const setText = (el: HTMLElement, text: string) => {
     if (el.textContent !== text) el.textContent = text;
   };
@@ -56,6 +62,7 @@ export function openInstagram(target: PostTarget): void {
     const go = ref<HTMLButtonElement>("go");
     setText(go, phase === "done" ? t("btn.close") : t("tiktok.send"));
     show(go, phase === "form" || phase === "sending" || phase === "done");
+    show(ref("settings"), phase === "setup");
     show(ref("cancel"), phase !== "done");
     go.disabled = phase === "sending";
     ref<HTMLTextAreaElement>("caption").disabled = phase !== "form";

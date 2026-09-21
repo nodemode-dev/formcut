@@ -3,6 +3,7 @@ import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
 import { icon } from "./icons";
 import { escapeHtml } from "./safe-text";
+import { openSettings } from "./settings-link";
 import type { PostTarget } from "./tiktok-dialog";
 import "../styles/tiktok.css";
 import "../styles/cloud.css";
@@ -75,12 +76,13 @@ function shell(title: string): { dialog: HTMLDialogElement; body: HTMLElement; n
 
 /** Browse Google Drive or Dropbox and add files to the bin. */
 export function openCloudBrowser(bin: MediaBin): void {
-  const { body, note } = shell(t("cloud.title"));
+  const { dialog, body, note } = shell(t("cloud.title"));
   body.innerHTML = `
     <div class="post-group" role="radiogroup">${SERVICES.map((service) => `<button type="button" class="post-choice" role="radio" data-service="${service}">${LABEL[service]}</button>`).join("")}</div>
     <div class="cloud-path"><button type="button" class="post-button" data-ref="back" hidden>${escapeHtml(t("cloud.back"))}</button><span data-ref="where"></span></div>
     <ul class="cloud-list" data-ref="list"></ul>
-    <button type="button" class="post-button" data-ref="more" hidden>${escapeHtml(t("cloud.more"))}</button>`;
+    <button type="button" class="post-button" data-ref="more" hidden>${escapeHtml(t("cloud.more"))}</button>
+    <button type="button" class="post-button is-primary" data-ref="setup" hidden>${escapeHtml(t("set.title"))}</button>`;
   const ref = <T extends HTMLElement = HTMLElement>(name: string) => body.querySelector<T>(`[data-ref="${name}"]`)!;
   let states: Record<string, ServiceState> = {};
   let service: Service = "google";
@@ -104,9 +106,11 @@ export function openCloudBrowser(bin: MediaBin): void {
     ref("where").textContent = [LABEL[service], ...trail.map((entry) => entry.name)].join(" / ");
     if (!states[service]?.connected) {
       ref("more").hidden = true;
+      ref("setup").hidden = false;
       note(fill(t("cloud.setup"), { service: LABEL[service] }));
       return;
     }
+    ref("setup").hidden = true;
     note("");
     const folder = trail.length ? trail[trail.length - 1].id : "";
     try {
@@ -158,6 +162,10 @@ export function openCloudBrowser(bin: MediaBin): void {
     void load(true);
   });
   ref("more").addEventListener("click", () => void load(false));
+  ref("setup").addEventListener("click", () => {
+    dialog.close();
+    openSettings("providers", LABEL[service]);
+  });
 
   api<Record<string, ServiceState>>("/api/cloud", undefined, "GET").then(
     (found) => {

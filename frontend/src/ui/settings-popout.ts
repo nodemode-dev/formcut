@@ -492,6 +492,19 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     showPage();
     q("close").focus();
   });
+  // Other dialogs send people here with the page and the section to show, so
+  // "set this up in Settings first" is a button that arrives, not a dead end.
+  window.addEventListener("formcut:open-settings", (event) => {
+    const wanted = (event as CustomEvent<{ page?: string; section?: string }>).detail ?? {};
+    if (wanted.page && PAGES.some(([id]) => id === wanted.page)) page = wanted.page;
+    scrim.hidden = false;
+    showPage();
+    q("close").focus();
+    if (wanted.section) {
+      const heading = [...scrim.querySelectorAll<HTMLElement>(".panel-section-head > span")].find((span) => span.textContent === wanted.section);
+      heading?.closest(".panel-section")?.scrollIntoView({ block: "start" });
+    }
+  });
   localizeElement(scrim);
   apply(read(), false);
   showPage();
