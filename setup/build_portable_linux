@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Builds a self-contained portable formcut folder for Linux: PyInstaller
 # onedir engine + built frontend + a launcher that parses the engine's bound
-# port and opens the browser. ffmpeg/ffprobe and yt-dlp stay tier-1 PATH
-# tools by policy and are checked, never bundled.
+# port and opens the browser. ffmpeg is checked for, never bundled: it comes
+# from the formcut-binaries release or from PATH.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 OUT=formcut-portable
 [ ! -d "$OUT/engine/portable" ] || { echo "Move the existing portable folder before rebuilding to preserve its data."; exit 1; }
 rm -rf "$OUT" backend/build backend/dist backend/*.spec
@@ -29,8 +29,10 @@ cat > "$OUT/formcut" <<'LAUNCH'
 #!/usr/bin/env bash
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || {
-  echo "formcut needs ffmpeg and ffprobe on PATH"; exit 1; }
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}/formcut/ffmpeg"
+found() { compgen -G "$1/ffmpeg*" >/dev/null; }
+command -v ffmpeg >/dev/null || found "${FORMCUT_FFMPEG_DIR:-$DATA}" || found "$DATA" || found "$HERE/engine" || {
+  echo "formcut needs ffmpeg: unpack the formcut-binaries Linux folder into $DATA, or put ffmpeg on PATH"; exit 1; }
 LOG="$(mktemp)"
 "$HERE/engine/formcut-engine" >"$LOG" 2>&1 &
 ENGINE=$!
@@ -49,8 +51,10 @@ LAUNCH
 chmod +x "$OUT/formcut"
 cat > "$OUT/README.txt" <<'TXT'
 formcut portable (Linux)
-Run ./formcut  (needs ffmpeg + ffprobe on PATH; yt-dlp on PATH enables URL import).
-Everything else is inside this folder; nothing installs.
+Run ./formcut. It needs ffmpeg: unpack the formcut-binaries Linux folder into
+~/.local/share/formcut/ffmpeg (or into engine/ here), or have ffmpeg on PATH.
+yt-dlp on PATH enables URL import. Everything else is inside this folder;
+nothing installs.
 TXT
 rm -rf backend/.venv-portable backend/build backend/*.spec
 echo "portable folder ready: $OUT"
