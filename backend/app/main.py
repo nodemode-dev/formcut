@@ -15,6 +15,8 @@ from .media import router as media_router
 from .paths import DATA_DIR
 from .presets import router as presets_router
 from .projects import router as projects_router
+from .remote import resume as resume_remote
+from .remote import router as remote_router
 from .security import LocalOnly
 from .stock import router as stock_router
 from .tiktok import router as tiktok_router
@@ -75,6 +77,8 @@ app.include_router(webhooks_router)
 app.include_router(tiktok_router)
 app.include_router(instagram_router)
 app.include_router(cloud_router)
+app.include_router(remote_router)
+app.add_event_handler("startup", lambda: resume_remote(app))
 
 
 @app.get("/api/health")

@@ -2,7 +2,9 @@ import ipaddress
 import os
 from urllib.parse import urlsplit
 
-from starlette.responses import PlainTextResponse
+from starlette.responses import PlainTextResponse, RedirectResponse
+
+from . import remote
 
 
 def loopback(value: str) -> bool:
@@ -28,15 +30,21 @@ class LocalOnly:
             return await self.app(scope, receive, send)
         headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
         client = (scope.get("client") or ("",))[0]
+        through_network = bool(scope.get("formcut.remote"))
         try:
-            host = urlsplit("http://" + headers.get("host", "")).hostname or ""
-            origin = headers.get("origin")
-            origin_host = urlsplit(origin).hostname if origin else None
-            allowed = loopback(client) and loopback(host) and (origin_host is None or loopback(origin_host))
-            if not allowed and remote_token():
-                # P11: remote access is off unless a token is set in the engine,
-                # and then every request must present it. Loopback is untouched.
-                allowed = headers.get("x-formcut-token") == remote_token()
+            if through_network:
+                # The network listener, marked by its own server: only paired
+                # devices, and the pairing page, get through.
+                allowed = remote.admitted(scope, headers)
+            else:
+                host = urlsplit("http://" + headers.get("host", "")).hostname or ""
+                origin = headers.get("origin")
+                origin_host = urlsplit(origin).hostname if origin else None
+                allowed = loopback(client) and loopback(host) and (origin_host is None or loopback(origin_host))
+                if not allowed and remote_token():
+                    # P11: remote access is off unless a token is set in the engine,
+                    # and then every request must present it. Loopback is untouched.
+                    allowed = headers.get("x-formcut-token") == remote_token()
         except ValueError:
             allowed = False
         if (
@@ -48,6 +56,8 @@ class LocalOnly:
         if not allowed:
             if scope["type"] == "websocket":
                 return await send({"type": "websocket.close", "code": 1008})
+            if through_network and scope.get("method") == "GET" and not scope.get("path", "").startswith("/api/"):
+                return await RedirectResponse("/pair", status_code=303)(scope, receive, send)
             return await PlainTextResponse("Local API request refused", status_code=403)(scope, receive, send)
 
         async def safe_send(message):
