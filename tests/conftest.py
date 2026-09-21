@@ -8,7 +8,9 @@ failing and teaching people to ignore red.
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +18,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend"))
+os.environ.setdefault("FORMCUT_DATA_DIR", tempfile.mkdtemp(prefix="formcut-tests-"))
 
 TEXT = {"content": "FORMCUT", "size": 14, "color": "#ffcc55", "bold": True, "align": "center"}
 
