@@ -221,6 +221,28 @@ def mask_polygon(mask: dict) -> list[tuple[float, float]]:
     return [tuple(p) for p in MASK_SHAPES.get(str(mask.get("shape")), MASK_SHAPES["rect"])]
 
 
+def transform_at(clip: dict, local: float) -> dict:
+    """The clip's transform at a local time: base, then keyframes and expressions, then animation slots.
+
+    One definition for drawing a clip and for carrying a prompt back through
+    where the clip was drawn, so the two can never disagree.
+    """
+    transform = {**DEFAULTS, **(clip.get("transform") or {})}
+    for prop in ("scale", "posX", "posY", "rotation", "opacity"):
+        transform[prop] = property_at(clip, prop, local, transform[prop])
+        expression = (clip.get("expressions") or {}).get(prop)
+        if expression:
+            transform[prop] = evaluate(expression, local, clip["duration"], transform[prop])
+    # K6: animation slots layer on top of the sampled transform
+    motion = animation_at(clip, local)
+    transform["scale"] *= motion["scale"]
+    transform["opacity"] *= motion["opacity"]
+    transform["posX"] += motion["posX"]
+    transform["posY"] += motion["posY"]
+    transform["rotation"] += motion["rotation"]
+    return transform
+
+
 class FrameRenderer:
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
@@ -747,19 +769,7 @@ class FrameRenderer:
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             self.matte_time = source_time(clip, local)
             image = self.mask_frame(image, clip)
-            transform = {**DEFAULTS, **(clip.get("transform") or {})}
-            for prop in ("scale", "posX", "posY", "rotation", "opacity"):
-                transform[prop] = property_at(clip, prop, local, transform[prop])
-                expression = (clip.get("expressions") or {}).get(prop)
-                if expression:
-                    transform[prop] = evaluate(expression, local, clip["duration"], transform[prop])
-            # K6: animation slots layer on top of the sampled transform
-            motion = animation_at(clip, local)
-            transform["scale"] *= motion["scale"]
-            transform["opacity"] *= motion["opacity"]
-            transform["posX"] += motion["posX"]
-            transform["posY"] += motion["posY"]
-            transform["rotation"] += motion["rotation"]
+            transform = transform_at(clip, local)
             h, w = image.shape[:2]
             fit = min(self.width / w, self.height / h)
             sx = fit * transform["scale"] / 100 * transform["width"] / 100 * (-1 if transform["flipH"] else 1)
