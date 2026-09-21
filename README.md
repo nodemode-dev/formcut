@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.9.0-ffae2b" alt="version v1.9.0" />
+  <img src="https://img.shields.io/badge/version-v1.10.0-ffae2b" alt="version v1.10.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -216,6 +216,7 @@ Shipped so far:
 | 1.7.0 | SAM 2.1 follows the subject through a clip with its own memory tracker; a trimmed clip's mattes come from its own frames |
 | 1.8.0 | MP4 exports on Linux and Windows without an H.264 encoder, with MPEG-4 Part 2; layered, placed, faded and graded timelines export natively, 4.5 times faster at 1080p on one core |
 | 1.9.0 | the native layered export takes rotation, crossfades, dips and still images; a dip matches the frame path exactly and a crossfade at 49.8 dB PSNR |
+| 1.10.0 | a Rust compositing kernel in the frame path, bit-identical to the Python it replaces: a titled 1080p export 1.8 times faster on one core, with the same output |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
