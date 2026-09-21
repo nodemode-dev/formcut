@@ -579,7 +579,7 @@ class FrameRenderer:
                 # why cutout appeared to be broken while the model sat ready.
                 try:
                     from .model_manager import ready as model_ready
-                    from .segmentation import raw_alpha
+                    from .segmentation import prompts, raw_alpha
 
                     model = options.get("model", "object-cutout")
                     if model_ready(model):
@@ -590,7 +590,7 @@ class FrameRenderer:
                         # frame rather than the subject. Feeding it the canvas
                         # is what turned the cutout into a blob.
                         source = self.media_frame(clip, self.matte_time)
-                        found = raw_alpha(source, model)
+                        found = raw_alpha(source, model, *prompts(options)) if model == "click-select" else raw_alpha(source, model)
                         # A click says which of the things the model found was
                         # meant. Without it a frame with two people keeps both.
                         chosen = options.get("point")

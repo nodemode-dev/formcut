@@ -166,7 +166,7 @@ def clip_values(clip):
         number(transition.get("duration", 0.5), "transition duration", 0.01, 86400)
     cutout = clip.get("cutout")
     if cutout:
-        if cutout.get("model") not in ("object-cutout", "person-cutout"):
+        if cutout.get("model") not in ("object-cutout", "person-cutout", "sharp-cutout", "video-matting", "click-select"):
             raise ValueError("Unknown cutout model")
         number(cutout.get("threshold", 0.5), "cutout threshold", 0, 1)
         number(cutout.get("feather", 0.1), "cutout feather", 0.005, 0.5)
@@ -176,6 +176,22 @@ def clip_values(clip):
                 raise ValueError("Cutout point must be an object")
             number(chosen.get("x", 0.5), "cutout point x", 0, 1)
             number(chosen.get("y", 0.5), "cutout point y", 0, 1)
+        points = cutout.get("points") or []
+        if not isinstance(points, list) or len(points) > 16:
+            raise ValueError("Cutout points must be a list of at most 16")
+        for entry in points:
+            if not isinstance(entry, dict):
+                raise ValueError("Cutout point must be an object")
+            number(entry.get("x", 0.5), "cutout point x", 0, 1)
+            number(entry.get("y", 0.5), "cutout point y", 0, 1)
+        box = cutout.get("box")
+        if box is not None:
+            if not isinstance(box, dict):
+                raise ValueError("Cutout box must be an object")
+            for side in ("x0", "y0", "x1", "y1"):
+                number(box.get(side), "cutout box " + side, 0, 1)
+            if not (box["x0"] < box["x1"] and box["y0"] < box["y1"]):
+                raise ValueError("Cutout box must have a size")
         for stroke in cutout.get("strokes", []):
             if stroke.get("mode") not in ("keep", "erase"):
                 raise ValueError("Invalid brush mode")

@@ -19,6 +19,18 @@ SAM_ENCODER = "sam2_hiera_tiny.encoder.onnx"
 SAM_DECODER = "sam2_hiera_tiny.decoder.onnx"
 
 
+def prompts(options: dict) -> tuple[list[dict], dict | None]:
+    """What a person pointed at: a list of points, the single point the Inspector stores, and a box.
+
+    All in 0..1 across the frame; a box is {x0, y0, x1, y1}.
+    """
+    points = [p for p in options.get("points") or [] if isinstance(p, dict)]
+    if not points and isinstance(options.get("point"), dict):
+        points = [options["point"]]
+    box = options.get("box")
+    return points, box if isinstance(box, dict) else None
+
+
 def _session(model: str, name: str | None = None):
     """One ONNX Runtime session per model file, made on first use."""
     import onnxruntime as ort
@@ -76,7 +88,7 @@ class VideoMatter:
         return np.clip(result["pha"][0, 0], 0, 1).astype(np.float32)
 
 
-def _sam(image: np.ndarray, points: list[dict]) -> np.ndarray:
+def _sam(image: np.ndarray, points: list[dict], box: dict | None = None) -> np.ndarray:
     """SAM 2: the frame is encoded once and kept, and each set of points is decoded against it.
 
     A point is {x, y} in 0..1 across the frame, kept unless it says keep: false.
@@ -94,8 +106,16 @@ def _sam(image: np.ndarray, points: list[dict]) -> np.ndarray:
         while len(_embeddings) > 4:
             _embeddings.popitem(last=False)
     chosen = points[:16]
-    coords = [[float(p.get("x", 0.5)) * 1024, float(p.get("y", 0.5)) * 1024] for p in chosen] + [[0.0, 0.0]]
-    labels = [0.0 if p.get("keep") is False else 1.0 for p in chosen] + [-1.0]
+    coords = [[float(p.get("x", 0.5)) * 1024, float(p.get("y", 0.5)) * 1024] for p in chosen]
+    labels = [0.0 if p.get("keep") is False else 1.0 for p in chosen]
+    if box is not None:
+        coords += [
+            [float(box.get("x0", 0)) * 1024, float(box.get("y0", 0)) * 1024],
+            [float(box.get("x1", 1)) * 1024, float(box.get("y1", 1)) * 1024],
+        ]
+        labels += [2.0, 3.0]
+    else:
+        coords, labels = [*coords, [0.0, 0.0]], [*labels, -1.0]
     feeds = {
         **features,
         "point_coords": np.array([coords], np.float32),
@@ -105,7 +125,7 @@ def _sam(image: np.ndarray, points: list[dict]) -> np.ndarray:
     }
     masks, scores = _session("click-select", SAM_DECODER).run(["masks", "iou_predictions"], feeds)
     choice = int(np.argmax(scores[0]))
-    if len(chosen) == 1:
+    if len(chosen) == 1 and box is None:
         # One click is ambiguous between a part and the whole; pointing at what
         # to keep means the whole, so the largest plausible mask is taken.
         areas = (masks[0] > 0).reshape(masks.shape[1], -1).sum(axis=1)
@@ -122,10 +142,10 @@ def _infer(model: str, image: np.ndarray, options: dict) -> np.ndarray:
         return _isnet(image)
     if model == "video-matting":
         return VideoMatter()(image)
-    points = [p for p in options.get("points") or [] if isinstance(p, dict)]
-    if not points:
+    points, box = prompts(options)
+    if not points and box is None:
         raise ValueError("Point at what to keep first")
-    return _sam(image, points)
+    return _sam(image, points, box)
 
 
 def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
@@ -134,7 +154,7 @@ def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
         raise ValueError("Download the selected cutout model in Local models first")
     h, w = image.shape[:2]
     small = cv2.resize(image[:, :, :3], (320, 320), interpolation=cv2.INTER_AREA)
-    prompt = repr(options.get("points")) if model == "click-select" else ""
+    prompt = repr(prompts(options)) if model == "click-select" else ""
     signature = (model, prompt, hashlib.blake2b(small.tobytes(), digest_size=12).digest())
     with _lock:
         alpha = _cache.get(signature)
@@ -189,14 +209,14 @@ def feathered(alpha: np.ndarray, options: dict) -> np.ndarray:
     return shaped
 
 
-def raw_alpha(image: np.ndarray, model: str, points: list[dict] | None = None) -> np.ndarray:
+def raw_alpha(image: np.ndarray, model: str, points: list[dict] | None = None, box: dict | None = None) -> np.ndarray:
     """One model run returning an unshaped 0..1 matte, for the BG3 job.
 
     Shaping is (a - threshold + feather / 2) / feather, so the identity is a
     threshold of 0.5 with a feather of 1. A threshold of 0 raised every matte
     by a half, and the threshold applied at read time then acted at 0.05.
     """
-    return cutout_alpha(image, {"model": model, "threshold": 0.5, "feather": 1.0, "strokes": [], "points": points or []})
+    return cutout_alpha(image, {"model": model, "threshold": 0.5, "feather": 1.0, "strokes": [], "points": points or [], "box": box})
 
 
 def outline(alpha: np.ndarray, max_points: int = 48) -> list[dict]:

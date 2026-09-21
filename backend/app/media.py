@@ -487,9 +487,12 @@ def cutout_preview(media_id: str, body: dict) -> dict:
         renderer.close()
     point = body.get("point")
     if model == "click-select":
-        if not isinstance(point, dict):
+        from .segmentation import prompts
+
+        points, box = prompts(body)
+        if not points and box is None:
             raise HTTPException(status_code=422, detail="Point at what to keep first")
-        alpha = raw_alpha(frame[:, :, :3], model, [point])
+        alpha = raw_alpha(frame[:, :, :3], model, points, box)
         found = region_count(alpha)
     else:
         alpha = raw_alpha(frame[:, :, :3], model)
