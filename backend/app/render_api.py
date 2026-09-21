@@ -479,7 +479,12 @@ def build_mattes(body: MatteInput):
         raise HTTPException(422, "Clip has no media")
     key = matte_key(media_id, model, options)
     duration = float(clip.get("duration", 0)) + float(clip.get("extendOut", 0) or 0)
-    times = sample_times(duration, body.fps)
+    from .timing import source_time
+
+    # Mattes are looked up by source time, so they are made at the clip's own
+    # source times. Sampling from zero made a trimmed clip's mattes from the
+    # wrong part of its file.
+    times = [round(source_time(clip, local), 4) for local in sample_times(duration, body.fps)]
     done = matte_progress(key, duration, body.fps)
     if done["ready"]:
         return {"status": "ready", **done}
@@ -503,16 +508,46 @@ def build_mattes(body: MatteInput):
                 ],
             }
         )
+        from .model_manager import ready as model_ready
+        from .sam_video import VideoTracker
+
+        prompted = [*points, *([box] if box else [])]
+        made = next((float(p["t"]) for p in prompted if isinstance(p.get("t"), (int, float)) and not isinstance(p.get("t"), bool)), 0.0)
+        seed_at = source_time(clip, made)
+        tracking = model == "click-select" and clip.get("kind") == "video" and bool(prompted) and model_ready("click-track")
+
+        def placed(frame):
+            if body.width and body.height and (points or box):
+                return to_source(clip, (body.width, body.height), (frame.shape[1], frame.shape[0]), points, box)
+            return points, box
+
         try:
-            for index, at in enumerate(times):
-                if cancelled():
-                    raise InterruptedError("Cancelled")
-                frame = renderer.media_frame(clip, at)
-                here, there = points, box
-                if body.width and body.height and (points or box):
-                    here, there = to_source(clip, (body.width, body.height), (frame.shape[1], frame.shape[0]), points, box)
-                matte_store(key, at, matter(frame) if matter else raw_alpha(frame, model, here, there))
-                report((index + 1) / len(times))
+            if tracking:
+                # SAM 2.1 follows the subject: forward from the frame the prompt
+                # was made on, then backward from it, each with its own tracker.
+                seed = min(range(len(times)), key=lambda index: abs(times[index] - seed_at))
+                done = 0
+                for run, indices in enumerate((range(seed, len(times)), range(seed, -1, -1))):
+                    tracker = None
+                    for index in indices:
+                        if cancelled():
+                            raise InterruptedError("Cancelled")
+                        frame = renderer.media_frame(clip, times[index])
+                        if tracker is None:
+                            tracker = VideoTracker(*placed(frame), len(times))
+                        alpha = tracker(frame)
+                        if run == 0 or index != seed:
+                            matte_store(key, times[index], alpha)
+                            done += 1
+                            report(done / len(times))
+            else:
+                for index, at in enumerate(times):
+                    if cancelled():
+                        raise InterruptedError("Cancelled")
+                    frame = renderer.media_frame(clip, at)
+                    here, there = placed(frame)
+                    matte_store(key, at, matter(frame) if matter else raw_alpha(frame, model, here, there))
+                    report((index + 1) / len(times))
         finally:
             renderer.close()
         return {"status": "ready", **matte_progress(key, duration, body.fps)}

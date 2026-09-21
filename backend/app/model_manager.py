@@ -42,6 +42,23 @@ MODELS = {
             "sam2_hiera_tiny.decoder.onnx": "https://huggingface.co/vietanhdev/segment-anything-2-onnx-models/resolve/main/sam2_hiera_tiny.decoder.onnx",
         },
     },
+    "click-track": {
+        "name": "SAM 2.1 video tracking",
+        "license": "Apache-2.0",
+        # SAM 2.1 Hiera Tiny with its memory encoder, memory attention and
+        # object pointers, so a point on one frame is followed through a clip.
+        "files": {
+            f"sam21-video-{name}": f"https://huggingface.co/square-zero-labs/sam2.1-tiny-video-onnx/resolve/main/{path}"
+            for name, path in (
+                ("vision_encoder.onnx", "onnx/vision_encoder.onnx"),
+                ("mask_decoder.onnx", "onnx/mask_decoder.onnx"),
+                ("memory_encoder.onnx", "onnx/memory_encoder.onnx"),
+                ("memory_attention.onnx", "onnx/memory_attention.onnx"),
+                ("pointer_tpos.onnx", "onnx/pointer_tpos.onnx"),
+                ("constants.json", "constants.json"),
+            )
+        },
+    },
     "object-cutout": {
         "name": "Object cutout (U2Net small)",
         "license": "Apache-2.0",

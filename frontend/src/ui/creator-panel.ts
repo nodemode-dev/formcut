@@ -150,7 +150,9 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       if (action === "cutout-models") {
         const state = root.querySelector<HTMLElement>("[data-cut-model-state]");
         if (state) state.textContent = "downloading";
-        for (const id of new Set(["object-cutout", "person-cutout", query<HTMLSelectElement>("cutout-model").value])) {
+        const chosen = query<HTMLSelectElement>("cutout-model").value;
+        // SAM 2 follows a subject through video with its tracker, fetched with it.
+        for (const id of new Set(["object-cutout", "person-cutout", chosen, ...(chosen === "click-select" ? ["click-track"] : [])])) {
           try {
             const started = await api<{ job_id?: string }>(`/api/models/${id}/download`, {});
             if (started.job_id) {
