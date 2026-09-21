@@ -118,3 +118,25 @@ def test_the_real_listener_marks_its_requests_even_from_this_machine(tmp_path, m
         assert json.loads(remote.STORE.read_text())["enabled"] is True
     finally:
         desk.put("/api/remote", json={"enabled": False})
+
+
+def test_every_network_access_label_is_translated_and_keeps_its_placeholder():
+    import os
+
+    folder = os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "i18n")
+
+    def read(name):
+        with open(os.path.join(folder, name), encoding="utf-8") as handle:
+            return handle.read()
+
+    english = json.loads(read("en.json"))
+    rows = read("language-pack.ts").split("`")[1].splitlines()
+    packed = {row.split("|")[0]: row.split("|")[1:] for row in rows if row}
+    keys = [key for key in english if key.startswith("remote.")] + ["prov.remote.use"]
+    assert len(keys) == 9
+    for code in ("de", "es"):
+        strings = json.loads(read(f"{code}.json"))
+        assert not [key for key in keys if key not in strings], code
+        assert "{code}" in strings["remote.code"], code
+    assert not [english[key] for key in keys if english[key] not in packed]
+    assert all("{code}" in text for text in packed[english["remote.code"]])
