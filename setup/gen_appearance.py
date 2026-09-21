@@ -44,10 +44,13 @@ DARK = [
     ("plum", "Plum", 295, 22, "deep", "#f0abfc"),
 ]
 LIGHT = [
-    ("light", "Light", 45, 8, "light", "#65a30d"),
-    ("sand", "Sand", 40, 22, "light", "#a16207"),
+    # Light, Sand and Mist darkened within their hue (from #65a30d, #a16207 and
+    # #0369a1) so the accent reads at 4.5:1 or more as text on every surface and
+    # under white text.
+    ("light", "Light", 45, 8, "light", "#3f6212"),
+    ("sand", "Sand", 40, 22, "light", "#854d0e"),
     ("linen", "Linen", 35, 16, "semi", "#9a3412"),
-    ("mist", "Mist", 210, 14, "semi", "#0369a1"),
+    ("mist", "Mist", 210, 14, "semi", "#075985"),
     ("pearl", "Pearl", 220, 6, "light", "#4f46e5"),
     ("dove-grey", "Dove Grey", 220, 4, "semi", "#334155"),
 ]
@@ -58,7 +61,11 @@ LADDER = {
     "light": [92, 96, 98, 100, 88, 83, 78],
     "semi": [86, 90, 94, 97, 82, 77, 72],
 }
-TEXT = {"dark": [96, 66, 45], "deep": [95, 65, 44], "hard": [100, 78, 58], "light": [14, 34, 52], "semi": [16, 36, 54]}
+# Main, soft and faint text lightness per ladder. Each soft and faint step is the
+# smallest that gives at least 4.5:1 (WCAG AA) against every surface text sits
+# on, input fields included, in every profile of that ladder, with soft and faint
+# kept at least 12 steps apart; the earlier faint steps measured 2.4 to 2.9:1.
+TEXT = {"dark": [96, 73, 61], "deep": [95, 72, 60], "hard": [100, 78, 58], "light": [14, 25, 37], "semi": [16, 22, 34]}
 
 
 def values(hue, sat, kind, accent):
