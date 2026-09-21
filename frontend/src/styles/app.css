@@ -597,6 +597,8 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   padding-bottom: var(--sp-3);
 }
 .bin-toolbar .seg [data-count] { color: var(--ink-faint); font-size: 11px; }
+/* On the accent fill of the active filter the faint ink measured 1.1 to 1.4:1. */
+.bin-toolbar .seg > button.is-active [data-count] { color: inherit; }
 .bin-grid { position: relative; min-height: 120px; }
 .bin-empty {
   grid-column: 1 / -1;
