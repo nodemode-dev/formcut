@@ -153,8 +153,148 @@ fn composite_affine(
     Ok(())
 }
 
+// NumPy's float32 luma weights: each decimal rounded to float64, then to float32.
+const LUMA: [f32; 3] = [0.2126_f64 as f32, 0.7152_f64 as f32, 0.0722_f64 as f32];
+
+/// The colour panel's settings, derived exactly as pixel_effects.colour_panel
+/// derives them: scalars in float64, then narrowed to float32 where NumPy
+/// narrows them against a float32 frame. None is a control at its neutral
+/// value, which the Python code skips, so the kernel skips it too.
+struct Grade {
+    gain: Option<[f32; 3]>,
+    tint: Option<[f32; 3]>,
+    exposure: Option<f32>,
+    brightness: Option<f32>,
+    contrast: Option<f32>,
+    highlights: Option<f32>,
+    shadows: Option<f32>,
+    whites: Option<f32>,
+    blacks: Option<f32>,
+    luminance: bool,
+    saturation: Option<f32>,
+    fade: Option<(f32, f32)>,
+    vignette: Option<f64>,
+}
+
+impl Grade {
+    fn new(values: [f64; 12]) -> Self {
+        let [temperature, tint, exposure, brightness, contrast, highlights, shadows, whites, blacks, saturation, fade, vignette] = values;
+        let gain = ((temperature - 6500.0).abs() > 1e-6).then(|| {
+            let shift = (6500.0 - temperature.clamp(2000.0, 11000.0)) / 4500.0;
+            [(1.0 + 0.22 * shift) as f32, (1.0 + 0.02 * shift.abs() * 0.0) as f32, (1.0 - 0.22 * shift) as f32]
+        });
+        let tint = tint / 100.0;
+        let (highlights, shadows, whites, blacks) = (highlights / 100.0, shadows / 100.0, whites / 100.0, blacks / 100.0);
+        let luminance = highlights != 0.0 || shadows != 0.0 || whites != 0.0 || blacks != 0.0 || saturation != 0.0;
+        let (brightness, contrast, factor) = (brightness / 100.0, 1.0 + contrast / 100.0, 1.0 + saturation / 100.0);
+        let (fade, vignette) = (fade / 100.0, vignette / 100.0);
+        let some = |value: f64| (value != 0.0).then_some(value as f32);
+        Grade {
+            gain,
+            tint: (tint != 0.0).then_some([(1.0 - 0.10 * tint) as f32, (1.0 + 0.25 * tint) as f32, (1.0 - 0.10 * tint) as f32]),
+            exposure: (exposure != 0.0).then(|| 2f64.powf(exposure) as f32),
+            brightness: some(brightness),
+            contrast: (contrast != 1.0).then_some(contrast as f32),
+            highlights: some(highlights),
+            shadows: some(shadows),
+            whites: some(whites),
+            blacks: some(blacks),
+            luminance,
+            saturation: (factor != 1.0 && luminance).then_some(factor as f32),
+            fade: (fade != 0.0).then_some(((1.0 - 0.35 * fade) as f32, (0.12 * fade) as f32)),
+            vignette: (vignette != 0.0).then_some(vignette),
+        }
+    }
+
+    fn row(&self, line: &mut [u8], row: usize, width: usize, height: usize) {
+        let (half_w, half_h) = (width as f64 / 2.0, height as f64 / 2.0);
+        for (column, pixel) in line.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+            let mut c = [pixel[0] as f32 / 255.0, pixel[1] as f32 / 255.0, pixel[2] as f32 / 255.0];
+            if let Some(gain) = self.gain {
+                c.iter_mut().zip(gain).for_each(|(v, g)| *v *= g);
+            }
+            if let Some(tint) = self.tint {
+                c.iter_mut().zip(tint).for_each(|(v, t)| *v *= t);
+            }
+            if let Some(exposure) = self.exposure {
+                c.iter_mut().for_each(|v| *v *= exposure);
+            }
+            if let Some(brightness) = self.brightness {
+                c.iter_mut().for_each(|v| *v += brightness);
+            }
+            if let Some(contrast) = self.contrast {
+                c.iter_mut().for_each(|v| *v = (*v - 0.5) * contrast + 0.5);
+            }
+            // np.einsum sums in this order: (r·wr + g·wg) + b·wb.
+            let lum = if self.luminance {
+                (c[0].clamp(0.0, 4.0) * LUMA[0] + c[1].clamp(0.0, 4.0) * LUMA[1]) + c[2].clamp(0.0, 4.0) * LUMA[2]
+            } else {
+                0.0
+            };
+            if self.highlights.is_some() || self.shadows.is_some() {
+                let high = (lum - 0.5).max(0.0) * 2.0;
+                if let Some(highlights) = self.highlights {
+                    let add = high * highlights;
+                    c.iter_mut().for_each(|v| *v += add);
+                }
+                if let Some(shadows) = self.shadows {
+                    let add = (0.5 - lum).max(0.0) * 2.0 * shadows;
+                    c.iter_mut().for_each(|v| *v += add);
+                }
+            }
+            if let Some(whites) = self.whites {
+                let add = (lum * lum * lum) * whites;
+                c.iter_mut().for_each(|v| *v += add);
+            }
+            if let Some(blacks) = self.blacks {
+                let dark = 1.0 - lum;
+                let add = (dark * dark * dark) * blacks;
+                c.iter_mut().for_each(|v| *v += add);
+            }
+            if let Some(saturation) = self.saturation {
+                c.iter_mut().for_each(|v| *v = (*v - lum) * saturation + lum);
+            }
+            if let Some((scale, lift)) = self.fade {
+                c.iter_mut().for_each(|v| *v = *v * scale + lift);
+            }
+            match self.vignette {
+                None => pixel.iter_mut().zip(c).for_each(|(out, v)| *out = (v * 255.0).clamp(0.0, 255.0) as u8),
+                // A float32 frame times a float64 falloff is float64 in NumPy, to the end.
+                Some(amount) => {
+                    let (dx, dy) = ((column as f64 - half_w) / half_w, (row as f64 - half_h) / half_h);
+                    let radius = (dx * dx + dy * dy).sqrt();
+                    let falloff = (1.0 - radius * radius * amount).clamp(0.0, 1.0);
+                    let factor = if amount > 0.0 { falloff } else { 2.0 - falloff };
+                    pixel.iter_mut().zip(c).for_each(|(out, v)| *out = (v as f64 * factor * 255.0).clamp(0.0, 255.0) as u8);
+                }
+            }
+        }
+    }
+}
+
+/// The colour panel on an RGBA frame, in place, alpha untouched: the float32
+/// grade of pixel_effects.colour_panel and apply_colour_panel's truncation to
+/// bytes, to the bit. `values` are the panel's temperature, tint, exposure,
+/// brightness, contrast, highlights, shadows, whites, blacks, saturation, fade
+/// and vignette; sharpen is not here, and the engine keeps Python when it is on.
+#[pyfunction]
+fn colour_panel(py: Python<'_>, mut image: PyReadwriteArray3<u8>, values: [f64; 12]) -> PyResult<()> {
+    let shape = image.shape().to_vec();
+    if shape[2] != 4 {
+        return Err(PyValueError::new_err("the image must be RGBA"));
+    }
+    let (height, width) = (shape[0], shape[1]);
+    let pixels = image.as_slice_mut().map_err(|_| PyValueError::new_err("the image must be contiguous"))?;
+    let grade = Grade::new(values);
+    py.allow_threads(|| {
+        pixels.par_chunks_mut(width * 4).enumerate().for_each(|(row, line)| grade.row(line, row, width, height));
+    });
+    Ok(())
+}
+
 #[pymodule]
 fn formcut_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(composite_affine, module)?)?;
+    module.add_function(wrap_pyfunction!(colour_panel, module)?)?;
     Ok(())
 }
