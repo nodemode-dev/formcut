@@ -1,0 +1,13 @@
+/* Webhook rows in Settings. Tokens only, so every theme applies. */
+.hook-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.hook-list:empty { display: none; }
+.hook-row { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-2); border: 1px solid var(--edge); border-radius: var(--radius-m); }
+.hook-url { overflow: hidden; color: var(--ink); font: 12px/1.4 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.hook-file { display: flex; align-items: center; gap: var(--sp-1); color: var(--ink-soft); font-size: 12px; cursor: pointer; }
+.hook-secret { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; color: var(--ink-soft); font-size: 11px; }
+.hook-secret code { flex: 1; min-width: 0; overflow: hidden; color: var(--ink-faint); font: 11px/1.4 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.hook-foot { display: flex; align-items: center; gap: var(--sp-1); }
+.hook-last { flex: 1; min-width: 0; color: var(--ink-soft); }
+.hook-last[data-state="delivered"] { color: var(--ink); }
+.hook-last[data-state="failed"] { color: var(--fault); }
+.hook-entry input { flex: 1; min-width: 0; }

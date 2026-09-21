@@ -11,6 +11,7 @@ import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
 import { buildModePanel } from "./mode-popout";
+import { buildWebhooks } from "./webhooks-settings";
 import { autosaveEnabled, setAutosaveEnabled } from "../engine/persistence";
 
 const PAGES = [
@@ -212,8 +213,8 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     }
   };
 
-  for (const [id, label] of [["pexels", "Pexels"], ["elevenlabs", "ElevenLabs"]] as const) {
-    const rows = group(providersView, label, id === "pexels" ? "prov.pexels.use" : "prov.elevenlabs.use");
+  for (const [id, label] of [["pexels", "Pexels"], ["elevenlabs", "ElevenLabs"], ["topaz", "Topaz Labs"]] as const) {
+    const rows = group(providersView, label, `prov.${id}.use`);
     const stateLine = document.createElement("div");
     stateLine.className = "prov-state";
     stateLine.innerHTML = `<span class="prov-badge" data-state="none">${t("prov.nokey")}</span><small class="panel-note"></small>`;
@@ -267,6 +268,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   // Hosted speech has a generate action here, because a provider panel that can
   // only be tested is not much use: the same path the Studio speech page takes
   // for the local runtime, through the hosted endpoint.
+  buildWebhooks(group(providersView, "hooks.title", "hooks.use"));
   const speechRows = group(providersView, "prov.generate", "prov.generate.hint");
   const speechText = document.createElement("input");
   speechText.type = "text";
