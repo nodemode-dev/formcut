@@ -15,7 +15,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import fast_export, gpu, jobs
+from . import fast_export, fast_layers, gpu, jobs
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import CONTAINERS, addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -288,6 +288,35 @@ def export_media(
                 "pixelFormat": pix,
                 "rate": out_rate,
                 "renderPath": "native",
+            }
+        layered = None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" else fast_layers.plan(project, count)
+        if layered is not None:
+            fast_layers.run(
+                layered,
+                program,
+                audio,
+                [*codec, "-pix_fmt", pix],
+                out_w,
+                out_h,
+                out_rate,
+                project["duration"],
+                path,
+                log,
+                report,
+                cancelled,
+            )
+            return {
+                "file": str(path),
+                "name": "formcut-export." + format,
+                "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                "frames": count,
+                "width": out_w,
+                "height": out_h,
+                "codec": wanted,
+                "encoder": encoder,
+                "pixelFormat": pix,
+                "rate": out_rate,
+                "renderPath": "layered",
             }
         command = [
             program,
