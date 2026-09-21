@@ -41,8 +41,10 @@ async def _remember_loop() -> None:
 
 @app.on_event("startup")
 async def _prepare_models() -> None:
+    from .ffmpeg_fetch import auto_fetch
     from .model_manager import auto_download
 
+    auto_fetch()
     auto_download()
 
 

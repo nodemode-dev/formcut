@@ -17,6 +17,7 @@ arguments = [
     '--clean', '--noconfirm', '--name', 'formcut-engine',
     '--onefile' if args.onefile else '--onedir',
     '--add-data', str(root.parent / 'frontend' / 'dist') + os.pathsep + 'frontend_dist',
+    '--add-data', str(root.parent / 'src-tauri' / 'binaries' / 'ffmpeg-licence.json') + os.pathsep + '.',
     '--add-data', str(root.parent / 'examples' / 'demo' / 'effect-example-image.jpg') + os.pathsep + 'examples/demo',
     '--collect-all', 'uvicorn',
     '--collect-binaries', 'wgpu', '--collect-data', 'wgpu',
