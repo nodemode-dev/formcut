@@ -85,6 +85,10 @@ jobs:
         shell: bash
         run: |
           pip install -r backend/requirements.txt pyinstaller
+          # The Rust kernels go into the frozen engine; without them it runs the Python path.
+          pip install "maturin==1.15.0"
+          maturin build --release --manifest-path backend/native/Cargo.toml --out native-dist
+          pip install native-dist/*.whl
           python backend/prepare_cv.py
           python backend/freeze.py --onefile
           suffix=""
