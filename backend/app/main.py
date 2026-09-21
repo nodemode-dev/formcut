@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .brush import router as brush_router
 from .features import router as features_router
+from .library import router as library_router
 from .media import router as media_router
 from .paths import DATA_DIR
 from .presets import router as presets_router
@@ -63,6 +64,7 @@ app.include_router(addons_router)
 app.include_router(track_router)
 app.include_router(features_router)
 app.include_router(brush_router)
+app.include_router(library_router)
 
 
 @app.get("/api/health")
