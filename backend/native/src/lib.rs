@@ -159,6 +159,16 @@ fn draw(
 #[inline]
 fn blend(row: &mut [u8], x: usize, layer: [i32; 4]) {
     const HALF_EVEN: f32 = 8_388_608.0;
+    // Opaque: a is exactly 1.0 and keep exactly 0.0, so the float sum is the
+    // front value, and (byte / 255) * 255 lies within 1.5e-5 of the byte and
+    // rounds back to it. Writing the bytes is the blend's own result, without
+    // the arithmetic that made an opaque full-frame layer cost seven copies.
+    if layer[3] == 255 {
+        row[x * 4] = layer[0] as u8;
+        row[x * 4 + 1] = layer[1] as u8;
+        row[x * 4 + 2] = layer[2] as u8;
+        return;
+    }
     let a = layer[3] as f32 / 255.0;
     let keep = 1.0f32 - a;
     for channel in 0..3 {
