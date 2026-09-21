@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from . import fast_export, gpu, jobs
 from .audio_render import RATE, processed_clip_audio, render_audio
-from .encoders import addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
+from .encoders import CONTAINERS, addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
 from .encoders import status as encoder_status
 from .frame_cache import FrameCache, ReadAhead
@@ -249,10 +249,13 @@ def export_media(
         # it, else the container's default; hardware is preferred inside choose.
         wanted = codec_name or ("h264" if format == "mp4" else "vp9")
         encoder = choose_encoder(wanted)
-        if not encoder:
-            fallback = "h264" if format == "mp4" else "vp9"
-            encoder = choose_encoder(fallback)
-            wanted = fallback
+        # Else the container's own codecs, best first. The LGPL ffmpeg formcut
+        # ships for Linux and Windows has no H.264 encoder, and still writes MP4
+        # with MPEG-4 Part 2, which desktop players and video sites read.
+        for fallback in CONTAINERS.get(format, ()):
+            if encoder:
+                break
+            encoder, wanted = choose_encoder(fallback), fallback
         if not encoder:
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])

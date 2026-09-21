@@ -17,10 +17,13 @@ CANDIDATES: dict[str, tuple[str, ...]] = {
     "hevc": ("hevc_videotoolbox", "hevc_nvenc", "hevc_qsv", "hevc_amf", "libx265"),
     "av1": ("av1_nvenc", "av1_qsv", "libsvtav1", "libaom-av1"),
     "vp9": ("libvpx-vp9",),
+    # ffmpeg's own MPEG-4 Part 2 encoder is in every build, the LGPL ones
+    # included, so MP4 can always be written even with no H.264 encoder.
+    "mpeg4": ("mpeg4",),
 }
 
 CONTAINERS: dict[str, tuple[str, ...]] = {
-    "mp4": ("h264", "hevc", "av1"),
+    "mp4": ("h264", "hevc", "av1", "mpeg4"),
     "webm": ("vp9", "av1"),
 }
 
@@ -129,6 +132,9 @@ def addon_binary_for(encoder: str):
 def tier_flags(encoder: str, quality: str) -> list[str]:
     """Quality flags for an encoder, falling back by family."""
     quality = quality if quality in ("high", "medium", "low") else "high"
+    if encoder == "mpeg4":
+        # A fixed quantiser gives each tier the same look at any frame size.
+        return ["-q:v", {"high": "2", "medium": "4", "low": "8"}[quality]]
     if encoder in TIERS:
         return TIERS[encoder][quality]
     if encoder.endswith("_nvenc"):
@@ -193,7 +199,7 @@ def supports_ten_bit(codec: str) -> bool:
 # this model's own error, so the estimate is a guide, not a promise.
 BITRATE_K = 0.00095  # kbit/s at one unit of (pixels per second) ** EXPONENT
 EXPONENT = 0.85
-CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921}
+CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921, "mpeg4": 1.6}
 # Quality factors are per codec, not shared: each encoder's tiers sit at
 # different crf values, so AV1's high tier is 1.58x its medium where H.264's is
 # 2.19x. Fitting one shared curve put an HEVC low-tier estimate 130 percent out.
