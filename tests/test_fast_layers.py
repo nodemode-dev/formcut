@@ -62,8 +62,8 @@ def test_a_placed_and_faded_picture_in_picture_is_layered():
     assert refusal(stacked([video(transform={"scale": 40, "posX": 25, "posY": -20, "opacity": 70, "flipH": True})])) is None
 
 
-def test_a_rotated_clip_keeps_the_frame_path():
-    assert refusal(stacked([video(transform={"rotation": 10})])) == "rotation"
+def test_a_rotated_and_flipped_clip_is_layered():
+    assert refusal(stacked([video(transform={"rotation": 10, "flipH": True})])) is None
 
 
 def test_a_blend_mode_keeps_the_frame_path():
@@ -82,16 +82,16 @@ def test_text_keeps_the_frame_path():
     assert refusal(stacked([text_clip()])) == "a text clip"
 
 
-def test_an_image_keeps_the_frame_path():
-    assert refusal(stacked([{**video(), "kind": "image"}])) == "a image clip"
+def test_a_graded_image_is_layered():
+    assert refusal(stacked([{**video(colour=GRADE), "kind": "image"}])) is None
 
 
 def test_keyframed_motion_keeps_the_frame_path():
     assert refusal(stacked([video(keyframes=[{"t": 0, "props": {"posX": 0}}, {"t": 1, "props": {"posX": 20}}])])) == "keyframes"
 
 
-def test_a_crossfade_keeps_the_frame_path():
-    assert refusal(stacked([video("a", 0, 2), video("b", 2, 2, transitionIn={"type": "crossfade", "duration": 0.5})])) is not None
+def test_a_wipe_keeps_the_frame_path():
+    assert refusal(stacked([video("a", 0, 2), video("b", 2, 2, transitionIn={"type": "wipe-up", "duration": 0.5})])) == "transition"
 
 
 def test_a_solid_background_is_layered_and_a_gradient_is_not():
