@@ -205,3 +205,41 @@ def test_posting_needs_an_account_and_a_finished_export(tmp_path, fake):
     assert job["status"] == "error" and "Connect a TikTok account" in job["error"]
     _connect()
     assert client.delete("/api/connect/tiktok").json()["connected"] is False
+
+
+def test_the_sign_in_page_opens_in_the_browser_only_when_asked(fake, monkeypatch):
+    opened = []
+    monkeypatch.setattr(tiktok.webbrowser, "open", lambda url: opened.append(url) or True)
+    client.put("/api/connect/tiktok/app", json={"clientKey": "key-1", "clientSecret": "local-secret"})
+    quiet = client.post("/api/connect/tiktok/start").json()
+    assert quiet["opened"] is False and opened == []
+    loud = client.post("/api/connect/tiktok/start", json={"open": True}).json()
+    assert loud["opened"] is True and opened == [loud["url"]]
+
+
+def test_saving_without_a_secret_keeps_it_and_none_is_ever_returned(fake):
+    client.put("/api/connect/tiktok/app", json={"clientKey": "key-1", "clientSecret": "local-secret"})
+    shown = client.put("/api/connect/tiktok/app", json={"clientKey": "key-2", "relay": ""}).json()
+    assert (shown["mode"], shown["clientKey"]) == ("local", "key-2") and "local-secret" not in json.dumps(shown)
+    assert tiktok._app()["clientSecret"] == "local-secret"
+    cleared = client.put("/api/connect/tiktok/app", json={"clientKey": "key-2", "clientSecret": ""}).json()
+    assert (cleared["mode"], cleared["configured"]) == (None, False)
+
+
+def _i18n(name):
+    with open(os.path.join(os.path.dirname(__file__), "..", "frontend", "src", "i18n", name), encoding="utf-8") as handle:
+        return handle.read()
+
+
+def test_every_tiktok_label_is_translated_and_keeps_its_placeholder():
+    english = json.loads(_i18n("en.json"))
+    rows = _i18n("language-pack.ts").split("`")[1].splitlines()
+    packed = {row.split("|")[0]: row.split("|")[1:] for row in rows if row}
+    keys = [key for key in english if key.startswith("tiktok.")] + ["prov.tiktok.use"]
+    assert len(keys) == 35
+    for code in ("de", "es"):
+        strings = json.loads(_i18n(f"{code}.json"))
+        assert not [key for key in keys if key not in strings], code
+        assert "{name}" in strings["tiktok.as"], code
+    assert not [english[key] for key in keys if english[key] not in packed]
+    assert all("{name}" in text for text in packed[english["tiktok.as"]])
