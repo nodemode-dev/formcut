@@ -25,6 +25,7 @@ import os
 import secrets
 import threading
 import time
+import webbrowser
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -240,10 +241,12 @@ def _post(body: PostInput, path: Path, media_type: str):
 
 @router.put("/api/connect/tiktok/app")
 def set_app(body: AppInput) -> dict:
+    """Store the app's credentials; an omitted secret keeps the stored one, an empty one clears it."""
     data = _read()
+    kept = data.get("app", {}).get("clientSecret", "")
     data["app"] = {
         "clientKey": body.clientKey.strip(),
-        "clientSecret": (body.clientSecret or "").strip(),
+        "clientSecret": kept if body.clientSecret is None else body.clientSecret.strip(),
         "relay": (body.relay or "").strip(),
     }
     _write(data)
@@ -255,12 +258,22 @@ def state() -> dict:
     app, account = _app(), _read().get("account")
     mode = "relay" if app["relay"] else "local" if app["clientSecret"] else None
     public = {"openId": account["openId"], "scope": account["scope"], "expiresAt": account["expiresAt"]} if account else None
-    return {"configured": bool(app["clientKey"] and mode), "mode": mode, "connected": bool(account), "account": public}
+    shown = {"clientKey": app["clientKey"], "relay": app["relay"]}  # neither is secret; the client secret is never returned
+    return {"configured": bool(app["clientKey"] and mode), "mode": mode, "connected": bool(account), "account": public, **shown}
+
+
+class StartInput(BaseModel):
+    open: bool = False
 
 
 @router.post("/api/connect/tiktok/start")
-def start(request: Request) -> dict:
-    """The TikTok sign-in address; the interface opens it in the system browser."""
+def start(request: Request, body: StartInput | None = None) -> dict:
+    """The TikTok sign-in address, opened in the system browser when asked.
+
+    The engine opens it rather than the interface, because the desktop shell's
+    webview has no permission to launch a browser; the address is returned
+    too, for the interface to show if no browser could be opened.
+    """
     app = _app()
     if not app["clientKey"]:
         raise HTTPException(409, "Set the TikTok client key first")
@@ -273,7 +286,8 @@ def start(request: Request) -> dict:
         _pending[token] = {"verifier": verifier, "redirect": redirect, "at": now}
     query = {"client_key": app["clientKey"], "response_type": "code", "scope": SCOPES, "redirect_uri": redirect, "state": token}
     query.update(code_challenge=challenge(verifier), code_challenge_method="S256")
-    return {"url": f"{_authorize()}?{urlencode(query)}"}
+    url = f"{_authorize()}?{urlencode(query)}"
+    return {"url": url, "opened": bool(body and body.open and webbrowser.open(url))}
 
 
 @router.get("/api/connect/tiktok/callback/", response_class=HTMLResponse)
