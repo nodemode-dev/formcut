@@ -140,11 +140,16 @@ SECRET_HINTS = ("key", "token", "secret", "password", "authorization")
 def locales() -> dict:
     """P6: locale files dropped into the data directory, with missing keys named."""
     import json as _json
+    import sys as _sys
 
     # Locales that ship with the app are read as well as ones a person dropped
-    # in, otherwise a translation that ships is one nobody ever sees.
-    bundled = Path(__file__).resolve().parents[2] / "frontend" / "public" / "locales"
-    folders = [f for f in (bundled, DATA_DIR / "locales") if f.is_dir()]
+    # in, otherwise a translation that ships is one nobody ever sees. A clone
+    # keeps them in frontend/public; a frozen build carries the built interface
+    # as frontend_dist, where Vite copied them.
+    bundled = [Path(__file__).resolve().parents[2] / "frontend" / "public" / "locales"]
+    if hasattr(_sys, "_MEIPASS"):
+        bundled.append(Path(_sys._MEIPASS) / "frontend_dist" / "locales")
+    folders = [f for f in (*bundled, DATA_DIR / "locales") if f.is_dir()]
     english: dict = {}
     base = Path(__file__).resolve().parents[2] / "frontend" / "src" / "i18n" / "en.json"
     if base.is_file():
