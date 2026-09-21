@@ -15,7 +15,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import gpu, jobs
+from . import fast_export, gpu, jobs
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -268,6 +268,24 @@ def export_media(
         # An H.264 add-on the person installed runs from its own binary; the
         # bundled LGPL ffmpeg drives everything else.
         program = str(addon_binary_for(encoder) or "ffmpeg")
+        native = None if os.environ.get("FORMCUT_EXPORT_PATH") == "frames" else fast_export.plan(project, count)
+        if native is not None:
+            fast_export.run(
+                native, program, audio, [*codec, "-pix_fmt", pix], out_w, out_h, out_rate, project["duration"], path, log, report, cancelled
+            )
+            return {
+                "file": str(path),
+                "name": "formcut-export." + format,
+                "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                "frames": count,
+                "width": out_w,
+                "height": out_h,
+                "codec": wanted,
+                "encoder": encoder,
+                "pixelFormat": pix,
+                "rate": out_rate,
+                "renderPath": "native",
+            }
         command = [
             program,
             "-v",
@@ -340,6 +358,7 @@ def export_media(
             "encoder": encoder,
             "pixelFormat": pix,
             "rate": out_rate,
+            "renderPath": "frames",
         }
     except BaseException:
         if process and process.poll() is None:
