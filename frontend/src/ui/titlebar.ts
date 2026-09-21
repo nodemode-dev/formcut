@@ -9,6 +9,7 @@ import { icon } from "./icons";
 import { t } from "../i18n";
 import { buildModePanel } from "./mode-popout";
 import { openTikTok } from "./tiktok-dialog";
+import { openInstagram } from "./instagram";
 import { activeProfile, onInterfaceMode, type InterfaceProfile } from "./interface-mode";
 
 export interface AppActions {
@@ -241,6 +242,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       <div class="modal-row export-estimate" data-ref="estimate"></div>
       <div class="modal-actions">
         <button class="tool-chip" data-ref="post" hidden>${icon("export")}${t("tiktok.lastExport")}</button>
+        <button class="tool-chip" data-ref="post-ig" hidden>${icon("pip")}${t("instagram.lastExport")}</button>
         <button class="tool-chip" data-ref="cancel">${t("export.cancel")}</button>
         <button class="btn-export" data-ref="start">${icon("export")}${t("export.start")}</button>
       </div>
@@ -341,6 +343,12 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     modal.hidden = true;
     openTikTok(lastExport);
   });
+  const postLastIg = modal.querySelector<HTMLButtonElement>('[data-ref="post-ig"]')!;
+  postLastIg.addEventListener("click", () => {
+    if (!lastExport) return;
+    modal.hidden = true;
+    openInstagram(lastExport);
+  });
   modal.querySelector('[data-ref="start"]')!.addEventListener("click", async () => {
     if (exporting) return;
     modal.hidden = true;
@@ -360,6 +368,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       showToast("Export complete");
       lastExport = { jobId, name: `formcut-export.${format}` };
       if (postLast.hidden) postLast.hidden = false;
+      if (postLastIg.hidden) postLastIg.hidden = false;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Export failed");
     } finally {

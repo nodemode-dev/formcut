@@ -14,6 +14,7 @@ import { api } from "../engine/api";
 import { buildLibraryView } from "./library-view";
 import { openUpscale } from "./upscale-dialog";
 import { openTikTok } from "./tiktok-dialog";
+import { openInstagram } from "./instagram";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -655,6 +656,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         <span class="dur-chip">${mm}:${ss}</span>
         ${upscalable ? `<button type="button" class="bin-upscale" title="${escapeHtml(t("upscale.action"))}" aria-label="${escapeHtml(t("upscale.action"))}">${icon("fullscreen")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-post" title="${escapeHtml(t("tiktok.action"))}" aria-label="${escapeHtml(t("tiktok.action"))}">${icon("export")}</button>` : ""}
+        ${item.kind === "video" ? `<button type="button" class="bin-ig" title="${escapeHtml(t("instagram.action"))}" aria-label="${escapeHtml(t("instagram.action"))}">${icon("pip")}</button>` : ""}
       </div>
       <div class="effect-name">${escapeHtml(item.name)}</div>`;
     card.querySelector(".bin-upscale")?.addEventListener("click", (ev) => {
@@ -665,6 +667,10 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     card.querySelector(".bin-post")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
       openTikTok({ mediaId: item.id, name: item.name });
+    });
+    card.querySelector(".bin-ig")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      openInstagram({ mediaId: item.id, name: item.name });
     });
     card.addEventListener("dragstart", (ev) => {
       ev.dataTransfer?.setData("application/x-formcut-media", item.id);

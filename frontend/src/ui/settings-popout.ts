@@ -13,6 +13,7 @@ import { api } from "../engine/api";
 import { buildModePanel } from "./mode-popout";
 import { buildWebhooks } from "./webhooks-settings";
 import { buildTikTokSettings } from "./tiktok-settings";
+import { buildInstagramSettings } from "./instagram";
 import { autosaveEnabled, setAutosaveEnabled } from "../engine/persistence";
 
 const PAGES = [
@@ -271,6 +272,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   // for the local runtime, through the hosted endpoint.
   buildWebhooks(group(providersView, "hooks.title", "hooks.use"));
   buildTikTokSettings(group(providersView, "TikTok", "prov.tiktok.use"));
+  buildInstagramSettings(group(providersView, "Instagram", "prov.instagram.use"));
   const speechRows = group(providersView, "prov.generate", "prov.generate.hint");
   const speechText = document.createElement("input");
   speechText.type = "text";
