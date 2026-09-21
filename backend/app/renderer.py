@@ -283,6 +283,9 @@ class FrameRenderer:
         self.prepared = {}
         self.clips = flatten(self.project)
         self.sources = {}
+        self.cursors: dict[str, list[tuple[str, int]]] = {}
+        self.cursor_used: dict[tuple[str, int], int] = {}
+        self.uses = 0
         self.stills = {}
         self.frame_numbers = {}
         self.tween_pairs = {}
@@ -299,6 +302,7 @@ class FrameRenderer:
         for source in self.sources.values():
             recycle(source)
         self.sources.clear()
+        self.cursors.clear()
         self.stills.clear()
         self.frames.clear()
         self.closed = True
@@ -357,12 +361,45 @@ class FrameRenderer:
         left = max(0, (resized.shape[1] - self.width) // 2)
         return resized[top : top + self.height, left : left + self.width]
 
-    def _tween(self, capture, media_id: str, wanted: int, blend: float):
+    CURSORS = 4
+
+    def _cursor(self, media_id: str, time: float, path) -> tuple[str, int]:
+        """The read position of this media that reaches `time` by reading forward.
+
+        One decoder per media meant two clips of one file at different moments,
+        a picture in picture of the same shot or a crossfade within one file,
+        pulled it back and forth, and each step back restarted ffmpeg from the
+        last keyframe: a 1080p picture in picture ran at 436 ms a frame where
+        the same layers from one moment ran at 134. Each media now keeps up to
+        CURSORS read positions; a request takes the nearest it can reach by
+        reading forward within the decoder's two-second window, opens a new one
+        when none can, and past the limit restarts the least recently used.
+        """
+        cursors = self.cursors.setdefault(media_id, [])
+        chosen = None
+        if cursors:
+            fps = self.sources[cursors[0]].fps
+            wanted, window = max(0, int(time * fps + 1e-7)), max(1, round(fps * 2))
+            forward = [(wanted - self.frame_numbers.get(cursor, -2), cursor) for cursor in cursors]
+            forward = [entry for entry in forward if 0 <= entry[0] <= window]
+            if forward:
+                chosen = min(forward)[1]
+            elif len(cursors) >= self.CURSORS:
+                chosen = min(cursors, key=lambda cursor: self.cursor_used.get(cursor, 0))
+        if chosen is None:
+            chosen = (media_id, len(cursors))
+            self.sources[chosen] = acquire(path, self.decode_limit, time)
+            cursors.append(chosen)
+        self.uses += 1
+        self.cursor_used[chosen] = self.uses
+        return chosen
+
+    def _tween(self, capture, cursor, wanted: int, blend: float):
         """The picture partway between two source frames, following the motion."""
-        key = (media_id, wanted)
+        key = (cursor, wanted)
         pair = self.tween_pairs.get(key)
         if pair is None:
-            current = self.frame_numbers.get(media_id, -2)
+            current = self.frame_numbers.get(cursor, -2)
             if wanted != current + 1:
                 capture.seek(wanted)
             ok, first = capture.read()
@@ -371,8 +408,8 @@ class FrameRenderer:
             ok, second = capture.read()
             if not ok:
                 return None
-            self.frame_numbers[media_id] = wanted + 1
-            self.frames[media_id] = cv2.cvtColor(second, cv2.COLOR_BGR2RGBA)
+            self.frame_numbers[cursor] = wanted + 1
+            self.frames[cursor] = cv2.cvtColor(second, cv2.COLOR_BGR2RGBA)
             grey_a = cv2.cvtColor(first, cv2.COLOR_BGR2GRAY)
             grey_b = cv2.cvtColor(second, cv2.COLOR_BGR2GRAY)
             flow = cv2.calcOpticalFlowFarneback(grey_a, grey_b, None, 0.5, 3, 21, 3, 5, 1.2, 0)
@@ -423,9 +460,8 @@ class FrameRenderer:
             if native:
                 self.decode_scale[media_id] = max(still.shape[0], still.shape[1]) / native
             return apply_crop(still.copy(), clip)
-        if media_id not in self.sources:
-            self.sources[media_id] = acquire(paths[0], self.decode_limit, time)
-        capture = self.sources[media_id]
+        cursor = self._cursor(media_id, time, paths[0])
+        capture = self.sources[cursor]
         rate = capture.fps
         count = capture.frame_count
         wanted = max(0, int(time * rate + 1e-7))
@@ -439,20 +475,20 @@ class FrameRenderer:
         # blended, so the movement continues instead of freezing.
         blend = float(time * rate) - wanted
         if clip.get("smoothSlow") and count and 0.02 < blend < 0.98 and wanted + 1 < count:
-            made = self._tween(capture, media_id, wanted, blend)
+            made = self._tween(capture, cursor, wanted, blend)
             if made is not None:
                 return apply_crop(made, clip)
-        current = self.frame_numbers.get(media_id, -2)
+        current = self.frame_numbers.get(cursor, -2)
         if wanted == current:
-            return apply_crop(self.frames[media_id].copy(), clip)
+            return apply_crop(self.frames[cursor].copy(), clip)
         if wanted != current + 1:
             capture.seek(wanted)
         ok, frame = capture.read()
         if not ok:
             raise ValueError("Could not decode source frame")
         result = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        self.frame_numbers[media_id] = wanted
-        self.frames[media_id] = result
+        self.frame_numbers[cursor] = wanted
+        self.frames[cursor] = result
         if native:
             self.decode_scale[media_id] = max(result.shape[0], result.shape[1]) / native
         return apply_crop(result.copy(), clip)
