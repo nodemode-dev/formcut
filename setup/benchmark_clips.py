@@ -144,7 +144,10 @@ def main() -> int:
         length = min(args.seconds, float(first.get("duration") or args.seconds))
         fps = max(1, round(float(first.get("fps") or 30)))
         layers = [records[i % len(records)] for i in range(3)]
-        report: dict = {"clips": [str(path) for path in args.clips], "source": {k: first.get(k) for k in ("width", "height", "fps", "duration")}}
+        report: dict = {
+            "clips": [str(path) for path in args.clips],
+            "source": {k: first.get(k) for k in ("width", "height", "fps", "duration")},
+        }
         single = document(3840, 2160, fps, [[clip("a", first, length)]])
         report["scrub"] = scrub(single, args.preview, args.seeks, length)
         stacked = document(
