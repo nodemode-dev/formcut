@@ -7,6 +7,7 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from .brush import router as brush_router
+from .cloud import router as cloud_router
 from .features import router as features_router
 from .instagram import router as instagram_router
 from .library import router as library_router
@@ -73,6 +74,7 @@ app.include_router(upscale_router)
 app.include_router(webhooks_router)
 app.include_router(tiktok_router)
 app.include_router(instagram_router)
+app.include_router(cloud_router)
 
 
 @app.get("/api/health")
