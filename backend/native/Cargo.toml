@@ -1,0 +1,21 @@
+[package]
+name = "formcut-native"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "formcut's native render kernels, called from the Python engine"
+publish = false
+
+[lib]
+name = "formcut_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+# All MIT or Apache-2.0. abi3 builds one module per platform for every Python from 3.10.
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py310"] }
+numpy = "0.22"
+rayon = "1.10"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

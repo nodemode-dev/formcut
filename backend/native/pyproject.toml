@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "formcut-native"
+version = "0.1.0"
+description = "formcut's native render kernels, called from the Python engine"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+
+[tool.maturin]
+module-name = "formcut_native"
+features = ["pyo3/extension-module"]
