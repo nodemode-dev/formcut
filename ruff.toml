@@ -10,6 +10,10 @@
 target-version = "py312"
 line-length = 140
 
+# A standalone, standard-library-only tool the owner keeps in its own style; it
+# is left out of lint and format rather than rewritten to this file's rules.
+extend-exclude = ["setup/merge_macos_bundle_v1.0.0.py"]
+
 [lint]
 # The set the check was already applying, made explicit. Widening it is a
 # separate decision from making the check pass, and mixing the two would hide
