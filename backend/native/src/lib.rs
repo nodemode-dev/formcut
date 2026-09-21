@@ -292,9 +292,49 @@ fn colour_panel(py: Python<'_>, mut image: PyReadwriteArray3<u8>, values: [f64; 
     Ok(())
 }
 
+const CHUNK: usize = 1 << 16;
+
+/// Bytes to 0..1 floats into `out`, as `image.astype(np.float32) / 255` makes them.
+#[pyfunction]
+fn unit_float(py: Python<'_>, image: PyReadonlyArray3<u8>, mut out: PyReadwriteArray3<f32>) -> PyResult<()> {
+    if image.shape() != out.shape() {
+        return Err(PyValueError::new_err("the image and the output differ in shape"));
+    }
+    let source = image.as_slice().map_err(|_| PyValueError::new_err("the image must be contiguous"))?;
+    let target = out.as_slice_mut().map_err(|_| PyValueError::new_err("the output must be contiguous"))?;
+    py.allow_threads(|| {
+        target.par_chunks_mut(CHUNK).zip(source.par_chunks(CHUNK)).for_each(|(to, from)| {
+            to.iter_mut().zip(from).for_each(|(value, byte)| *value = *byte as f32 / 255.0);
+        });
+    });
+    Ok(())
+}
+
+/// 0..1 floats to bytes into `out`, as `np.round(values * 255).astype(np.uint8)`
+/// makes them: the product in float32, rounded half to even. round_ties_even is a
+/// library call per value on baseline x86-64; adding and removing 2^23 rounds the
+/// same way in plain float32 arithmetic (the values are 0 to 255) and vectorises.
+#[pyfunction]
+fn to_bytes(py: Python<'_>, values: PyReadonlyArray3<f32>, mut out: PyReadwriteArray3<u8>) -> PyResult<()> {
+    const ROUND: f32 = 8_388_608.0;
+    if values.shape() != out.shape() {
+        return Err(PyValueError::new_err("the values and the output differ in shape"));
+    }
+    let source = values.as_slice().map_err(|_| PyValueError::new_err("the values must be contiguous"))?;
+    let target = out.as_slice_mut().map_err(|_| PyValueError::new_err("the output must be contiguous"))?;
+    py.allow_threads(|| {
+        target.par_chunks_mut(CHUNK).zip(source.par_chunks(CHUNK)).for_each(|(to, from)| {
+            to.iter_mut().zip(from).for_each(|(byte, value)| *byte = ((value * 255.0 + ROUND) - ROUND) as u8);
+        });
+    });
+    Ok(())
+}
+
 #[pymodule]
 fn formcut_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(composite_affine, module)?)?;
     module.add_function(wrap_pyfunction!(colour_panel, module)?)?;
+    module.add_function(wrap_pyfunction!(unit_float, module)?)?;
+    module.add_function(wrap_pyfunction!(to_bytes, module)?)?;
     Ok(())
 }
