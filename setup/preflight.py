@@ -62,6 +62,7 @@ def check_files() -> None:
         "src-tauri/tauri.conf.json",
         "src-tauri/Cargo.toml",
         "src-tauri/binaries/ffmpeg-licence.json",
+        "src-tauri/ffmpeg/README.md",
         ".github/workflows/release.yml",
         ".github/workflows/checks.yml",
         "frontend/package.json",

@@ -94,6 +94,47 @@ jobs:
           mkdir -p src-tauri/binaries
           cp "$built" "src-tauri/binaries/formcut-engine-${{ matrix.target }}$suffix"
 
+      # macOS and Windows installers carry formcut's LGPL ffmpeg from the
+      # formcut-binaries release. Every file is checked against the record by
+      # the same code the app's first-run fetch uses, and a mismatch fails the
+      # build. The programs are staged under their plain names so the installed
+      # app, which cannot be written to, needs no links. A target with no
+      # published build is noted and fetches ffmpeg on first run instead. Linux
+      # packages always do, since a packaged ffmpeg in /usr/bin would collide
+      # with the system's.
+      - name: bundle ffmpeg
+        if: runner.os != 'Linux'
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          python - <<'PY'
+          import os, sys, tempfile, urllib.request
+          from pathlib import Path
+          sys.path.insert(0, "backend")
+          from app import ffmpeg_fetch
+          triple = os.environ["TARGET"]
+          record = ffmpeg_fetch.record()
+          files = ffmpeg_fetch.pins(record, triple)
+          if not files:
+              print(f"::notice::no ffmpeg build is recorded for {triple}; this installer fetches it on first run")
+              sys.exit(0)
+          url = ffmpeg_fetch.source(record, triple)
+          stage = Path("src-tauri/ffmpeg")
+          with tempfile.TemporaryDirectory() as scratch:
+              archive = Path(scratch) / "ffmpeg.tar.gz"
+              try:
+                  urllib.request.urlretrieve(url, archive)
+              except OSError as error:
+                  print(f"::notice::{url} is not published ({error}); this installer fetches ffmpeg on first run")
+                  sys.exit(0)
+              count = ffmpeg_fetch.install(archive, files, stage)
+          suffix = ".exe" if triple.endswith("windows-msvc") else ""
+          for program in ("ffmpeg", "ffprobe"):
+              (stage / f"{program}-{triple}{suffix}").rename(stage / f"{program}{suffix}")
+          print(f"bundled {count} files from {url}, each matching the record")
+          PY
+
       - name: build the app
         uses: tauri-apps/tauri-action@v0
         env:

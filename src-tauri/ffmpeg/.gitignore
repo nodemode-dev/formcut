@@ -1,0 +1,4 @@
+# Filled by the release workflow; binaries are never committed.
+*
+!.gitignore
+!README.md

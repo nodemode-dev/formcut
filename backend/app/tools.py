@@ -75,7 +75,15 @@ def bundle_dir() -> Path | None:
     candidates: list[Path] = []
     if getattr(sys, "frozen", False):
         here = Path(sys.executable).resolve().parent
-        candidates += [here, here / "binaries", here.parent / "Resources" / "binaries"]
+        candidates += [
+            here,
+            here / "binaries",
+            here.parent / "Resources" / "binaries",
+            # Where an installer puts the bundled ffmpeg resource: beside the
+            # engine on Windows, in the bundle's Resources on macOS.
+            here / "ffmpeg",
+            here.parent / "Resources" / "ffmpeg",
+        ]
     candidates += [user_ffmpeg_dir(), Path(__file__).resolve().parents[2] / "src-tauri" / "binaries"]
     return next((c for c in candidates if _holds_ffmpeg(c)), None)
 
