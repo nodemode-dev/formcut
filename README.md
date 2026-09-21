@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.20.0-ffae2b" alt="version v1.20.0" />
+  <img src="https://img.shields.io/badge/version-v1.21.0-ffae2b" alt="version v1.21.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -227,6 +227,7 @@ Shipped so far:
 | 1.18.0 | iOS and Android apps: a small shell that remembers your computer's address and opens formcut there; CI builds an Android APK and an iOS simulator build (see mobile/README.md) |
 | 1.19.0 | the colour grade runs in the Rust kernel, 5 to 9 times faster and identical to the pixel; renders no longer vary by CPU; the export dialog names the codec and encoder it will use and warns when MP4 can only be MPEG-4 Part 2 |
 | 1.20.0 | every theme's text meets WCAG AA contrast on every surface, hints, notes and details included; Light, Sand and Mist take accents that read as text; the active bin filter's count is legible |
+| 1.21.0 | effects render 1.2 to 1.6 times faster with identical pictures: work that depends only on the frame size is done once, and the conversions around the effect chain run in the Rust kernel |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
