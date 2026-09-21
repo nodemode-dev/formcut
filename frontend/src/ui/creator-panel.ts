@@ -1,4 +1,5 @@
 import { effectParameters, type ParamDeclaration } from "./effect-parameters";
+import { icon } from "./icons";
 import { localizeElement, text as phrase } from "../i18n/text";
 import type { ProjectEngine } from "../engine/project";
 import type { Clip, KeyframeProp } from "../engine/types";
@@ -73,17 +74,32 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     entries.forEach((entry, index) => {
       if (!rows[index]) {
         const row = document.createElement("div"); row.className = "processor-row";
-        row.innerHTML = `<span></span><input type="range" min="0" max="1" step="0.01" aria-label="Strength"><button class="tool-chip" title="Move earlier">Up</button><button class="tool-chip">Remove</button>`;
+        row.innerHTML = `<div class="fx-title"><button type="button" class="iconbtn fx-power" data-power aria-pressed="true" title="Turn off">${icon("eye")}</button><span></span></div><input type="range" min="0" max="1" step="0.01" aria-label="Strength"><button class="tool-chip" title="Move earlier">Up</button><button class="tool-chip">Remove</button>`;
+        // On and off keeps the effect and its settings; only whether it renders changes.
+        row.querySelector("[data-power]")!.addEventListener("click", () => void safe(() => {
+          const next = structuredClone(selected()?.[kind] ?? []);
+          if (!next[index]) return;
+          next[index].enabled = next[index].enabled === false;
+          patch({ [kind]: next });
+        }));
         row.querySelector("input")!.addEventListener("change", event => void safe(() => {
           const next = structuredClone(selected()?.[kind] ?? []); next[index].amount = Number((event.target as HTMLInputElement).value); patch({ [kind]: next });
         }));
-        const buttons = row.querySelectorAll("button");
+        const buttons = row.querySelectorAll("button.tool-chip");
         buttons[0].addEventListener("click", () => void safe(() => { const next = structuredClone(selected()?.[kind] ?? []); if (index) [next[index - 1], next[index]] = [next[index], next[index - 1]]; patch({ [kind]: next }); }));
         buttons[1].addEventListener("click", () => void safe(() => { const next = structuredClone(selected()?.[kind] ?? []); next.splice(index, 1); patch({ [kind]: next }); }));
         rows[index] = row; target.append(row);
       }
       const name = rows[index].querySelector("span")!;
-      if (name.textContent !== entry.id) name.textContent = entry.id;
+      const label = (kind === "effects" ? catalog.video : catalog.audio).find((e) => e.id === entry.id)?.name ?? entry.id;
+      if (name.textContent !== label) name.textContent = label;
+      const on = entry.enabled !== false;
+      const power = rows[index].querySelector<HTMLButtonElement>("[data-power]")!;
+      if (power.getAttribute("aria-pressed") !== String(on)) {
+        power.setAttribute("aria-pressed", String(on));
+        power.title = on ? "Turn off" : "Turn on";
+      }
+      rows[index].classList.toggle("is-off", !on);
       setValue(rows[index].querySelector("input")!, String(entry.amount));
       if (kind === "effects") effectParameters(rows[index], entry, catalog.video.find(e => e.id === entry.id)?.declarations ?? [], (name, value) => void safe(() => {
         const next = structuredClone(selected()?.effects ?? []);

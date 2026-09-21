@@ -101,14 +101,15 @@ export interface Clip {
   speed?: number;
   sourceIn?: number;
   speedCurve?: Array<{ t: number; speed: number }>;
-  effects?: Array<{ id: string; amount: number; params?: Record<string, number> }>;
+  // enabled: false switches an effect off without losing its settings; absent means on.
+  effects?: Array<{ id: string; amount: number; params?: Record<string, number>; enabled?: boolean }>;
   lutId?: string;
   shaderId?: string;
   expressions?: Partial<Record<KeyframeProp, string>>;
   cutout?: { model: string; threshold: number; feather: number; strokes: Array<{ mode: "keep" | "erase"; radius: number; points: number[][] }>; point?: { x: number; y: number; t?: number }; box?: { x0: number; y0: number; x1: number; y1: number; t?: number } };
   volume?: number;
   pan?: number;
-  audioEffects?: Array<{ id: string; amount: number }>;
+  audioEffects?: Array<{ id: string; amount: number; enabled?: boolean }>;
 
   fadeIn?: number;
   fadeOut?: number;

@@ -800,7 +800,9 @@ class FrameRenderer:
             local = time - clip["start"]
             if clip.get("trackHidden") or clip["kind"] == "audio" or local < 0 or local >= clip["duration"] + clip.get("extendOut", 0):
                 continue
-            effects = [dict(entry) for entry in (clip.get("effects") or [])]
+            # An effect switched off keeps its settings in the project and is left
+            # out here, the one place a clip's visual effects are read.
+            effects = [dict(entry) for entry in (clip.get("effects") or []) if entry.get("enabled", True) is not False]
             for entry in effects:
                 if entry.get("keys"):
                     # K3: keyed parameters resolve per frame before the stack runs

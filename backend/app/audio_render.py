@@ -178,7 +178,7 @@ def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarra
         raise ValueError(error.decode(errors="replace")[-1000:])
     raw = np.frombuffer(output, "<f4").reshape(-1, 2)
     samples = time_stretch(raw, clip, int(duration * RATE), cancelled)
-    effects = list(clip.get("audioEffects") or [])
+    effects = [entry for entry in (clip.get("audioEffects") or []) if entry.get("enabled", True) is not False]
     if clip.get("audioFx"):
         effects.insert(0, {"id": clip["audioFx"], "amount": 1})
     for effect in effects:

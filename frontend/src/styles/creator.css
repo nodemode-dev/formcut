@@ -17,6 +17,13 @@
 .speed-graph { color: var(--cue); width: 100%; height: 90px; background: var(--inset); }
 .processor-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sp-1); margin-block: var(--sp-2); }
 .processor-row input { width: 100% !important; }
+/* An applied effect's switch sits with its name: accent while on, faint while
+   off, when the name and strength dim but the effect and its settings stay. */
+.processor-row .fx-title { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; }
+.processor-row .fx-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.processor-row .fx-power { flex: 0 0 auto; color: var(--cue); }
+.processor-row .fx-power[aria-pressed="false"] { color: var(--ink-faint); }
+.processor-row.is-off .fx-title span, .processor-row.is-off input { opacity: 0.45; }
 .studio-modal .set-window { width: min(960px, 90vw); height: min(700px, 86vh); }
 .studio-footer { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--edge); min-height: 40px; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .studio-content section[hidden], .studio-panel [hidden] { display: none; }
