@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.30.2-ffae2b" alt="version v1.30.2" />
+  <img src="https://img.shields.io/badge/version-v1.30.3-ffae2b" alt="version v1.30.3" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -239,6 +239,7 @@ Shipped so far:
 | 1.30.0 | formcut's ffmpeg is now the 7.1.5-2 build, with hardware H.264 and HEVC on Windows and Linux; a formcut that fetched the earlier build refreshes it on its own, and never touches an ffmpeg you placed yourself |
 | 1.30.1 | `setup/benchmark_routes.py` measures which export route layered projects should take on your machine, and writes the results as JSON |
 | 1.30.2 | the macOS app builds on a Mac with Eigen 5 installed (Homebrew brings it in), and its image-processing runtime is built for formcut's minimum macOS instead of the one it was built on |
+| 1.30.3 | `setup/build_macos_app` completes: build scripts and procedural macros are no longer stripped, which made every macro fail with "can't find crate" on macOS 27; the app itself is still stripped |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
