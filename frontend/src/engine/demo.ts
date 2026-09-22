@@ -13,7 +13,7 @@ export async function loadDemoProject(engine: ProjectEngine, bin: MediaBin): Pro
   };
   const clipMedia = byName("input-clip-example.mp4");
   const video = byName("model-drop-MV.mp4");
-  const music = byName("a-sample.wav");
+  const voice = byName("a-sample.wav");
   const still = byName("effect-example-image.jpg");
   const id = () => crypto.randomUUID();
   const place = (item: MediaItem, start: number, duration: number, extra: Partial<Clip> = {}): Clip => ({
@@ -31,9 +31,10 @@ export async function loadDemoProject(engine: ProjectEngine, bin: MediaBin): Pro
   });
   const footage = [
     place(clipMedia, 0, 8, { sourceIn: 2 }),
-    place(video, 8, 8, { sourceIn: 42, muted: true, transitionIn: { type: "crossfade", duration: 0.8 } }),
+    place(video, 8, 8, { sourceIn: 1, muted: true, transitionIn: { type: "crossfade", duration: 0.8 } }),
   ];
-  const bed = place(music, 0, Math.min(16, music.duration), { fadeOut: 1.5 });
+  // The spoken line plays with the title, whole: a fade would swallow a line this short.
+  const line = place(voice, 0.5, voice.duration);
   engine.dispatch("project.load", {
     projectId: null,
     title: "Demo project",
@@ -50,7 +51,7 @@ export async function loadDemoProject(engine: ProjectEngine, bin: MediaBin): Pro
         { id: id(), name: "Titles", clips: [title] },
         { id: id(), name: "Overlay", clips: [overlay] },
         { id: id(), name: "Video", clips: footage },
-        { id: id(), name: "Audio", clips: [bed] },
+        { id: id(), name: "Audio", clips: [line] },
       ],
     }],
   });
