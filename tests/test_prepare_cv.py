@@ -11,6 +11,7 @@ import subprocess
 from pathlib import Path
 
 import prepare_cv
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -45,3 +46,16 @@ def test_importing_the_script_runs_nothing(monkeypatch):
     monkeypatch.setattr(subprocess, "check_output", refuse)
     monkeypatch.setattr(subprocess, "run", refuse)
     importlib.reload(prepare_cv)
+
+
+def test_windows_builds_drop_only_the_ffmpeg_dll_rule():
+    # The rule in context, as opencv-python-headless 4.12.0.88's setup.py has it.
+    before = '    rearrange_cmake_output_data = {\n        "cv2": (\n'
+    after = "\n        )\n        + [],\n    }\n"
+    patched = prepare_cv.drop_ffmpeg_dll_rule(before + prepare_cv.FFMPEG_DLL_RULE + after)
+    assert patched == before + "            []" + after
+
+
+def test_a_setup_py_without_that_exact_rule_stops_the_build():
+    with pytest.raises(SystemExit, match="no longer has the Windows FFmpeg DLL rule"):
+        prepare_cv.drop_ffmpeg_dll_rule("setup(name='something else')")

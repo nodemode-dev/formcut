@@ -4,10 +4,14 @@ Run by the packaging scripts (python prepare_cv.py) before the engine is frozen,
 so the frozen engine carries a permissive image-processing runtime.
 """
 
+import hashlib
 import json
 import os
 import subprocess
 import sys
+import tarfile
+import tempfile
+import urllib.request
 from pathlib import Path
 
 # WITH_EIGEN=OFF: OpenCV 4.12 reads Eigen's version from Eigen/src/Core/util/Macros.h,
@@ -20,6 +24,49 @@ CMAKE_ARGS = (
     "-DWITH_FFMPEG=OFF -DWITH_GSTREAMER=OFF -DBUILD_LIST=core,imgproc,imgcodecs,features2d,python3 -DWITH_OPENEXR=OFF"
     " -DWITH_VTK=OFF -DWITH_QT=OFF -DWITH_GTK=OFF -DWITH_IPP=OFF -DWITH_ITT=OFF -DWITH_EIGEN=OFF"
 )
+
+
+PACKAGE = "opencv-python-headless"
+VERSION = "4.12.0.88"
+
+# opencv-python's setup.py requires the videoio FFmpeg DLL on Windows even when
+# FFmpeg is not built, and stops with "Not found: 'bin/opencv_videoio_ffmpeg...'"
+# after a successful compile (seen on the Windows release runner). Its check exempts
+# only gapi and has no switch, so on Windows the build uses the pinned sdist, checked
+# against PyPI's digest, with that one rule removed. Anything but this exact text
+# stops the build rather than patching something else.
+FFMPEG_DLL_RULE = r"""            [r"bin/opencv_videoio_ffmpeg\d{4}%s\.dll" % ("_64" if is64 else "")]
+            if os.name == "nt"
+            else []"""
+
+
+def drop_ffmpeg_dll_rule(setup_text: str) -> str:
+    if setup_text.count(FFMPEG_DLL_RULE) != 1:
+        raise SystemExit(f"{PACKAGE} {VERSION}'s setup.py no longer has the Windows FFmpeg DLL rule this build removes.")
+    return setup_text.replace(FFMPEG_DLL_RULE, "            []")
+
+
+def windows_source(folder: Path) -> Path:
+    """The pinned sdist, verified against PyPI's SHA-256, with the FFmpeg DLL rule removed."""
+    with urllib.request.urlopen(f"https://pypi.org/pypi/{PACKAGE}/{VERSION}/json", timeout=60) as response:
+        release = json.load(response)
+    sdist = next(item for item in release["urls"] if item["packagetype"] == "sdist")
+    if not sdist["url"].startswith("https://"):
+        raise SystemExit(f"PyPI gave a download address that is not https: {sdist['url']}")
+    archive = folder / sdist["filename"]
+    with urllib.request.urlopen(sdist["url"], timeout=600) as response, archive.open("wb") as out:  # noqa: S310 (https checked above)
+        digest = hashlib.sha256()
+        while chunk := response.read(1 << 20):
+            digest.update(chunk)
+            out.write(chunk)
+    if digest.hexdigest() != sdist["digests"]["sha256"]:
+        raise SystemExit(f"{sdist['filename']} does not match the SHA-256 PyPI publishes for it.")
+    with tarfile.open(archive) as tar:
+        tar.extractall(folder, filter="data")
+    source = folder / f"{PACKAGE}-{VERSION}"
+    setup = source / "setup.py"
+    setup.write_text(drop_ffmpeg_dll_rule(setup.read_text(encoding="utf-8")), encoding="utf-8")
+    return source
 
 
 def macos_floor() -> str:
@@ -57,9 +104,12 @@ def main() -> int:
     print(notice, flush=True)
     if target:
         print(f"It will run on macOS {target} and later.", flush=True)
-    package = "opencv-python-headless==4.12.0.88"
     pip = [sys.executable, "-m", "pip", "install", "--force-reinstall", "--no-deps", "--no-cache-dir"]
-    subprocess.run([*pip, "--no-binary", "opencv-python-headless", package], env=environment, check=True)
+    if sys.platform == "win32":
+        with tempfile.TemporaryDirectory() as folder:
+            subprocess.run([*pip, str(windows_source(Path(folder)))], env=environment, check=True)
+    else:
+        subprocess.run([*pip, "--no-binary", PACKAGE, f"{PACKAGE}=={VERSION}"], env=environment, check=True)
     print("Image-processing runtime installed. The freeze step will verify the new build in a fresh process.")
     return 0
 
