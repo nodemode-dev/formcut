@@ -4,9 +4,8 @@ mod engine_lifecycle;
 use std::sync::Mutex;
 
 use tauri::menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
-use tauri_plugin_dialog::DialogExt;
-use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+use tauri::{Manager, RunEvent};
+use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
 struct Backend(Mutex<Option<CommandChild>>);
@@ -96,7 +95,7 @@ fn main() {
             });
 
             let handle = app.handle().clone();
-            let (mut rx, child) = app
+            let (rx, child) = app
                 .shell()
                 .sidecar("formcut-engine")
                 .expect("sidecar binary is bundled")
