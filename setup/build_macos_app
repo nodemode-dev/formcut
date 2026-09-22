@@ -82,6 +82,11 @@ mkdir -p src-tauri/binaries
 cp backend/dist/formcut-engine "src-tauri/binaries/formcut-engine-$TRIPLE"
 echo "sidecar: src-tauri/binaries/formcut-engine-$TRIPLE"
 
+say "Bundling formcut's ffmpeg for $TRIPLE"
+# As release builds do: the verified LGPL ffmpeg from formcut-binaries goes inside the
+# app, so it needs no download on first launch.
+$RUN "backend/$VENV/bin/python" setup/bundle_ffmpeg.py --target "$TRIPLE"
+
 say "Generating app icons"
 cargo tauri icon src-tauri/icons/icon.png
 

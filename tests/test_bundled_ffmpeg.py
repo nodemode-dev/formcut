@@ -75,7 +75,14 @@ def test_ffmpeg_is_staged_before_the_app_is_built():
 def test_the_release_checks_the_bundle_with_the_apps_own_check():
     text = workflow()
     step = text[text.index("- name: bundle ffmpeg") : text.index("- name: build the app")]
-    assert "ffmpeg_fetch.install(" in step and "ffmpeg_fetch.pins(" in step
+    assert "python setup/bundle_ffmpeg.py --target" in step
+    script = (ROOT / "setup" / "bundle_ffmpeg.py").read_text(encoding="utf-8")
+    assert "ffmpeg_fetch.install(" in script and "ffmpeg_fetch.pins(" in script
+
+
+def test_a_local_mac_build_bundles_ffmpeg_as_the_release_does():
+    script = (ROOT / "setup" / "build_macos_app").read_text(encoding="utf-8")
+    assert script.index("setup/bundle_ffmpeg.py") < script.index("cargo tauri build")
 
 
 def test_the_bundle_carries_the_staging_folder():

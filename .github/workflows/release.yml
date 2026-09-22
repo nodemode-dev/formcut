@@ -111,33 +111,7 @@ jobs:
         shell: bash
         env:
           TARGET: ${{ matrix.target }}
-        run: |
-          python - <<'PY'
-          import os, sys, tempfile, urllib.request
-          from pathlib import Path
-          sys.path.insert(0, "backend")
-          from app import ffmpeg_fetch
-          triple = os.environ["TARGET"]
-          record = ffmpeg_fetch.record()
-          files = ffmpeg_fetch.pins(record, triple)
-          if not files:
-              print(f"::notice::no ffmpeg build is recorded for {triple}; this installer fetches it on first run")
-              sys.exit(0)
-          url = ffmpeg_fetch.source(record, triple)
-          stage = Path("src-tauri/ffmpeg")
-          with tempfile.TemporaryDirectory() as scratch:
-              archive = Path(scratch) / "ffmpeg.tar.gz"
-              try:
-                  urllib.request.urlretrieve(url, archive)
-              except OSError as error:
-                  print(f"::notice::{url} is not published ({error}); this installer fetches ffmpeg on first run")
-                  sys.exit(0)
-              count = ffmpeg_fetch.install(archive, files, stage)
-          suffix = ".exe" if triple.endswith("windows-msvc") else ""
-          for program in ("ffmpeg", "ffprobe"):
-              (stage / f"{program}-{triple}{suffix}").rename(stage / f"{program}{suffix}")
-          print(f"bundled {count} files from {url}, each matching the record")
-          PY
+        run: python setup/bundle_ffmpeg.py --target "$TARGET"
 
       - name: build the app
         uses: tauri-apps/tauri-action@v0
