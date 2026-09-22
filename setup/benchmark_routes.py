@@ -20,6 +20,7 @@ written to a temporary data folder that is removed afterwards.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import platform
@@ -101,8 +102,14 @@ def run(args: argparse.Namespace, data: str, width: int, height: int) -> int:
         "cores": os.cpu_count(),
         "size": f"{width}x{height}",
         "seconds": seconds,
+        # Without formcut's Rust kernels the frame path runs on NumPy, so its times
+        # are not the frame path an app built with the kernels would take.
+        "native_kernels": importlib.util.find_spec("formcut_native") is not None,
     }
     print(f"formcut export routes on {machine['platform']}, {machine['cores']} cores, {seconds:g} s at {width}x{height}\n")
+    if not machine["native_kernels"]:
+        print("note: formcut's Rust kernels are not installed, so the frame path runs on NumPy here.")
+        print("      To measure it as a built app runs: python -m pip install ./backend/native\n")
     results = []
     # The first export in a process detects the encoders (a test encode each)
     # and fills caches; one discarded export keeps that off the first scene.
