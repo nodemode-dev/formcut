@@ -13,8 +13,11 @@ import threading
 
 # Per codec, in the order we would rather use: hardware first, software last.
 CANDIDATES: dict[str, tuple[str, ...]] = {
-    "h264": ("h264_videotoolbox", "h264_nvenc", "h264_qsv", "h264_amf", "libx264"),
-    "hevc": ("hevc_videotoolbox", "hevc_nvenc", "hevc_qsv", "hevc_amf", "libx265"),
+    # The GPU makers' own encoders first, then VA-API (Intel and AMD on Linux)
+    # and Media Foundation (Windows' encoders, a GPU's or Microsoft's own, so
+    # every Windows 10 and 11 machine has one), then an installed libx264.
+    "h264": ("h264_videotoolbox", "h264_nvenc", "h264_qsv", "h264_amf", "h264_vaapi", "h264_mf", "libx264"),
+    "hevc": ("hevc_videotoolbox", "hevc_nvenc", "hevc_qsv", "hevc_amf", "hevc_vaapi", "hevc_mf", "libx265"),
     "av1": ("av1_nvenc", "av1_qsv", "libsvtav1", "libaom-av1"),
     "vp9": ("libvpx-vp9",),
     # ffmpeg's own MPEG-4 Part 2 encoder is in every build, the LGPL ones
@@ -39,6 +42,25 @@ TIERS: dict[str, dict[str, list[str]]] = {
     "_hardware": {"high": ["-q:v", "45"], "medium": ["-q:v", "60"], "low": ["-q:v", "75"]},
     "_nvenc": {"high": ["-cq", "21"], "medium": ["-cq", "28"], "low": ["-cq", "35"]},
     "_qsv": {"high": ["-global_quality", "21"], "medium": ["-global_quality", "28"], "low": ["-global_quality", "35"]},
+    # AMF takes constant quantisers per frame type; -q:v means nothing to it.
+    "_amf": {
+        "high": ["-rc", "cqp", "-qp_i", "19", "-qp_p", "21"],
+        "medium": ["-rc", "cqp", "-qp_i", "24", "-qp_p", "26"],
+        "low": ["-rc", "cqp", "-qp_i", "29", "-qp_p", "31"],
+    },
+    # VA-API: a constant quantiser, the rate control every driver offers.
+    "_vaapi": {
+        "high": ["-rc_mode", "CQP", "-qp", "20"],
+        "medium": ["-rc_mode", "CQP", "-qp", "25"],
+        "low": ["-rc_mode", "CQP", "-qp", "30"],
+    },
+    # Media Foundation's quality mode, 0 to 100, which Microsoft's software
+    # encoder supports as well as the GPUs' ones.
+    "_mf": {
+        "high": ["-rate_control", "quality", "-quality", "85"],
+        "medium": ["-rate_control", "quality", "-quality", "70"],
+        "low": ["-rate_control", "quality", "-quality", "55"],
+    },
 }
 
 _lock = threading.Lock()
@@ -58,22 +80,42 @@ def _listed() -> set[str]:
     return names
 
 
+VAAPI_DEVICE = "/dev/dri/renderD128"
+
+
+def hardware_io(encoder: str) -> tuple[list[str], str | None]:
+    """What an encoder needs around it: flags before the inputs, and a filter to end the chain.
+
+    VA-API encoders take frames only in video memory, so they need the render
+    device named before the inputs and an upload ending the filter chain, and
+    no -pix_fmt after it. Every other encoder takes ordinary frames.
+    """
+    if encoder.endswith("_vaapi"):
+        return ["-vaapi_device", VAAPI_DEVICE], "format=nv12,hwupload"
+    return [], None
+
+
 def _works(encoder: str) -> bool:
-    """Encode two generated frames; a listed encoder with no device fails here."""
+    """Encode two generated frames exactly as an export would; a listed encoder
+    with no device, or refusing the quality flags, fails here and is skipped."""
+    device, upload = hardware_io(encoder)
     try:
         probe = subprocess.run(
             [
                 "ffmpeg",
                 "-v",
                 "error",
+                *device,
                 "-f",
                 "lavfi",
                 "-i",
                 "testsrc2=size=320x240:rate=30:duration=0.1",
                 "-frames:v",
                 "2",
+                *(["-vf", upload] if upload else []),
                 "-c:v",
                 encoder,
+                *tier_flags(encoder, "high"),
                 "-f",
                 "null",
                 "-",
@@ -141,6 +183,9 @@ def tier_flags(encoder: str, quality: str) -> list[str]:
         return TIERS["_nvenc"][quality]
     if encoder.endswith("_qsv"):
         return TIERS["_qsv"][quality]
+    for family in ("_amf", "_vaapi", "_mf"):
+        if encoder.endswith(family):
+            return TIERS[family][quality]
     return TIERS["_hardware"][quality]
 
 

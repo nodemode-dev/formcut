@@ -103,9 +103,13 @@ def _video(source: Path, out: Path, factor: float, method: str, seconds: float, 
     if method == "sharp":
         chain += ",unsharp=5:5:0.6"
     encoder = _encoder()
+    device, upload = encoders.hardware_io(encoder)
+    if upload:
+        chain += f",{upload}"
     program = shutil.which("ffmpeg") or "ffmpeg"
-    command = [program, "-v", "error", "-nostdin", "-y", "-i", str(source), "-map", "0:v:0", "-map", "0:a?", "-vf", chain]
-    command += ["-c:v", encoder, *encoders.tier_flags(encoder, "high"), "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"]
+    command = [program, "-v", "error", "-nostdin", "-y", *device, "-i", str(source), "-map", "0:v:0", "-map", "0:a?", "-vf", chain]
+    pixels = [] if upload else ["-pix_fmt", "yuv420p"]
+    command += ["-c:v", encoder, *encoders.tier_flags(encoder, "high"), *pixels, "-c:a", "aac", "-b:a", "192k"]
     command += ["-movflags", "+faststart", "-progress", "pipe:1", str(out)]
     with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
         for line in process.stdout:

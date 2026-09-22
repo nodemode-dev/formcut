@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from . import fast_export, fast_layers, gpu, jobs, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
-from .encoders import CONTAINERS, addon_binary_for, estimate_size, pixel_format, supports_ten_bit, tier_flags
+from .encoders import CONTAINERS, addon_binary_for, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
 from .encoders import status as encoder_status
 from .frame_cache import FrameCache, ReadAhead
@@ -260,6 +260,10 @@ def export_media(
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
         pix = pixel_format(encoder, ten_bit)
+        # VA-API takes frames in video memory: its device before the inputs and an
+        # upload ending the filter chain, which the frame path's one chain can
+        # take, so such exports go through the frame path.
+        device, upload = hardware_io(encoder)
         out_w, out_h = resize_for(project, size)
         num, den = RATE_PRESETS.get(rate or "", (0, 0))
         out_rate = f"{num}/{den}" if num else str(fps)
@@ -271,7 +275,7 @@ def export_media(
         # An H.264 add-on the person installed runs from its own binary; the
         # bundled LGPL ffmpeg drives everything else.
         program = str(addon_binary_for(encoder) or "ffmpeg")
-        native = None if os.environ.get("FORMCUT_EXPORT_PATH") == "frames" else fast_export.plan(project, count)
+        native = None if os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload else fast_export.plan(project, count)
         if native is not None:
             fast_export.run(
                 native, program, audio, [*codec, "-pix_fmt", pix], out_w, out_h, out_rate, project["duration"], path, log, report, cancelled
@@ -289,7 +293,9 @@ def export_media(
                 "rate": out_rate,
                 "renderPath": "native",
             }
-        layered = None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" else fast_layers.plan(project, count)
+        layered = (
+            None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload else fast_layers.plan(project, count)
+        )
         if layered is not None and os.environ.get("FORMCUT_EXPORT_PATH") != "layered" and fast_layers.prefers_exact(layered):
             # Measured as fast through the exact path, which renders the grade the
             # preview shows rather than a cube of it. FORMCUT_EXPORT_PATH=layered
@@ -328,6 +334,7 @@ def export_media(
             "-v",
             "error",
             "-y",
+            *device,
             "-f",
             "rawvideo",
             "-pix_fmt",
@@ -345,12 +352,11 @@ def export_media(
             "-map",
             "1:a",
             "-vf",
-            f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2",
+            f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2" + (f",{upload}" if upload else ""),
             "-r",
             out_rate,
             *codec,
-            "-pix_fmt",
-            pix,
+            *([] if upload else ["-pix_fmt", pix]),
             "-t",
             str(project["duration"]),
             str(path),
