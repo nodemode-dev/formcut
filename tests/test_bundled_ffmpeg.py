@@ -42,6 +42,14 @@ def test_a_windows_install_finds_ffmpeg_beside_the_engine(monkeypatch, tmp_path)
     assert tools.bundle_dir() == folder
 
 
+def test_a_linux_package_finds_ffmpeg_in_usr_lib(monkeypatch, tmp_path):
+    # The AppImage (and a .deb or .rpm) has the engine in usr/bin and the
+    # resources in usr/lib/formcut, as the 1.32.0 AppImage built on Linux showed.
+    usr = tmp_path / "squashfs-root" / "usr"
+    folder = installed(monkeypatch, tmp_path, usr / "bin" / "formcut-engine", usr / "lib" / "formcut" / "ffmpeg")
+    assert tools.bundle_dir() == folder
+
+
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
 def test_a_plainly_named_bundle_is_adopted_without_writing(monkeypatch, tmp_path):
     folder = tmp_path / "Resources" / "ffmpeg"
@@ -61,10 +69,10 @@ def workflow() -> str:
     return (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
 
-def test_the_release_bundles_ffmpeg_only_outside_linux():
+def test_the_release_bundles_ffmpeg_on_every_platform():
     text = workflow()
-    step = text.index("- name: bundle ffmpeg")
-    assert "if: runner.os != 'Linux'" in text[step : step + 200]
+    step = text[text.index("- name: bundle ffmpeg") : text.index("- name: build the app")]
+    assert "runner.os" not in step
 
 
 def test_ffmpeg_is_staged_before_the_app_is_built():
