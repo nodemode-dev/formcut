@@ -23,9 +23,9 @@ for the project elsewhere.
 
 ## Reporting
 
-Report anything that breaks this code to the maintainers at
-**mackin@nodemode.ai**. Reports are read by the maintainers only and kept
-confidential; say if you would like a reply.
+Report anything that breaks this code by opening an
+[issue](https://github.com/nodemode-ai/formcut/issues), or by reaching the
+maintainers on GitHub at [@nodemode-ai](https://github.com/nodemode-ai).
 
 ## What happens next
 
