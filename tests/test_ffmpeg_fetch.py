@@ -104,7 +104,9 @@ def test_a_mirror_can_be_named(monkeypatch):
 
 def test_the_record_formcut_carries_pins_every_linux_file():
     files = ffmpeg_fetch.pins(ffmpeg_fetch.record(), "x86_64-unknown-linux-gnu")
-    assert len(files) == 9 and all(len(entry["sha256"]) == 64 for entry in files)
+    assert len(files) == 12 and all(len(entry["sha256"]) == 64 for entry in files)
+    names = {Path(entry["path"]).name for entry in files}
+    assert {"libva.so.2", "libva-drm.so.2", "libdrm.so.2"} <= names
 
 
 @pytest.mark.parametrize("triple", ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"])
@@ -153,3 +155,52 @@ def test_a_machine_with_no_recorded_build_says_so(monkeypatch):
     monkeypatch.setattr(ffmpeg_fetch, "record", lambda: {"targets": {}})
     with pytest.raises(ValueError, match="no ffmpeg build is recorded"):
         ffmpeg_fetch.fetch(lambda fraction: None, lambda: False)
+
+
+def test_the_release_name_tags_the_address_when_the_record_has_one():
+    data = {"release": "7.1.5-2", "source": {"ffmpeg": {"version": "7.1.5"}}}
+    url = ffmpeg_fetch.source(data, TRIPLE)
+    assert url == f"{ffmpeg_fetch.RELEASE}/ffmpeg-7.1.5-2/ffmpeg-lgpl-7.1.5-2-{TRIPLE}.tar.gz"
+    assert ffmpeg_fetch.release(ffmpeg_fetch.record()) == "7.1.5-2"
+
+
+def _own_download(monkeypatch, tmp_path, installed: str | None, carried: str = "7.1.5-2") -> Path:
+    folder = tmp_path / "own"
+    folder.mkdir()
+    if installed is not None:
+        (folder / "ffmpeg-licence.json").write_text(json.dumps({"release": installed}), encoding="utf-8")
+    monkeypatch.setattr(tools, "user_ffmpeg_dir", lambda: folder)
+    monkeypatch.setattr(tools, "bundle_dir", lambda: folder)
+    monkeypatch.setattr(ffmpeg_fetch.shutil, "which", lambda name: None)
+    monkeypatch.setattr(ffmpeg_fetch, "record", lambda: {"release": carried, "targets": {TRIPLE: {"files": recorded(FILES)}}})
+    return folder
+
+
+def test_formcut_refreshes_its_own_download_from_an_older_release(monkeypatch, tmp_path):
+    _own_download(monkeypatch, tmp_path, installed="7.1.5")
+    assert ffmpeg_fetch.outdated() is True and ffmpeg_fetch.needed() is True
+
+
+def test_the_same_release_is_not_fetched_again(monkeypatch, tmp_path):
+    _own_download(monkeypatch, tmp_path, installed="7.1.5-2")
+    assert ffmpeg_fetch.needed() is False
+
+
+def test_an_ffmpeg_placed_by_hand_is_never_refreshed(monkeypatch, tmp_path):
+    _own_download(monkeypatch, tmp_path, installed=None)
+    assert ffmpeg_fetch.needed() is False
+
+
+def test_an_ffmpeg_formcut_is_pointed_at_is_never_refreshed(monkeypatch, tmp_path):
+    _own_download(monkeypatch, tmp_path, installed="7.1.5")
+    monkeypatch.setattr(tools, "bundle_dir", lambda: tmp_path / "chosen")
+    assert ffmpeg_fetch.needed() is False
+
+
+def test_a_refresh_brings_the_new_licence_documents(tmp_path):
+    folder = tmp_path / "ffmpeg"
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    ffmpeg_fetch.install(archive(tmp_path / "a", {**FILES, "THIRD-PARTY-NOTICES.txt": b"old"}), recorded(FILES), folder)
+    ffmpeg_fetch.install(archive(tmp_path / "b", {**FILES, "THIRD-PARTY-NOTICES.txt": b"new, with libva"}), recorded(FILES), folder)
+    assert (folder / "THIRD-PARTY-NOTICES.txt").read_bytes() == b"new, with libva"
