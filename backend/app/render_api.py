@@ -44,6 +44,9 @@ class RenderInput(BaseModel):
     quality: str = "high"
     codec: str | None = None
     tenBit: bool = False
+    # Render every frame as the preview shows it, instead of the faster layered graph
+    # whose colours can differ slightly (41 dB for a graded clip, measured).
+    exact: bool = False
     size: str | None = None
     rate: str | None = None
 
@@ -234,6 +237,7 @@ def export_media(
     ten_bit: bool = False,
     size: str | None = None,
     rate: str | None = None,
+    exact: bool = False,
 ) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     path = OUTPUTS / (job_id + "." + format)
@@ -296,10 +300,11 @@ def export_media(
         layered = (
             None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload else fast_layers.plan(project, count)
         )
-        if layered is not None and os.environ.get("FORMCUT_EXPORT_PATH") != "layered" and fast_layers.prefers_exact(layered):
-            # Measured as fast through the exact path, which renders the grade the
-            # preview shows rather than a cube of it. FORMCUT_EXPORT_PATH=layered
-            # keeps the graph.
+        if layered is not None and exact and os.environ.get("FORMCUT_EXPORT_PATH") != "layered":
+            # Exact colours: the frame path renders what the preview shows. The graph is
+            # the default because it is the faster route: 1.7x to 1.9x on a 10-core Mac
+            # with the Rust kernels, its colours identical or within 41 to 48 dB.
+            # FORMCUT_EXPORT_PATH=layered keeps the graph regardless.
             layered = None
         if layered is not None:
             fast_layers.run(
@@ -432,7 +437,9 @@ def export(body: RenderInput):
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
 
     def operation(job_id, report, cancelled):
-        result = export_media(project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate)
+        result = export_media(
+            project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate, body.exact
+        )
         webhooks.announce_export(result, project)
         return result
 

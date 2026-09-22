@@ -574,6 +574,7 @@
   "export.size": "Tamaño",
   "export.size.timeline": "Línea de tiempo",
   "export.tenbit": "Color de 10 bits",
+  "export.exact": "Colores exactos de la vista previa (más lento)",
   "export.estimate": "Tamaño estimado",
   "layout.pane.media": "Medios",
   "layout.pane.inspector": "Inspector",

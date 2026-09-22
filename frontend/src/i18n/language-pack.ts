@@ -884,6 +884,7 @@ Codec|Codec|Codec|コーデック|코덱|Codec|Кодек|Kodek|编解码器|編
 Size|Taille|Dimensione|サイズ|크기|Tamanho|Размер|Boyut|尺寸|尺寸
 Timeline|Montage|Timeline|タイムライン|타임라인|Linha do tempo|Таймлайн|Zaman çizelgesi|时间线|時間軸
 10-bit colour|Couleur 10 bits|Colore a 10 bit|10ビットカラー|10비트 색상|Cor de 10 bits|10-битный цвет|10 bit renk|10 位色彩|10 位色彩
+Exact preview colours (slower)|Couleurs exactes de l’aperçu (plus lent)|Colori esatti dell’anteprima (più lento)|プレビューと同じ色（低速）|미리보기와 동일한 색상(느림)|Cores exatas da pré-visualização (mais lento)|Точные цвета предпросмотра (медленнее)|Önizlemeyle birebir renkler (daha yavaş)|与预览完全一致的颜色（较慢）|與預覽完全一致的色彩（較慢）
 Estimated size|Taille estimée|Dimensione stimata|推定サイズ|예상 크기|Tamanho estimado|Примерный размер|Tahmini boyut|预计大小|預計大小
 Inspector|Inspecteur|Ispettore|インスペクター|인스펙터|Inspetor|Инспектор|Denetçi|检查器|檢視器
 left|gauche|sinistra|左|왼쪽|esquerda|слева|sol|左侧|左側

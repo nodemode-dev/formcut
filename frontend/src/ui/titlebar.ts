@@ -241,6 +241,10 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
         <span>${t("export.tenbit")}</span>
         <button class="toggle" data-ref="tenbit" aria-label="10-bit"></button>
       </div>
+      <div class="modal-row">
+        <span>${t("export.exact")}</span>
+        <button class="toggle" data-ref="exact" aria-label="${t("export.exact")}"></button>
+      </div>
       <div class="modal-row export-estimate" data-ref="estimate"></div>
       <div class="modal-actions">
         <button class="tool-chip" data-ref="post" hidden>${icon("export")}${t("tiktok.lastExport")}</button>
@@ -309,6 +313,9 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     }
   };
   modal.querySelector('[data-ref="tenbit"]')?.addEventListener("click", (ev) => {
+    (ev.currentTarget as HTMLElement).classList.toggle("is-on");
+  });
+  modal.querySelector('[data-ref="exact"]')?.addEventListener("click", (ev) => {
     (ev.currentTarget as HTMLElement).classList.toggle("is-on");
   });
   modal.addEventListener("click", (ev) => {
@@ -390,6 +397,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       const jobId = await exportProject(state, format, quality, showToast, exportController.signal, {
         codec: segValue("codec") || null,
         tenBit: modal.querySelector('[data-ref="tenbit"]')!.classList.contains("is-on"),
+        exact: modal.querySelector('[data-ref="exact"]')!.classList.contains("is-on"),
         size: segValue("size") || null,
       });
       showToast("Export complete");

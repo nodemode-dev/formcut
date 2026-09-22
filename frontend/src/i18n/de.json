@@ -574,6 +574,7 @@
   "export.size": "Größe",
   "export.size.timeline": "Zeitleiste",
   "export.tenbit": "10-Bit-Farbe",
+  "export.exact": "Exakte Vorschaufarben (langsamer)",
   "export.estimate": "Geschätzte Größe",
   "layout.pane.media": "Medien",
   "layout.pane.inspector": "Inspektor",

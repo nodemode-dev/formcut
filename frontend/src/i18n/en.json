@@ -574,6 +574,7 @@
   "export.size": "Size",
   "export.size.timeline": "Timeline",
   "export.tenbit": "10-bit colour",
+  "export.exact": "Exact preview colours (slower)",
   "export.estimate": "Estimated size",
   "layout.pane.media": "Media",
   "layout.pane.inspector": "Inspector",
