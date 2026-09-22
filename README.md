@@ -42,6 +42,10 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 
 ## Quick Start
 
+### Download
+
+Each release carries a zip for macOS (Apple silicon), Windows and Linux that runs with nothing else installed, formcut's ffmpeg included; the release notes say how to open each. On an Intel Mac, build it with `setup/build_macos_app --intel`. To run from source instead, read on.
+
 ### Requirements
 
 Node 18 or newer, Python 3.11 or newer, and `ffmpeg` and `ffprobe` on PATH. Everything else is installed by the scripts below.
@@ -175,7 +179,7 @@ most defects here, so a change starts from what is true rather than from a guess
 
 ## Releasing
 
-See [RELEASING.md](RELEASING.md). Run `python setup/preflight.py` before tagging: it refuses a tag whose version disagrees anywhere, whose build refers to a missing file, or whose ffmpeg licence has not been decided.
+A release is a version: bump it and push to `main`, and `.github/workflows/release.yml` builds macOS (Apple silicon), Windows and Linux and publishes one zip for each on the release `v<version>`. Run `python setup/preflight.py` before pushing: it refuses a version that disagrees anywhere, a build that refers to a missing file, or an ffmpeg licence that has not been decided. See [RELEASING.md](RELEASING.md).
 
 ## Development
 
@@ -183,6 +187,10 @@ See [RELEASING.md](RELEASING.md). Run `python setup/preflight.py` before tagging
 - Records: the phased plan, the per-version build notes and the reasoning logs for every area live in the planning sidecar beside the repository, not in it. The repository carries the readme, the contributor guide, the wiki source and code.
 - Skills: project skills for AI-assisted development live in `.claude/skills/`, one folder per skill; the folder ships empty.
 - Wiki edits: change the files in `.docs/wiki/` and push; the Action publishes them. The wiki must exist first (create any page once in the GitHub UI) for the first publish to land.
+
+## Contributing
+
+Bug reports, fixes, features and translations are all welcome: [CONTRIBUTING.md](CONTRIBUTING.md) says how to set up, which checks to run and how releases happen. Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md), and security problems are reported privately, as [SECURITY.md](SECURITY.md) describes.
 
 ## Status
 
@@ -251,3 +259,11 @@ Still open, each blocked on hardware or inputs rather than on design: GPU compos
 ## Licence
 
 Apache 2.0, in [`LICENSE`](LICENSE). Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md).
+
+## Maintenance
+
+formcut is maintained for as long as it is really used and contributed to. Its aim is to go past CapCut in what it can do, and that takes both: people editing with it and reporting what they find, and contributions that expand what it can do. While there are both, it will keep being maintained; without them, maintenance will stop.
+
+## Star history
+
+[![Star history for nodemode-ai/formcut](https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date)](https://www.star-history.com/#nodemode-ai/formcut&Date)

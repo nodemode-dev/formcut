@@ -39,11 +39,12 @@ ffmpeg as a **separate program** rather than linking against it. The two meet at
 a process boundary, and neither licence reaches across it.
 
 The builds are **LGPL-2.1** (`--disable-gpl --disable-nonfree`), published one
-archive per target on the formcut-binaries release. The macOS and Windows
-installers carry the build for their platform, checked file by file against the
-SHA-256 recorded in `ffmpeg-licence.json` when the release is made. Linux
-packages, and any machine where no ffmpeg is found, fetch the archive on first
-run and check it the same way, against the record the app carries; if one file
+archive per target on the formcut-binaries release. The macOS, Windows and
+Linux release zips carry the build for their platform, checked file by file
+against the SHA-256 recorded in `ffmpeg-licence.json` when the release is made
+(`setup/bundle_ffmpeg.py`). Any machine where no ffmpeg is found, such as a run
+from source, fetches the archive on first run and checks it the same way,
+against the record the app carries; if one file
 differs, nothing is installed. A GPL ffmpeg inside the bundle would make the
 distributed whole GPL-3.0, so preflight fails any release workflow that passes
 `--allow-gpl` or uses the retired fetch script.
