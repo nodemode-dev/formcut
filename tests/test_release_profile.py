@@ -32,3 +32,9 @@ def test_build_time_crates_are_left_unstripped(manifest):
 def test_the_app_is_still_stripped():
     release = tomllib.loads((ROOT / "src-tauri" / "Cargo.toml").read_text(encoding="utf-8"))["profile"]["release"]
     assert release["strip"] is True
+
+
+def test_the_kernel_library_is_not_stripped():
+    # Python loads it as rustc loads a procedural macro; see backend/native/Cargo.toml.
+    release = tomllib.loads((ROOT / "backend" / "native" / "Cargo.toml").read_text(encoding="utf-8"))["profile"]["release"]
+    assert release["strip"] is False

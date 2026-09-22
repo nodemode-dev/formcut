@@ -19,6 +19,10 @@ rayon = "1.10"
 [profile.release]
 lto = "thin"
 codegen-units = 1
+# The kernel library is loaded by Python much as rustc loads a procedural macro, and
+# on macOS 27 every stripped Rust library tried so far failed to load. Unstripped it
+# is 2.4 MB instead of 0.7 MB (measured), which is nothing beside the engine.
+strip = false
 
 # Even with no strip setting, cargo strips release builds' debug info, procedural
 # macros included (-C strip=debuginfo on their rustc lines). On macOS 27 with rustc
