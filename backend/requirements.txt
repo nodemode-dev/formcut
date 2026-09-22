@@ -11,3 +11,6 @@ onnxruntime==1.23.2
 grpcio>=1.70,<2
 # Used by setup/preflight.py to parse the workflow files before a tag.
 PyYAML>=6.0
+# The test suite, and setup/benchmark_routes.py, which builds its scenes with the
+# suite's helpers; the version CI runs. The frozen engine never imports it.
+pytest==8.3.4
