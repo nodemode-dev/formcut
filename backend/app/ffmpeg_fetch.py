@@ -45,14 +45,38 @@ def pins(data: dict, triple: str) -> list[dict]:
     return [entry for entry in target.get("files") or [] if entry.get("path") and entry.get("sha256")]
 
 
+def release(data: dict) -> str:
+    """The release name, which tags the release and names its archives; the FFmpeg version without one."""
+    return data.get("release") or ((data.get("source") or {}).get("ffmpeg") or {}).get("version", "")
+
+
 def source(data: dict, triple: str) -> str:
-    version = ((data.get("source") or {}).get("ffmpeg") or {}).get("version", "")
-    base = os.environ.get("FORMCUT_FFMPEG_RELEASE") or f"{RELEASE}/ffmpeg-{version}"
-    return f"{base.rstrip('/')}/ffmpeg-lgpl-{version}-{triple}.tar.gz"
+    name = release(data)
+    base = os.environ.get("FORMCUT_FFMPEG_RELEASE") or f"{RELEASE}/ffmpeg-{name}"
+    return f"{base.rstrip('/')}/ffmpeg-lgpl-{name}-{triple}.tar.gz"
+
+
+def outdated() -> bool:
+    """formcut is running its own download, from another release than the record it carries.
+
+    Only the per-person folder formcut filled itself counts, known by the record
+    it wrote there, and only while it is the ffmpeg formcut uses: an ffmpeg a
+    person placed by hand, named in FORMCUT_FFMPEG_DIR or has on PATH is never
+    replaced. A new formcut with a rebuilt ffmpeg (7.1.5-2 after 7.1.5) would
+    otherwise leave everyone who fetched the first one on it for good.
+    """
+    data, folder = record(), tools.user_ffmpeg_dir()
+    if not data or not pins(data, tools.host_triple()) or tools.bundle_dir() != folder:
+        return False
+    try:
+        have = json.loads((folder / "ffmpeg-licence.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return release(have) != release(data)
 
 
 def needed() -> bool:
-    return tools.bundle_dir() is None and shutil.which("ffmpeg") is None
+    return (tools.bundle_dir() is None and shutil.which("ffmpeg") is None) or outdated()
 
 
 def _download(url: str, path: Path, report, cancelled) -> None:
@@ -106,8 +130,10 @@ def install(archive: Path, files: list[dict], folder: Path) -> int:
             target = folder / entry["path"]
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(root / entry["path"], target)
+        # The licence documents always come from the archive, so a refresh brings
+        # the notices for whatever the new build contains.
         for name in DOCUMENTS:
-            if (root / name).is_file() and not (folder / name).exists():
+            if (root / name).is_file():
                 shutil.copy2(root / name, folder / name)
     return len(files)
 
