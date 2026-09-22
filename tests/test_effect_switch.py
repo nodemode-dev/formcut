@@ -1,7 +1,9 @@
 """Effects switch off without losing their settings; the keyframe toggle stays where it can be seen."""
 
+import json
 import os
 import pathlib
+import re
 
 import numpy as np
 import pytest
@@ -55,3 +57,19 @@ def test_each_applied_effect_row_has_a_switch():
     source = (UI / "creator-panel.ts").read_text(encoding="utf-8")
     assert "data-power" in source and "next[index].enabled = next[index].enabled === false" in source
     assert os.path.exists(UI / "creator-panel.ts")
+
+
+def test_every_label_on_an_effect_row_is_translated_in_every_language_and_in_the_row():
+    i18n = UI.parent / "i18n"
+    rows = (i18n / "language-pack.ts").read_text(encoding="utf-8").split("`")[1].splitlines()
+    pack = {row.split("|")[0]: row.split("|")[1:] for row in rows if row}
+    inline = (i18n / "text.ts").read_text(encoding="utf-8")
+    english = json.loads((i18n / "en.json").read_text(encoding="utf-8"))
+    source = (UI / "creator-panel.ts").read_text(encoding="utf-8")
+    for phrase in ("Strength", "Up", "Move earlier", "Remove", "Turn off", "Turn on"):
+        assert phrase in pack and len(pack[phrase]) == 9 and all(pack[phrase]), phrase
+        for language in ("de", "es"):
+            table = json.loads((i18n / f"{language}.json").read_text(encoding="utf-8"))
+            keyed = any(value == phrase and key in table for key, value in english.items())
+            assert keyed or re.search(rf'{language}: \{{[^}}]*"{re.escape(phrase)}":', inline), (language, phrase)
+        assert f'phrase("{phrase}")' in source, phrase
