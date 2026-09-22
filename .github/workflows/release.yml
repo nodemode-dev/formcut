@@ -1,28 +1,58 @@
 name: release
 
-# Builds downloadable desktop apps when a version tag is pushed, which is the
-# first gap in the document: today, using formcut means installing Python, Node
-# and ffmpeg and starting it from a clone.
+# Builds formcut for macOS (Apple Silicon), Windows (x86_64) and Linux (x86_64) and
+# publishes them as one zip per platform on a GitHub release, each running with
+# nothing else installed.
 #
-# This workflow has never been run. It needs GitHub runners, an Apple Developer
-# identity for notarization and a Windows signing certificate, none of which
-# exist in the environment it was written in. Treat it as a starting point that
-# a first tag will shake out, not as a proven pipeline. What it does is drawn
-# from the scripts already in the repository: backend/freeze.py produces the
-# frozen engine that src-tauri/tauri.conf.json expects at
-# binaries/formcut-engine, and setup/build_*.sh wrap the same steps by hand.
+# A release is a version. On every push to main the first job reads APP_VERSION;
+# if tag v<version> does not exist yet (a "chore(release)" commit bumped it), the
+# three platforms build and, only when all three succeed, the tag and the release
+# are made with their zips. A push that leaves the version alone builds nothing, and
+# a failed build makes no tag, so the next push to main tries again. Running it by
+# hand rebuilds the current version and replaces its zips.
+#
+# Intel Macs are not built: setup/build_macos_app --intel builds one on any Mac.
+# The apps are unsigned; the release notes say how to open them the first time.
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  version:
+    name: which version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      build: ${{ steps.read.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: read
+        run: |
+          version=$(python3 -c "import re; print(re.search(r'^APP_VERSION = \"([^\"]+)\"', open('backend/app/main.py').read(), re.M).group(1))")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "building formcut $version"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "v$version is already released; nothing to build"
+          fi
+
   build:
     name: ${{ matrix.label }}
+    needs: version
+    if: needs.version.outputs.build == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,23 +61,19 @@ jobs:
           - os: macos-14
             label: macOS arm64
             target: aarch64-apple-darwin
-          - os: macos-13
-            label: macOS x86_64
-            target: x86_64-apple-darwin
-          - os: ubuntu-22.04
-            label: Linux x86_64
-            target: x86_64-unknown-linux-gnu
+            bundles: --bundles app
           - os: windows-latest
             label: Windows x86_64
             target: x86_64-pc-windows-msvc
-          # ARM64 runners for the two platforms that were x86-only. Both are
-          # ordinary hosted runners now, so neither needs emulation.
-          - os: ubuntu-22.04-arm
-            label: Linux arm64
-            target: aarch64-unknown-linux-gnu
-          - os: windows-11-arm
-            label: Windows arm64
-            target: aarch64-pc-windows-msvc
+            bundles: --no-bundle
+          # 22.04 so the AppImage runs on glibc 2.35 and newer.
+          - os: ubuntu-22.04
+            label: Linux x86_64
+            target: x86_64-unknown-linux-gnu
+            bundles: --bundles appimage
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -64,10 +90,14 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: system libraries for tauri
-        if: startsWith(matrix.os, 'ubuntu')
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf file
+
+      - name: the minimum macOS
+        if: runner.os == 'macOS'
+        run: echo "MACOSX_DEPLOYMENT_TARGET=$(python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['bundle']['macOS']['minimumSystemVersion'])")" >> "$GITHUB_ENV"
 
       # The interface is built first because the frozen engine carries it.
       - name: build the interface
@@ -76,72 +106,74 @@ jobs:
           npm run build
         working-directory: frontend
 
-      # PyPI's OpenCV brings its own FFmpeg, which freeze.py refuses, so OpenCV
-      # is rebuilt without it first. The engine is frozen to one file and put
-      # where externalBin looks for it. ffmpeg is not bundled: on first run the
-      # app fetches formcut's LGPL build and checks every file against the
-      # record it carries.
+      # The Rust kernels go into the engine, and an engine without them is refused,
+      # as setup/build_macos_app does. PyPI's OpenCV brings its own FFmpeg, which
+      # freeze.py refuses, so prepare_cv.py rebuilds it first.
       - name: freeze the engine
-        shell: bash
+        working-directory: backend
         run: |
-          pip install -r backend/requirements.txt pyinstaller
-          # The Rust kernels go into the frozen engine; without them it runs the Python path.
-          pip install "maturin==1.15.0"
-          maturin build --release --manifest-path backend/native/Cargo.toml --out native-dist
-          pip install native-dist/*.whl
-          python backend/prepare_cv.py
-          python backend/freeze.py --onefile
+          python -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
+          python -m maturin build --release --manifest-path native/Cargo.toml --target "${{ matrix.target }}" --out native-dist
+          python -m pip install --force-reinstall --no-deps native-dist/*.whl
+          python -c "import formcut_native; print('kernels load:', formcut_native.__file__)"
+          python prepare_cv.py
+          python freeze.py --onefile
           suffix=""
           if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
-          built=$(ls dist/formcut-engine$suffix backend/dist/formcut-engine$suffix 2>/dev/null | head -1)
-          test -n "$built"
-          mkdir -p src-tauri/binaries
-          cp "$built" "src-tauri/binaries/formcut-engine-${{ matrix.target }}$suffix"
+          check=$(./dist/formcut-engine$suffix --selfcheck)
+          echo "$check"
+          case "$check" in *'"native_kernels": true'*) ;; *) echo "the engine was frozen without formcut's Rust kernels"; exit 1 ;; esac
+          mkdir -p ../src-tauri/binaries
+          cp "dist/formcut-engine$suffix" "../src-tauri/binaries/formcut-engine-${{ matrix.target }}$suffix"
 
-      # macOS and Windows installers carry formcut's LGPL ffmpeg from the
-      # formcut-binaries release. Every file is checked against the record by
-      # the same code the app's first-run fetch uses, and a mismatch fails the
-      # build. The programs are staged under their plain names so the installed
-      # app, which cannot be written to, needs no links. A target with no
-      # published build is noted and fetches ffmpeg on first run instead. Linux
-      # packages always do, since a packaged ffmpeg in /usr/bin would collide
-      # with the system's.
+      # formcut's LGPL ffmpeg from the formcut-binaries release, every file checked
+      # against the record by the code the app's first-run fetch uses.
       - name: bundle ffmpeg
-        if: runner.os != 'Linux'
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-        run: python setup/bundle_ffmpeg.py --target "$TARGET"
+        run: python setup/bundle_ffmpeg.py --target "${{ matrix.target }}"
 
       - name: build the app
-        uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing and notarization
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows signing
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        with:
-          # Linux gets all three package formats rather than the AppImage alone,
-          # so a person who installs with their package manager is served too.
-          args: --target ${{ matrix.target }} ${{ startsWith(matrix.os, 'ubuntu') && '--bundles appimage,deb,rpm' || '' }}
-          tagName: ${{ github.ref_name }}
-          releaseName: formcut ${{ github.ref_name }}
-          releaseDraft: true
-          includeUpdaterJson: false
+          # linuxdeploy is an AppImage; extracting it lets it run without FUSE.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: npx --yes @tauri-apps/cli@2 build --target "${{ matrix.target }}" ${{ matrix.bundles }}
 
-  collect:
-    name: attach to the release
-    needs: build
+      - name: package the zip
+        run: python setup/package_release.py --target "${{ matrix.target }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formcut-${{ matrix.target }}
+          path: release-dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: publish the release
+    needs: [version, build]
+    if: needs.version.outputs.build == 'true'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
-      - name: note
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-dist
+          merge-multiple: true
+      - name: write the checksums, the manifest and the notes
         run: |
-          echo "tauri-action attaches .dmg, .msi, .AppImage, .deb and .rpm to the draft release."
-          echo "Publish the draft once each artefact has been opened once on its own platform."
+          python setup/release_manifest.py --version "$VERSION" --dir release-dist > manifest.json
+          (cd release-dist && sha256sum -- *.zip > SHA256SUMS)
+          mv manifest.json release-dist/manifest.json
+          python setup/release_notes.py --version "$VERSION" > notes.md
+      - name: publish
+        run: |
+          ls -la release-dist
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" release-dist/* --clobber
+            gh release edit "v$VERSION" --notes-file notes.md
+          else
+            gh release create "v$VERSION" release-dist/* --target "$GITHUB_SHA" --title "formcut $VERSION" --notes-file notes.md
+          fi

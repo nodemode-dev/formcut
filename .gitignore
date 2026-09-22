@@ -39,3 +39,4 @@ Thumbs.db
 .vscode/
 *.swp
 mcp/.venv/
+release-dist/

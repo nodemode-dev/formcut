@@ -165,6 +165,8 @@ def check_licences() -> None:
             "the release workflow fetches an ffmpeg of its own; the app fetches formcut's LGPL build on first run, "
             "and a GPL build in the bundle would make it GPL-3.0 rather than Apache-2.0"
         )
+    elif "setup/bundle_ffmpeg.py" in workflow:
+        notes.append("the release bundles formcut's own LGPL ffmpeg (setup/bundle_ffmpeg.py), every file checked against the record")
     else:
         notes.append("the release bundles no ffmpeg; the app fetches formcut's LGPL build and checks it against the record")
 
