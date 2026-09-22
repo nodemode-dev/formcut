@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.31.0-ffae2b" alt="version v1.31.0" />
+  <img src="https://img.shields.io/badge/version-v1.31.1-ffae2b" alt="version v1.31.1" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -241,6 +241,7 @@ Shipped so far:
 | 1.30.2 | the macOS app builds on a Mac with Eigen 5 installed (Homebrew brings it in), and its image-processing runtime is built for formcut's minimum macOS instead of the one it was built on |
 | 1.30.3 | `setup/build_macos_app` completes: build scripts and procedural macros are no longer stripped, which made every macro fail with "can't find crate" on macOS 27; the app itself is still stripped |
 | 1.31.0 | macOS 14 is the minimum; `setup/build_macos_app --intel` builds for Intel Macs on an Apple Silicon Mac; every macOS build carries formcut's Rust kernels and refuses an engine without them; pytest is in the requirements |
+| 1.31.1 | the Rust kernels build on macOS 27 too: no Cargo project strips its build scripts or procedural macros, which cargo does even with no strip setting |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
