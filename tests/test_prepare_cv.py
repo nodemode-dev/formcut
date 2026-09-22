@@ -24,7 +24,7 @@ def test_eigen_is_switched_off_with_ffmpeg_and_gstreamer():
 def test_a_macos_build_targets_the_minimum_formcut_declares(monkeypatch):
     monkeypatch.delenv("MACOSX_DEPLOYMENT_TARGET", raising=False)
     declared = json.loads((ROOT / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))["bundle"]["macOS"]["minimumSystemVersion"]
-    assert prepare_cv.build_environment("darwin")["MACOSX_DEPLOYMENT_TARGET"] == declared == "12.0"
+    assert prepare_cv.build_environment("darwin")["MACOSX_DEPLOYMENT_TARGET"] == declared == "14.0"
 
 
 def test_a_target_the_packager_chose_is_kept(monkeypatch):
