@@ -109,7 +109,8 @@ def run(args: argparse.Namespace, data: str, width: int, height: int) -> int:
     print(f"formcut export routes on {machine['platform']}, {machine['cores']} cores, {seconds:g} s at {width}x{height}\n")
     if not machine["native_kernels"]:
         print("note: formcut's Rust kernels are not installed, so the frame path runs on NumPy here.")
-        print("      To measure it as a built app runs: python -m pip install ./backend/native\n")
+        print("      To measure it as a built app runs, install them (from any folder):")
+        print(f'      "{sys.executable}" -m pip install "{ROOT / "backend" / "native"}"\n')
     results = []
     # The first export in a process detects the encoders (a test encode each)
     # and fills caches; one discarded export keeps that off the first scene.
