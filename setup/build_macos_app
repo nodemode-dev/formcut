@@ -1,15 +1,50 @@
 #!/bin/sh
+# Builds formcut.app and a dmg.
+#
+#   setup/build_macos_app           for this Mac: Apple Silicon, or Intel on an Intel Mac
+#   setup/build_macos_app --intel   for Intel Macs, on an Apple Silicon Mac: the engine
+#                                   is built under Rosetta in an Intel Python environment
+#
+# The engine carries formcut's Rust kernels, as release builds do. The minimum macOS,
+# for the app, the kernels and the rebuilt OpenCV alike, is tauri.conf.json's
+# minimumSystemVersion.
 set -e
 
 say() { printf '\n== %s ==\n' "$1"; }
 
-say "Checking prerequisites"
+ARCH=$(uname -m)
+case "${1:-}" in
+  --intel) ARCH=x86_64 ;;
+  "") ;;
+  *) echo "usage: setup/build_macos_app [--intel]"; exit 1 ;;
+esac
+RUN=
+case "$ARCH" in
+  arm64) TRIPLE=aarch64-apple-darwin ;;
+  x86_64)
+    TRIPLE=x86_64-apple-darwin
+    # On Apple Silicon the Intel engine is built by Intel Python under Rosetta; what it
+    # starts (pip, the OpenCV compile, PyInstaller) stays Intel with it.
+    [ "$(uname -m)" = arm64 ] && RUN="arch -x86_64" ;;
+  *) echo "unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+say "Checking prerequisites ($TRIPLE)"
 command -v python3 >/dev/null || { echo "python3 is required (https://python.org)"; exit 1; }
 command -v npm >/dev/null || { echo "npm is required (https://nodejs.org)"; exit 1; }
 command -v cargo >/dev/null || { echo "Rust is required: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; exit 1; }
 xcode-select -p >/dev/null 2>&1 || { echo "Xcode command line tools are required: xcode-select --install"; exit 1; }
+if [ -n "$RUN" ]; then
+  arch -x86_64 /usr/bin/true 2>/dev/null || { echo "Rosetta is required for an Intel build: softwareupdate --install-rosetta --agree-to-license"; exit 1; }
+  arch -x86_64 python3 -c "import platform, sys; sys.exit(platform.machine() != 'x86_64')" 2>/dev/null \
+    || { echo "python3 cannot run as Intel. Install Python from python.org (its installer is universal); Homebrew's is Apple Silicon only."; exit 1; }
+fi
+rustup target list --installed 2>/dev/null | grep -qx "$TRIPLE" || rustup target add "$TRIPLE"
 command -v ffmpeg >/dev/null || echo "note: ffmpeg not on PATH; the app runs, media probing and export need it"
 cargo tauri --version >/dev/null 2>&1 || { say "Installing tauri-cli"; cargo install tauri-cli --version '^2' --locked; }
+MACOSX_DEPLOYMENT_TARGET=$(python3 -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['bundle']['macOS']['minimumSystemVersion'])")
+export MACOSX_DEPLOYMENT_TARGET
+echo "minimum macOS: $MACOSX_DEPLOYMENT_TARGET"
 
 say "Building the frontend"
 cd frontend
@@ -17,20 +52,28 @@ cd frontend
 npm run build
 cd ..
 
-say "Building the engine (Python -> single binary)"
+say "Building the engine for $TRIPLE (Python -> single binary, with formcut's Rust kernels)"
 cd backend
-python3 -m venv .venv-package
-. .venv-package/bin/activate
-pip install --upgrade pip >/dev/null
-pip install -r requirements.txt pyinstaller
-python prepare_cv.py
-python freeze.py --onefile
-./dist/formcut-engine --selfcheck
-deactivate
+VENV=.venv-package-$ARCH
+$RUN python3 -m venv "$VENV"
+PY="$RUN $VENV/bin/python"
+$PY -m pip install --upgrade pip >/dev/null
+$PY -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
+# The kernels release.yml builds, for the engine's own architecture.
+rm -rf native-dist
+$PY -m maturin build --release --manifest-path native/Cargo.toml --target "$TRIPLE" --interpreter "$VENV/bin/python" --out native-dist
+$PY -m pip install --force-reinstall --no-deps native-dist/*.whl
+$PY prepare_cv.py
+$PY freeze.py --onefile
+CHECK=$($RUN ./dist/formcut-engine --selfcheck)
+echo "$CHECK"
+case "$CHECK" in
+  *'"native_kernels": true'*) ;;
+  *) echo "The engine was frozen without formcut's Rust kernels; stopping rather than ship it."; exit 1 ;;
+esac
 cd ..
 
-say "Placing the sidecar for this machine's target triple"
-TRIPLE=$(rustc -Vv | awk '/^host:/ {print $2}')
+say "Placing the sidecar for $TRIPLE"
 mkdir -p src-tauri/binaries
 cp backend/dist/formcut-engine "src-tauri/binaries/formcut-engine-$TRIPLE"
 echo "sidecar: src-tauri/binaries/formcut-engine-$TRIPLE"
@@ -38,15 +81,16 @@ echo "sidecar: src-tauri/binaries/formcut-engine-$TRIPLE"
 say "Generating app icons"
 cargo tauri icon src-tauri/icons/icon.png
 
-say "Building the app bundle (this compiles Rust; first run takes a while)"
-cargo tauri build --bundles app dmg
+say "Building the app bundle for $TRIPLE (this compiles Rust; first run takes a while)"
+cargo tauri build --target "$TRIPLE" --bundles app dmg
 
+BUNDLE=src-tauri/target/$TRIPLE/release/bundle
 say "Done"
-echo "App:  src-tauri/target/release/bundle/macos/formcut.app"
-echo "DMG:  src-tauri/target/release/bundle/dmg/"
+echo "App:  $BUNDLE/macos/formcut.app"
+echo "DMG:  $BUNDLE/dmg/"
+echo "It runs on macOS $MACOSX_DEPLOYMENT_TARGET and later."
 echo
 echo "The bundle is unsigned. First launch: right-click the app > Open,"
-echo "or clear quarantine: xattr -dr com.apple.quarantine src-tauri/target/release/bundle/macos/formcut.app"
+echo "or clear quarantine: xattr -dr com.apple.quarantine $BUNDLE/macos/formcut.app"
 echo
-echo "Intel Macs: run this same script on an Intel machine, or add the target"
-echo "(rustup target add x86_64-apple-darwin) and rebuild the sidecar there."
+echo "Intel Macs: setup/build_macos_app --intel, on this Mac or any other."

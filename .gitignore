@@ -14,6 +14,8 @@ src-tauri/gen/
 backend/dist/
 backend/build/
 backend/.venv-package/
+backend/.venv-package-*/
+backend/native-dist/
 backend/*.spec
 
 # local data, secrets and caches
