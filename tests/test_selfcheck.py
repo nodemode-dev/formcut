@@ -26,4 +26,5 @@ def test_missing_kernels_are_reported_without_failing_the_selfcheck(monkeypatch,
     monkeypatch.setitem(sys.modules, "formcut_native", None)
     without_kernels, info = _run(capsys)
     assert info["native_kernels"] is False
+    assert info["native_error"].startswith(("ImportError", "ModuleNotFoundError"))
     assert without_kernels == with_kernels

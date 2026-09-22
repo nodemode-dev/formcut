@@ -63,6 +63,10 @@ $PY -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
 rm -rf native-dist
 $PY -m maturin build --release --manifest-path native/Cargo.toml --target "$TRIPLE" --interpreter "$VENV/bin/python" --out native-dist
 $PY -m pip install --force-reinstall --no-deps native-dist/*.whl
+# They must load here, before freezing: a failure now means this Mac refuses the
+# library itself, not that PyInstaller left it out. Python's own error is printed.
+$PY -c "import formcut_native; print('kernels load:', formcut_native.__file__)" \
+  || { echo "formcut's Rust kernels were built but do not load on this Mac (the error is above); stopping."; exit 1; }
 $PY prepare_cv.py
 $PY freeze.py --onefile
 CHECK=$($RUN ./dist/formcut-engine --selfcheck)

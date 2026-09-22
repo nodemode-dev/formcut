@@ -27,8 +27,9 @@ def selfcheck() -> int:
         import formcut_native  # noqa: F401
 
         info["native_kernels"] = True
-    except ImportError:
+    except ImportError as exc:
         info["native_kernels"] = False
+        info["native_error"] = f"{type(exc).__name__}: {exc}"
     print(json.dumps(info))
     return 1 if any(str(value).startswith("missing:") for value in info.values()) or (getattr(sys, "frozen", False) and not info["dist_bundled"]) else 0
 
