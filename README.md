@@ -20,7 +20,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 ## Highlights
 
 - **One renderer for preview and export.** The same decode, crop, colour, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Pixel-measured parameters follow the resolution actually decoded, so a blur looks the same in a small preview and a full-resolution export.
-- **Effect catalogue, browsable and real**: 74 colour grades, 55 visual effects, 48 audio chains, 12 transitions, plus effect packages you can drop in as data (a manifest with a filter-chain template or a WGSL shader, checked against an engine allowlist). Every card's thumbnail is rendered by the engine through that effect.
+- **Effect catalogue, browsable and real**: 74 colour grades, 58 visual effects, 48 audio chains, 12 transitions, plus effect packages you can drop in as data (a manifest with a filter-chain template or a WGSL shader, checked against an engine allowlist). Every card's thumbnail is rendered by the engine through that effect.
 - **Voiceover recording** straight onto the timeline, with a peak-holding level meter so a muted or wrong input shows before a take is wasted.
 - **Scene detection** from the inspector, which finds a long clip's cuts and splits there, so it can become short ones, **smooth slow motion** that makes the frames between rather than repeating them, and **canvas backgrounds**: a colour, a gradient, an image, or a blurred copy of the clip.
 - **Picture repair**: stabilisation from a measured camera path, flicker removal, noise removal that keeps edges, and colour matching between clips.
