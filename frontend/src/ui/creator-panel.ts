@@ -74,7 +74,8 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
     entries.forEach((entry, index) => {
       if (!rows[index]) {
         const row = document.createElement("div"); row.className = "processor-row";
-        row.innerHTML = `<div class="fx-title"><button type="button" class="iconbtn fx-power" data-power aria-pressed="true" title="Turn off">${icon("eye")}</button><span></span></div><input type="range" min="0" max="1" step="0.01" aria-label="Strength"><button class="tool-chip" title="Move earlier">Up</button><button class="tool-chip">Remove</button>`;
+        // Rows are built after the panel is localised, so each label is translated here.
+        row.innerHTML = `<div class="fx-title"><button type="button" class="iconbtn fx-power" data-power aria-pressed="true" title="${phrase("Turn off")}" aria-label="${phrase("Turn off")}">${icon("eye")}</button><span></span></div><input type="range" min="0" max="1" step="0.01" aria-label="${phrase("Strength")}"><button class="tool-chip" title="${phrase("Move earlier")}">${phrase("Up")}</button><button class="tool-chip">${phrase("Remove")}</button>`;
         // On and off keeps the effect and its settings; only whether it renders changes.
         row.querySelector("[data-power]")!.addEventListener("click", () => void safe(() => {
           const next = structuredClone(selected()?.[kind] ?? []);
@@ -97,7 +98,8 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       const power = rows[index].querySelector<HTMLButtonElement>("[data-power]")!;
       if (power.getAttribute("aria-pressed") !== String(on)) {
         power.setAttribute("aria-pressed", String(on));
-        power.title = on ? "Turn off" : "Turn on";
+        power.title = on ? phrase("Turn off") : phrase("Turn on");
+        power.setAttribute("aria-label", power.title);
       }
       rows[index].classList.toggle("is-off", !on);
       setValue(rows[index].querySelector("input")!, String(entry.amount));
