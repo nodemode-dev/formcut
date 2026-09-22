@@ -1,18 +1,34 @@
-"""The desktop app's release profile: the app is stripped, build-time crates are not.
+"""Release profiles: build-time crates are never stripped, and the app still is.
 
-cargo hands profile.release's strip to build scripts and procedural macros too
-(checked: -C strip=symbols on the proc-macro's rustc line). Stripped, every
-procedural macro failed with "can't find crate" on the owner's Mac (macOS 27,
-rustc 1.97.1), and the same build succeeded with them left unstripped.
+cargo strips procedural macros with everything else in a release build:
+-C strip=symbols under strip = true, and -C strip=debuginfo even with no strip
+setting at all (both checked on their rustc lines). On the owner's Mac (macOS 27,
+rustc 1.97.1) a stripped procedural macro cannot be loaded, "can't find crate",
+which broke the app's build and then formcut_native's; every Cargo project in the
+repository therefore sets [profile.release.build-override] strip = false.
 """
 
+import subprocess
 import tomllib
 from pathlib import Path
 
-CARGO = Path(__file__).resolve().parent.parent / "src-tauri" / "Cargo.toml"
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+TRACKED = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
+MANIFESTS = sorted(path for path in TRACKED if path.endswith("Cargo.toml"))
 
 
-def test_the_app_is_stripped_and_build_time_crates_are_not():
-    release = tomllib.loads(CARGO.read_text(encoding="utf-8"))["profile"]["release"]
+def test_every_cargo_project_is_covered():
+    assert {"src-tauri/Cargo.toml", "backend/native/Cargo.toml", "mobile/src-tauri/Cargo.toml"} <= set(MANIFESTS)
+
+
+@pytest.mark.parametrize("manifest", MANIFESTS)
+def test_build_time_crates_are_left_unstripped(manifest):
+    profile = tomllib.loads((ROOT / manifest).read_text(encoding="utf-8"))["profile"]["release"]
+    assert profile["build-override"]["strip"] is False
+
+
+def test_the_app_is_still_stripped():
+    release = tomllib.loads((ROOT / "src-tauri" / "Cargo.toml").read_text(encoding="utf-8"))["profile"]["release"]
     assert release["strip"] is True
-    assert release["build-override"]["strip"] is False
