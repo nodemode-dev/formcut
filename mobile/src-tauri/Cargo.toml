@@ -18,3 +18,9 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+
+# Cargo strips release builds' debug info even with no strip setting, procedural
+# macros included; on macOS 27 with rustc 1.97.1 a stripped procedural macro cannot
+# be loaded ("can't find crate"). Build-time crates are left unstripped.
+[profile.release.build-override]
+strip = false

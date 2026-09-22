@@ -18,8 +18,10 @@ strip = true
 lto = true
 
 # Build scripts and procedural macros run during the build and never ship, and
-# cargo gives them profile.release's strip too (-C strip=symbols). Stripped, every
-# procedural macro failed with "can't find crate" on macOS 27 with rustc 1.97.1;
-# left unstripped the same build succeeds, and the app binary is stripped as before.
+# cargo strips them with the rest: -C strip=symbols with strip = true, and
+# -C strip=debuginfo even with no strip setting. On macOS 27 with rustc 1.97.1 a
+# stripped procedural macro cannot be loaded ("can't find crate"), here and in
+# backend/native alike; left unstripped the builds succeed, and the app binary is
+# stripped as before.
 [profile.release.build-override]
 strip = false

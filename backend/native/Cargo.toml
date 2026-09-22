@@ -19,3 +19,10 @@ rayon = "1.10"
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+# Even with no strip setting, cargo strips release builds' debug info, procedural
+# macros included (-C strip=debuginfo on their rustc lines). On macOS 27 with rustc
+# 1.97.1 a stripped procedural macro cannot be loaded ("can't find crate" for
+# pyo3_macros and indoc), so build-time crates are left unstripped.
+[profile.release.build-override]
+strip = false
