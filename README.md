@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.31.3-ffae2b" alt="version v1.31.3" />
+  <img src="https://img.shields.io/badge/version-v1.32.0-ffae2b" alt="version v1.32.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -244,6 +244,7 @@ Shipped so far:
 | 1.31.1 | the Rust kernels build on macOS 27 too: no Cargo project strips its build scripts or procedural macros, which cargo does even with no strip setting |
 | 1.31.2 | the Rust kernel library itself is not stripped either; the macOS build checks that the kernels load before freezing and prints Python's error if they do not |
 | 1.31.3 | the route benchmark's hint for installing the Rust kernels names the full paths, so it works from any folder |
+| 1.32.0 | exports take the faster layered route by default, with "Exact preview colours (slower)" in the export dialog for colours exactly as previewed; a Mac built locally carries its verified ffmpeg, as release builds do |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
