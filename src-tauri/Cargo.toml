@@ -16,3 +16,10 @@ tokio = { version = "1", features = ["time"] }
 [profile.release]
 strip = true
 lto = true
+
+# Build scripts and procedural macros run during the build and never ship, and
+# cargo gives them profile.release's strip too (-C strip=symbols). Stripped, every
+# procedural macro failed with "can't find crate" on macOS 27 with rustc 1.97.1;
+# left unstripped the same build succeeds, and the app binary is stripped as before.
+[profile.release.build-override]
+strip = false
