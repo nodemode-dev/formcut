@@ -24,7 +24,7 @@ for the project elsewhere.
 ## Reporting
 
 Report anything that breaks this code to the maintainers at
-**mackin@nodemode.ai**. Reports are read by the maintainers only and kept
+**@nodemode-ai**. Reports are read by the maintainers only and kept
 confidential; say if you would like a reply.
 
 ## What happens next
