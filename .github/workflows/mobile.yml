@@ -10,17 +10,17 @@ on:
 
 jobs:
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: mobile
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - name: Android NDK
         run: |
           sdkmanager --install "ndk;27.0.12077973"
@@ -28,14 +28,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - run: npm install
       - run: npx tauri android init --ci
       - run: npx tauri icon ../src-tauri/icons/icon.png
       - run: npx tauri android build --debug --apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: formcut-android
           path: mobile/src-tauri/gen/android/app/build/outputs/apk/
@@ -47,18 +47,18 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - run: npm install
       - run: npx tauri ios init --ci
       - run: npx tauri icon ../src-tauri/icons/icon.png
       - run: npx tauri ios build --debug --target aarch64-sim
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: formcut-ios-simulator
           path: mobile/src-tauri/gen/apple/build/
