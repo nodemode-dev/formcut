@@ -7,7 +7,7 @@
 <p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.29.0-ffae2b" alt="version v1.29.0" />
+  <img src="https://img.shields.io/badge/version-v1.30.0-ffae2b" alt="version v1.30.0" />
   <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
   <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
@@ -236,6 +236,7 @@ Shipped so far:
 | 1.27.0 | the keyframe button is back in every track's controls, so keyframe lanes open again; each applied effect shows its name and switches on and off, keeping its settings |
 | 1.28.0 | the applied-effect rows, their on/off switch included, in all twelve languages |
 | 1.29.0 | H.264 and HEVC through Windows' Media Foundation and Linux's VA-API (Intel and AMD) once the rebuilt ffmpeg is published; each hardware encoder tuned in its own quality controls and tested at start-up exactly as exports use it |
+| 1.30.0 | formcut's ffmpeg is now the 7.1.5-2 build, with hardware H.264 and HEVC on Windows and Linux; a formcut that fetched the earlier build refreshes it on its own, and never touches an ffmpeg you placed yourself |
 
 Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
