@@ -105,7 +105,7 @@ Everything lives in `.env` beside the launcher, never committed. The template is
 
 ## Demo media
 
-The demo project expects four files in `examples/demo/`: `input-clip-example.mp4`, `model-drop-MV.mp4`, `a-sample.wav` and `effect-example-image.jpg`. That folder is ignored by git, so the files stay local; without them the demo button says what is missing and effect thumbnails fall back to a generated image.
+The demo project loads the four files in `examples/demo/`: two 10-second clips and an image from Pexels, and a spoken line generated with Kokoro. They are in the repository, under their own licences rather than formcut's; [`examples/demo/README.md`](examples/demo/README.md) lists each one's source. They are not bundled into release builds, so in an installed app the demo button says what is missing and the effect thumbnails use a generated image.
 
 ## Architecture
 

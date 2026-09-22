@@ -28,9 +28,15 @@ models/*
 !models/.gitkeep
 *.log
 
-# local media: the demo assets are expected here but never committed
+# demo media: the four files the demo project loads, and their credits, are tracked
+# (sources and licences in examples/demo/README.md); anything else here stays local
 examples/demo/*
 !examples/demo/.gitkeep
+!examples/demo/README.md
+!examples/demo/input-clip-example.mp4
+!examples/demo/model-drop-MV.mp4
+!examples/demo/a-sample.wav
+!examples/demo/effect-example-image.jpg
 
 # editor and platform noise
 .DS_Store
