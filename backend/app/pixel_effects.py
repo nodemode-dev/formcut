@@ -501,6 +501,16 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
     raise ValueError(f"Unknown visual effect: {effect}")
 
 
+def _stack_steps(effect_id: str) -> list | None:
+    """The steps of a stack package, or None when the id is not one."""
+    from .effect_packages import find
+
+    entry = find(effect_id)
+    if entry and entry["kind"] == "video" and entry["backend"]["type"] == "stack":
+        return entry["backend"]["steps"]
+    return None
+
+
 def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.ndarray:
     to_float, to_bytes = _native_kernel("unit_float"), _native_kernel("to_bytes")
     if to_float is not None and image.dtype == np.uint8 and image.ndim == 3 and image.flags.c_contiguous:
@@ -512,7 +522,22 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
     for entry in effects:
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
         if entry["id"] not in GRADES and entry["id"] not in VIDEO_EFFECTS:
-            raise ValueError("Unknown visual effect: " + entry["id"])
+            # A stack package is formcut's own steps: each runs as it would on
+            # its own, blended by its strength times the clip's.
+            steps = _stack_steps(entry["id"])
+            if steps is None:
+                raise ValueError("Unknown visual effect: " + entry["id"])
+            if amount > 0:
+                for step in steps:
+                    share = amount * max(0.0, min(1.0, float(step.get("amount", 1))))
+                    if share <= 0:
+                        continue
+                    if "grade" in step:
+                        changed = grade(result[:, :, :3], step["grade"])
+                    else:
+                        changed = process(result[:, :, :3], step["effect"], local, clamp_params(step.get("params") or {}))
+                    result[:, :, :3] = np.clip(changed * share + result[:, :, :3] * (1 - share), 0, 1)
+            continue
         # An effect turned all the way down was still being computed in full and
         # then blended away to nothing, so a chain of disabled effects cost as
         # much as a chain of active ones.

@@ -389,6 +389,8 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Looks|Looks|Look|ルック|룩|Visuais|Образы|Görünümler|风格|風格
+Packages|Paquets|Pacchetti|パッケージ|패키지|Pacotes|Пакеты|Paketler|效果包|效果包
 Oil Paint|Peinture à l'huile|Pittura a olio|油絵|유화|Pintura a óleo|Масляная живопись|Yağlı boya|油画|油畫
 Hex Pixelate|Pixellisation hexagonale|Pixel esagonali|六角形モザイク|육각형 픽셀|Pixelado hexagonal|Шестиугольные пиксели|Altıgen piksel|六边形像素化|六邊形像素化
 Neon Edges|Contours néon|Bordi al neon|ネオンエッジ|네온 윤곽선|Bordas neon|Неоновые контуры|Neon kenarlar|霓虹边缘|霓虹邊緣

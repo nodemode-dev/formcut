@@ -645,7 +645,8 @@ def package_entries(kind: str) -> list[dict]:
             "id": e["id"],
             "name": e["name"],
             "category": e.get("category", "Packages"),
-            "group": "Packages",
+            "group": "Looks" if e.get("library") else "Packages",
+            "names": e.get("names") or {},
             "parameters": e["parameters"],
             "declarations": e["declarations"],
         }

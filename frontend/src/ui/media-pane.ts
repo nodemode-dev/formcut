@@ -6,7 +6,7 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
 import { defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
 import { transcribeClip, typedCaptions } from "../engine/captions";
-import { t } from "../i18n";
+import { locale, t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
 import { categoryIcon } from "./category-icons";
@@ -30,7 +30,7 @@ const TABS: Array<[string, string]> = [
   ["Sounds", "tab.sounds"],
 ];
 const EFFECT_GROUPS: Array<[string, string[]]> = [
-  ["Video effects", ["Blur", "Stylize", "Distort", "Texture", "Mask", "Cutout"]],
+  ["Video effects", ["Blur", "Stylize", "Distort", "Texture", "Looks", "Packages", "Mask", "Cutout"]],
   ["Audio effects", ["Voice", "Tone", "Space", "Clean"]],
 ];
 const FILTER_GROUPS = ["Adjust", "Film", "Warm", "Cool", "Split"];
@@ -251,7 +251,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     `<div class="effect-card fx-card${favourites.has(favKey(kind, id)) ? " is-fav" : ""}" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden><button class="fav-star" data-star aria-label="Favourite" aria-pressed="${favourites.has(favKey(kind, id))}">${"\u2605"}</button>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
   const transitionName = (type: string) =>
     type === "crossfade" ? t("trans.crossfade") : type === "dip" ? t("trans.dip") : text(type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
-  type CatalogueEntry = { id: string; name: string; category?: string; group?: string };
+  type CatalogueEntry = { id: string; name: string; category?: string; group?: string; names?: Record<string, string> };
   void fetch("/api/catalogue")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
     .then((data: { video: CatalogueEntry[]; audio: CatalogueEntry[]; transitions: string[]; previewVersion?: string }) => {
@@ -261,7 +261,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       fxGrid.insertAdjacentHTML(
         "beforeend",
         [
-          ...data.video.filter(grouped).map((v) => fxCard(v.category === "Color" ? "filter" : "effect", "video", v.group!, v.id, text(v.name), thumb("effect", v.id))),
+          ...data.video.filter(grouped).map((v) => fxCard(v.category === "Color" ? "filter" : "effect", "video", v.group!, v.id, v.names?.[locale] ?? text(v.name), thumb("effect", v.id))),
           ...MASKS.map(([shape, label]) => fxCard("effect", "mask", "Mask", shape, label, thumb("mask", shape))),
           ...CUTOUTS.map(([model, label]) => fxCard("effect", "cutout", "Cutout", model, label, thumb("source", "cutout"))),
           ...data.audio.filter(grouped).map((a) => fxCard("effect", "audio", a.group!, a.id, text(a.name), glyph)),

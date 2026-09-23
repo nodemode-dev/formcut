@@ -22,6 +22,9 @@ export const CATEGORY_ICONS: Record<string, CategoryGlyph> = {
   "Cool": { body: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="m10 20l-1.25-2.5L6 18m4-14L8.75 6.5L6 6m8 14l1.25-2.5L18 18M14 4l1.25 2.5L18 6"/><path d="m17 21l-3-6h-4m7-12l-3 6l1.5 3M2 12h6.5L10 9m10 1l-1.5 2l1.5 2"/><path d="M22 12h-6.5L14 15M4 10l1.5 2L4 14m3 7l3-6l-1.5-3M7 3l3 6h4"/></g>`, stroked: true, viewBox: "0 0 24 24" },
   "Split": { body: `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8V5c0-1 1-2 2-2h10c1 0 2 1 2 2v3m0 8v3c0 1-1 2-2 2H7c-1 0-2-1-2-2v-3m-1-4h16"/>`, stroked: true, viewBox: "0 0 24 24" },
 };
+// A look is a grade with a finish, and a package is a person's own stack of effects.
+CATEGORY_ICONS.Looks = CATEGORY_ICONS.Film;
+CATEGORY_ICONS.Packages = CATEGORY_ICONS.Stylize;
 
 export function categoryIcon(label: string): string {
   const glyph = CATEGORY_ICONS[label];

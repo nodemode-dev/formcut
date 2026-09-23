@@ -21,6 +21,13 @@ _lock = threading.Lock()
 _base: np.ndarray | None = None
 
 
+def _is_stack(item: str) -> bool:
+    from .effect_packages import find
+
+    entry = find(item)
+    return bool(entry and entry["kind"] == "video" and entry["backend"]["type"] == "stack")
+
+
 def known(kind: str, item: str) -> bool:
     if kind == "look":
         from .assets import ROOT
@@ -31,7 +38,7 @@ def known(kind: str, item: str) -> bool:
 
         return item in TITLE_STYLE_IDS
     return (
-        (kind == "effect" and (item in GRADES or item in VIDEO_EFFECTS))
+        (kind == "effect" and (item in GRADES or item in VIDEO_EFFECTS or _is_stack(item)))
         or (kind == "transition" and item in TRANSITIONS)
         or (kind == "mask" and item in MASKS)
         or (kind == "source" and item == "cutout")
