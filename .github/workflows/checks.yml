@@ -108,12 +108,22 @@ jobs:
       # runs here too.
       # The suite runs everywhere, because it is the part that has to hold on
       # every platform. Only the pixel-exact checks below are pinned to one.
+      # The tests make and read media by running ffmpeg, and no runner has it
+      # installed: a release build carries formcut's own and the engine finds it,
+      # but the tests call ffmpeg by name. Without it, every test that makes a
+      # clip failed on all three runners. Linux keeps the ffmpeg and fonts the
+      # golden frames below were pinned against.
+      - name: ffmpeg for the tests (Linux, with the fonts the golden frames use)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - name: ffmpeg for the tests (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+      - name: ffmpeg for the tests (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
       - name: tests
         run: python -m pytest tests -q
-
-      - name: install ffmpeg for the render checks
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
 
       - name: golden frames, and preview against export
         if: matrix.os == 'ubuntu-latest'
@@ -161,6 +171,12 @@ jobs:
           printf '#!/bin/sh\necho "stub for cargo check"\n' > "src-tauri/binaries/formcut-engine-$triple"
           chmod +x "src-tauri/binaries/formcut-engine-$triple"
           echo "stubbed formcut-engine-$triple"
+      # tauri::generate_context! also reads the built interface (frontendDist,
+      # ../frontend/dist) when the crate compiles, and this job does not build
+      # it, so cargo check stopped there before compiling any Rust. A one-page
+      # stand-in is enough to compile; it never leaves the runner either.
+      - name: stub the built interface so the shell can compile
+        run: mkdir -p frontend/dist && printf '<!doctype html><title>formcut</title>\n' > frontend/dist/index.html
       - run: cargo check --manifest-path src-tauri/Cargo.toml
       # Clippy reports rather than blocks until it has been seen to pass once on
       # a real runner; promoting it to -D warnings before that would fail every
