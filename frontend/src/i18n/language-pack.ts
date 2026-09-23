@@ -389,6 +389,33 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Built in|Intégré|Integrato|組み込み|기본 제공|Incluído|Встроенный|Yerleşik|内置|內建
+Cinematic intro|Intro cinématique|Intro cinematografica|シネマティックイントロ|시네마틱 인트로|Intro cinematográfica|Кинематографичное интро|Sinematik giriş|电影感片头|電影感片頭
+Lower third|Bandeau|Sottopancia|ローワーサード|하단 자막|Terço inferior|Нижняя плашка|Alt bant|下方字幕条|下方字幕條
+Photo slideshow|Diaporama photo|Presentazione di foto|フォトスライドショー|사진 슬라이드쇼|Apresentação de fotos|Фотослайд-шоу|Fotoğraf slayt gösterisi|照片幻灯片|照片投影片
+Quote card|Carte citation|Scheda citazione|引用カード|인용 카드|Cartão de citação|Карточка с цитатой|Alıntı kartı|引言卡片|引言卡片
+Countdown|Compte à rebours|Conto alla rovescia|カウントダウン|카운트다운|Contagem regressiva|Обратный отсчёт|Geri sayım|倒计时|倒數計時
+Split screen|Écran partagé|Schermo diviso|分割画面|분할 화면|Tela dividida|Разделённый экран|Bölünmüş ekran|分屏|分割畫面
+Before and after|Avant et après|Prima e dopo|ビフォーアフター|전후 비교|Antes e depois|До и после|Önce ve sonra|前后对比|前後對比
+Product showcase|Présentation produit|Vetrina prodotto|商品紹介|제품 소개|Vitrine de produto|Презентация товара|Ürün vitrini|产品展示|產品展示
+Vertical short|Vidéo courte verticale|Video breve verticale|縦型ショート|세로형 쇼츠|Vídeo curto vertical|Вертикальное короткое видео|Dikey kısa video|竖屏短视频|直式短影片
+Travel opener|Ouverture voyage|Apertura di viaggio|旅行オープニング|여행 오프닝|Abertura de viagem|Заставка путешествия|Seyahat açılışı|旅行开场|旅行開場
+Breaking news|Dernière minute|Ultime notizie|速報ニュース|속보|Últimas notícias|Срочные новости|Son dakika|突发新闻|突發新聞
+End screen|Écran de fin|Schermata finale|エンドスクリーン|엔드 스크린|Tela final|Финальная заставка|Bitiş ekranı|片尾画面|片尾畫面
+Photo 1|Photo 1|Foto 1|写真 1|사진 1|Foto 1|Фото 1|Fotoğraf 1|照片 1|照片 1
+Photo 2|Photo 2|Foto 2|写真 2|사진 2|Foto 2|Фото 2|Fotoğraf 2|照片 2|照片 2
+Photo 3|Photo 3|Foto 3|写真 3|사진 3|Foto 3|Фото 3|Fotoğraf 3|照片 3|照片 3
+Photo 4|Photo 4|Foto 4|写真 4|사진 4|Foto 4|Фото 4|Fotoğraf 4|照片 4|照片 4
+Photo 5|Photo 5|Foto 5|写真 5|사진 5|Foto 5|Фото 5|Fotoğraf 5|照片 5|照片 5
+Right|Droite|Destra|右|오른쪽|Direita|Справа|Sağ|右|右
+Before|Avant|Prima|ビフォー|이전|Antes|До|Önce|之前|之前
+After|Après|Dopo|アフター|이후|Depois|После|Sonra|之后|之後
+Product photo|Photo du produit|Foto del prodotto|商品写真|제품 사진|Foto do produto|Фото товара|Ürün fotoğrafı|产品照片|產品照片
+Clip 1|Clip 1|Clip 1|クリップ 1|클립 1|Clipe 1|Клип 1|Klip 1|片段 1|片段 1
+Clip 2|Clip 2|Clip 2|クリップ 2|클립 2|Clipe 2|Клип 2|Klip 2|片段 2|片段 2
+Clip 3|Clip 3|Clip 3|クリップ 3|클립 3|Clipe 3|Клип 3|Klip 3|片段 3|片段 3
+Next video 1|Vidéo suivante 1|Video successivo 1|次の動画 1|다음 동영상 1|Próximo vídeo 1|Следующее видео 1|Sonraki video 1|下一个视频 1|下一部影片 1
+Next video 2|Vidéo suivante 2|Video successivo 2|次の動画 2|다음 동영상 2|Próximo vídeo 2|Следующее видео 2|Sonraki video 2|下一个视频 2|下一部影片 2
 Follow size|Suivre la taille|Segui la dimensione|サイズに追従|크기 따라가기|Seguir o tamanho|Следовать за размером|Boyutu takip et|跟随大小|跟隨大小
 Follow angle|Suivre l'angle|Segui l'angolo|角度に追従|각도 따라가기|Seguir o ângulo|Следовать за углом|Açıyı takip et|跟随角度|跟隨角度
 H.264 without a hardware encoder|H.264 sans encodeur matériel|H.264 senza codificatore hardware|ハードウェアエンコーダーなしの H.264|하드웨어 인코더 없는 H.264|H.264 sem codificador por hardware|H.264 без аппаратного кодировщика|Donanım kodlayıcısı olmadan H.264|无硬件编码器时的 H.264|無硬體編碼器時的 H.264

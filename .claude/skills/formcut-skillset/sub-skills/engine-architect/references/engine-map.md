@@ -52,7 +52,7 @@ The rest is written by hand.
 | render_stream.py | 71 | /api/render | 1 |
 | stock.py | 287 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
-| templates.py | 199 | /api/templates | 7 |
+| templates.py | 214 | /api/templates | 7 |
 | tiktok.py | 340 | /api/connect/tiktok/app | 7 |
 | track.py | 178 | /api/track | 1 |
 | tts.py | 91 | /api/tts | 3 |
@@ -98,6 +98,7 @@ the automation transports.
 - `store.py` (57L)
 - `subject.py` (220L)
 - `template_assets.py` (92L)
+- `template_library.py` (450L)
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (209L)

@@ -178,16 +178,19 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           for (const item of root.querySelectorAll<HTMLElement>("[data-slot]")) if (!live.has(item.dataset.slot)) item.remove();
           for (const slot of template.slots) {
             let label = [...root.querySelectorAll<HTMLLabelElement>("label")].find(l => l.dataset.slot === slot.id);
-            if (!label) { label = document.createElement("label"); label.dataset.slot = slot.id; const name = document.createElement("span"); name.textContent = slot.name; label.append(name, document.createElement("select")); root.append(label); }
+            if (!label) { label = document.createElement("label"); label.dataset.slot = slot.id; const name = document.createElement("span"); name.textContent = slot.nameKey ? t(slot.nameKey) : slot.name; label.append(name, document.createElement("select")); root.append(label); }
             reconcileOptions(label.querySelector("select")!, bin.all.filter(m => m.kind === slot.kind).map(m => ({ id: m.id, name: m.name })));
           }
           q("template-fill").hidden = false;
         }));
         const download = document.createElement("a"); download.className = "tool-chip"; download.textContent = "Export"; download.href = `/api/templates/${entry.id}/file`; download.download = "template.fctemplate";
         const remove = document.createElement("button"); remove.className = "tool-chip"; remove.textContent = "Delete"; remove.addEventListener("click", () => void run(async () => { await api(`/api/templates/${entry.id}`, undefined, "DELETE"); await refreshTemplates(); }));
-        row.append(fill, download, remove); templateRows.set(entry.id, row); q("template-list").append(row);
+        // formcut's own templates cannot be deleted, so they offer no Delete.
+        if (entry.bundled) row.append(fill, download); else row.append(fill, download, remove);
+        templateRows.set(entry.id, row); q("template-list").append(row);
       }
-      row.querySelector("span")!.textContent = `${entry.name} · ${entry.slots.length} slots`;
+      const name = entry.nameKey ? t(entry.nameKey) : entry.name;
+      row.querySelector("span")!.textContent = `${name} · ${entry.slots.length} slots${entry.bundled ? ` · ${t("tpl.builtin")}` : ""}`;
     }
   };
   const modelRows = new Map<string, HTMLElement>();

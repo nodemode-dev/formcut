@@ -473,7 +473,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       return;
     }
     if (view === "templates") {
-      void renderList("/api/templates", (entry) => `${String(entry.name)} · ${(entry.slots as unknown[] | undefined)?.length ?? 0} ${t("home.slots")}`, "home.notemplates");
+      void renderList("/api/templates", (entry) => `${entry.nameKey ? t(String(entry.nameKey)) : String(entry.name)} · ${(entry.slots as unknown[] | undefined)?.length ?? 0} ${t("home.slots")}`, "home.notemplates");
       return;
     }
     if (view === "models") {

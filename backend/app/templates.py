@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from . import template_library
 from .media import _find
 from .paths import DATA_DIR
 from .render_document import validate_document
@@ -57,9 +58,18 @@ class FillInput(BaseModel):
     fit: bool = True
 
 
+_posters: dict[str, str | None] = {}
+
+
 def get(template_id: str):
     if not template_id.isalnum():
         raise HTTPException(404, "Template not found")
+    bundled = template_library.template(template_id)
+    if bundled:
+        # formcut's own: built in code, so the poster is drawn once and kept.
+        if template_id not in _posters:
+            _posters[template_id] = poster_frame(validate_document(copy.deepcopy(bundled["project"])), None)
+        return {**bundled, "poster": _posters[template_id]}
     path = ROOT / (template_id + ".json")
     if not path.is_file():
         raise HTTPException(404, "Template not found")
@@ -83,10 +93,13 @@ def validate_template(item: dict) -> dict:
 
 @router.get("")
 def list_templates():
+    bundled = template_library.listing()
     if not ROOT.exists():
-        return []
+        return bundled
     with _lock:
-        return [{k: item[k] for k in ("id", "name", "slots")} for path in ROOT.glob("*.json") for item in [json.loads(path.read_text())]]
+        return bundled + [
+            {k: item[k] for k in ("id", "name", "slots")} for path in ROOT.glob("*.json") for item in [json.loads(path.read_text())]
+        ]
 
 
 @router.post("", status_code=201)
@@ -194,6 +207,8 @@ def import_template(file: UploadFile):
 
 @router.delete("/{template_id}", status_code=204)
 def delete(template_id: str):
+    if template_library.template(template_id):
+        raise HTTPException(403, "formcut's own templates cannot be deleted")
     get(template_id)
     with _lock:
         (ROOT / (template_id + ".json")).unlink()
