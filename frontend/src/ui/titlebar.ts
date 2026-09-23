@@ -284,8 +284,11 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     const list = available[segValue("fmt")] ?? [];
     const codec = segValue("codec") || list[0] || "";
     const encoder = encoders[codec]?.encoder;
-    const fallback = segValue("fmt") === "mp4" && codec === "mpeg4" && !list.some((name) => name === "h264" || name === "hevc");
-    const text = !codec || !encoder ? "" : fallback ? t("export.mpeg4Warning")
+    // No MP4 encoder here: Auto saves WebM (render_api), and MPEG-4 Part 2 only
+    // when picked by name, which is when its own warning applies.
+    const noMp4 = segValue("fmt") === "mp4" && !list.some((name) => name === "h264" || name === "hevc" || name === "av1");
+    const fallback = noMp4 && codec === "mpeg4";
+    const text = noMp4 && !segValue("codec") ? t("export.webmWarning") : !codec || !encoder ? "" : fallback ? t("export.mpeg4Warning")
       : t("export.encoderUses").replace("{codec}", CODEC_NAMES[codec] ?? codec.toUpperCase()).replace("{encoder}", encoder);
     if (encoderRow.textContent !== text) encoderRow.textContent = text;
     encoderRow.classList.toggle("is-warning", fallback);

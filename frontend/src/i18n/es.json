@@ -959,5 +959,6 @@
   "library.sound.waves": "Olas",
   "library.sound.crickets": "Grillos",
   "library.cat.HipHop": "Hip hop",
-  "library.cat.Electronic": "Electrónica"
+  "library.cat.Electronic": "Electrónica",
+  "export.webmWarning": "Aquí no funciona ningún codificador H.264, HEVC ni AV1 y OpenH264 está desactivado, así que esta exportación MP4 se guardará como WebM. Elige MPEG-4 Part 2 para mantener MP4, aunque Instagram y algunos reproductores lo rechacen."
 }

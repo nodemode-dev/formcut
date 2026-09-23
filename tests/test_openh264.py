@@ -181,3 +181,18 @@ def test_an_h264_export_with_no_h264_encoder_goes_through_openh264(route, cisco_
     ).stdout.split()
     assert streams[0] == "h264" and "aac" in streams, streams
     assert not list((render_api.OUTPUTS).glob(f"openh264-{route or 'default'}.intermediate.*")), "the intermediate is removed"
+
+
+def test_the_export_sheet_offers_h264_through_openh264_where_nothing_else_encodes_it(codec_home, monkeypatch):
+    """The sheet lists what status() reports; without H.264 there it fell to MPEG-4
+    Part 2 and showed that warning on the very machines OpenH264 is for."""
+    from app import encoders
+
+    monkeypatch.setattr(encoders, "detect", lambda: {"h264": [], "hevc": [], "av1": [], "vp9": ["libvpx-vp9"], "mpeg4": ["mpeg4"]})
+    if openh264._binary() is None:
+        pytest.skip("Cisco publishes no library for this computer")
+    offered = encoders.status()
+    assert offered["codecs"]["h264"]["encoder"] == "libopenh264" and offered["containers"]["mp4"][0] == "h264"
+    openh264.set_enabled(False)
+    offered = encoders.status()
+    assert not offered["codecs"]["h264"]["available"] and "h264" not in offered["containers"]["mp4"]

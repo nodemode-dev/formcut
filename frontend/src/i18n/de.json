@@ -959,5 +959,6 @@
   "library.sound.waves": "Wellen",
   "library.sound.crickets": "Grillen",
   "library.cat.HipHop": "Hip-Hop",
-  "library.cat.Electronic": "Elektronisch"
+  "library.cat.Electronic": "Elektronisch",
+  "export.webmWarning": "Hier funktioniert kein H.264-, HEVC- oder AV1-Encoder und OpenH264 ist aus, daher wird dieser MP4-Export als WebM gespeichert. Wähle MPEG-4 Part 2, um MP4 zu behalten, auch wenn Instagram und manche Player es ablehnen."
 }

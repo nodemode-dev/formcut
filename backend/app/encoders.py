@@ -196,6 +196,15 @@ def status() -> dict:
     codecs = {
         codec: {"available": bool(options), "encoder": options[0] if options else None, "all": options} for codec, options in found.items()
     }
+    # With no H.264 encoder here, an H.264 export goes through Cisco's OpenH264
+    # (openh264.py), fetched the first time it is needed; offering H.264 keeps the
+    # export sheet from falling to MPEG-4 Part 2 on the very machines it is for.
+    if not codecs.get("h264", {}).get("available"):
+        from . import openh264
+
+        state = openh264.status()
+        if state["supported"] and state["enabled"]:
+            codecs["h264"] = {"available": True, "encoder": "libopenh264", "all": ["libopenh264"]}
     return {
         "codecs": codecs,
         "containers": {

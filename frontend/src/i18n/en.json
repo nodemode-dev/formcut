@@ -959,5 +959,6 @@
   "library.sound.waves": "Waves",
   "library.sound.crickets": "Crickets",
   "library.cat.HipHop": "Hip hop",
-  "library.cat.Electronic": "Electronic"
+  "library.cat.Electronic": "Electronic",
+  "export.webmWarning": "No H.264, HEVC or AV1 encoder works here and OpenH264 is off, so this MP4 export will be saved as WebM. Choose MPEG-4 Part 2 to keep MP4, though Instagram and some players refuse it."
 }
