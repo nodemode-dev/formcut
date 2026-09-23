@@ -69,6 +69,13 @@ MODELS = {
         "license": "Apache-2.0",
         "files": {"u2net_human_seg.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx"},
     },
+    "ai-upscale": {
+        "name": "Real-ESRGAN x4plus",
+        "license": "BSD-3-Clause",
+        # Converted to ONNX from the official RealESRGAN_x4plus.pth by a published,
+        # reproducible recipe; pinned below to the converter's stated SHA-256.
+        "files": {"realesrgan-x4plus.onnx": "https://huggingface.co/skillsafe-ai/realesrgan-x4plus/resolve/main/model.onnx"},
+    },
     "local-speech": {
         "name": "Kokoro local speech",
         "license": "Apache-2.0",
@@ -304,7 +311,9 @@ def import_model(model: str, file: UploadFile):
 
 # P8: pinned SHA-256 per file. A name absent here is unpinned and recorded on
 # first download instead, so a pin can be added from a verified machine later.
-PINNED: dict[str, str] = {}
+PINNED: dict[str, str] = {
+    "realesrgan-x4plus.onnx": "4851ec156207d271f5328605d0582eeb851e656227da8aca093ced9e60789291",
+}
 
 SOURCES_FILE = ROOT / "sources.json"
 

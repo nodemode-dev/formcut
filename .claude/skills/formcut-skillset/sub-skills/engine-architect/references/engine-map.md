@@ -38,7 +38,7 @@ The rest is written by hand.
 | local_speech.py | 99 | /api/speech | 2 |
 | main.py | 282 | /api/health | 8 |
 | media.py | 723 | /api/media | 24 |
-| model_manager.py | 417 | /api/models | 7 |
+| model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 300 | /api/presets | 6 |
 | project_tracking.py | 71 | /api/track | 1 |
@@ -54,7 +54,7 @@ The rest is written by hand.
 | tiktok.py | 340 | /api/connect/tiktok/app | 7 |
 | track.py | 96 | /api/track | 1 |
 | tts.py | 91 | /api/tts | 3 |
-| upscale.py | 288 | /api/media | 2 |
+| upscale.py | 313 | /api/media | 2 |
 | webhooks.py | 252 | /api/webhooks | 5 |
 
 ## Modules with no routes of their own
@@ -63,6 +63,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
+- `ai_upscale.py` (132L)
 - `audio_render.py` (207L)
 - `cli.py` (61L)
 - `effect_packages.py` (216L)

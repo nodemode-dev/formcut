@@ -230,7 +230,7 @@ def test_every_label_the_dialog_shows_is_translated_with_its_placeholders():
     rows = [row.split("|") for row in (folder / "language-pack.ts").read_text(encoding="utf-8").split("`")[1].splitlines() if row]
     packed = {row[0]: row[1:] for row in rows}
     keys = [key for key in english if key.startswith("upscale.")] + ["btn.close", "export.cancel", "library.added"]
-    assert len(keys) == 21
+    assert len(keys) == 25  # 21, and the four for AI upscaling on this machine
     for code in ("de", "es"):
         strings = json.loads((folder / f"{code}.json").read_text(encoding="utf-8"))
         assert not [key for key in keys if key not in strings], code

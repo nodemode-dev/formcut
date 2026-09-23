@@ -5,7 +5,7 @@ import { icon } from "./icons";
 import { escapeHtml } from "./safe-text";
 import "../styles/upscale.css";
 
-type Method = "lanczos" | "sharp" | "bicubic" | "topaz";
+type Method = "lanczos" | "sharp" | "bicubic" | "ai" | "topaz";
 
 interface JobState {
   status: string;
@@ -24,6 +24,7 @@ const METHODS: Array<[Method, string]> = [
   ["lanczos", "upscale.lanczos"],
   ["sharp", "upscale.sharp"],
   ["bicubic", "upscale.bicubic"],
+  ["ai", "upscale.ai"],
   ["topaz", "upscale.topaz"],
 ];
 const FACTORS = [1.5, 2, 3, 4];
@@ -82,6 +83,7 @@ export function openUpscale(item: MediaItem, bin: MediaBin): void {
   let finished = false;
   let shown = -1;
   let topazKey: boolean | null = null; // unknown until Topaz is picked
+  let aiReady: boolean | null = null; // unknown until AI is picked
 
   const fits = (candidate: number) => method === "topaz" || Math.max(width, height) * candidate <= LIMIT;
   const blocked = () => method === "topaz" && topazKey === false && !finished;
@@ -108,11 +110,12 @@ export function openUpscale(item: MediaItem, bin: MediaBin): void {
     }
     setText(ref("result"), width ? fill(t("upscale.result"), { size: `${even(width * factor)} × ${even(height * factor)}` }) : "");
     const topazHint = topazKey === false ? t("upscale.needKey") : t("upscale.topazNote");
-    setText(ref("hint"), method === "topaz" ? topazHint : limited ? fill(t("upscale.limit"), { limit: String(LIMIT) }) : "");
+    setText(ref("hint"), method === "topaz" ? topazHint : method === "ai" && !limited ? t("upscale.aiNote") : limited ? fill(t("upscale.limit"), { limit: String(LIMIT) }) : "");
     const go = ref<HTMLButtonElement>("go");
     let label = t("upscale.title");
     if (finished) label = t("btn.close");
     else if (method === "topaz") label = estimate ? fill(t("upscale.pay"), { credits: range(estimate.credits) }) : t("upscale.ask");
+    else if (method === "ai" && aiReady === false) label = t("upscale.aiDownload");
     setText(go, label);
     go.disabled = running !== null || blocked() || (!finished && !fits(factor));
   };
@@ -126,6 +129,40 @@ export function openUpscale(item: MediaItem, bin: MediaBin): void {
       topazKey = true; // the provider list is out of reach: let the engine answer instead
     }
     refresh();
+  };
+
+  const checkModel = async () => {
+    if (aiReady !== null) return;
+    try {
+      const listed = await api<Array<{ id: string; ready?: boolean }>>("/api/models", undefined, "GET");
+      aiReady = listed.some((entry) => entry.id === "ai-upscale" && entry.ready);
+    } catch {
+      aiReady = true; // the model list is out of reach: let the engine answer instead
+    }
+    refresh();
+  };
+
+  // The model is fetched here, with progress, and the dialog then upscales as usual.
+  const fetchModel = async () => {
+    const started = await api<{ job_id: string }>("/api/models/ai-upscale/download", {});
+    running = started.job_id;
+    progress(0);
+    ref("bar").hidden = false;
+    note(t("upscale.aiDownloading"));
+    refresh();
+    for (;;) {
+      const state = await api<JobState>(`/api/jobs/${started.job_id}`, undefined, "GET");
+      progress(state.progress ?? 0);
+      if (state.status === "done" || state.status === "error" || state.status === "cancelled") {
+        running = null;
+        ref("bar").hidden = true;
+        aiReady = state.status === "done";
+        note(state.status === "done" ? "" : state.status === "error" ? (state.error ?? "") : t("upscale.cancelled"));
+        refresh();
+        return;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
   };
 
   const watch = async (jobId: string) => {
@@ -158,6 +195,10 @@ export function openUpscale(item: MediaItem, bin: MediaBin): void {
       return;
     }
     try {
+      if (method === "ai" && aiReady === false) {
+        await fetchModel();
+        return;
+      }
       if (method === "topaz" && !estimate) {
         const reply = await api<Estimate>(`/api/media/${item.id}/upscale/estimate`, { method, factor, model: MODEL });
         estimate = reply;
@@ -189,6 +230,7 @@ export function openUpscale(item: MediaItem, bin: MediaBin): void {
     note("");
     refresh();
     if (method === "topaz") void checkKey();
+    if (method === "ai") void checkModel();
   });
   ref("factors").addEventListener("click", (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-factor]");

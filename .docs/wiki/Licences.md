@@ -97,6 +97,7 @@ All UI icons are hand-authored inline currentColor SVG in this repo, except the 
 | grpcio | Apache-2.0 | Optional headless transport |
 | U2Net / U2NetP weights | Apache-2.0 upstream project | Explicit download into user data; never bundled |
 | Kokoro 82M model | Apache-2.0 upstream model card | Explicit download into user data; never bundled |
+| Real-ESRGAN x4plus weights (ONNX export) | BSD-3-Clause (xinntao/Real-ESRGAN) | Explicit download into user data from the AI upscale dialog, checked against its pinned SHA-256; never bundled |
 | kokoro-onnx | MIT wrapper; phonemizer/eSpeak dependencies include GPL terms | External user-installed speech environment only; wrapper, phonemizer and eSpeak excluded from the frozen engine |
 
 Licence sources: [OpenCV packaging](https://github.com/opencv/opencv-python), [Pillow](https://github.com/python-pillow/Pillow), [NumPy](https://github.com/numpy/numpy), [wgpu-py](https://github.com/pygfx/wgpu-py), [wgpu](https://github.com/gfx-rs/wgpu), [ONNX Runtime](https://github.com/microsoft/onnxruntime), [gRPC](https://github.com/grpc/grpc), [U2Net](https://github.com/xuebinqin/U-2-Net), [Kokoro model](https://huggingface.co/hexgrad/Kokoro-82M), [Kokoro ONNX wrapper](https://github.com/thewh1teagle/kokoro-onnx).

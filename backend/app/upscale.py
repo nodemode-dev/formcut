@@ -32,12 +32,12 @@ from fastapi import APIRouter, HTTPException
 from PIL import Image, ImageFilter, ImageOps
 from pydantic import BaseModel, Field
 
-from . import encoders, jobs, media, providers
+from . import ai_upscale, encoders, jobs, media, model_manager, providers
 
 router = APIRouter(prefix="/api/media", tags=["upscale"])
 
 ALGORITHMS = {"lanczos": "lanczos", "sharp": "lanczos", "bicubic": "bicubic"}
-LABELS = {"lanczos": "Lanczos", "sharp": "sharpened", "bicubic": "bicubic"}
+LABELS = {"lanczos": "Lanczos", "sharp": "sharpened", "bicubic": "bicubic", "ai": "AI"}
 LIMIT = 4096  # longest side written here; beyond it most machines have no encoder
 MODEL = re.compile(r"^[a-z]{2,8}-\d{1,3}$")
 POLL = 5.0  # seconds between Topaz status queries
@@ -135,6 +135,26 @@ def _algorithmic(item: dict, source: Path, body: UpscaleBody):
                 _video(source, out, body.factor, body.method, float(item.get("duration") or 0), report, cancelled)
             extra = {"upscaledFrom": item["id"], "upscale": {"method": body.method, "factor": body.factor}}
             return {"media": media.ingest_path(out, _named(item, body.factor, LABELS[body.method], suffix), extra)}
+
+    return operation
+
+
+def _ai(item: dict, source: Path, body: UpscaleBody):
+    """Real-ESRGAN on this machine: a still at once, a clip frame by frame."""
+
+    def operation(job_id: str, report, cancelled) -> dict:
+        with tempfile.TemporaryDirectory(prefix="formcut-upscale-") as scratch:
+            suffix = ".png" if item["kind"] == "image" else ".mp4"
+            out = Path(scratch) / f"upscaled{suffix}"
+            if item["kind"] == "image":
+                with Image.open(source) as image:
+                    ai_upscale.upscale_image(ImageOps.exif_transpose(image), body.factor).save(out)
+            else:
+                fps = float(item.get("fps") or 30.0)
+                frames = round(fps * float(item.get("duration") or 0))
+                ai_upscale.upscale_video(source, out, int(item["width"]), int(item["height"]), fps, body.factor, frames, report, cancelled)
+            extra = {"upscaledFrom": item["id"], "upscale": {"method": "ai", "model": ai_upscale.MODEL, "factor": body.factor}}
+            return {"media": media.ingest_path(out, _named(item, body.factor, LABELS["ai"], suffix), extra)}
 
     return operation
 
@@ -282,6 +302,11 @@ def upscale(media_id: str, body: UpscaleBody) -> dict:
         if not body.request_id:
             raise HTTPException(422, "ask for an estimate first; its request id starts the Topaz job")
         return jobs.submit("upscale", _topaz_job(item, source, body))
+    if body.method == "ai":
+        if not model_manager.ready(ai_upscale.MODEL):
+            raise HTTPException(409, "AI upscaling needs its model (64 MB) downloaded first")
+        _fits(item, body.factor)
+        return jobs.submit("upscale", _ai(item, source, body))
     if body.method not in ALGORITHMS:
         raise HTTPException(422, f"unknown method {body.method!r}")
     _fits(item, body.factor)
