@@ -2,7 +2,8 @@
 
 Contents: modules, engine commands, emitted names, tokens, stylesheet order.
 
-Derived from `frontend/src` at v0.56.0.
+The module list and the engine commands are generated from `frontend/src` by
+`python setup/skill_maps.py`; the rest is written by hand.
 
 ## Contents
 
@@ -16,52 +17,72 @@ Derived from `frontend/src` at v0.56.0.
 
 - `engine/api.ts` (29L)
 - `engine/audio-playback.ts` (164L)
-- `engine/captions.ts` (118L)
+- `engine/captions.ts` (184L)
 - `engine/coordinates.ts` (11L)
-- `engine/creator-commands.ts` (79L)
-- `engine/demo.ts` (57L)
+- `engine/creator-commands.ts` (193L)
+- `engine/demo.ts` (58L)
 - `engine/json-delta.ts` (49L)
 - `engine/keyframes.ts` (97L)
+- `engine/live-mix.ts` (156L)
 - `engine/local-transport.ts` (11L)
 - `engine/media.ts` (77L)
 - `engine/motion.ts` (25L)
-- `engine/persistence.ts` (233L)
-- `engine/project.ts` (768L)
+- `engine/persistence.ts` (237L)
+- `engine/project.ts` (1016L)
 - `engine/seed.ts` (52L)
-- `engine/timing.ts` (61L)
-- `engine/types.ts` (139L)
+- `engine/timing.ts` (96L)
+- `engine/types.ts` (242L)
+- `i18n/index.ts` (190L)
+- `i18n/language-pack.ts` (903L)
+- `i18n/text.ts` (29L)
+- `main.ts` (92L)
+- `types/assets.d.ts` (6L)
 - `ui/accordion.ts` (55L)
-- `ui/appearance.ts` (177L)
+- `ui/appearance.ts` (213L)
+- `ui/category-icons.ts` (34L)
 - `ui/clip-visuals.ts` (158L)
-- `ui/creator-panel.ts` (160L)
-- `ui/editor-actions.ts` (88L)
+- `ui/cloud.ts` (313L)
+- `ui/compact.ts` (10L)
+- `ui/creator-panel.ts` (359L)
+- `ui/editor-actions.ts` (155L)
 - `ui/effect-parameters.ts` (76L)
-- `ui/export-job.ts` (11L)
+- `ui/export-job.ts` (25L)
 - `ui/file-menu.ts` (16L)
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
-- `ui/icons.ts` (51L)
-- `ui/inspector-pane.ts` (542L)
-- `ui/interface-mode.ts` (202L)
-- `ui/media-pane.ts` (631L)
+- `ui/icons.ts` (54L)
+- `ui/inspector-pane.ts` (1559L)
+- `ui/instagram.ts` (185L)
+- `ui/interface-mode.ts` (246L)
+- `ui/library-view.ts` (145L)
+- `ui/media-pane.ts` (884L)
 - `ui/mode-popout.ts` (157L)
 - `ui/preset-grid.ts` (20L)
-- `ui/preview-manipulation.ts` (68L)
-- `ui/render-preview.ts` (194L)
+- `ui/preview-manipulation.ts` (545L)
+- `ui/remote-settings.ts` (93L)
+- `ui/render-preview.ts` (233L)
 - `ui/safe-text.ts` (3L)
-- `ui/settings-popout.ts` (487L)
-- `ui/start-screen.ts` (452L)
-- `ui/studio-tools.ts` (302L)
-- `ui/timeline-pane.ts` (529L)
-- `ui/timeline-structure.ts` (44L)
+- `ui/settings-link.ts` (8L)
+- `ui/settings-popout.ts` (511L)
+- `ui/start-screen.ts` (519L)
+- `ui/studio-tools.ts` (608L)
+- `ui/tiktok-dialog.ts` (258L)
+- `ui/tiktok-settings.ts` (89L)
+- `ui/timeline-pane.ts` (652L)
+- `ui/timeline-structure.ts` (50L)
 - `ui/title-speech.ts` (53L)
-- `ui/titlebar.ts` (281L)
+- `ui/titlebar.ts` (417L)
+- `ui/tool-tray.ts` (139L)
 - `ui/track-controls.ts` (39L)
 - `ui/track-height.ts` (80L)
-- `ui/track-keyframes.ts` (424L)
+- `ui/track-keyframes.ts` (666L)
 - `ui/tracking.ts` (38L)
-- `ui/work-area.ts` (135L)
-- `ui/workspace-layout.ts` (187L)
+- `ui/upscale-dialog.ts` (212L)
+- `ui/voiceover.ts` (185L)
+- `ui/webhooks-settings.ts` (124L)
+- `ui/work-area.ts` (139L)
+- `ui/workspace-layout.ts` (305L)
+- `workers/transcription.ts` (108L)
 
 ## Engine commands
 
@@ -71,20 +92,27 @@ and a UI module that mutates state directly is a defect.
 - `captions.add`
 - `clip.add`
 - `clip.audiofx`
+- `clip.cutout`
 - `clip.effect`
+- `clip.effects`
 - `clip.interp`
 - `clip.key`
 - `clip.keyframe`
+- `clip.keyframes.replace`
 - `clip.keyframes.set`
 - `clip.mask`
+- `clip.mask-track`
 - `clip.move`
 - `clip.mute`
 - `clip.remove`
+- `clip.remove-range`
 - `clip.select`
 - `clip.select-all`
 - `clip.select-set`
 - `clip.select-toggle`
+- `clip.smooth-slow`
 - `clip.split`
+- `clip.stabilise`
 - `clip.style`
 - `clip.text`
 - `clip.timing`
@@ -96,16 +124,21 @@ and a UI module that mutates state directly is a defect.
 - `clips.move`
 - `clips.mute`
 - `clips.remove`
+- `clips.split`
 - `history.redo`
 - `history.undo`
 - `media.relink`
+- `project.background`
 - `project.load`
 - `project.rename`
 - `project.saved`
 - `timeline.activate`
+- `timeline.move`
+- `timeline.rename`
 - `transport.end`
 - `transport.home`
 - `transport.seek`
+- `transport.skip`
 - `transport.step`
 - `transport.toggle`
 
@@ -152,4 +185,4 @@ The inspector gains an Easy `section.removebg` with Off, Automatic, Brush and Ch
 
 ## v0.62.0 delta
 
-`ui/workspace-layout.ts` carries a slot map (`slots` per pane, `front` per slot): panes live in the left, right or bottom slot, a slot holding more than one stacks behind a `.pane-stack-tabs` strip positioned like the dividers, and hidden members stay in the DOM so node identity survives a move. The layout persists per interface profile at `formcut.layout.<profile>`, falling back to the older single key.
+`ui/workspace-layout.ts` carries a slot map (`slots` per pane, `front` per slot): panes live in the left, right or bottom slot, a slot holding more than one stacks behind a `.pane-stack-tabs` strip positioned like the dividers, and hidden members stay in the DOM so node identity survives a move. The layout persists per interface profile at `formcut.layout.[profile]`, falling back to the older single key.

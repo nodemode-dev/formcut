@@ -45,20 +45,9 @@ the event type.
 
 ## MCP tools
 
-- `formcut_status`
-- `formcut_list_media`
-- `formcut_import_media`
-- `formcut_create_project`
-- `formcut_get_project`
-- `formcut_list_projects`
-- `formcut_add_clip`
-- `formcut_set_frame`
-- `formcut_render`
-- `formcut_render_status`
-- `formcut_cancel_render`
-- `formcut_catalogue`
-- `formcut_edit`
-- `formcut_capabilities`
+The server declares 16 tools. Their exact names, parameters, limits and effects are in the
+formcut-mcp pack, `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`,
+generated from the server by `setup/mcp_tool_reference.py`; this map does not keep its own copy.
 
 Built on mcp 2.2.0: the server class is `MCPServer`, imported from
 `mcp.server.mcpserver`, and transport is stdio. Its own virtualenv exists

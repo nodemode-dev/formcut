@@ -1,7 +1,6 @@
 Read ../CLAUDE.md first, then ../.docs/wiki/Home.md for the subsystem map and the
-contracts between parts. Licences are in ../.docs/wiki/Licences.md. Development
-records (plan, build notes, reasoning logs) live in the planning sidecar, not in
-this repository. This file is a pointer, not an installed skill.
+contracts between parts. Licences are in ../.docs/wiki/Licences.md. This file is a pointer, not an installed
+skill.
 
 ## Skills in this repository
 

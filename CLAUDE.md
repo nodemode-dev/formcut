@@ -35,12 +35,11 @@ Two invariants worth repeating here, because breaking them is silent:
 Anything outside the interface drives formcut through `POST /api/rpc`: 15
 methods, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
-`mcp/` server is that surface packaged as 14 MCP tools over stdio. ANA
+`mcp/` server is that surface packaged as 16 MCP tools over stdio. ANA
 connecting in will use this surface, so extend it rather than adding a second
 path.
 
-The phased plan, the per-version build notes and the reasoning logs for every
-area live in the planning sidecar beside this repository, not in it, so the
-repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
+The reasoning behind a change belongs in its commit message, and releases, with
+their notes, are on the GitHub Releases page. The repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
 the project skills under `.claude/skills/` and code. Licences for assets and
 dependencies are in `.docs/wiki/Licences.md`.

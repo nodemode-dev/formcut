@@ -22,6 +22,8 @@ ANA connecting in is the intended direction and is deferred: the surface above i
 
 ## The MCP server
 
+For connecting the server, driving formcut through it, or changing its tools, load the formcut-mcp pack at `.claude/skills/formcut-mcp/`: it carries the workflows, the recovery steps and a tool reference generated from the server. This section is the architectural summary.
+
 `mcp/formcut_mcp.py` is a stdio MCP server built on mcp 2.2.0, where the server class is `MCPServer` (renamed from `FastMCP` in the 2.x line). It runs in its own virtualenv because the SDK pins a newer starlette than the engine's FastAPI accepts. Fourteen tools, workflow shaped rather than endpoint shaped, returning explicit handles and putting failures in the result text with the recovery action.
 
 Register it with the interpreter and script path printed by `mcp/oc_install`. `FORMCUT_ENGINE` points it at a non-default engine address. It identifies itself to the engine with `session.hello`, so a person watching the app sees the agent driving.

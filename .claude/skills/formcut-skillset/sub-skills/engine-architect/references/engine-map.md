@@ -1,39 +1,61 @@
 # Engine map
 
-Derived from the tree at v0.56.0, not from memory. Regenerate by listing
-`backend/app` and reading each module's router prefix and decorators.
+The two module sections are generated from `backend/app` by
+`python setup/skill_maps.py`; run it after adding, removing or renaming a module.
+The rest is written by hand.
+
+## Contents
+
+- Modules that serve routes
+- Modules with no routes of their own
+- Reading order for a change
+- Data directory layout
+- v0.56.0 delta
+- v0.57.0 delta
+- v0.58.0 delta
+- v0.59.0 delta
+- v0.60.0 delta
+- v0.61.0 delta
 
 ## Modules that serve routes
 
 | Module | Lines | Prefix | Routes |
 | --- | --- | --- | --- |
-| assets.py | 122 | /api/assets | 3 |
-| automation.py | 265 | /api/rpc | 2 |
+| addons.py | 194 | /api/addons | 3 |
+| assets.py | 135 | /api/assets | 3 |
+| automation.py | 597 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
-| catalogue.py | 260 | /api/catalogue | 1 |
-| clip_visuals.py | 131 | /api/media | 2 |
+| catalogue.py | 714 | /api/catalogue | 1 |
+| clip_visuals.py | 165 | /api/media | 2 |
+| cloud.py | 447 | /api/cloud | 9 |
 | demo.py | 59 | /api/demo | 2 |
-| effect_previews.py | 96 | /api/catalogue/preview | 1 |
-| export.py | 537 | /api/export | 3 |
-| fonts.py | 49 | /api/assets | 1 |
-| jobs.py | 96 | /api/jobs | 3 |
-| local_speech.py | 92 | /api/speech | 2 |
-| main.py | 60 | /api/health | 1 |
-| media.py | 254 | /api/media | 8 |
-| model_manager.py | 196 | /api/models | 4 |
-| orchestration.py | 151 | /api/orchestration | 4 |
-| presets.py | 121 | /api/presets | 5 |
-| project_tracking.py | 63 | /api/track | 1 |
-| projects.py | 58 | /api/projects | 5 |
-| recovery.py | 74 | /api/recovery | 4 |
-| providers.py | 150 | /api/providers | 4 |
-| render_api.py | 142 | /api/render | 6 |
+| effect_previews.py | 147 | /api/catalogue/preview | 1 |
+| fonts.py | 93 | /api/assets | 1 |
+| generate.py | 233 | /api/generate | 2 |
+| instagram.py | 213 | /api/connect/instagram | 4 |
+| jobs.py | 104 | /api/jobs | 3 |
+| library.py | 1049 | /api/library | 3 |
+| local_speech.py | 99 | /api/speech | 2 |
+| main.py | 282 | /api/health | 8 |
+| media.py | 723 | /api/media | 24 |
+| model_manager.py | 417 | /api/models | 7 |
+| orchestration.py | 150 | /api/orchestration | 4 |
+| presets.py | 300 | /api/presets | 6 |
+| project_tracking.py | 71 | /api/track | 1 |
+| projects.py | 172 | /api/projects | 9 |
+| providers.py | 161 | /api/providers | 4 |
+| recovery.py | 89 | /api/recovery | 4 |
+| remote.py | 264 | /api/remote | 6 |
+| render_api.py | 666 | /api/render | 13 |
 | render_stream.py | 71 | /api/render | 1 |
-| stock.py | 259 | /api/stock | 5 |
+| stock.py | 287 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
-| templates.py | 164 | /api/templates | 7 |
+| templates.py | 199 | /api/templates | 7 |
+| tiktok.py | 340 | /api/connect/tiktok/app | 7 |
 | track.py | 96 | /api/track | 1 |
 | tts.py | 91 | /api/tts | 3 |
+| upscale.py | 288 | /api/media | 2 |
+| webhooks.py | 252 | /api/webhooks | 5 |
 
 ## Modules with no routes of their own
 
@@ -41,26 +63,38 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `audio_render.py` (108L)
-- `cli.py` (54L)
-- `expressions.py` (35L)
-- `features.py` (29L)
-- `fonts.py` (49L)
-- `gpu.py` (78L)
-- `main.py` (53L)
-- `paths.py` (20L)
-- `pixel_effects.py` (131L, clamps params to catalogue declarations)
+- `audio_render.py` (207L)
+- `cli.py` (61L)
+- `effect_packages.py` (216L)
+- `encoders.py` (282L)
+- `expressions.py` (51L)
+- `fast_export.py` (291L)
+- `fast_layers.py` (362L)
+- `features.py` (43L)
+- `ffmpeg_fetch.py` (165L)
+- `frame_cache.py` (146L)
+- `gpu.py` (92L)
+- `matte_cache.py` (126L)
+- `paths.py` (32L)
+- `pixel_effects.py` (582L)
 - `processes.py` (22L)
-- `project_tracking.py` (63L)
-- `render_document.py` (83L)
-- `renderer.py` (209L)
-- `security.py` (42L)
-- `segmentation.py` (53L)
-- `store.py` (54L)
-- `template_assets.py` (47L)
-- `timing.py` (88L)
-- `validation.py` (62L)
-- `video_source.py` (141L)
+- `prompt_space.py` (74L)
+- `proxies.py` (265L)
+- `render_document.py` (104L)
+- `renderer.py` (876L)
+- `rhythm.py` (148L)
+- `sam_video.py` (163L)
+- `scenes.py` (110L)
+- `security.py` (68L)
+- `segmentation.py` (289L)
+- `stabilise.py` (209L)
+- `store.py` (57L)
+- `subject.py` (220L)
+- `template_assets.py` (92L)
+- `timing.py` (269L)
+- `tools.py` (232L)
+- `validation.py` (206L)
+- `video_source.py` (228L)
 
 ## Reading order for a change
 

@@ -150,7 +150,7 @@ Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut
 
 ## MCP server
 
-`mcp/` carries an MCP server that puts the editor in front of an agent: 14
+`mcp/` carries an MCP server that puts the editor in front of an agent: 16
 workflow tools over stdio, built on the official Python SDK. It runs as its own
 process with its own virtualenv, because the SDK pins a newer starlette than the
 engine's FastAPI accepts.
@@ -164,8 +164,8 @@ are workflow shaped rather than one per endpoint: `formcut_status`,
 `formcut_import_media`, `formcut_create_project`, `formcut_add_clip`,
 `formcut_set_frame`, `formcut_render`, `formcut_render_status`,
 `formcut_cancel_render`, `formcut_list_media`, `formcut_list_projects`,
-`formcut_get_project`, `formcut_catalogue`, `formcut_edit` and
-`formcut_capabilities`. Every call returns the handles the next one needs, and a
+`formcut_get_project`, `formcut_media_proxy`, `formcut_find_scenes`,
+`formcut_catalogue`, `formcut_edit` and `formcut_capabilities`. Every call returns the handles the next one needs, and a
 failure comes back as text naming the recovery action. The server identifies
 itself to the engine, so Settings, Connections shows the agent that is driving.
 
@@ -174,8 +174,15 @@ itself to the engine, so Settings, Connections shows the agent that is driving.
 `.claude/skills/formcut-skillset/` is a skill pack describing this codebase for
 local development with Claude Code: a director, five specialists (engine,
 interface, timeline and render, orchestration and MCP, build discipline) and
-reference maps generated from the tree. It carries the invariants that explain
-most defects here, so a change starts from what is true rather than from a guess.
+reference maps whose inventories are generated from the tree by
+`setup/skill_maps.py`. It carries the invariants that explain most defects here,
+so a change starts from what is true rather than from a guess.
+
+`.claude/skills/formcut-mcp/` is a skill pack for the MCP server: setting it up
+with a host, driving formcut through its tools (assembling and rendering a cut,
+raw edits, a rough cut from detected scenes, and recovering from stale revisions
+or an interrupted job), and changing the server safely. Its tool reference is
+generated from the server by `setup/mcp_tool_reference.py`.
 
 ## Releasing
 
@@ -184,7 +191,7 @@ A release is a version: bump it and push to `main`, and `.github/workflows/relea
 ## Development
 
 - Conventions: surgical edits over rewrites, one state engine that owns the document, stable mounted DOM with no rebuilds, every colour and z value from a token, inline `currentColor` icons with no icon dependency, no emoji anywhere, and no claim in the notes that was not run. Full set: [CLAUDE.md](CLAUDE.md).
-- Skills: project skills for AI-assisted development live in `.claude/skills/`, one folder per skill; the folder ships empty.
+- Skills: project skills for AI-assisted development live in `.claude/skills/`, one folder per skill: `formcut-skillset` and `formcut-mcp`, described under Project skills.
 - Wiki edits: change the files in `.docs/wiki/` and push; the Action publishes them. The wiki must exist first (create any page once in the GitHub UI) for the first publish to land.
 
 ## Contributing
