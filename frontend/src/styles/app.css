@@ -1454,3 +1454,10 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
    spare room but never shrinks below its own label (German stays unclipped), and
    the row still scrolls when the pane is narrower than every label together. */
 .inspector-head .seg > button, .inspector-subtabs .seg > button { flex: 1 0 auto; text-align: center; }
+
+/* Settings, Connections: connecting an AI agent. */
+.agent-list { display: grid; gap: var(--sp-2); }
+.agent-card { display: grid; gap: 4px; padding: var(--sp-2); border: 1px solid var(--edge); border-radius: var(--radius-m); background: var(--pane); }
+.agent-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.agent-card small { color: var(--ink-soft); }
+.agent-snippet { margin: 0; padding: var(--sp-2); background: var(--inset); border-radius: var(--radius-s); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; user-select: all; }

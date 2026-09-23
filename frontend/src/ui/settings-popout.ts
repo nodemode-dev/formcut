@@ -318,6 +318,44 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   // driving, what they last asked for, and live job activity from the event
   // stream. Cancellation is available here too, so either side can stop a job.
   const connectionsView = view("connections");
+  // Connecting an agent comes first: Claude Code, Codex, Cursor or any MCP client
+  // runs formcut's own server, which finds the running app by itself.
+  const agentRows = group(connectionsView, "conn.agents", "conn.agents.hint");
+  const agentList = document.createElement("div");
+  agentList.className = "agent-list";
+  agentRows.append(agentList);
+  const drawAgents = async () => {
+    if (agentList.childElementCount) return;
+    const res = await fetch("/api/agents/connect");
+    if (!res.ok) return;
+    const data = (await res.json()) as { clients: Array<{ id: string; name: string; kind: string; file: string | null; text: string }> };
+    for (const client of data.clients) {
+      const card = document.createElement("div");
+      card.className = "agent-card";
+      const head = document.createElement("div");
+      head.className = "agent-head";
+      const name = document.createElement("strong");
+      name.textContent = client.id === "any" ? t("conn.agents.any") : client.name;
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "tool-chip";
+      copy.textContent = t("conn.agents.copy");
+      head.append(name, copy);
+      const where = document.createElement("small");
+      where.textContent = client.file ? t("conn.agents.addTo").replace("{file}", client.file) : t("conn.agents.runThis");
+      const snippet = document.createElement("pre");
+      snippet.className = "agent-snippet";
+      snippet.textContent = client.text;
+      copy.addEventListener("click", () => {
+        void navigator.clipboard.writeText(client.text).then(() => {
+          copy.textContent = t("conn.agents.copied");
+          window.setTimeout(() => (copy.textContent = t("conn.agents.copy")), 1600);
+        });
+      });
+      card.append(head, where, snippet);
+      agentList.append(card);
+    }
+  };
   const sessionRows = group(connectionsView, "conn.sessions", "conn.sessions.hint");
   const sessionList = document.createElement("div");
   sessionList.className = "conn-list";
@@ -464,6 +502,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     }
     if (page === "providers") void refreshProviders();
     if (page === "connections") {
+      void drawAgents();
       openStream();
       void drawSessions();
       drawActivity();

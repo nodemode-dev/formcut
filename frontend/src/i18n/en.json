@@ -846,5 +846,12 @@
   "fx.imported": "Imported {name}",
   "fx.inUseHere": "A clip in this project uses this package. Remove it from that clip first.",
   "fx.removeConfirm": "Remove this package? You can import it again later.",
-  "fx.packageRemoved": "Package removed"
+  "fx.packageRemoved": "Package removed",
+  "conn.agents": "AI agents",
+  "conn.agents.hint": "Let Claude Code, Codex, Cursor or any MCP client drive formcut. Add it once; while formcut is running, the agent finds it by itself.",
+  "conn.agents.runThis": "Run this in a terminal:",
+  "conn.agents.addTo": "Add this to {file}:",
+  "conn.agents.any": "Any other MCP client: the command and its arguments",
+  "conn.agents.copy": "Copy",
+  "conn.agents.copied": "Copied"
 }
