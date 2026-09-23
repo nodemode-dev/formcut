@@ -147,7 +147,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: python setup/output_checks.py
 
+      # bash on every runner: Windows would run this under PowerShell, which
+      # cannot read the heredoc.
       - name: the engine imports and its routes mount once
+        shell: bash
         run: |
           python - <<'PY'
           import sys, collections
