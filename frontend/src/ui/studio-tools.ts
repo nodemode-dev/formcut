@@ -125,7 +125,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       <div class="panel-section" data-template-fill hidden><div class="panel-section-head"><span>Fill media slots</span></div><div class="panel-rows"><div data-template-slots></div><label>New project title <input data-template-title value="Untitled from template"></label><label><input type="checkbox" data-template-fit checked> Fit replacement duration to each slot</label><div class="studio-actions"><button class="tool-chip is-primary" data-template-create>Create project</button></div></div></div>
     </section>
     <section data-view="speech" class="set-view" hidden>
-      <div class="panel-section"><div class="panel-section-head"><span>Local speech</span><small>Install the local speech runtime once with backend/setup_local_ai.py. Download Kokoro under Local models. Synthesis then runs offline.</small></div><div class="panel-rows"><textarea data-speech-text rows="6" placeholder="Text to speak"></textarea><label>Voice <select data-speech-voice></select></label><label>Language <select data-speech-language><option value="en-us">English (US)</option><option value="en-gb">English (UK)</option><option value="es">Español</option><option value="fr-fr">Français</option><option value="it">Italiano</option><option value="pt-br">Português</option><option value="ja">日本語</option><option value="cmn">中文</option></select></label><label>Speed <input data-speech-speed type="number" min="0.5" max="2" step="0.1" value="1"></label><div class="studio-actions"><button class="tool-chip is-primary" data-speech-create>${icon("speak")}Generate and add to timeline</button></div></div></div>
+      <div class="panel-section"><div class="panel-section-head"><span>Local speech</span><small>Install the local speech runtime once with backend/setup_local_ai.py. Download Kokoro under Local models. Synthesis then runs offline.</small></div><div class="panel-rows"><textarea data-speech-text rows="6" placeholder="Text to speak"></textarea><label>Engine <select data-speech-engine><option value="kokoro">Kokoro</option><option value="pocket">Pocket TTS</option><option value="chatterbox">Chatterbox</option></select></label><small data-speech-engine-note></small><button class="tool-chip" type="button" data-speech-install hidden>Install</button><label>Voice <select data-speech-voice></select></label><label data-speech-clone hidden>Clone a voice from <select data-speech-reference><option value="">None</option></select></label><label data-speech-consent-row hidden><input type="checkbox" data-speech-consent> I have the speaker's permission</label><label data-speech-expression-row hidden>Expression <input data-speech-exaggeration type="range" min="0.25" max="1.5" step="0.05" value="0.5"></label><label>Language <select data-speech-language><option value="en-us">English (US)</option><option value="en-gb">English (UK)</option><option value="es">Español</option><option value="fr-fr">Français</option><option value="it">Italiano</option><option value="pt-br">Português</option><option value="ja">日本語</option><option value="cmn">中文</option></select></label><label data-speech-speed-row>Speed <input data-speech-speed type="number" min="0.5" max="2" step="0.1" value="1"></label><div class="studio-actions"><button class="tool-chip is-primary" data-speech-create>${icon("speak")}Generate and add to timeline</button></div></div></div>
     </section>
     <section data-view="models" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Local models</span><small>Download once, then process media locally. You can also import model files acquired separately.</small></div><div class="panel-rows"><div data-model-list></div></div></div>
@@ -331,11 +331,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     if (activePage === "stock" && !stock.loaded) await stock.search(1);
     if (activePage === "templates") await refreshTemplates();
     if (activePage === "models") await refreshModels();
-    if (activePage === "speech") {
-      const voices = await api("/api/speech/voices"); reconcileOptions(q<HTMLSelectElement>("speech-voice"), voices.voices);
-      if (!voices.ready) say(t("speech.needmodel"));
-      else if (!voices.runtime) say(t("speech.needsetup"));
-    }
+    if (activePage === "speech") await loadSpeechEngine();
   };
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });
   // The local video and local image sections are a view of the library itself,
@@ -570,10 +566,50 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const project = await api(`/api/templates/${template.id}/fill`, { bindings, title: q("template-title").value, fit: q("template-fit").checked });
     engine.dispatch("project.load", project); modal.hidden = true;
   }));
+  // Local speech engines: Kokoro, and Pocket TTS and Chatterbox installed into the speech runtime on request.
+  const ENGINE_NOTES: Record<string, string> = {
+    kokoro: "Kokoro, Apache-2.0: many voices and languages, fast.",
+    pocket: "Pocket TTS by Kyutai, CC-BY-4.0: small and quick on a CPU; built-in voices, or clone one with permission.",
+    chatterbox: "Chatterbox by Resemble AI, MIT: expressive, multilingual, clones a voice from seconds of audio. Its audio carries an inaudible watermark.",
+  };
+  const loadSpeechEngine = async () => {
+    const engineId = q<HTMLSelectElement>("speech-engine").value;
+    const voices = await api(`/api/speech/voices?engine=${engineId}`);
+    reconcileOptions(q<HTMLSelectElement>("speech-voice"), voices.voices);
+    const cloning = engineId !== "kokoro";
+    q<HTMLElement>("speech-clone").hidden = !cloning;
+    q<HTMLElement>("speech-consent-row").hidden = !cloning;
+    q<HTMLElement>("speech-expression-row").hidden = engineId !== "chatterbox";
+    q<HTMLElement>("speech-speed-row").hidden = cloning;
+    q<HTMLElement>("speech-engine-note").textContent = text(ENGINE_NOTES[engineId]);
+    const references = bin.all.filter((m) => m.kind === "audio" || m.kind === "video").map((m) => ({ id: m.id, name: m.name }));
+    reconcileOptions(q<HTMLSelectElement>("speech-reference"), [{ id: "", name: text("None") }, ...references]);
+    const missing = cloning && voices.runtime && !voices.installed;
+    q<HTMLButtonElement>("speech-install").hidden = !missing;
+    if (engineId === "kokoro" && !voices.ready) say(t("speech.needmodel"));
+    else if (!voices.runtime) say(t("speech.needsetup"));
+    else if (missing) say(text("Install this engine to use it; it downloads PyTorch and its model once."));
+    else say("");
+  };
+  q<HTMLSelectElement>("speech-engine").addEventListener("change", () => void run(loadSpeechEngine));
+  q("speech-install").addEventListener("click", () => void run(async () => {
+    say(text("Installing; this can take several minutes."));
+    await job(`/api/speech/engines/${q<HTMLSelectElement>("speech-engine").value}/install`, {});
+    await loadSpeechEngine();
+  }));
   q("speech-create").addEventListener("click", () => void run(async () => {
     const start = engine.snapshot.playhead;
     const timelineId = engine.snapshot.timelines[engine.snapshot.activeTimeline].id;
-    const result = await job("/api/speech", { text: q<HTMLTextAreaElement>("speech-text").value, voice: q<HTMLSelectElement>("speech-voice").value, language: q<HTMLSelectElement>("speech-language").value, speed: Number(q("speech-speed").value) });
+    const result = await job("/api/speech", {
+      text: q<HTMLTextAreaElement>("speech-text").value,
+      voice: q<HTMLSelectElement>("speech-voice").value,
+      language: q<HTMLSelectElement>("speech-language").value,
+      speed: Number(q("speech-speed").value),
+      engine: q<HTMLSelectElement>("speech-engine").value,
+      reference: q<HTMLSelectElement>("speech-reference").value || null,
+      consent: q<HTMLInputElement>("speech-consent").checked,
+      exaggeration: Number(q("speech-exaggeration").value),
+    });
     await bin.load();
     if (engine.snapshot.timelines[engine.snapshot.activeTimeline].id !== timelineId) { say("Speech saved in Media; the active timeline changed"); return; }
     const tracks = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks;

@@ -149,6 +149,8 @@ a search.
 | Purpose | Model | Licence | Link |
 | --- | --- | --- | --- |
 | Upscaling | Real-ESRGAN x4 ONNX | BSD-3-Clause | `https://github.com/xinntao/Real-ESRGAN` |
+| Speech | Pocket TTS (Kyutai) | MIT code, CC-BY-4.0 weights | `https://github.com/kyutai-labs/pocket-tts` |
+| Speech | Chatterbox (Resemble AI) | MIT | `https://github.com/resemble-ai/chatterbox` |
 | Upscaling, faster | RealESRGAN-x4plus-anime | BSD-3-Clause | same repository, releases |
 | Interpolation | RIFE v4.6 ONNX | MIT | `https://github.com/hzwer/Practical-RIFE` |
 | Depth, for 3D effects | Depth Anything V2 Small | Apache-2.0 | `https://huggingface.co/depth-anything/Depth-Anything-V2-Small` |

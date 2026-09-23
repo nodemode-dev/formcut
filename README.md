@@ -30,7 +30,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 - **Colour and shape**: imported LUTs as library looks with an intensity mix, fourteen mask shapes plus a pen tool with editable anchors and bezier handles, and In, Out and Combo animation slots that rescale when a clip is trimmed.
 - **Keyframes that actually curve**: cubic-bezier easing solved the way CSS solves it, with named presets (ease, easeIn, easeOut, easeInOut, smooth, snap, overshoot, anticipate) as handle positions and a bezier mode with handles of your own, on transform properties, effect parameters and volume alike.
 - **Titles**: weight, italic, outline, shadow, background plate, line height, letter spacing, wrap width and opacity, a gallery of ten built-in styles with engine-rendered thumbnails, presets that carry their own font, and double-click typing on the canvas.
-- **Captions and speech**: Whisper in the browser in tiny, base or small, English-only or multilingual, on WebGPU where the browser offers it, with placement, size and words-per-caption controls, typed captions, and local speech that accepts models beyond the bundled one.
+- **Captions and speech**: Whisper in the browser in tiny, base or small, English-only or multilingual, on WebGPU where the browser offers it, with placement, size and words-per-caption controls, typed captions, and local speech with three engines: Kokoro, Kyutai's Pocket TTS (26 built-in voices, quick on a CPU) and Resemble AI's Chatterbox (expressive and multilingual, its output watermarked), the last two installed into the speech runtime on request, both able to clone a voice from a clip in Media once you confirm the speaker's permission.
 - **Studio**: project settings, Pexels stock, a media downloader for any site yt-dlp supports, generate image, video and audio through your own provider keys, timeline templates, local video and image browsers, local speech and local models, in a popout with a collapsible rail and a per-section fullscreen view.
 - **Export**: H.264, HEVC, AV1 and VP9 with hardware encoders preferred and confirmed by encoding, not by listing; 10-bit where the encoder supports it; size and frame-rate presets stored as exact fractions; and a live size estimate fitted to real output.
 - **One renderer for preview and export**, held there by a golden-frame check in CI that also compares the two paths on every push. Editors with separate paths drift: a transition previews as a dissolve and exports as a wipe.
@@ -134,7 +134,7 @@ backend/   Python FastAPI engine
 ├── app/providers.py       provider keys held by the engine, and a real connection test
 ├── app/clip_visuals.py    audio peaks and filmstrips for the timeline
 ├── app/storage.py         data directory usage, split into rebuildable and precious
-├── app/local_speech.py    Kokoro runtime gate and worker
+├── app/local_speech.py    local speech: Kokoro, Pocket TTS and Chatterbox workers
 ├── app/model_manager.py   model installs: background on first start, cancellable, adopts old installs
 ├── app/templates.py       template save, fill, export, import
 └── app/store.py           atomic project writes with revision checks

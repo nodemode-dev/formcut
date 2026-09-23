@@ -97,6 +97,8 @@ All UI icons are hand-authored inline currentColor SVG in this repo, except the 
 | grpcio | Apache-2.0 | Optional headless transport |
 | U2Net / U2NetP weights | Apache-2.0 upstream project | Explicit download into user data; never bundled |
 | Kokoro 82M model | Apache-2.0 upstream model card | Explicit download into user data; never bundled |
+| Pocket TTS (Kyutai) | MIT code; CC-BY-4.0 weights, credited to Kyutai; the voice-cloning weights are gated behind Kyutai's terms, which forbid cloning without consent | Installed into the speech runtime on request; weights downloaded into user data; never bundled |
+| Chatterbox (Resemble AI) | MIT code and weights; every output carries Resemble AI's inaudible Perth watermark | Installed into the speech runtime on request; weights downloaded into user data; never bundled |
 | Real-ESRGAN x4plus weights (ONNX export) | BSD-3-Clause (xinntao/Real-ESRGAN) | Explicit download into user data from the AI upscale dialog, checked against its pinned SHA-256; never bundled |
 | kokoro-onnx | MIT wrapper; phonemizer/eSpeak dependencies include GPL terms | External user-installed speech environment only; wrapper, phonemizer and eSpeak excluded from the frozen engine |
 
