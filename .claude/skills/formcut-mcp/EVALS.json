@@ -1,0 +1,50 @@
+{
+  "skill_name": "formcut-mcp",
+  "notes": "Each prompt is a request a formcut user would make with the MCP server connected. Expected behaviours are observable in the tool calls made and the reply.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "assemble-and-render",
+      "prompt": "I have /Users/sam/footage/intro.mp4, /Users/sam/footage/interview.mov and /Users/sam/footage/logo.png. Make a 1080p project called Sam interview with the intro, then the interview, then the logo for 3 seconds at the end, and render it as a high quality mp4. Tell me where the file is.",
+      "files": [],
+      "expected_behavior": [
+        "Calls formcut_status before any other formcut tool",
+        "Imports each file with formcut_import_media and uses the media ids those calls return",
+        "Creates the project, then adds the three clips end to end, each formcut_add_clip carrying the revision returned by the previous call, with duration 3 for the logo",
+        "Calls formcut_render with file_format mp4 and quality high, polls formcut_render_status until done, and reports the output path it returned"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "stale-revision-recovery",
+      "prompt": "Split the second clip of my project Launch teaser at 4 seconds. I also have the formcut window open and have been moving things around.",
+      "files": [],
+      "expected_behavior": [
+        "Reads the project with formcut_get_project to get the clip id and the current revision before editing",
+        "Uses formcut_edit with a clip.split command, checking the operation name against formcut_capabilities",
+        "When the edit is refused for a stale revision, re-reads the project and retries against its current state, instead of guessing a revision or retrying the same call"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "engine-not-running",
+      "prompt": "Use formcut to render my project Weekly recap as webm.",
+      "files": [],
+      "expected_behavior": [
+        "Calls formcut_status first",
+        "When the reply says the engine is not answering, stops the workflow and tells the user to start the engine with ./formcut or set FORMCUT_ENGINE, rather than calling the render tools",
+        "Does not claim a render was started"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "adjacent-task-no-overreach",
+      "prompt": "What export formats does formcut support, and does it need an account?",
+      "files": [],
+      "expected_behavior": [
+        "Answers from what formcut is (MP4 or WebM, local first with no account) without importing media, creating a project or starting a render",
+        "Does not walk the user through installing the MCP server they did not ask about"
+      ]
+    }
+  ]
+}
