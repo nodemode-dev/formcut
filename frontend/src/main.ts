@@ -88,5 +88,9 @@ installWorkspaceLayout();
 installAccordions(workspace);
 app.append(buildStartScreen(engine, bin));
 localizeElement(document.body);
+// Arabic, Persian, Hebrew and Croatian ship as locale files, loaded here: until
+// this call they never loaded at all. A saved choice among them takes effect,
+// right to left included, as its file arrives (loadExtraLocales).
+void loadExtraLocales().then(() => document.dispatchEvent(new CustomEvent("formcut:locales")));
 void bin.load();
 Object.defineProperty(window, "formcut", { value: { engine, bin, actions, liveMix, loadExtraLocales } });

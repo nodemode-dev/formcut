@@ -492,8 +492,21 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   search.addEventListener("input", () => {
     if (view === "media") renderMedia();
   });
-  el.querySelector<HTMLSelectElement>('[data-ref="lang"]')!.addEventListener("change", (event) => {
+  const languageMenu = el.querySelector<HTMLSelectElement>('[data-ref="lang"]')!;
+  languageMenu.addEventListener("change", (event) => {
     setLocale((event.target as HTMLSelectElement).value);
+  });
+  // The locales that ship as files (and any a person drops in) arrive after this
+  // menu is built; rebuild it when they do, or they can never be chosen.
+  document.addEventListener("formcut:locales", () => {
+    languageMenu.replaceChildren(...LOCALE_NAMES.map((entry) => {
+      const option = document.createElement("option");
+      option.value = entry.code;
+      option.textContent = entry.name;
+      option.dataset.noI18n = "";
+      option.selected = entry.code === locale;
+      return option;
+    }));
   });
 
   // Dropping files anywhere on the home surface imports them, which is what a

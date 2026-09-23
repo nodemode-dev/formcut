@@ -1,4 +1,4 @@
-import { locale, t } from "./index";
+import { locale, phrase, t } from "./index";
 import en from "./en.json";
 import { PHRASES } from "./language-pack";
 
@@ -9,7 +9,7 @@ const additional: Record<string, Record<string, string>> = {
 const keys = new Map(Object.entries(en).map(([key, value]) => [value, key]));
 export function text(value: string): string {
   const key = keys.get(value);
-  return PHRASES[locale]?.[value] ?? additional[locale]?.[value] ?? (key ? t(key) : value);
+  return PHRASES[locale]?.[value] ?? additional[locale]?.[value] ?? phrase(value) ?? (key ? t(key) : value);
 }
 export function localizeElement(root: HTMLElement): void {
   if (locale === "en") return;

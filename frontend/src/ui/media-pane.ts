@@ -277,10 +277,28 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const transitionName = (type: string) =>
     type === "crossfade" ? t("trans.crossfade") : type === "dip" ? t("trans.dip") : text(type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
   type CatalogueEntry = { id: string; name: string; category?: string; group?: string; names?: Record<string, string> };
+  // An effect's, look's or package's name comes from the catalogue, in every
+  // language it has; a change of language relabels the cards from these, since
+  // the general rewrite knows only the interface's own strings.
+  const catalogueNames = new Map<string, CatalogueEntry>();
+  const relabelEffects = () => {
+    for (const card of el.querySelectorAll<HTMLElement>(".fx-card[data-kind]")) {
+      const entry = catalogueNames.get(`${card.dataset.kind}:${card.dataset.id}`);
+      if (!entry) continue;
+      const label = entry.names?.[locale] ?? text(entry.name);
+      const name = card.querySelector<HTMLElement>(".effect-name");
+      if (name && name.textContent !== label) name.textContent = label;
+      if (card.dataset.label !== label) card.dataset.label = label;
+    }
+  };
+  document.addEventListener("formcut:locale", relabelEffects);
+  document.addEventListener("formcut:locales", relabelEffects);
   void fetch("/api/catalogue")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
     .then((data: { video: CatalogueEntry[]; audio: CatalogueEntry[]; transitions: string[]; cutouts?: CutoutPreset[]; previewVersion?: string }) => {
       for (const preset of data.cutouts ?? []) cutoutPresets.set(preset.id, preset);
+      for (const entry of data.video) catalogueNames.set(`video:${entry.id}`, entry);
+      for (const entry of data.audio) catalogueNames.set(`audio:${entry.id}`, entry);
       previewVersion = data.previewVersion ?? "";
       const grouped = (entry: CatalogueEntry) => entry.group !== undefined && entry.group !== "Other";
       const glyph = `<div class="effect-thumb has-glyph">${icon("speaker")}</div>`;

@@ -10,7 +10,7 @@ import { icon } from "./icons";
 export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElement {
   const element = document.createElement("section");
   element.className = "pane pane-preview";
-  element.innerHTML = `<div class="pane-header"><div class="title">Preview</div><div class="meta" data-ref="meta"></div></div>
+  element.innerHTML = `<div class="pane-header"><div class="title">Preview</div><div class="meta" data-ref="meta" dir="ltr"></div></div>
     <div class="stage-wrap"><div class="stage"><canvas class="render-canvas" aria-label="Video preview"></canvas><div class="preview-message" role="status"></div></div></div>
     <div class="transport"><span class="tc-field"></span><span class="tc-total"></span><div class="transport-btns">
     <button class="iconbtn" data-command="transport.home" title="Start">${icon("toStart")}</button>
@@ -18,7 +18,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     <button class="iconbtn play" data-command="transport.toggle" title="Play or pause"><span data-play>${icon("play")}</span><span data-pause hidden>${icon("pause")}</span></button>
     <button class="iconbtn" data-skip="0.5" title="${text("Forward half a second")}">${icon("chevR")}</button>
     <button class="iconbtn" data-command="transport.end" title="End">${icon("toEnd")}</button></div>
-    <select class="mini-select" aria-label="Preview resolution"><option value="640">640 px</option><option value="960">960 px</option><option value="0">Full size</option></select></div>`;
+    <select class="mini-select" dir="ltr" aria-label="Preview resolution"><option value="640">640 px</option><option value="960">960 px</option><option value="0">Full size</option></select></div>`;
   const canvas = element.querySelector("canvas")!;
   const context = canvas.getContext("2d", { alpha: false })!;
   const stage = element.querySelector<HTMLElement>(".stage")!;

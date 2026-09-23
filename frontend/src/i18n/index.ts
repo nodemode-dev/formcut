@@ -1,7 +1,7 @@
 // Locale strings live in JSON files. The active locale is chosen at boot from
 // localStorage and can be changed in place afterwards, without a reload and
 // without losing unsaved work; see relocalize below.
-import { languagePack } from "./language-pack";
+import { PHRASES, languagePack } from "./language-pack";
 import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
@@ -131,6 +131,27 @@ function indexLocales(): void {
       if (typeof value === "string" && value && !REVERSE.has(value)) REVERSE.set(value, key);
     }
   }
+  // Phrases the interface translates by their English wording (the language
+  // pack, and phrase: entries in locale files) map back to that wording, so a
+  // switch of language rewrites them too.
+  for (const table of Object.values(PHRASES)) {
+    for (const [source, value] of Object.entries(table)) {
+      if (value && !REVERSE.has(value)) REVERSE.set(value, PHRASE + source);
+      if (!REVERSE.has(source)) REVERSE.set(source, PHRASE + source);
+    }
+  }
+}
+
+/** A locale's own wording for an English phrase, from the pack or its file's phrase: entries. */
+export const PHRASE = "phrase:";
+export function phrase(source: string, code: string = locale): string | undefined {
+  return PHRASES[code]?.[source] ?? LOCALES[code]?.[PHRASE + source];
+}
+
+function resolve(key: string): string | undefined {
+  if (!key.startsWith(PHRASE)) return LOCALES[locale]?.[key] ?? LOCALES.en[key];
+  const source = key.slice(PHRASE.length);
+  return locale === "en" ? source : phrase(source) ?? source;
 }
 indexLocales();
 
@@ -159,7 +180,7 @@ export function relocalize(root: HTMLElement = document.body): void {
     if (!trimmed) continue;
     const key = REVERSE.get(trimmed);
     if (!key) continue;
-    const next = LOCALES[locale]?.[key] ?? LOCALES.en[key];
+    const next = resolve(key);
     if (next && next !== trimmed) pending.push([node, raw.replace(trimmed, next)]);
   }
   for (const [target, value] of pending) target.textContent = value;
@@ -170,7 +191,7 @@ export function relocalize(root: HTMLElement = document.body): void {
       if (!current) continue;
       const key = REVERSE.get(current.trim());
       if (!key) continue;
-      const next = LOCALES[locale]?.[key] ?? LOCALES.en[key];
+      const next = resolve(key);
       if (next && next !== current) element.setAttribute(attribute, next);
     }
   }
