@@ -4,7 +4,7 @@ import { reconcilePresets } from "./preset-grid";
 import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
-import { defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
+import { MASK_SHAPES, defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
 import { transcribeClip, typedCaptions } from "../engine/captions";
 import { locale, t } from "../i18n";
 import { text } from "../i18n/text";
@@ -34,8 +34,16 @@ const EFFECT_GROUPS: Array<[string, string[]]> = [
   ["Audio effects", ["Voice", "Tone", "Space", "Clean"]],
 ];
 const FILTER_GROUPS = ["Adjust", "Film", "Warm", "Cool", "Split"];
-const MASKS: Array<[string, string]> = [["rect", t("fx.mask.rect")], ["ellipse", t("fx.mask.ellipse")]];
-const CUTOUTS: Array<[string, string]> = [["object-cutout", t("fx.cutout.object")], ["person-cutout", t("fx.cutout.person")]];
+// Every mask shape the renderer draws, except the pen path, which is drawn by hand.
+const MASKS: Array<[string, string]> = MASK_SHAPES.filter((shape) => shape !== "path").map((shape) => [shape, t(`mask.${shape}`)]);
+/** A cutout preset from the catalogue: a model at given edge settings, or a colour key. */
+type CutoutPreset = { id: string; name: string; model?: string; threshold?: number; feather?: number; key?: { color: string; similarity: number; blend: number } };
+const cutoutPresets = new Map<string, CutoutPreset>();
+const presetLabel = (name: string) => name.split(" · ").map((part) => text(part)).join(" · ");
+const presetOn = (clip: Clip, preset: CutoutPreset) =>
+  preset.key
+    ? clip.key?.color === preset.key.color
+    : clip.cutout?.model === preset.model && clip.cutout?.threshold === preset.threshold && clip.cutout?.feather === preset.feather;
 
 export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElement {
   const el = document.createElement("section");
@@ -237,7 +245,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     for (const card of fxGrid.querySelectorAll<HTMLElement>(".fx-card")) {
       const value = card.dataset.id!;
       const kind = card.dataset.kind;
-      const on = !!clip && (kind === "audio" ? audio.has(value) : kind === "mask" ? clip.mask?.shape === value : kind === "cutout" ? clip.cutout?.model === value : video.has(value));
+      const on = !!clip && (kind === "audio" ? audio.has(value) : kind === "mask" ? clip.mask?.shape === value : kind === "cutout" ? cutoutPresets.has(value) && presetOn(clip, cutoutPresets.get(value)!) : video.has(value));
       card.classList.toggle("is-active", on);
     }
     for (const card of transGrid.querySelectorAll<HTMLElement>(".trans-card")) {
@@ -269,7 +277,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   type CatalogueEntry = { id: string; name: string; category?: string; group?: string; names?: Record<string, string> };
   void fetch("/api/catalogue")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
-    .then((data: { video: CatalogueEntry[]; audio: CatalogueEntry[]; transitions: string[]; previewVersion?: string }) => {
+    .then((data: { video: CatalogueEntry[]; audio: CatalogueEntry[]; transitions: string[]; cutouts?: CutoutPreset[]; previewVersion?: string }) => {
+      for (const preset of data.cutouts ?? []) cutoutPresets.set(preset.id, preset);
       previewVersion = data.previewVersion ?? "";
       const grouped = (entry: CatalogueEntry) => entry.group !== undefined && entry.group !== "Other";
       const glyph = `<div class="effect-thumb has-glyph">${icon("speaker")}</div>`;
@@ -278,7 +287,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         [
           ...data.video.filter(grouped).map((v) => fxCard(v.category === "Color" ? "filter" : "effect", "video", v.group!, v.id, v.names?.[locale] ?? text(v.name), thumb("effect", v.id))),
           ...MASKS.map(([shape, label]) => fxCard("effect", "mask", "Mask", shape, label, thumb("mask", shape))),
-          ...CUTOUTS.map(([model, label]) => fxCard("effect", "cutout", "Cutout", model, label, thumb("source", "cutout"))),
+          ...[...cutoutPresets.values()].map((preset) => fxCard("effect", "cutout", "Cutout", preset.id, presetLabel(preset.name), thumb("cutout", preset.id))),
           ...data.audio.filter(grouped).map((a) => fxCard("effect", "audio", a.group!, a.id, text(a.name), glyph)),
         ].join(""),
       );
@@ -468,19 +477,31 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
           say(t("fx.cutoutkind"));
           return;
         }
-        if (clip.cutout?.model === value) {
-          engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: undefined } });
+        const preset = cutoutPresets.get(value);
+        if (!preset) return;
+        // A second click on the preset in use takes it off again.
+        if (presetOn(clip, preset)) {
+          if (preset.key) engine.dispatch("clip.key", { clipId: clip.id, key: null });
+          else engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: undefined } });
           say(`${t("fx.removed")}: ${label}`);
           return;
         }
+        if (preset.key) {
+          engine.dispatch("clip.key", { clipId: clip.id, key: { ...preset.key } });
+          say(`${t("fx.added")}: ${label}`);
+          return;
+        }
         const models = (await (await fetch("/api/models")).json()) as Array<{ id: string; ready: boolean }>;
-        if (!models.find((m) => m.id === value)?.ready) {
+        if (!models.find((m) => m.id === preset.model)?.ready) {
           say(t("fx.needmodel"));
           return;
         }
         const target = engine.findClip(clip.id)?.clip;
         if (!target) return;
-        engine.dispatch("clip.creator", { clipId: target.id, patch: { cutout: { model: value, threshold: 0.5, feather: 0.1, strokes: target.cutout?.strokes ?? [] } } });
+        engine.dispatch("clip.creator", {
+          clipId: target.id,
+          patch: { cutout: { model: preset.model!, threshold: preset.threshold!, feather: preset.feather!, strokes: target.cutout?.strokes ?? [] } },
+        });
         say(`${t("fx.added")}: ${label}`);
       } else {
         const on = (clip.effects ?? []).some((e) => e.id === value);

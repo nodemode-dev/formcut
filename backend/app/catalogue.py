@@ -694,6 +694,36 @@ EFFECT_DEFAULTS = {
 }
 
 
+# Cutout presets for the effects browser: the two cutout models at a range of
+# edge settings, and the colour key for green and blue backdrops. The engine's
+# cutout shapes its matte as (a - threshold + feather / 2) / feather, so a higher
+# threshold keeps less (tight), a lower one more (loose), and feather is the
+# width of the soft edge. Names are joined with " · " and translated by part.
+_EDGES = [
+    ("standard", "", 0.5, 0.1),
+    ("soft", "Soft edge", 0.5, 0.35),
+    ("hard", "Hard edge", 0.5, 0.02),
+    ("tight", "Tight", 0.7, 0.1),
+    ("loose", "Loose", 0.3, 0.15),
+]
+CUTOUT_PRESETS = [
+    {
+        "id": f"{subject}-{edge}",
+        "name": name + (f" · {label}" if label else ""),
+        "model": f"{subject}-cutout",
+        "threshold": threshold,
+        "feather": feather,
+    }
+    for subject, name in (("person", "Person"), ("object", "Object"))
+    for edge, label, threshold, feather in _EDGES
+] + [
+    {"id": "person-hair", "name": "Person · Hair detail", "model": "person-cutout", "threshold": 0.35, "feather": 0.3},
+    {"id": "object-detail", "name": "Object · Fine detail", "model": "object-cutout", "threshold": 0.35, "feather": 0.05},
+    {"id": "key-green", "name": "Green screen", "key": {"color": "#00b140", "similarity": 0.3, "blend": 0.08}},
+    {"id": "key-blue", "name": "Blue screen", "key": {"color": "#0047bb", "similarity": 0.3, "blend": 0.08}},
+]
+
+
 def package_entries(kind: str) -> list[dict]:
     from .effect_packages import entries
 
@@ -739,6 +769,7 @@ def catalogue() -> dict:
         + package_entries("video"),
         "audio": [{"id": k, "name": label(k), "group": group_of(k, AUDIO_GROUPS)} for k in AUDIO_CHAINS] + package_entries("audio"),
         "transitions": TRANSITIONS,
+        "cutouts": CUTOUT_PRESETS,
         "blendModes": ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"],
         "previewVersion": PREVIEW_VERSION,
     }

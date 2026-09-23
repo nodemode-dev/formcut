@@ -16,7 +16,15 @@ from .renderer import FrameRenderer
 router = APIRouter(prefix="/api/catalogue/preview", tags=["catalogue"])
 CACHE = DATA_DIR / "catalogue-previews"
 WIDTH, HEIGHT = 192, 144
-MASKS = ("rect", "ellipse")
+
+
+def _masks() -> tuple[str, ...]:
+    from .renderer import MASK_SHAPES
+
+    return (*MASK_SHAPES, "linear")
+
+
+MASKS = _masks()
 _lock = threading.Lock()
 _base: np.ndarray | None = None
 
@@ -42,7 +50,14 @@ def known(kind: str, item: str) -> bool:
         or (kind == "transition" and item in TRANSITIONS)
         or (kind == "mask" and item in MASKS)
         or (kind == "source" and item == "cutout")
+        or (kind == "cutout" and any(preset["id"] == item for preset in _cutouts()))
     )
+
+
+def _cutouts() -> list[dict]:
+    from .catalogue import CUTOUT_PRESETS
+
+    return CUTOUT_PRESETS
 
 
 def base_image() -> np.ndarray:
@@ -60,6 +75,38 @@ def base_image() -> np.ndarray:
                 y, x = np.mgrid[0:HEIGHT, 0:WIDTH]
                 _base = np.dstack([x * 255 // WIDTH, y * 255 // HEIGHT, np.full_like(x, 140), np.full_like(x, 255)]).astype(np.uint8)
         return _base.copy()
+
+
+def _cutout_preview(image: np.ndarray, preset: dict) -> np.ndarray:
+    """A preset's edge on a soft stand-in matte, shaped by the engine's own formula.
+
+    The real matte comes from a model at render time; here a smooth figure
+    (head and shoulders for a person, a rounded form for an object) takes its
+    place, so tight, loose, soft and hard differ exactly as they will on footage.
+    """
+    y, x = np.mgrid[0:HEIGHT, 0:WIDTH].astype(np.float32)
+    u, v = x / WIDTH, y / HEIGHT
+    if "key" in preset:
+        # A backdrop in the key's colour behind the subject, removed where it matches.
+        red, green, blue = (int(preset["key"]["color"][i : i + 2], 16) for i in (1, 3, 5))
+        # The backdrop in the key's colour: kept on the left, keyed out on the
+        # right, so the card shows which colour it removes.
+        backdrop = (np.abs(u - 0.5) > 0.3) | (v < 0.12)
+        out = image.copy()
+        out[backdrop, :3] = (red, green, blue)
+        out[backdrop & (u >= 0.5), 3] = 0
+        return out
+    if preset["model"] == "person-cutout":
+        head = np.exp(-(((u - 0.5) / 0.1) ** 2 + ((v - 0.34) / 0.16) ** 2))
+        body = np.exp(-(((u - 0.5) / 0.26) ** 2 + ((v - 0.95) / 0.3) ** 2))
+        matte = np.clip(np.maximum(head, body) * 1.4, 0, 1)
+    else:
+        matte = np.clip(np.exp(-(((u - 0.5) / 0.28) ** 2 + ((v - 0.55) / 0.34) ** 2)) * 1.4, 0, 1)
+    threshold, feather = float(preset["threshold"]), max(0.005, float(preset["feather"]))
+    alpha = np.clip((matte - threshold + feather / 2) / feather, 0, 1)
+    out = image.copy()
+    out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
+    return out
 
 
 def over(layer: np.ndarray, ground: np.ndarray) -> np.ndarray:
@@ -116,13 +163,19 @@ def render(kind: str, item: str) -> np.ndarray:
     if kind == "effect":
         return over(apply_effects(image, [{"id": item, "amount": 1}], 0.5), dark)
     if kind == "mask":
+        # The renderer's own shape, so the card shows the mask it applies.
+        from .renderer import MASK_SHAPES
+
         alpha = np.zeros((HEIGHT, WIDTH), np.float32)
-        if item == "ellipse":
-            cv2.ellipse(alpha, (WIDTH // 2, HEIGHT // 2), (int(WIDTH * 0.34), int(HEIGHT * 0.36)), 0, 0, 360, 1, -1)
+        if item == "linear":
+            alpha[:] = np.clip((np.arange(WIDTH, dtype=np.float32) / WIDTH - 0.3) / 0.4, 0, 1)[None, :]
         else:
-            cv2.rectangle(alpha, (int(WIDTH * 0.16), int(HEIGHT * 0.14)), (int(WIDTH * 0.84), int(HEIGHT * 0.86)), 1, -1)
+            box = np.array([[WIDTH * (0.16 + 0.68 * x), HEIGHT * (0.14 + 0.72 * y)] for x, y in MASK_SHAPES[item]], np.int32)
+            cv2.fillPoly(alpha, [box], 1)
         image[:, :, 3] = np.round(image[:, :, 3] * cv2.GaussianBlur(alpha, (0, 0), 3)).astype(np.uint8)
         return over(image, dark)
+    if kind == "cutout":
+        return over(_cutout_preview(image, next(p for p in _cutouts() if p["id"] == item)), dark)
     if kind == "transition":
         outgoing = dark.copy()
         outgoing[:, :, :3] = np.round(image[:, :, :3].mean(axis=2, keepdims=True) * 0.4).astype(np.uint8)

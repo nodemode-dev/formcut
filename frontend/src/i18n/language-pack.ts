@@ -389,6 +389,28 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Triangle|Triangle|Triangolo|三角形|삼각형|Triângulo|Треугольник|Üçgen|三角形|三角形
+Pentagon|Pentagone|Pentagono|五角形|오각형|Pentágono|Пятиугольник|Beşgen|五边形|五邊形
+Hexagon|Hexagone|Esagono|六角形|육각형|Hexágono|Шестиугольник|Altıgen|六边形|六邊形
+Octagon|Octogone|Ottagono|八角形|팔각형|Octógono|Восьмиугольник|Sekizgen|八边形|八邊形
+Star|Étoile|Stella|星形|별|Estrela|Звезда|Yıldız|星形|星形
+Six-point star|Étoile à six branches|Stella a sei punte|六芒星|육각별|Estrela de seis pontas|Шестиконечная звезда|Altı köşeli yıldız|六角星|六角星
+Heart|Cœur|Cuore|ハート|하트|Coração|Сердце|Kalp|心形|心形
+Cross|Croix|Croce|十字|십자|Cruz|Крест|Artı|十字形|十字形
+Arrow|Flèche|Freccia|矢印|화살표|Seta|Стрелка|Ok|箭头|箭頭
+Chevron|Chevron|Chevron|シェブロン|갈매기표|Chevron|Шеврон|Köşeli ok|V 形|V 形
+Trapezoid|Trapèze|Trapezio|台形|사다리꼴|Trapézio|Трапеция|Yamuk|梯形|梯形
+Linear|Linéaire|Lineare|リニア|선형|Linear|Линейная|Doğrusal|线性|線性
+Person|Personne|Persona|人物|인물|Pessoa|Человек|Kişi|人物|人物
+Object|Objet|Oggetto|オブジェクト|사물|Objeto|Объект|Nesne|物体|物件
+Soft edge|Bord doux|Bordo morbido|柔らかい縁|부드러운 가장자리|Borda suave|Мягкий край|Yumuşak kenar|柔和边缘|柔和邊緣
+Hard edge|Bord net|Bordo netto|くっきりした縁|선명한 가장자리|Borda dura|Жёсткий край|Sert kenar|硬边缘|硬邊緣
+Tight|Serré|Stretto|タイト|타이트|Justo|Плотно|Sıkı|紧贴|緊貼
+Loose|Large|Largo|ゆったり|여유 있게|Folgado|Свободно|Gevşek|宽松|寬鬆
+Hair detail|Détail des cheveux|Dettaglio capelli|髪の細部|머리카락 세부|Detalhe do cabelo|Детали волос|Saç ayrıntısı|发丝细节|髮絲細節
+Fine detail|Détail fin|Dettaglio fine|細部|세밀한 부분|Detalhe fino|Мелкие детали|İnce ayrıntı|精细细节|精細細節
+Green screen|Écran vert|Green screen|グリーンバック|그린 스크린|Tela verde|Зелёный фон|Yeşil perde|绿幕|綠幕
+Blue screen|Écran bleu|Blue screen|ブルーバック|블루 스크린|Tela azul|Синий фон|Mavi perde|蓝幕|藍幕
 Import package|Importer un paquet|Importa pacchetto|パッケージを読み込む|패키지 가져오기|Importar pacote|Импортировать пакет|Paketi içe aktar|导入效果包|匯入效果包
 Remove package|Supprimer le paquet|Rimuovi pacchetto|パッケージを削除|패키지 제거|Remover pacote|Удалить пакет|Paketi kaldır|移除效果包|移除效果包
 Could not import the package: {reason}|Impossible d'importer le paquet : {reason}|Impossibile importare il pacchetto: {reason}|パッケージを読み込めませんでした: {reason}|패키지를 가져올 수 없습니다: {reason}|Não foi possível importar o pacote: {reason}|Не удалось импортировать пакет: {reason}|Paket içe aktarılamadı: {reason}|无法导入效果包:{reason}|無法匯入效果包:{reason}
