@@ -57,6 +57,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         <div class="search-field">${icon("search")}<input data-ref="fx-search" placeholder="${t("fx.search")}" /></div>
         <div class="fx-status" data-ref="fx-status" role="status"></div>
         <div class="card-grid" data-ref="fx-grid"></div>
+        <p class="fx-empty" data-ref="fx-empty" hidden></p>
       </div>
     </div>
     <div class="media-body text-body" data-view="text" hidden>
@@ -192,6 +193,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const fxGrid = el.querySelector<HTMLElement>('[data-ref="fx-grid"]')!;
   const fxSearch = el.querySelector<HTMLInputElement>('[data-ref="fx-search"]')!;
   const fxStatus = el.querySelector<HTMLElement>('[data-ref="fx-status"]')!;
+  const fxEmpty = el.querySelector<HTMLElement>('[data-ref="fx-empty"]')!;
+  let fxLoaded = false;
   const transGrid = el.querySelector<HTMLElement>('[data-ref="trans-grid"]')!;
   const capTrack = el.querySelector<HTMLSelectElement>('[data-ref="cap-track"]')!;
   let fxMode: "effect" | "filter" = "effect";
@@ -210,10 +213,17 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       if (node.hidden === shown) node.hidden = !shown;
       if (node.classList.contains("cat-item")) node.classList.toggle("is-active", shown && node.dataset.cat === activeCats[fxMode]);
     }
+    let any = false;
     for (const card of fxGrid.querySelectorAll<HTMLElement>(".fx-card")) {
       const visible = card.dataset.mode === fxMode && (query ? card.dataset.name!.includes(query) : card.dataset.cat === activeCats[fxMode]);
       if (card.hidden === visible) card.hidden = !visible;
+      any ||= visible;
     }
+    // Say why a category is empty rather than show nothing at all.
+    const message = !fxLoaded || any ? "" : query ? t("fx.noMatch") : activeCats[fxMode] === "Packages" ? t("fx.packagesEmpty") : t("fx.categoryEmpty");
+    if (fxEmpty.textContent !== message) fxEmpty.textContent = message;
+    const hide = !message;
+    if (fxEmpty.hidden !== hide) fxEmpty.hidden = hide;
   };
   const syncFxActive = () => {
     const clip = selectedClip();
@@ -271,6 +281,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         "beforeend",
         data.transitions.map((type) => `<div class="effect-card trans-card" data-trans="${escapeHtml(type)}">${thumb("transition", type)}<div class="effect-name">${escapeHtml(transitionName(type))}</div></div>`).join(""),
       );
+      fxLoaded = true;
+      applyFxFilter();
       applyFxFilter();
       syncFxActive();
     })

@@ -275,6 +275,20 @@ def transform_at(clip: dict, local: float) -> dict:
     return transform
 
 
+def _revealed(kind: str, h: int, w: int, progress: float) -> np.ndarray:
+    """Where the incoming clip shows at this point in a shaped transition; the outgoing one hides there."""
+    y, x = np.mgrid[:h, :w].astype(np.float32)
+    if kind == "clock-wipe":
+        return (np.arctan2(x - w / 2, h / 2 - y) % (2 * math.pi)) <= 2 * math.pi * progress
+    if kind == "blinds":
+        return ((y / h) * 8) % 1 < progress
+    if kind == "diagonal-wipe":
+        return (x / w + y / h) / 2 <= progress
+    if kind == "diamond":
+        return np.abs(x - w / 2) / (w / 2) + np.abs(y - h / 2) / (h / 2) <= 2 * progress
+    return np.abs(x - w / 2) <= (w / 2) * progress
+
+
 def _pixelated(image: np.ndarray, block: int) -> np.ndarray:
     """The picture in square blocks of this many pixels, for the pixel dissolve."""
     if block <= 1:
@@ -772,7 +786,7 @@ class FrameRenderer:
             dy = -int(h * (1 - progress)) if kind == "push-down" else int(h * (1 - progress)) if kind == "cover-up" else 0
             image = cv2.warpAffine(image, np.float32([[1, 0, dx], [0, 1, dy]]), (w, h))
         elif kind in ("clock-wipe", "blinds", "diagonal-wipe", "diamond", "barn-door"):
-            image[:, :, 3] *= self._revealed(kind, h, w, progress)
+            image[:, :, 3] *= _revealed(kind, h, w, progress)
         elif kind == "pixel-dissolve":
             image = _pixelated(image, round((1 - progress) * min(w, h) / 12))
             image[:, :, 3] = (image[:, :, 3].astype(np.float32) * progress).astype(image.dtype)
@@ -829,7 +843,7 @@ class FrameRenderer:
         elif kind == "push-down":
             image = cv2.warpAffine(image, np.float32([[1, 0, 0], [0, 1, int(h * progress)]]), (w, h))
         elif kind in ("clock-wipe", "blinds", "diagonal-wipe", "diamond", "barn-door"):
-            image[:, :, 3] *= ~self._revealed(kind, h, w, progress)
+            image[:, :, 3] *= ~_revealed(kind, h, w, progress)
         elif kind == "pixel-dissolve":
             image = _pixelated(image, round(progress * min(w, h) / 12))
         elif kind == "blur-fade" and progress > 0:
@@ -837,20 +851,6 @@ class FrameRenderer:
         elif kind == "spin":
             image = cv2.warpAffine(image, cv2.getRotationMatrix2D((w / 2, h / 2), progress * 180, max(0.001, 1 - progress)), (w, h))
         return image
-
-    @staticmethod
-    def _revealed(kind: str, h: int, w: int, progress: float) -> np.ndarray:
-        """Where the incoming clip shows at this point in a shaped transition; the outgoing one hides there."""
-        y, x = np.mgrid[:h, :w].astype(np.float32)
-        if kind == "clock-wipe":
-            return (np.arctan2(x - w / 2, h / 2 - y) % (2 * math.pi)) <= 2 * math.pi * progress
-        if kind == "blinds":
-            return ((y / h) * 8) % 1 < progress
-        if kind == "diagonal-wipe":
-            return (x / w + y / h) / 2 <= progress
-        if kind == "diamond":
-            return np.abs(x - w / 2) / (w / 2) + np.abs(y - h / 2) / (h / 2) <= 2 * progress
-        return np.abs(x - w / 2) <= (w / 2) * progress
 
     def frame(self, time: float) -> np.ndarray:
         canvas = np.zeros((self.height, self.width, 4), np.uint8)

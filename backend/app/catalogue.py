@@ -514,10 +514,37 @@ PARAM_SPECS = {
     "levels": {"min": 2.0, "max": 16.0, "step": 1.0, "unit": "", "group": "shape"},
     "threshold": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "shape"},
     "strength": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "shape"},
+    "intensity": {"min": 0.0, "max": 3.0, "step": 0.01, "unit": "x", "group": "shape"},
+    "segments": {"min": 2.0, "max": 16.0, "step": 1.0, "unit": "", "group": "shape"},
+    "spacing": {"min": 2.0, "max": 24.0, "step": 1.0, "unit": "px", "group": "shape"},
+    "twist": {"min": -6.0, "max": 6.0, "step": 0.05, "unit": "", "group": "shape"},
+    "tiles": {"min": 1.0, "max": 8.0, "step": 1.0, "unit": "", "group": "shape"},
+    "density": {"min": 0.0, "max": 3.0, "step": 0.05, "unit": "x", "group": "shape"},
+    "scale": {"min": 0.25, "max": 4.0, "step": 0.05, "unit": "x", "group": "shape"},
+    "curvature": {"min": 0.0, "max": 0.4, "step": 0.01, "unit": "", "group": "shape"},
+    "x": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "shape"},
+    "y": {"min": 0.0, "max": 1.0, "step": 0.01, "unit": "", "group": "shape"},
+}
+
+# What a parameter means for one effect, where its general name would say less:
+# Pixelate's size is its pixel size, Halftone's its dot size.
+PARAM_LABELS = {
+    "pixelate": {"size": "pixelSize"},
+    "bayer-dither": {"size": "pixelSize"},
+    "hex-pixelate": {"size": "cellSize"},
+    "stained-glass": {"size": "cellSize"},
+    "led-wall": {"size": "ledSize"},
+    "halftone": {"size": "dotSize"},
+    "oil-paint": {"size": "brushSize"},
+    "chromatic": {"size": "offset"},
+    "anaglyph": {"size": "offset"},
+    "crosshatch": {"size": "spacing"},
+    "ink-outline": {"size": "lineDetail"},
+    "night-vision": {"strength": "noise"},
 }
 
 
-def declare(defaults: dict) -> list[dict]:
+def declare(defaults: dict, effect: str = "") -> list[dict]:
     """The parameter declarations for one catalogue entry, from its defaults."""
     out = []
     for key, value in defaults.items():
@@ -525,7 +552,7 @@ def declare(defaults: dict) -> list[dict]:
         out.append(
             {
                 "key": key,
-                "labelKey": f"param.{key}",
+                "labelKey": "param." + PARAM_LABELS.get(effect, {}).get(key, key),
                 "min": spec["min"],
                 "max": spec["max"],
                 "default": value,
@@ -634,6 +661,36 @@ EFFECT_DEFAULTS = {
     "stained-glass": {"size": 12},
     "bayer-dither": {"size": 8},
     "anaglyph": {"size": 12},
+    # Each default is the value the effect used before it was a control, so a
+    # clip saved earlier renders exactly as it did.
+    "radial-blur": {"intensity": 1},
+    "vignette": {"intensity": 1},
+    "fisheye": {"intensity": 1},
+    "kaleidoscope": {"segments": 6},
+    "scanlines": {"spacing": 2, "intensity": 1},
+    "cartoon": {"levels": 5},
+    "spin-blur": {"intensity": 1},
+    "night-vision": {"strength": 0.05},
+    "ink-outline": {"size": 9},
+    "swirl": {"twist": 2.2},
+    "pinch": {"intensity": 1},
+    "tile-repeat": {"tiles": 2},
+    "film-scratches": {"density": 1},
+    "light-leak": {"intensity": 1},
+    "aperture-grille": {"intensity": 1},
+    "paper-texture": {"intensity": 1},
+    "snowfall": {"density": 1, "scale": 1},
+    "bokeh-spots": {"density": 1, "scale": 1},
+    "vhs-tape": {"intensity": 1},
+    "neon-edges": {"intensity": 1},
+    "crt-screen": {"curvature": 0.12},
+    "block-glitch": {"density": 1},
+    "fog": {"density": 1},
+    "lens-flare": {"intensity": 1, "x": 0.72, "y": 0.22},
+    "sparkles": {"density": 1, "scale": 1},
+    "clarity": {"intensity": 1},
+    "dehaze": {"intensity": 1},
+    "skin-smooth": {"intensity": 1},
 }
 
 
@@ -675,11 +732,12 @@ def catalogue() -> dict:
                 "category": "Effects",
                 "group": group_of(k, EFFECT_GROUPS),
                 "parameters": EFFECT_DEFAULTS.get(k, {}),
-                "declarations": declare(EFFECT_DEFAULTS.get(k, {})),
+                "declarations": declare(EFFECT_DEFAULTS.get(k, {}), k),
             }
             for k in VIDEO_EFFECTS
-        ],
-        "audio": [{"id": k, "name": label(k), "group": group_of(k, AUDIO_GROUPS)} for k in AUDIO_CHAINS],
+        ]
+        + package_entries("video"),
+        "audio": [{"id": k, "name": label(k), "group": group_of(k, AUDIO_GROUPS)} for k in AUDIO_CHAINS] + package_entries("audio"),
         "transitions": TRANSITIONS,
         "blendModes": ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"],
         "previewVersion": PREVIEW_VERSION,

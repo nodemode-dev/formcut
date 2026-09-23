@@ -1445,3 +1445,4 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .color-curve .point { fill: var(--pane); stroke: var(--ink); stroke-width: 1.2; cursor: grab; }
 .color-hint { font-size: 10px; color: var(--ink-faint); }
 .color-actions { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
+.fx-empty { margin: var(--sp-2) 0; font-size: 12px; line-height: 1.5; color: var(--ink-soft); max-width: 36ch; }
