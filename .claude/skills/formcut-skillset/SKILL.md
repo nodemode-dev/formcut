@@ -3,7 +3,7 @@ name: formcut-skillset
 description: "Use for any work on formcut, the local video editor: its Python FastAPI engine, vanilla TypeScript interface, Tauri shell, JSON-RPC automation surface, orchestration event stream and MCP server. Carries the codebase as it stands: module and route maps, the state engine and its commands, the shared renderer, timeline and keyframe behaviour, appearance profiles and tokens, locale keys, and the invariants that explain most bugs. Trigger on formcut, formcut engine, render session, clip visuals, keyframe lanes, appearance profile, formcut MCP, orchestration session, project.edit, api/rpc, or any file under backend/app, frontend/src or src-tauri. Also for adding an engine endpoint, changing a pane, extending the automation or MCP tools, wiring an external orchestrator in, or reviewing a change against this project build discipline. Route through formcut-director unless the question is narrow and owned by one specialist."
 license: Apache-2.0
 metadata:
-  formcut.version: "1.41.0"
+  formcut.version: "1.41.1"
   formcut.compiled: "2026-09-22"
 ---
 
