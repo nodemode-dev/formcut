@@ -4,7 +4,16 @@ sample. The spike that shaped this found the degenerate case worth guarding:
 a template without variance (a flat patch, like the inside of a solid shape)
 matches everywhere with a perfect score, so the template box auto-widens
 until it contains edges. The frontend turns the returned path into position
-keyframes, so tracking rides the existing keyframe system end to end."""
+keyframes, so tracking rides the existing keyframe system end to end.
+
+With transform set, the subject's size and angle are followed too, so a title
+pinned to it grows and tilts with it: feature points inside the picked area are
+followed by pyramidal Lucas-Kanade optical flow, each checked by tracking it
+back (a point that does not return within a pixel is dropped), and a RANSAC
+similarity (move, uniform scale, rotation) is estimated at each step and
+accumulated. Points are topped up inside the subject's current area when too
+few survive, and tracking stops where too little is left to trust.
+"""
 
 from __future__ import annotations
 
@@ -29,6 +38,7 @@ class TrackBody(BaseModel):
     box: float = 0.12
     sample_fps: float = 10.0
     max_seconds: float = MAX_SECONDS
+    transform: bool = False
 
 
 @router.post("")
@@ -65,10 +75,15 @@ def track_point(body: TrackBody) -> dict[str, Any]:
     if not tmpl.size or tmpl.std() < 2:
         cap.release()
         raise HTTPException(status_code=422, detail="the picked point has no trackable detail")
-    points = [{"t": 0.0, "x": round(px, 2), "y": round(py, 2)}]
     sample_fps = min(max(body.sample_fps, 2.0), 15.0)
     step = max(1, round(fps / sample_fps))
     limit = min(max(body.max_seconds, 1.0), MAX_SECONDS)
+    if body.transform:
+        try:
+            return {"points": _follow_transform(cap, cv2, gray0, px, py, box, fps, step, limit), "frame": {"w": w, "h": h}}
+        finally:
+            cap.release()
+    points = [{"t": 0.0, "x": round(px, 2), "y": round(py, 2)}]
     n = 0
     while n / fps < limit:
         ok = True
@@ -94,3 +109,70 @@ def track_point(body: TrackBody) -> dict[str, Any]:
         points.append({"t": round(n / fps, 2), "x": round(cx / w * 100, 2), "y": round(cy / h * 100, 2)})
     cap.release()
     return {"points": points, "frame": {"w": w, "h": h}}
+
+
+def _features(cv2, gray, cx: float, cy: float, size: float, avoid=None):
+    import numpy as np
+
+    mask = np.zeros_like(gray)
+    half = max(4, int(size / 2))
+    cv2.rectangle(mask, (int(cx) - half, int(cy) - half), (int(cx) + half, int(cy) + half), 255, -1)
+    if avoid is not None:
+        for x, y in avoid.reshape(-1, 2):
+            cv2.circle(mask, (int(x), int(y)), 4, 0, -1)
+    found = cv2.goodFeaturesToTrack(gray, maxCorners=80, qualityLevel=0.01, minDistance=3, mask=mask)
+    return found.astype(np.float32) if found is not None else np.empty((0, 1, 2), np.float32)
+
+
+def _follow_transform(cap, cv2, gray, px: float, py: float, box: int, fps: float, step: int, limit: float) -> list[dict]:
+    """The picked point's path with the subject's scale (1 at the start) and rotation (degrees, clockwise)."""
+    import math
+
+    import numpy as np
+
+    h, w = gray.shape[:2]
+    start = np.array([px / 100 * w, py / 100 * h, 1.0])
+    pts = _features(cv2, gray, start[0], start[1], box)
+    if len(pts) < 6:
+        raise HTTPException(status_code=422, detail="the picked area has too little detail to follow its size and angle")
+    total = np.eye(3)
+    path = [{"t": 0.0, "x": round(px, 2), "y": round(py, 2), "scale": 1.0, "rotation": 0.0}]
+    flow = {"winSize": (21, 21), "maxLevel": 3}
+    n = 0
+    while n / fps < limit:
+        ok, frame = True, None
+        for _ in range(step):
+            ok, frame = cap.read()
+            n += 1
+            if not ok:
+                break
+        if not ok:
+            break
+        nxt_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        nxt, found, _err = cv2.calcOpticalFlowPyrLK(gray, nxt_gray, pts, None, **flow)
+        back, returned, _err = cv2.calcOpticalFlowPyrLK(nxt_gray, gray, nxt, None, **flow)
+        good = (found.ravel() == 1) & (returned.ravel() == 1) & (np.linalg.norm((back - pts).reshape(-1, 2), axis=1) < 1.0)
+        if good.sum() < 6:
+            break
+        step_matrix, inliers = cv2.estimateAffinePartial2D(pts[good], nxt[good], method=cv2.RANSAC, ransacReprojThreshold=2.0)
+        if step_matrix is None or inliers is None or int(inliers.sum()) < 6:
+            break
+        total = np.vstack([step_matrix, [0.0, 0.0, 1.0]]) @ total
+        cx, cy, _one = total @ start
+        if not (0 <= cx < w and 0 <= cy < h):
+            break
+        scale = math.hypot(total[0, 0], total[1, 0])
+        path.append(
+            {
+                "t": round(n / fps, 2),
+                "x": round(float(cx) / w * 100, 2),
+                "y": round(float(cy) / h * 100, 2),
+                "scale": round(float(scale), 4),
+                "rotation": round(math.degrees(math.atan2(float(total[1, 0]), float(total[0, 0]))), 2),
+            }
+        )
+        kept = nxt[good][inliers.ravel() == 1].reshape(-1, 1, 2)
+        if len(kept) < 25:
+            kept = np.concatenate([kept, _features(cv2, nxt_gray, cx, cy, box * scale, kept)])
+        gray, pts = nxt_gray, kept
+    return path

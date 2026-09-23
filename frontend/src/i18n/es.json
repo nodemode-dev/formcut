@@ -865,5 +865,7 @@
   "set.h264.patent": "La licencia de patentes H.264 de Cisco cubre el uso personal y los usos que no generan ingresos. Para lo demás, obtén tu propia licencia o exporta en WebM.",
   "set.h264.licence": "Licencia",
   "set.h264.remove": "Quitar",
-  "export.webmFallback": "Guardado como WebM: este ordenador no tiene codificador H.264 y OpenH264 está desactivado o no se pudo descargar."
+  "export.webmFallback": "Guardado como WebM: este ordenador no tiene codificador H.264 y OpenH264 está desactivado o no se pudo descargar.",
+  "track.followScale": "Seguir el tamaño",
+  "track.followRotation": "Seguir el ángulo"
 }

@@ -2,7 +2,17 @@ import type { ProjectEngine } from "../engine/project";
 import { api } from "../engine/api";
 import { t } from "../i18n";
 
+// Whether a pinned clip also grows and turns with the subject; kept while the
+// inspector redraws, so the choice holds from one clip to the next.
+const follow = { scale: false, rotation: false };
+
 export function installTracking(root: HTMLElement, engine: ProjectEngine): void {
+  for (const [key, ref] of [["scale", "track-scale"], ["rotation", "track-rotation"]] as const) {
+    const toggle = root.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+    if (!toggle) continue;
+    toggle.classList.toggle("is-on", follow[key]);
+    toggle.addEventListener("click", () => { follow[key] = toggle.classList.toggle("is-on"); });
+  }
   const button = root.querySelector<HTMLElement>('[data-ref="track-btn"]')!;
   const hint = root.querySelector<HTMLElement>('[data-ref="track-hint"]')!;
   let pick: AbortController | undefined;
@@ -27,7 +37,8 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
       const box = canvas.getBoundingClientRect();
       const point = [(event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height];
       say(t("track.running"));
-      void api("/api/track/clip", { project, source: source.id, target: project.selectedClipId, time: project.playhead, point }).then(result => {
+      void api("/api/track/clip", { project, source: source.id, target: project.selectedClipId, time: project.playhead, point,
+        follow: ["position", ...(follow.scale ? ["scale"] : []), ...(follow.rotation ? ["rotation"] : [])] }).then(result => {
         if (engine.snapshot.timelines[engine.snapshot.activeTimeline].id !== timelineId || !engine.findClip(project.selectedClipId!)) throw new Error("The target timeline changed during tracking");
         engine.dispatch("clip.keyframes.set", { clipId: project.selectedClipId, keyframes: result.keyframes });
         say(`${result.keyframes.length} ${t("track.done")}`);

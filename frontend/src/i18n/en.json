@@ -865,5 +865,7 @@
   "set.h264.patent": "Cisco's H.264 patent licence covers personal use and uses that earn no money. For anything else, get your own licence or export WebM.",
   "set.h264.licence": "Licence",
   "set.h264.remove": "Remove",
-  "export.webmFallback": "Saved as WebM: this computer has no H.264 encoder, and OpenH264 is off or could not be downloaded."
+  "export.webmFallback": "Saved as WebM: this computer has no H.264 encoder, and OpenH264 is off or could not be downloaded.",
+  "track.followScale": "Follow size",
+  "track.followRotation": "Follow angle"
 }

@@ -43,7 +43,7 @@ The rest is written by hand.
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 300 | /api/presets | 6 |
-| project_tracking.py | 71 | /api/track | 1 |
+| project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 172 | /api/projects | 9 |
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
@@ -54,7 +54,7 @@ The rest is written by hand.
 | storage.py | 66 | /api/storage | 1 |
 | templates.py | 199 | /api/templates | 7 |
 | tiktok.py | 340 | /api/connect/tiktok/app | 7 |
-| track.py | 96 | /api/track | 1 |
+| track.py | 178 | /api/track | 1 |
 | tts.py | 91 | /api/tts | 3 |
 | upscale.py | 313 | /api/media | 2 |
 | webhooks.py | 252 | /api/webhooks | 5 |

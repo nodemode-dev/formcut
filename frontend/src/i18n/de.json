@@ -865,5 +865,7 @@
   "set.h264.patent": "Ciscos H.264-Patentlizenz deckt die private Nutzung und Nutzungen ohne Einnahmen ab. Für alles andere brauchst du eine eigene Lizenz oder exportierst als WebM.",
   "set.h264.licence": "Lizenz",
   "set.h264.remove": "Entfernen",
-  "export.webmFallback": "Als WebM gespeichert: Dieser Computer hat keinen H.264-Encoder, und OpenH264 ist aus oder konnte nicht geladen werden."
+  "export.webmFallback": "Als WebM gespeichert: Dieser Computer hat keinen H.264-Encoder, und OpenH264 ist aus oder konnte nicht geladen werden.",
+  "track.followScale": "Größe folgen",
+  "track.followRotation": "Winkel folgen"
 }
