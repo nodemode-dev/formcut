@@ -8,6 +8,7 @@ from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 from . import gpu
 from .assets import apply_lut, asset_path
 from .catalogue import GRADES, scale_pixel_params
+from .color_grade import apply as apply_color_grade
 from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
@@ -883,17 +884,18 @@ class FrameRenderer:
                     clip.get("lutIntensity", 1),
                     crop_box(clip),
                     repr(clip.get("colour")),
+                    repr(clip.get("colorGrade")),
                 )
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
-                    still = apply_colour_panel(still, clip.get("colour"))
+                    still = apply_color_grade(apply_colour_panel(still, clip.get("colour")), clip.get("colorGrade"))
                     scaled = self.scaled_effects(effects, clip)
                     still = apply_effects(still, scaled, 0) if scaled else still
                     self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
             else:
                 image = self.text_frame(clip) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
-                image = apply_colour_panel(image, clip.get("colour"))
+                image = apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
                 # Stabilisation needs the clip's place in time, which an effect
                 # never sees, so it is applied here from the measured path.
                 steady = clip.get("stabilise")

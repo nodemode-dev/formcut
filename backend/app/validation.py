@@ -87,6 +87,9 @@ def clip_values(clip):
         ]:
             if panel.get(name) is not None:
                 number(panel[name], "colour " + name, low, high)
+    from .color_grade import check as check_grade
+
+    check_grade(clip.get("colorGrade"))
     style = clip.get("textStyle") or {}
     for name, low, high in [
         ("weight", 100, 900),

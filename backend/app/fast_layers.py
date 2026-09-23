@@ -33,7 +33,19 @@ from .renderer import DEFAULTS
 from .timing import source_time
 from .video_source import VideoSource
 
-ALLOWED = {"colour", "lutId", "fadeIn", "fadeOut", "rampIn", "rampOut", "extendOut", "transitionIn", "transitionOut", "transitionLength"}
+ALLOWED = {
+    "colour",
+    "colorGrade",
+    "lutId",
+    "fadeIn",
+    "fadeOut",
+    "rampIn",
+    "rampOut",
+    "extendOut",
+    "transitionIn",
+    "transitionOut",
+    "transitionLength",
+}
 # The renderer draws these two as alpha ramps alone: a crossfade ramps the
 # incoming clip in over the outgoing one, which keeps playing; a dip ramps one
 # out and the other in through the background.
@@ -140,11 +152,17 @@ def refusal(project: dict) -> str | None:
 
 
 def _grade(clip: dict) -> dict | None:
+    from .color_grade import active as grade_active
     from .pixel_effects import colour_active
 
-    if not colour_active(clip.get("colour")) and not clip.get("lutId"):
+    if not colour_active(clip.get("colour")) and not grade_active(clip.get("colorGrade")) and not clip.get("lutId"):
         return None
-    return {"colour": clip.get("colour"), "lutId": clip.get("lutId"), "lutIntensity": clip.get("lutIntensity", 1)}
+    return {
+        "colour": clip.get("colour"),
+        "colorGrade": clip.get("colorGrade"),
+        "lutId": clip.get("lutId"),
+        "lutIntensity": clip.get("lutIntensity", 1),
+    }
 
 
 def plan(project: dict, count: int) -> Plan | None:
@@ -229,7 +247,9 @@ def bake(grade: dict, path: Path) -> Path:
     steps = np.round(np.linspace(0, 255, CUBE)).astype(np.uint8)
     blue, green, red = np.meshgrid(steps, steps, steps, indexing="ij")
     image = np.stack([red, green, blue, np.full_like(red, 255)], axis=-1).reshape(CUBE * CUBE, CUBE, 4)
-    graded = apply_colour_panel(image, grade.get("colour"))
+    from .color_grade import apply as apply_color_grade
+
+    graded = apply_color_grade(apply_colour_panel(image, grade.get("colour")), grade.get("colorGrade"))
     if grade.get("lutId"):
         graded = apply_lut(graded, str(grade["lutId"]), float(grade.get("lutIntensity", 1)))
     values = graded[:, :, :3].reshape(-1, 3).astype(np.float64) / 255

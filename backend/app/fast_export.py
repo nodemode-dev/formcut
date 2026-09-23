@@ -42,6 +42,7 @@ ABSENT = (
     "key",
     "stabilise",
     "colour",
+    "colorGrade",
     "crop",
     "smoothSlow",
     "reversed",
