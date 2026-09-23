@@ -63,6 +63,10 @@ through `setup/package_release.py`. Intel Macs are not built by the workflow.
 
 ## Signing
 
-The apps are unsigned; the release notes say how to open each the first time.
-Signing would go in the "build the app" step: an Apple Developer identity for
-notarization, a code-signing certificate for Windows.
+The macOS app is signed ad hoc (`signingIdentity: "-"` in `tauri.conf.json`),
+which needs no Apple account and seals the bundle: without a seal, macOS calls a
+downloaded app damaged and offers no way to open it. The release checks the seal
+on the app unzipped from its own zip, and stops if it is broken. It is not
+notarized, so the first launch goes through System Settings, Privacy & Security,
+Open Anyway, as the release notes say. Notarization would need an Apple
+Developer identity in the "build the app" step; the Windows app is unsigned.

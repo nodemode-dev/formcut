@@ -84,3 +84,17 @@ def test_the_phone_apps_are_built_unsigned_and_gate_the_release():
     assert "tauri ios build --no-sign --target aarch64" in ios and "ios-arm64.ipa" in ios
     for job in ("android", "ios"):
         assert jobs[job]["env"]["VERSION"] == "${{ needs.version.outputs.version }}"
+
+
+def test_the_macos_app_is_sealed_and_checked_as_a_download():
+    """Unsealed, a downloaded app is 'damaged' on Apple silicon, with no way to open it."""
+    import json
+
+    mac = json.loads((ROOT / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))["bundle"]["macOS"]
+    assert mac["signingIdentity"] == "-", "ad hoc: seals the bundle with no Apple account"
+    assert mac["hardenedRuntime"] is False, "library validation would stop the one-file engine and OpenH264"
+    check = next(step for step in JOBS["build"]["steps"] if step.get("name") == "the downloaded macOS app is sealed")
+    assert check["if"] == "runner.os == 'macOS'"
+    assert "ditto -x -k release-dist/*.zip" in check["run"] and "codesign --verify --deep --strict" in check["run"]
+    names = [step.get("name") for step in JOBS["build"]["steps"]]
+    assert names.index("the downloaded macOS app is sealed") > names.index("package the zip")

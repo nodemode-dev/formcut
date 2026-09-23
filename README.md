@@ -50,6 +50,8 @@ Each release carries a zip for macOS (Apple silicon), Windows and Linux that run
 
 **Tested so far:** the macOS (Apple silicon) and Linux builds have been tested on real machines and work. The Windows build, and the Android and iOS companion apps, are built and published with every release but have not been tested on real devices yet; reports are welcome in the issues.
 
+**Opening the macOS app:** it is signed but not notarized, so the first time macOS says it cannot verify formcut; open System Settings, Privacy & Security, and choose Open Anyway. A download from 1.41.2 or earlier may instead be called damaged, because those builds were not sealed: run `xattr -dr com.apple.quarantine formcut.app` once, then open it.
+
 ### Requirements
 
 Node 18 or newer, Python 3.11 or newer, and `ffmpeg` and `ffprobe` on PATH. Everything else is installed by the scripts below.

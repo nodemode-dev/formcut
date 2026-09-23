@@ -19,7 +19,9 @@
     "externalBin": ["binaries/formcut-engine"],
     "resources": { "ffmpeg/": "ffmpeg/" },
     "macOS": {
-      "minimumSystemVersion": "14.0"
+      "minimumSystemVersion": "14.0",
+      "signingIdentity": "-",
+      "hardenedRuntime": false
     }
   }
 }

@@ -14,7 +14,13 @@ name: release
 # refuses to run from any branch but main.
 #
 # Intel Macs are not built: setup/build_macos_app --intel builds one on any Mac.
-# The apps are unsigned; the release notes say how to open them the first time.
+# The macOS app is signed ad hoc (tauri.conf.json: signingIdentity "-"), which
+# needs no Apple account: without it Tauri leaves the bundle unsealed and macOS
+# calls a downloaded copy damaged, with no way to open it. It is not notarized,
+# so the release notes say how to open it the first time. Hardened runtime is
+# off: it matters only for notarization, and its library validation would stop
+# the one-file engine loading its own libraries and OpenH264 loading Cisco's.
+# The Windows app is unsigned.
 
 on:
   workflow_dispatch:
@@ -150,6 +156,18 @@ jobs:
 
       - name: package the zip
         run: python setup/package_release.py --target "${{ matrix.target }}"
+
+      # The app as a person gets it: unzipped from the release zip, then checked
+      # as Gatekeeper checks it. A signature that does not seal the bundle is what
+      # macOS reports as damaged, so it stops the release here.
+      - name: the downloaded macOS app is sealed
+        if: runner.os == 'macOS'
+        run: |
+          unpacked=$(mktemp -d)
+          ditto -x -k release-dist/*.zip "$unpacked"
+          codesign --verify --deep --strict --verbose=2 "$unpacked/formcut.app"
+          codesign -dv "$unpacked/formcut.app" 2>&1 | tee /dev/stderr | grep -q "Signature=adhoc"
+          codesign --verify --strict "$unpacked/formcut.app/Contents/MacOS/formcut-engine"
 
       - uses: actions/upload-artifact@v6
         with:
