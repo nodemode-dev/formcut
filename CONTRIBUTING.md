@@ -57,8 +57,9 @@ Only the maintainer pushes to `main`. Everyone else forks the repository and ope
 
 ## Releases
 
-A release is a version: bumping it on `main` makes the release workflow build macOS,
-Windows and Linux and publish them. See [RELEASING.md](RELEASING.md).
+A release is a version, and only the maintainer makes one: after the version is bumped on
+`main`, the maintainer runs the release workflow by hand, which builds every platform and
+publishes them together. No push starts a release. See [RELEASING.md](RELEASING.md).
 
 ## Licensing
 

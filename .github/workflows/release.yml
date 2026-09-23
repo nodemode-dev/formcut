@@ -4,20 +4,25 @@ name: release
 # publishes them as one zip per platform on a GitHub release, each running with
 # nothing else installed.
 #
-# A release is a version. On every push to main the first job reads APP_VERSION;
-# if tag v<version> does not exist yet (a "chore(release)" commit bumped it), the
-# three platforms build and, only when all three succeed, the tag and the release
-# are made with their zips. A push that leaves the version alone builds nothing, and
-# a failed build makes no tag, so the next push to main tries again. Running it by
-# hand rebuilds the current version and replaces its zips.
+# A release is made by hand, never by a push: the maintainer runs this workflow
+# on main (Actions, release, Run workflow; or gh workflow run release.yml --ref
+# main). The first job reads APP_VERSION; if tag v<version> does not exist yet
+# (a "chore(release)" commit bumped it), every platform builds and, only when all
+# succeed, the tag and the release are made with their files. A version already
+# released builds nothing unless the run asks to rebuild it, which replaces its
+# files. A failed build makes no tag, so running it again tries again. It
+# refuses to run from any branch but main.
 #
 # Intel Macs are not built: setup/build_macos_app --intel builds one on any Mac.
 # The apps are unsigned; the release notes say how to open them the first time.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      rebuild:
+        description: "Rebuild a version that is already released, replacing its files"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -38,15 +43,21 @@ jobs:
         with:
           fetch-depth: 0
       - id: read
+        env:
+          REBUILD: ${{ inputs.rebuild }}
         run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::A release is made from main; this run is on $GITHUB_REF_NAME"
+            exit 1
+          fi
           version=$(python3 -c "import re; print(re.search(r'^APP_VERSION = \"([^\"]+)\"', open('backend/app/main.py').read(), re.M).group(1))")
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+          if [ "$REBUILD" = true ] || ! git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
             echo "build=true" >> "$GITHUB_OUTPUT"
             echo "building formcut $version"
           else
             echo "build=false" >> "$GITHUB_OUTPUT"
-            echo "v$version is already released; nothing to build"
+            echo "::notice::v$version is already released, so nothing was built. Bump the version to release a new one, or run again with rebuild to replace its files."
           fi
 
   build:

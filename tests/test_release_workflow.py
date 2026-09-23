@@ -1,7 +1,8 @@
 """The release workflow: when it builds, what it builds, and what it publishes.
 
-It cannot run here, so its rules are checked from the file: a push to main builds
-only a version with no tag yet, every platform is checked and packaged the same way,
+It cannot run here, so its rules are checked from the file: only the maintainer
+starts it, by hand and from main; it builds only a version with no tag yet unless
+asked to rebuild, every platform is checked and packaged the same way,
 nothing is published unless every build succeeded, and the notes name exactly the
 zips setup/package_release.py writes.
 """
@@ -33,10 +34,12 @@ def _runs(job: str) -> str:
     return "\n".join(step.get("run", "") for step in JOBS[job]["steps"])
 
 
-def test_a_push_to_main_or_a_hand_run_starts_it_and_no_tag_does():
+def test_only_a_hand_run_from_main_starts_it():
     triggers = WORKFLOW[True]  # YAML reads the key "on" as true
-    assert triggers["push"] == {"branches": ["main"]}
-    assert "workflow_dispatch" in triggers
+    assert set(triggers) == {"workflow_dispatch"}, "no push, tag or schedule may start a release"
+    rebuild = triggers["workflow_dispatch"]["inputs"]["rebuild"]
+    assert rebuild["type"] == "boolean" and rebuild["default"] is False
+    assert 'if [ "$GITHUB_REF" != "refs/heads/main" ]' in _runs("version")
 
 
 def test_only_a_version_without_a_tag_builds():

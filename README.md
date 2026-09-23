@@ -191,7 +191,7 @@ generated from the server by `setup/mcp_tool_reference.py`.
 
 ## Releasing
 
-A release is a version: bump it and push to `main`, and `.github/workflows/release.yml` builds macOS (Apple silicon), Windows and Linux and publishes one zip for each on the release `v<version>`. Run `python setup/preflight.py` before pushing: it refuses a version that disagrees anywhere, a build that refers to a missing file, or an ffmpeg licence that has not been decided. See [RELEASING.md](RELEASING.md).
+A release is a version, and only the maintainer makes one: bump it, push to `main` (which runs the checks), then run the release workflow on `main` from the Actions tab, or `gh workflow run release.yml --ref main`. `.github/workflows/release.yml` then builds macOS (Apple silicon), Windows and Linux and publishes one zip for each on the release `v<version>`. Run `python setup/preflight.py` before pushing: it refuses a version that disagrees anywhere, a build that refers to a missing file, or an ffmpeg licence that has not been decided. See [RELEASING.md](RELEASING.md).
 
 ## Development
 
