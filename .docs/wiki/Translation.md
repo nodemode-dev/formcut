@@ -45,4 +45,4 @@ untranslated or deliberately left as it is: language names in their own
 language, user content such as track and timeline names, file types, and code
 such as the expression example. The scan used for each release visits every
 tab, menu, creator page and select option, including pages that stay hidden
-until chosen; it is described in the planning sidecar's `TEST_PLAN.md`.
+until chosen.

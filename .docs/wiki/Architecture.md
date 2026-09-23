@@ -18,7 +18,7 @@ Background work uses `jobs.py`, with two workers and up to eight active jobs. St
 
 Writable state comes from `paths.py`. No runtime writes belong under frontend assets or a PyInstaller extraction directory. HTTP binds to loopback. Mutating API clients send `x-formcut-local: 1`; the middleware also rejects non-loopback hosts/origins. Web page code has no Tauri shell permissions.
 
-Keep comments and development explanations in the planning sidecar's reasoning logs, not inline in code. Make manual, single-region edits; do not use bulk replacement or codemods. Preserve mounted controls and their focus. Static creation before mounting is allowed; inspect update paths separately. Every version is driven in a real browser, and the flows each one claims are listed in that version's build notes.
+Keep code comments short; the reasoning behind a change belongs in its commit message. Make manual, single-region edits; do not use bulk replacement or codemods. Preserve mounted controls and their focus. Static creation before mounting is allowed; inspect update paths separately. Every version is driven in a real browser before it is released.
 
 ## Playback and decoding
 

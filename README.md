@@ -184,79 +184,12 @@ A release is a version: bump it and push to `main`, and `.github/workflows/relea
 ## Development
 
 - Conventions: surgical edits over rewrites, one state engine that owns the document, stable mounted DOM with no rebuilds, every colour and z value from a token, inline `currentColor` icons with no icon dependency, no emoji anywhere, and no claim in the notes that was not run. Full set: [CLAUDE.md](CLAUDE.md).
-- Records: the phased plan, the per-version build notes and the reasoning logs for every area live in the planning sidecar beside the repository, not in it. The repository carries the readme, the contributor guide, the wiki source and code.
 - Skills: project skills for AI-assisted development live in `.claude/skills/`, one folder per skill; the folder ships empty.
 - Wiki edits: change the files in `.docs/wiki/` and push; the Action publishes them. The wiki must exist first (create any page once in the GitHub UI) for the first publish to land.
 
 ## Contributing
 
 Bug reports, fixes, features and translations are all welcome: [CONTRIBUTING.md](CONTRIBUTING.md) says how to set up, which checks to run and how releases happen. Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md), and security problems are reported privately, as [SECURITY.md](SECURITY.md) describes.
-
-## Status
-
-Under active development, released version by version. Every version is a commit and each one's record lives in the planning sidecar and in `BUILD_NOTES.md`.
-
-Shipped so far:
-
-| Version | What it carried |
-| --- | --- |
-| 0.55.0 | interface modes, autosave and recovery, delta history, multi-select, declared effect parameters |
-| 0.56.0 | everyday editing: split, rejoin, freeze, reverse, crop, flip, reattach, per-timeline formats, magnetic track, guides, Easy tray and clip panel, favourites and audition |
-| 0.57.0 | titles and captions: full title styling, canvas typing, a style gallery, font-carrying presets, caption model and placement controls, typed captions |
-| 0.58.0 | speed: frame cache with read-ahead, per-clip audio cache and live mixing, probed hardware decode, parallel export |
-| 0.59.0 | looks, masks, motion: colour panel, LUT looks, keyed effect parameters and volume, linear and inverted masks, animation slots, audio strength, tape pitch |
-| 0.60.0 | background-removal groundwork and export: licence gate, matte cache, Easy removal surface, HEVC, AV1, 10-bit, size and rate presets, live size estimates |
-| 0.61.0 | platform: effect packages, templates carrying their own media, pinned model downloads, per-run logs and diagnostics, drop-in locales, token-gated remote access, a complete RPC surface |
-| 0.62.0 | movable panes that stack as tabs, per profile |
-| 0.98.7 | the redesign pass: two-row timeline header, category slots, supplied icons, nine-tab strip |
-| 0.98.7 | timeline tabs that reorder, rename and never squeeze the toolbar; a visible composition range; studio fullscreen per section |
-| 0.98.8 | LGPL ffmpeg for all four desktop targets, with its record and notices; found in a per-person folder or a clone under the names it ships with |
-| 0.98.9 | the portable Linux build runs from the repo root and starts with ffmpeg from formcut-binaries; first Linux release tarball |
-| 0.99.0 | a native export path for cut-only timelines, frame-identical to the frame path and four times faster on one core; the test suite from 56 functions to 220 |
-| 0.100.0 | IS-Net, video matting with carried state, and SAM 2 point selection run; stored mattes no longer raised by half; copyleft weights never fetched unasked |
-| 1.0.0 | the cutout pickers offer every model in twelve languages; formcut fetches and verifies its own LGPL ffmpeg on first run; a release workflow that can build the installers |
-| 1.1.0 | IS-Net, video matting and SAM 2 pass validation and reach render and export; SAM 2 takes points or a box; golden mattes; installed builds show every language; a benchmark on real clips |
-| 1.2.0 | the macOS and Windows installers carry formcut's LGPL ffmpeg from the formcut-binaries release, checked file by file against the record |
-| 1.3.0 | first launch fetches 4.4 MB instead of about 1.4 GB, every other model on first use; the cutout labels in all twelve languages, checked in the running editor |
-| 1.4.0 | draw a box on the preview to tell SAM 2 what to keep; timeline filmstrips for video clips work again |
-| 1.5.0 | points and boxes land on the subject for scaled, moved, flipped, rotated and letterboxed clips, carried back through the renderer's own placement |
-| 1.6.0 | points and boxes on keyframed and animated clips land where the clip was when they were made; one shared transform for drawing and for prompts |
-| 1.7.0 | SAM 2.1 follows the subject through a clip with its own memory tracker; a trimmed clip's mattes come from its own frames |
-| 1.8.0 | MP4 exports on Linux and Windows without an H.264 encoder, with MPEG-4 Part 2; layered, placed, faded and graded timelines export natively, 4.5 times faster at 1080p on one core |
-| 1.9.0 | the native layered export takes rotation, crossfades, dips and still images; a dip matches the frame path exactly and a crossfade at 49.8 dB PSNR |
-| 1.10.0 | a Rust compositing kernel in the frame path, bit-identical to the Python it replaces: a titled 1080p export 1.8 times faster on one core, with the same output |
-| 1.11.0 | a library of 32 stickers, 6 music tracks and 17 sound effects, every one made by formcut's own code and free to use with no credit; Stickers, Music and Sounds tabs in 12 languages |
-| 1.12.0 | upscaling from any video or still in the bin: Lanczos, sharpened Lanczos and bicubic on this machine, or Topaz AI in Topaz Labs' cloud with your own key, which shows the credits before anything is charged |
-| 1.13.0 | signed webhooks: every finished export can be sent, with or without the video, to Make, Zapier, n8n or your own server to pass on to TikTok, Instagram and elsewhere; a Topaz key panel in Settings |
-| 1.14.0 | posting to TikTok from a bin video or the last export: a draft to your TikTok inbox, or a direct post with the privacy levels your account allows; sign in through your browser, set up in Settings |
-| 1.15.0 | posting Reels to Instagram from a bin video or the last export, as the professional account behind the access token you connect in Settings; video that is not H.264 or HEVC is caught before upload |
-| 1.16.0 | Google Drive and Dropbox: browse and add files to the bin, save exports to a formcut folder; connect in Settings |
-| 1.17.0 | formcut on phones and other computers on your network: turn it on in Settings, pair a device with a one-time code, and the whole app opens in that device's browser, served by your desktop |
-| 1.18.0 | iOS and Android apps: a small shell that remembers your computer's address and opens formcut there; CI builds an Android APK and an iOS simulator build (see mobile/README.md) |
-| 1.19.0 | the colour grade runs in the Rust kernel, 5 to 9 times faster and identical to the pixel; renders no longer vary by CPU; the export dialog names the codec and encoder it will use and warns when MP4 can only be MPEG-4 Part 2 |
-| 1.20.0 | every theme's text meets WCAG AA contrast on every surface, hints, notes and details included; Light, Sand and Mist take accents that read as text; the active bin filter's count is legible |
-| 1.21.0 | effects render 1.2 to 1.6 times faster with identical pictures: work that depends only on the frame size is done once, and the conversions around the effect chain run in the Rust kernel |
-| 1.22.0 | the exact render path exports 15 to 30 percent faster with identical pictures: layers moved by whole pixels skip resampling in the Rust kernel, and its blend rounds without a call per value |
-| 1.23.0 | a graded clip exports through the exact render path by default, as fast as before and with the grade the preview shows; projects that use one file at two moments, like a picture in picture of the same shot or a crossfade within one clip, render about 3.5 times faster on the exact path |
-| 1.24.0 | the exact render path spends 40 percent less of its own time per frame, pictures identical: opaque layers skip the blend in the Rust kernel, and frames are no longer copied where nothing shares them |
-| 1.25.0 | formcut on phones, in portrait and landscape, on tablets and in narrow windows: nothing off the screen, every Settings tab reachable, controls sized for fingers on touch screens, and the preview and timeline side by side on a landscape phone |
-| 1.26.0 | the TikTok, Instagram and cloud dialogs take you straight to their section in Settings when a service needs setting up; every dialog checked on phones and desktops in light and dark themes |
-| 1.27.0 | the keyframe button is back in every track's controls, so keyframe lanes open again; each applied effect shows its name and switches on and off, keeping its settings |
-| 1.28.0 | the applied-effect rows, their on/off switch included, in all twelve languages |
-| 1.29.0 | H.264 and HEVC through Windows' Media Foundation and Linux's VA-API (Intel and AMD) once the rebuilt ffmpeg is published; each hardware encoder tuned in its own quality controls and tested at start-up exactly as exports use it |
-| 1.30.0 | formcut's ffmpeg is now the 7.1.5-2 build, with hardware H.264 and HEVC on Windows and Linux; a formcut that fetched the earlier build refreshes it on its own, and never touches an ffmpeg you placed yourself |
-| 1.30.1 | `setup/benchmark_routes.py` measures which export route layered projects should take on your machine, and writes the results as JSON |
-| 1.30.2 | the macOS app builds on a Mac with Eigen 5 installed (Homebrew brings it in), and its image-processing runtime is built for formcut's minimum macOS instead of the one it was built on |
-| 1.30.3 | `setup/build_macos_app` completes: build scripts and procedural macros are no longer stripped, which made every macro fail with "can't find crate" on macOS 27; the app itself is still stripped |
-| 1.31.0 | macOS 14 is the minimum; `setup/build_macos_app --intel` builds for Intel Macs on an Apple Silicon Mac; every macOS build carries formcut's Rust kernels and refuses an engine without them; pytest is in the requirements |
-| 1.31.1 | the Rust kernels build on macOS 27 too: no Cargo project strips its build scripts or procedural macros, which cargo does even with no strip setting |
-| 1.31.2 | the Rust kernel library itself is not stripped either; the macOS build checks that the kernels load before freezing and prints Python's error if they do not |
-| 1.31.3 | the route benchmark's hint for installing the Rust kernels names the full paths, so it works from any folder |
-| 1.32.0 | exports take the faster layered route by default, with "Exact preview colours (slower)" in the export dialog for colours exactly as previewed; a Mac built locally carries its verified ffmpeg, as release builds do |
-| 1.33.0 | each new version builds macOS, Windows and Linux and publishes a zip for each, with checksums and a manifest; the Linux build finds its bundled ffmpeg; contributing, code of conduct and security policy |
-| 1.33.1 | the first release: the engine builds on clean checkouts (the uncleared demo image is no longer bundled), OpenCV builds on Windows, CI actions on Node 24 |
-
-Still open, each blocked on hardware or inputs rather than on design: GPU compositing (needs a WebGPU adapter), the background-removal models themselves (downloads and an accelerator), HEIC and AVIF import, HDR tone mapping, multi-stream audio, packaging verified on a clean machine, and aarch64 builds.
 
 ## Licence
 
@@ -268,4 +201,10 @@ formcut is maintained for as long as it is really used and contributed to. Its a
 
 ## Star history
 
-[![Star history for nodemode-ai/formcut](https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date)](https://www.star-history.com/#nodemode-ai/formcut&Date)
+<a href="https://www.star-history.com/#nodemode-ai/formcut&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date" />
+    <img alt="Star history for nodemode-ai/formcut" src="https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date&theme=dark" />
+  </picture>
+</a>
