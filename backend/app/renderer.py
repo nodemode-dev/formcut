@@ -157,9 +157,12 @@ def _heart() -> list[tuple[float, float]]:
 MASK_SHAPES = {
     "rect": [(0, 0), (1, 0), (1, 1), (0, 1)],
     "ellipse": [(0.5 + 0.5 * math.cos(2 * math.pi * i / 64), 0.5 + 0.5 * math.sin(2 * math.pi * i / 64)) for i in range(64)],
-    "triangle": _regular(3),
+    # Odd-sided shapes stand on a flat side with a vertex at the top; the half-step
+    # turn that gives even-sided ones a flat top had the triangle and pentagon
+    # pointing left.
+    "triangle": _regular(3, -0.75),
     "diamond": [(0.5, 0), (1, 0.5), (0.5, 1), (0, 0.5)],
-    "pentagon": _regular(5),
+    "pentagon": _regular(5, -1.25),
     "hexagon": _regular(6),
     "octagon": _regular(8),
     "star": _star(5, 0.42),
