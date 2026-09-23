@@ -29,7 +29,8 @@
     "groups": [
       "video",
       "audio",
-      "effects"
+      "effects",
+      "color"
     ],
     "subtabs": [
       "basic",
@@ -73,6 +74,9 @@
         "repair",
         "scenes",
         "rhythm"
+      ],
+      "color": [
+        "color"
       ]
     }
   },
@@ -181,6 +185,7 @@
     "section.repair": true,
     "subtab.repair": true,
     "section.canvas": true,
-    "section.rhythm": true
+    "section.rhythm": true,
+    "group.color": true
   }
 }

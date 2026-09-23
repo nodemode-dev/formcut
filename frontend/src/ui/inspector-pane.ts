@@ -60,13 +60,13 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   el.innerHTML = `
     <div class="inspector-head">
       <div class="seg" data-ref="group">
-        <button class="is-active" data-group="video" data-feature="group.video">Video</button><button data-group="audio" data-feature="group.audio">Audio</button><button data-group="effects" data-feature="group.effects">Effects</button>
+        <button class="is-active" data-group="video" data-feature="group.video">Video</button><button data-group="audio" data-feature="group.audio">Audio</button><button data-group="effects" data-feature="group.effects">Effects</button><button data-group="color" data-feature="group.color">Color</button>
       </div>
       <button class="select-chip" data-ref="show-all" data-feature="insp.showall" title="${t("insp.showall")}" aria-pressed="false">${icon("sliders")}</button>
     </div>
     <div class="inspector-subtabs">
       <div class="seg" data-ref="subtabs">
-        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="color" data-feature="subtab.color">Color</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">${t("subtab.adjust")}</button><button data-tab="repair" data-feature="subtab.repair">${t("subtab.repair")}</button>
+        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">${t("subtab.adjust")}</button><button data-tab="repair" data-feature="subtab.repair">${t("subtab.repair")}</button>
       </div>
     </div>
     <div class="inspector-body">
@@ -417,7 +417,6 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
 
   const TAB_VIEWS: Record<string, { sections: string[]; pages: string[] }> = {
     "video:basic": { sections: ["transform", "text", "blend", "canvas"], pages: [] },
-    "video:color": { sections: ["color"], pages: [] },
     "video:speed": { sections: ["timing"], pages: ["speed"] },
     "video:animation": { sections: ["track"], pages: ["motion"] },
     // Repair is a subtab of its own: stabilisation, flicker, noise, colour match
@@ -427,6 +426,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     "video:repair": { sections: ["repair", "scenes", "rhythm"], pages: [] },
     audio: { sections: ["audio", "rhythm"], pages: ["audio"] },
     effects: { sections: [], pages: ["effects", "transition"] },
+    // Grading is neither a filter nor an effect: its own group, the whole column.
+    color: { sections: ["color"], pages: [] },
   };
   const groupSeg = el.querySelector<HTMLElement>('[data-ref="group"]')!;
   const subtabSeg = el.querySelector<HTMLElement>('[data-ref="subtabs"]')!;
@@ -1547,7 +1548,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     if (kind === "audio") shown = views["audio"] ?? ["audio"];
     else if (kind === "text") shown = ["transform", "timing", "blend"];
     else {
-      shown = (profile.inspector.subtabs ?? []).flatMap((subtab) => views[`video:${subtab}`] ?? []);
+      shown = [...(profile.inspector.subtabs ?? []).flatMap((subtab) => views[`video:${subtab}`] ?? []), ...(views["color"] ?? ["color"])];
       if (!shown.length) shown = ["transform", "timing"];
     }
     const wanted = new Set(shown.filter((name) => !name.includes(":")));

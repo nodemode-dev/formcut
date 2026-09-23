@@ -474,6 +474,10 @@ export function buildColorSection(engine: ProjectEngine): HTMLElement {
     }
   };
   ref<HTMLSelectElement>("scope-mode").addEventListener("change", drawScope);
+  // Hidden, the scope skips frames; shown, it draws the one on screen at once.
+  new MutationObserver(() => {
+    if (section.dataset.tabHidden !== "true") drawScope();
+  }).observe(section, { attributes: true, attributeFilter: ["data-tab-hidden", "class", "hidden"] });
 
   // Filling the controls from the clip -----------------------------------------
   const refill = () => {
