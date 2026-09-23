@@ -56,6 +56,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       <div class="media-main">
         <div class="search-field">${icon("search")}<input data-ref="fx-search" placeholder="${t("fx.search")}" /></div>
         <div class="fx-status" data-ref="fx-status" role="status"></div>
+        <div class="fx-package-bar" data-ref="fx-package-bar" hidden><button type="button" class="tool-chip" data-ref="fx-import">${t("fx.importPackage")}</button><input type="file" accept=".zip,.json,application/zip,application/json" data-ref="fx-import-file" hidden /></div>
         <div class="card-grid" data-ref="fx-grid"></div>
         <p class="fx-empty" data-ref="fx-empty" hidden></p>
       </div>
@@ -194,6 +195,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const fxSearch = el.querySelector<HTMLInputElement>('[data-ref="fx-search"]')!;
   const fxStatus = el.querySelector<HTMLElement>('[data-ref="fx-status"]')!;
   const fxEmpty = el.querySelector<HTMLElement>('[data-ref="fx-empty"]')!;
+  const fxPackageBar = el.querySelector<HTMLElement>('[data-ref="fx-package-bar"]')!;
+  const fxImportFile = el.querySelector<HTMLInputElement>('[data-ref="fx-import-file"]')!;
   let fxLoaded = false;
   const transGrid = el.querySelector<HTMLElement>('[data-ref="trans-grid"]')!;
   const capTrack = el.querySelector<HTMLSelectElement>('[data-ref="cap-track"]')!;
@@ -219,6 +222,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       if (card.hidden === visible) card.hidden = !visible;
       any ||= visible;
     }
+    const packagesOpen = fxMode === "effect" && !query && activeCats[fxMode] === "Packages";
+    if (fxPackageBar.hidden === packagesOpen) fxPackageBar.hidden = !packagesOpen;
     // Say why a category is empty rather than show nothing at all.
     const message = !fxLoaded || any ? "" : query ? t("fx.noMatch") : activeCats[fxMode] === "Packages" ? t("fx.packagesEmpty") : t("fx.categoryEmpty");
     if (fxEmpty.textContent !== message) fxEmpty.textContent = message;
@@ -282,7 +287,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         data.transitions.map((type) => `<div class="effect-card trans-card" data-trans="${escapeHtml(type)}">${thumb("transition", type)}<div class="effect-name">${escapeHtml(transitionName(type))}</div></div>`).join(""),
       );
       fxLoaded = true;
-      applyFxFilter();
+      markPackages();
       applyFxFilter();
       syncFxActive();
     })
@@ -295,6 +300,83 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     applyFxFilter();
   });
   fxSearch.addEventListener("input", applyFxFilter);
+  // A person's own packages: imported here, removable here, never formcut's looks.
+  const markPackages = () => {
+    for (const card of fxGrid.querySelectorAll<HTMLElement>('.fx-card[data-cat="Packages"]')) {
+      if (card.querySelector("[data-remove]")) continue;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "fx-remove";
+      remove.dataset.remove = card.dataset.id!;
+      remove.title = t("fx.removePackage");
+      remove.setAttribute("aria-label", t("fx.removePackage"));
+      remove.textContent = "\u00d7";
+      card.prepend(remove);
+    }
+  };
+  const refreshPackages = async () => {
+    const res = await fetch("/api/catalogue");
+    if (!res.ok) return;
+    type Listed = { id: string; name: string; group?: string; names?: Record<string, string> };
+    const data = (await res.json()) as { video: Listed[]; audio: Listed[] };
+    for (const card of fxGrid.querySelectorAll('.fx-card[data-cat="Packages"]')) card.remove();
+    const glyph = `<div class="effect-thumb has-glyph">${icon("speaker")}</div>`;
+    fxGrid.insertAdjacentHTML(
+      "beforeend",
+      [
+        ...data.video.filter((v) => v.group === "Packages").map((v) => fxCard("effect", "video", "Packages", v.id, v.names?.[locale] ?? text(v.name), thumb("effect", v.id))),
+        ...data.audio.filter((a) => a.group === "Packages").map((a) => fxCard("effect", "audio", "Packages", a.id, a.names?.[locale] ?? text(a.name), glyph)),
+      ].join(""),
+    );
+    markPackages();
+    applyFxFilter();
+    syncFxActive();
+  };
+  const usedInProject = (id: string) =>
+    engine.snapshot.timelines.some((timeline) =>
+      timeline.tracks.some((track) => track.clips.some((clip) => clip.effects?.some((e) => e.id === id) || clip.audioEffects?.some((e) => e.id === id))),
+    );
+  el.querySelector<HTMLButtonElement>('[data-ref="fx-import"]')!.addEventListener("click", () => fxImportFile.click());
+  fxImportFile.addEventListener("change", async () => {
+    const file = fxImportFile.files?.[0];
+    fxImportFile.value = "";
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/packages/import", { method: "POST", body: form });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      say(t("fx.importFailed").replace("{reason}", String(body.detail ?? res.status)));
+      return;
+    }
+    say(t("fx.imported").replace("{name}", body.name));
+    await refreshPackages();
+  });
+  fxGrid.addEventListener(
+    "click",
+    async (ev) => {
+      const button = (ev.target as HTMLElement).closest<HTMLButtonElement>("[data-remove]");
+      if (!button) return;
+      // Before the grid's own click, which would apply the package to the clip.
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      const id = button.dataset.remove!;
+      if (usedInProject(id)) {
+        say(t("fx.inUseHere"));
+        return;
+      }
+      if (!window.confirm(t("fx.removeConfirm"))) return;
+      const res = await fetch(`/api/packages/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        say(String(body.detail ?? res.status));
+        return;
+      }
+      say(t("fx.packageRemoved"));
+      await refreshPackages();
+    },
+    true,
+  );
   let auditionTimer = 0;
   let auditionToken = 0;
   const auditionFrame = (() => {

@@ -839,5 +839,12 @@
   "param.noise": "Ruido",
   "fx.noMatch": "Ningún efecto coincide con tu búsqueda.",
   "fx.categoryEmpty": "Todavía no hay nada aquí.",
-  "fx.packagesEmpty": "Tus propios paquetes de efectos aparecen aquí. Pon una carpeta de paquete en la carpeta effects dentro de la carpeta de datos de formcut y reinicia formcut."
+  "fx.packagesEmpty": "Tus propios paquetes de efectos aparecen aquí. Elige Importar paquete para añadir un .zip de una carpeta de paquete o su manifest.json.",
+  "fx.importPackage": "Importar paquete",
+  "fx.removePackage": "Quitar paquete",
+  "fx.importFailed": "No se pudo importar el paquete: {reason}",
+  "fx.imported": "{name} importado",
+  "fx.inUseHere": "Un clip de este proyecto usa este paquete. Quítalo primero de ese clip.",
+  "fx.removeConfirm": "¿Quitar este paquete? Podrás importarlo de nuevo más tarde.",
+  "fx.packageRemoved": "Paquete quitado"
 }

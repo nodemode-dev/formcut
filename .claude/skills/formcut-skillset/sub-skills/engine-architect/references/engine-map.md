@@ -36,7 +36,7 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 1049 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 282 | /api/health | 8 |
+| main.py | 314 | /api/health | 10 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -67,7 +67,7 @@ the automation transports.
 - `audio_render.py` (207L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
-- `effect_packages.py` (287L)
+- `effect_packages.py` (394L)
 - `encoders.py` (282L)
 - `expressions.py` (51L)
 - `fast_export.py` (292L)

@@ -1446,3 +1446,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .color-hint { font-size: 10px; color: var(--ink-faint); }
 .color-actions { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
 .fx-empty { margin: var(--sp-2) 0; font-size: 12px; line-height: 1.5; color: var(--ink-soft); max-width: 36ch; }
+.fx-package-bar { margin: 0 0 var(--sp-2); }
+.fx-card { position: relative; }
+.fx-remove { position: absolute; top: 6px; left: 6px; z-index: 1; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--edge); background: var(--pane); color: var(--ink); font-size: 14px; line-height: 1; opacity: 0; transition: opacity 120ms; }
+.fx-card:hover .fx-remove, .fx-remove:focus-visible { opacity: 1; }

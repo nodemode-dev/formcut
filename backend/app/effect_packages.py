@@ -4,7 +4,9 @@ A package is a folder under `effects/` in the data directory containing a
 manifest and one backend: a stack of formcut's own video effects and grades,
 written in the manifest (video); a filter-chain template with parameter slots
 (audio); or a WGSL shader (video). formcut's own library of looks is loaded the
-same way from `effect_library/` beside this module, before the person's own. Packages load at start and after Import
+same way from `effect_library/` beside this module, before the person's own.
+A person adds one with Import package in the effects browser (install, below):
+it is checked by this loader before it is kept, and refused with the reason. Packages load at start and after Import
 package; a package that fails to load is collected with its reason and listed
 in Settings rather than stopping the engine.
 
@@ -15,9 +17,13 @@ filters the engine already uses, so a package cannot smuggle arbitrary ffmpeg
 
 from __future__ import annotations
 
+import io
 import json
 import re
+import shutil
 import threading
+import uuid
+import zipfile
 from pathlib import Path
 
 from .paths import DATA_DIR
@@ -285,3 +291,104 @@ def chain_for(effect_id: str, params: dict | None) -> str | None:
             number = float(spec["default"])
         values[name] = max(float(spec["min"]), min(float(spec["max"]), number))
     return SLOT.sub(lambda m: f"{values[m.group(1)]:g}", entry["backend"]["template"])
+
+
+# Importing a package from the interface. A package is small text: a manifest,
+# and a chain or a shader beside it. Only those three names are ever taken from
+# an upload, and they are written under those fixed names, so nothing inside a
+# zip chooses where anything lands.
+PACKAGE_FILES = ("manifest.json", "chain.txt", "shader.wgsl")
+MAX_UPLOAD = 4_000_000
+
+
+def _files_from(data: bytes, filename: str) -> dict[str, bytes]:
+    """The package's files from an upload: a .zip of a package, or a bare manifest.json."""
+    if filename.lower().endswith(".json") or data.lstrip()[:1] == b"{":
+        return {"manifest.json": data}
+    if not zipfile.is_zipfile(io.BytesIO(data)):
+        raise ValueError("a package is a .zip of its folder, or its manifest.json")
+    files: dict[str, bytes] = {}
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        members = [m for m in archive.infolist() if not m.is_dir()]
+        # The sizes are the archive's own claims, checked before anything is read.
+        if sum(m.file_size for m in members) > MAX_UPLOAD:
+            raise ValueError("the package unpacks to more than 4 MB")
+        for member in members:
+            parts = member.filename.replace("\\", "/").split("/")
+            name = parts[-1]
+            if name not in PACKAGE_FILES or any(part.startswith((".", "__MACOSX")) for part in parts):
+                continue
+            if name in files:
+                raise ValueError(f"the zip holds more than one {name}")
+            files[name] = archive.read(member)
+    if "manifest.json" not in files:
+        raise ValueError("the zip has no manifest.json")
+    return files
+
+
+def install(data: bytes, filename: str) -> dict:
+    """Check an uploaded package the way the loader would, then add it. ValueError says why not."""
+    if len(data) > MAX_UPLOAD:
+        raise ValueError("the package is larger than 4 MB")
+    files = _files_from(data, filename or "")
+    staging = DATA_DIR / "effects-incoming" / uuid.uuid4().hex
+    staging.mkdir(parents=True)
+    try:
+        for name, content in files.items():
+            (staging / name).write_bytes(content)
+        entry = load_package(staging)
+        existing = find(entry["id"])
+        if existing and existing.get("library"):
+            raise ValueError(f"{entry['id']} is one of formcut's own looks; give the package another id")
+        PACKAGES.mkdir(parents=True, exist_ok=True)
+        target = PACKAGES / entry["id"]
+        replaced = target.exists()
+        if replaced:
+            shutil.rmtree(target)
+        shutil.move(str(staging), str(target))
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    reload()
+    return {"id": entry["id"], "name": entry["name"], "kind": entry["kind"], "replaced": replaced}
+
+
+class PackageInUse(ValueError):
+    """A package that saved projects still use: removing it would leave them unable to load."""
+
+
+def projects_using(package_id: str) -> list[str]:
+    """The saved projects with a clip that uses this package, by name."""
+    from . import store
+
+    def uses(node) -> bool:
+        if isinstance(node, dict):
+            for key in ("effects", "audioEffects"):
+                listed = node.get(key)
+                if isinstance(listed, list) and any(isinstance(e, dict) and e.get("id") == package_id for e in listed):
+                    return True
+            return any(uses(value) for value in node.values())
+        if isinstance(node, list):
+            return any(uses(value) for value in node)
+        return False
+
+    return [project.get("name") or project.get("id", "") for project in store.list_projects() if uses(project)]
+
+
+def remove(package_id: str) -> None:
+    """Delete one of the person's own packages; formcut's looks are not theirs to delete.
+
+    The document validator refuses an effect id it does not know, so a package
+    removed from under a project would stop that project saving and rendering.
+    Removal is refused while a saved project uses it, naming those projects.
+    """
+    entry = find(package_id)
+    if not entry:
+        raise KeyError(package_id)
+    folder = Path(entry["folder"]).resolve()
+    if entry.get("library") or folder.parent != PACKAGES.resolve():
+        raise PermissionError(f"{package_id} is one of formcut's own looks")
+    users = projects_using(package_id)
+    if users:
+        raise PackageInUse(f"Used in {', '.join(users[:5])}{' and more' if len(users) > 5 else ''}. Remove it from those clips first.")
+    shutil.rmtree(folder)
+    reload()

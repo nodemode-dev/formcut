@@ -839,5 +839,12 @@
   "param.noise": "Noise",
   "fx.noMatch": "No effects match your search.",
   "fx.categoryEmpty": "Nothing here yet.",
-  "fx.packagesEmpty": "Your own effect packages appear here. Put a package folder in the effects folder inside formcut's data folder, then restart formcut."
+  "fx.packagesEmpty": "Your own effect packages appear here. Choose Import package to add a .zip of a package folder, or its manifest.json.",
+  "fx.importPackage": "Import package",
+  "fx.removePackage": "Remove package",
+  "fx.importFailed": "Could not import the package: {reason}",
+  "fx.imported": "Imported {name}",
+  "fx.inUseHere": "A clip in this project uses this package. Remove it from that clip first.",
+  "fx.removeConfirm": "Remove this package? You can import it again later.",
+  "fx.packageRemoved": "Package removed"
 }

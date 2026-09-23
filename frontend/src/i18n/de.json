@@ -839,5 +839,12 @@
   "param.noise": "Rauschen",
   "fx.noMatch": "Keine Effekte passen zu deiner Suche.",
   "fx.categoryEmpty": "Hier ist noch nichts.",
-  "fx.packagesEmpty": "Deine eigenen Effektpakete erscheinen hier. Lege einen Paketordner in den Ordner „effects“ in formcuts Datenordner und starte formcut neu."
+  "fx.packagesEmpty": "Deine eigenen Effektpakete erscheinen hier. Wähle „Paket importieren“, um eine .zip eines Paketordners oder dessen manifest.json hinzuzufügen.",
+  "fx.importPackage": "Paket importieren",
+  "fx.removePackage": "Paket entfernen",
+  "fx.importFailed": "Das Paket konnte nicht importiert werden: {reason}",
+  "fx.imported": "{name} importiert",
+  "fx.inUseHere": "Ein Clip in diesem Projekt nutzt dieses Paket. Entferne es zuerst aus dem Clip.",
+  "fx.removeConfirm": "Dieses Paket entfernen? Du kannst es später erneut importieren.",
+  "fx.packageRemoved": "Paket entfernt"
 }
