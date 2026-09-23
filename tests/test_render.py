@@ -83,7 +83,9 @@ def test_a_keyframe_changes_the_picture_over_time():
 
 
 def test_a_mask_removes_part_of_the_picture():
-    masked = make_project(clips=[text_clip(mask={"shape": "ellipse", "x": 30, "y": 30, "w": 40, "h": 40, "feather": 0})])
+    # Half the frame: centred text straddles the middle in any font, so either
+    # half cuts some of it. A centred ellipse did only where the font was wide.
+    masked = make_project(clips=[text_clip(mask={"shape": "rect", "x": 0, "y": 0, "w": 50, "h": 100, "feather": 0})])
     assert lit(render_at(masked, 1.0)) < lit(render_at(make_project(), 1.0))
 
 

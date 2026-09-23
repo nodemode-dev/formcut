@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 from app import fast_export
 from app.fast_layers import LIMIT, Layer, Plan, bake, graph, refusal
-from conftest import make_project, text_clip
+from conftest import DECODER_PARITY, make_project, text_clip
 
 GRADE = {"exposure": 0.2, "contrast": 12, "saturation": 15}
 
@@ -244,6 +244,7 @@ def three_layers(media_id: str) -> dict:
     return project
 
 
+@DECODER_PARITY
 def test_layers_export_natively_within_sight_of_the_frame_path(footage, monkeypatch):
     layered = export(three_layers(footage), "stack", "", monkeypatch)
     frames = export(three_layers(footage), "stack", "frames", monkeypatch)

@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from app.fast_layers import Layer, Plan, graph, inputs, plan, refusal
-from conftest import make_project, text_clip
+from conftest import DECODER_PARITY, make_project, text_clip
 from PIL import Image
 
 HAVE_FFMPEG = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
@@ -202,11 +202,13 @@ def psnr(first: str, second: str) -> float:
     return math.inf if value == "inf" else float(value)
 
 
+@DECODER_PARITY
 def test_a_crossfade_exports_natively_close_to_the_frame_path(footage, monkeypatch):
     layered, frames = both(joined("crossfade", footage[0]), "crossfade", monkeypatch)
     assert layered["renderPath"] == "layered" and psnr(frames["file"], layered["file"]) > 40
 
 
+@DECODER_PARITY
 def test_a_rotated_picture_in_picture_exports_natively_within_sight(footage, monkeypatch):
     clips = [video("top", 0, 1, footage[0], transform={"scale": 40, "posX": 20, "rotation": 20})]
     project = make_project(width=320, height=180, fps=30, clips=clips, duration=1.0)

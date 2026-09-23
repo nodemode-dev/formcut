@@ -97,7 +97,8 @@ def test_a_user_token_finds_the_account_through_its_pages(meta):
     shown = client.put("/api/connect/instagram", json={"token": "user-token"}).json()
     assert shown == {"connected": True, "userId": "1784", "username": "maker"}
     assert "user-token" not in json.dumps(client.get("/api/connect/instagram").json())
-    assert os.stat(instagram.STORE).st_mode & 0o777 == 0o600
+    # Windows has no POSIX modes; there the store is private to the user's own profile.
+    assert os.name == "nt" or os.stat(instagram.STORE).st_mode & 0o777 == 0o600
 
 
 def test_a_page_token_finds_its_own_account(meta):

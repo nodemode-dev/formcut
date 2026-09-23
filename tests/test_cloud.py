@@ -149,7 +149,8 @@ def test_google_signs_in_on_the_loopback_with_pkce_and_drive_file(fake):
     assert cloud.challenge(form["code_verifier"]) == query["code_challenge"][0]
     shown = client.get("/api/cloud").json()["google"]
     assert shown["connected"] is True and "g-secret" not in json.dumps(shown)
-    assert os.stat(cloud.STORE).st_mode & 0o777 == 0o600
+    # Windows has no POSIX modes; there the store is private to the user's own profile.
+    assert os.name == "nt" or os.stat(cloud.STORE).st_mode & 0o777 == 0o600
     assert client.get("/api/cloud/google/callback", params={"state": query["state"][0], "code": "g-code"}).status_code == 400
 
 

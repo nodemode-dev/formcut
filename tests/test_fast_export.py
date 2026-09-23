@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from app import fast_export
 from app.fast_export import LIMIT, Plan, Segment, _span, _timebase, graph, inputs, refusal
-from conftest import ROOT, make_project, text_clip
+from conftest import DECODER_PARITY, ROOT, make_project, text_clip
 
 HAVE_FFMPEG = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
 
@@ -300,7 +300,7 @@ def test_a_gap_is_black_for_exactly_its_frames():
 
 def test_every_source_is_sought_where_the_decoder_would_seek():
     plan = plan_with(Segment(30, Path("/m/a.mp4"), 30.0, 320, 180, 1.5, 0.0, 1.2))
-    assert inputs(plan) == ["-ss", "1.5", "-t", "1.200000", "-i", "/m/a.mp4"]
+    assert inputs(plan) == ["-ss", "1.5", "-t", "1.200000", "-i", str(Path("/m/a.mp4"))]
 
 
 def test_a_source_at_the_canvas_size_is_not_rescaled():
@@ -418,6 +418,7 @@ def cuts(sources: dict) -> dict:
     return make_project(width=320, height=180, fps=30, clips=clips, duration=2.5)
 
 
+@DECODER_PARITY
 def test_native_cuts_with_off_grid_timing_are_the_frame_paths_pictures(sources, monkeypatch):
     native = export(cuts(sources), "cuts", "", monkeypatch)
     frames = export(cuts(sources), "cuts", "frames", monkeypatch)
@@ -441,6 +442,7 @@ def test_a_native_export_keeps_the_timelines_sound(sources, monkeypatch):
     assert "audio" in streams.split()
 
 
+@DECODER_PARITY
 def test_a_letterboxed_source_is_within_sight_of_the_frame_path(sources, monkeypatch):
     project = make_project(
         width=320, height=180, fps=30, clips=[{**video("a", 0.0, 1.0), "mediaId": sources["wide"], "sourceIn": 0.5}], duration=1.0

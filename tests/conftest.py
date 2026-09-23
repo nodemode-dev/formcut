@@ -71,3 +71,11 @@ def moving_frames() -> list[np.ndarray]:
         frame[70:110, 40 + index * 8 : 80 + index * 8] = patch
         frames.append(np.dstack([frame] * 3))
     return frames
+
+
+# Checks that compare two decoders pixel for pixel: OpenCV's own ffmpeg, which the
+# frame path reads through, against the system ffmpeg the native and layered paths
+# run. Like the golden frames in checks.yml they are pinned to Linux, where CI
+# controls both builds; Homebrew's newer major release rounds a little differently,
+# which says nothing about formcut's code. They run on every Linux check.
+DECODER_PARITY = pytest.mark.skipif(sys.platform != "linux", reason="compares two ffmpeg builds; pinned to Linux, where CI controls both")

@@ -139,7 +139,8 @@ def test_sign_in_uses_pkce_on_the_loopback_and_keeps_tokens_private(fake):
     shown = client.get("/api/connect/tiktok").json()
     assert (shown["connected"], shown["mode"], shown["account"]["openId"]) == (True, "local", "open-1")
     assert "act.1" not in json.dumps(shown) and "rft.1" not in json.dumps(shown)
-    assert os.stat(tiktok.STORE).st_mode & 0o777 == 0o600
+    # Windows has no POSIX modes; there the store is private to the user's own profile.
+    assert os.name == "nt" or os.stat(tiktok.STORE).st_mode & 0o777 == 0o600
 
 
 def test_an_unknown_or_replayed_sign_in_is_refused(fake):

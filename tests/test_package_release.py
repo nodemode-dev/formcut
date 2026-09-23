@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import stat
 import zipfile
 from pathlib import Path
@@ -34,6 +35,7 @@ def _modes(archive: Path) -> dict[str, int]:
         return {info.filename: (info.external_attr >> 16) & 0o777 for info in bundle.infolist()}
 
 
+@pytest.mark.skipif(os.name == "nt", reason="zip modes come from POSIX permissions; these zips are packaged on macOS and Linux")
 def test_linux_ships_the_appimage_executable(packager):
     module, root = packager
     release = root / "src-tauri" / "target" / "x86_64-unknown-linux-gnu" / "release"
@@ -60,6 +62,7 @@ def test_windows_ships_a_folder_with_the_engine_and_ffmpeg_beside_the_app(packag
     assert not (root / "out" / "formcut-9.9.9-windows-x86_64").exists()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="zip modes come from POSIX permissions; these zips are packaged on macOS and Linux")
 def test_macos_keeps_the_bundle_and_its_executables(packager):
     module, root = packager
     app = root / "src-tauri" / "target" / "aarch64-apple-darwin" / "release" / "bundle" / "macos" / "formcut.app"
