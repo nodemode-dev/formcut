@@ -6,9 +6,9 @@ written in the manifest (video); a filter-chain template with parameter slots
 (audio); or a WGSL shader (video). formcut's own library of looks is loaded the
 same way from `effect_library/` beside this module, before the person's own.
 A person adds one with Import package in the effects browser (install, below):
-it is checked by this loader before it is kept, and refused with the reason. Packages load at start and after Import
-package; a package that fails to load is collected with its reason and listed
-in Settings rather than stopping the engine.
+it is checked by this loader before it is kept, and refused with the reason.
+Packages load at start and after an import; one that fails to load is collected
+with its reason and reported by /api/packages rather than stopping the engine.
 
 The filter allowlist is the security boundary: a chain template may only name
 filters the engine already uses, so a package cannot smuggle arbitrary ffmpeg
