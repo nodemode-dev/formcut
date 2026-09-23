@@ -58,7 +58,7 @@ def test_every_platform_is_checked_bundled_and_packaged_alike():
 
 
 def test_nothing_is_published_unless_every_build_succeeded():
-    assert JOBS["publish"]["needs"] == ["version", "build"]
+    assert JOBS["publish"]["needs"] == ["version", "build", "android", "ios"]
     runs = _runs("publish")
     assert "setup/release_notes.py" in runs and "gh release create" in runs and "--clobber" in runs
     assert "setup/release_manifest.py" in runs and "SHA256SUMS" in runs and "release-dist/*" in runs
@@ -70,3 +70,14 @@ def test_the_notes_name_exactly_the_zips_that_are_built():
     for target in _targets():
         platform, arch = packager.PLATFORMS[target]
         assert f"`formcut-9.9.9-{platform}-{arch}.zip`" in text
+
+
+def test_the_phone_apps_are_built_unsigned_and_gate_the_release():
+    jobs = JOBS
+    assert set(jobs["publish"]["needs"]) >= {"build", "android", "ios"}
+    android = " ".join(step.get("run", "") for step in jobs["android"]["steps"])
+    ios = " ".join(step.get("run", "") for step in jobs["ios"]["steps"])
+    assert "tauri android build --debug --apk --target aarch64" in android and "android-arm64.apk" in android
+    assert "tauri ios build --no-sign --target aarch64" in ios and "ios-arm64.ipa" in ios
+    for job in ("android", "ios"):
+        assert jobs[job]["env"]["VERSION"] == "${{ needs.version.outputs.version }}"

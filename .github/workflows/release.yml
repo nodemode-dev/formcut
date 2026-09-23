@@ -146,9 +146,96 @@ jobs:
           path: release-dist/*.zip
           if-no-files-found: error
 
+  # The phone apps, unsigned as the owner chose: an APK signed with Android's
+  # debug key (an APK needs some signature to install at all; the debug key
+  # needs no account or secret), and an iOS IPA with no signature, which
+  # AltStore, SideStore or Sideloadly sign with the installer's own Apple ID.
+  # Each takes the release's version through --config, so the phone apps report
+  # the version they were released as.
+  android:
+    name: Android arm64
+    needs: version
+    if: needs.version.outputs.build == 'true'
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+      - name: Android NDK
+        run: |
+          sdkmanager --install "ndk;27.0.12077973"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npx tauri android init --ci
+      - run: npx tauri icon ../src-tauri/icons/icon.png
+      - name: build the APK, signed with the debug key
+        run: npx tauri android build --debug --apk --target aarch64 --config "{\"version\":\"$VERSION\"}"
+      - name: name it for the release
+        run: |
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -n 1)
+          test -n "$apk" || { echo "no APK was built"; exit 1; }
+          mkdir -p ../release-dist
+          cp "$apk" "../release-dist/formcut-$VERSION-android-arm64.apk"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: formcut-android
+          path: release-dist/*.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS arm64
+    needs: version
+    if: needs.version.outputs.build == 'true'
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npx tauri ios init --ci
+      - run: npx tauri icon ../src-tauri/icons/icon.png
+      # --no-sign (Tauri CLI 2.11.0 and later) archives without signing and packs
+      # the .app into an IPA for third-party installers.
+      - name: build the IPA, unsigned
+        run: npx tauri ios build --no-sign --target aarch64 --config "{\"version\":\"$VERSION\"}"
+      - name: name it for the release
+        run: |
+          ipa=$(find src-tauri/gen/apple -name '*.ipa' | head -n 1)
+          test -n "$ipa" || { echo "no IPA was built"; exit 1; }
+          mkdir -p ../release-dist
+          cp "$ipa" "../release-dist/formcut-$VERSION-ios-arm64.ipa"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: formcut-ios
+          path: release-dist/*.ipa
+          if-no-files-found: error
+
   publish:
     name: publish the release
-    needs: [version, build]
+    needs: [version, build, android, ios]
     if: needs.version.outputs.build == 'true'
     runs-on: ubuntu-24.04
     env:
@@ -165,7 +252,7 @@ jobs:
       - name: write the checksums, the manifest and the notes
         run: |
           python setup/release_manifest.py --version "$VERSION" --dir release-dist > manifest.json
-          (cd release-dist && sha256sum -- *.zip > SHA256SUMS)
+          (cd release-dist && sha256sum -- *.zip *.apk *.ipa > SHA256SUMS)
           mv manifest.json release-dist/manifest.json
           python setup/release_notes.py --version "$VERSION" > notes.md
       - name: publish

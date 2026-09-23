@@ -37,5 +37,13 @@ def test_each_zip_is_listed_with_its_platform_size_and_checksum(tmp_path):
 
 def test_a_zip_this_release_does_not_make_stops_it(tmp_path):
     (tmp_path / "formcut-9.9.9-beos-x86.zip").write_bytes(b"?")
-    with pytest.raises(SystemExit, match="not a zip this release makes"):
+    with pytest.raises(SystemExit, match="not a file this release makes"):
         _load().manifest("9.9.9", tmp_path)
+
+
+def test_the_phone_apps_are_listed_with_their_minimum_os(tmp_path):
+    (tmp_path / "formcut-9.9.9-android-arm64.apk").write_bytes(b"apk")
+    (tmp_path / "formcut-9.9.9-ios-arm64.ipa").write_bytes(b"ipa")
+    by_platform = {asset["platform"]: asset for asset in _load().manifest("9.9.9", tmp_path)["assets"]}
+    assert by_platform["android"]["minimum_os"] == "Android 7.0 (API 24)" and by_platform["android"]["arch"] == "arm64"
+    assert by_platform["ios"]["minimum_os"] == "iOS 14" and by_platform["ios"]["file"] == "formcut-9.9.9-ios-arm64.ipa"

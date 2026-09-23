@@ -21,6 +21,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MINIMUM_OS = {"macos": "macOS 14", "windows": "Windows 10", "linux": "glibc 2.35"}
+# The phone apps: Tauri 2's defaults, which mobile/src-tauri/tauri.conf.json does not change.
+MOBILE = {".apk": ("android", "arm64", "Android 7.0 (API 24)"), ".ipa": ("ios", "arm64", "iOS 14")}
 
 
 def _platforms() -> dict[str, tuple[str, str]]:
@@ -32,10 +34,13 @@ def _platforms() -> dict[str, tuple[str, str]]:
 
 def manifest(version: str, folder: Path) -> dict:
     known = {f"formcut-{version}-{platform}-{arch}.zip": (platform, arch) for platform, arch in _platforms().values()}
+    for suffix, (platform, arch, _) in MOBILE.items():
+        known[f"formcut-{version}-{platform}-{arch}{suffix}"] = (platform, arch)
+    minimum = {**MINIMUM_OS, **{platform: floor for platform, _, floor in MOBILE.values()}}
     assets = []
-    for path in sorted(folder.glob("formcut-*.zip")):
+    for path in sorted(p for p in folder.glob("formcut-*") if p.suffix in (".zip", *MOBILE)):
         if path.name not in known:
-            raise SystemExit(f"{path.name} is not a zip this release makes")
+            raise SystemExit(f"{path.name} is not a file this release makes")
         platform, arch = known[path.name]
         assets.append(
             {
@@ -44,7 +49,7 @@ def manifest(version: str, folder: Path) -> dict:
                 "file": path.name,
                 "bytes": path.stat().st_size,
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                "minimum_os": MINIMUM_OS[platform],
+                "minimum_os": minimum[platform],
             }
         )
     record = json.loads((ROOT / "src-tauri" / "binaries" / "ffmpeg-licence.json").read_text(encoding="utf-8"))
