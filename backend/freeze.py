@@ -31,7 +31,7 @@ arguments = [
     str(root / 'desktop_entry.py'),
 ]
 
-for package in ("numpy", "Pillow", "opencv-python-headless", "wgpu", "onnxruntime", "fastapi", "uvicorn", "python-multipart", "httpx", "grpcio", "yt-dlp"):
+for package in ("mcp", "mcp-types", "numpy", "Pillow", "opencv-python-headless", "wgpu", "onnxruntime", "fastapi", "uvicorn", "python-multipart", "httpx", "grpcio", "yt-dlp"):
     arguments.extend(["--copy-metadata", package])
 for notice in Path(cv2.__file__).parent.glob("LICENSE*"):
     arguments.extend(["--add-data", str(notice) + os.pathsep + "third_party/opencv"])

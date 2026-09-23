@@ -4,7 +4,7 @@
     python setup/mcp_tool_reference.py           # rewrite the reference
     python setup/mcp_tool_reference.py --check   # exit 1 if it is out of date
 
-Every tool mcp/formcut_mcp.py declares, with its exact name, its parameters (limits
+Every tool backend/app/agent_mcp.py declares, with its exact name, its parameters (limits
 and defaults as the server enforces them) and whether it changes anything, read with
 ast so the MCP SDK need not be installed. Agents quote names from the reference, so
 it is generated, never edited by hand.
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SERVER = ROOT / "mcp" / "formcut_mcp.py"
+SERVER = ROOT / "backend" / "app" / "agent_mcp.py"
 REFERENCE = ROOT / ".claude" / "skills" / "formcut-mcp" / "sub-skills" / "mcp-workflows" / "references" / "tools.md"
 
 
@@ -64,7 +64,7 @@ def reference() -> str:
         "# formcut MCP tools",
         "",
         (
-            "Generated from `mcp/formcut_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, "
+            "Generated from `backend/app/agent_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, "
             "with its exact name, its parameters (limits and defaults as the server enforces them) and whether it "
             "changes anything. Names are case sensitive. If a host's tool listing disagrees with this file, the "
             "listing is current and this file is stale."

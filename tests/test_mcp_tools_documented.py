@@ -10,7 +10,7 @@ import re
 
 from conftest import ROOT
 
-SERVER = (ROOT / "mcp" / "formcut_mcp.py").read_text(encoding="utf-8")
+SERVER = (ROOT / "backend" / "app" / "agent_mcp.py").read_text(encoding="utf-8")
 
 
 def _reference():
