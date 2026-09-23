@@ -18,7 +18,20 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend"))
-os.environ.setdefault("FORMCUT_DATA_DIR", tempfile.mkdtemp(prefix="formcut-tests-"))
+# The suite's own data folder, removed when the run ends (a full run leaves up to
+# 150 MB of media, proxies and renders). A folder given in FORMCUT_DATA_DIR is kept.
+_OWN_DATA_DIR = None if "FORMCUT_DATA_DIR" in os.environ else tempfile.mkdtemp(prefix="formcut-tests-")
+os.environ.setdefault("FORMCUT_NO_WARM", "1")
+if _OWN_DATA_DIR:
+    os.environ["FORMCUT_DATA_DIR"] = _OWN_DATA_DIR
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if _OWN_DATA_DIR:
+        import shutil
+
+        shutil.rmtree(_OWN_DATA_DIR, ignore_errors=True)
+
 
 TEXT = {"content": "FORMCUT", "size": 14, "color": "#ffcc55", "bold": True, "align": "center"}
 
