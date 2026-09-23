@@ -2,7 +2,7 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
@@ -85,10 +85,6 @@ app.add_event_handler("startup", lambda: resume_remote(app))
 def health() -> dict:
     return {"status": "ok", "version": APP_VERSION}
 
-
-_dist = Path(os.environ.get("FORMCUT_DIST", ""))
-if os.environ.get("FORMCUT_DIST") and _dist.is_dir():
-    app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")
 
 # P9: one log per run, the last ten kept, and a system-information summary that
 # never carries a provider key.
@@ -242,6 +238,32 @@ def packages_reload() -> dict:
     return reload_packages()
 
 
+@app.post("/api/packages/import", status_code=201)
+def packages_import(file: UploadFile) -> dict:
+    """Add an effect package from a .zip of its folder or its manifest.json."""
+    from .effect_packages import MAX_UPLOAD, install
+
+    data = file.file.read(MAX_UPLOAD + 1)
+    try:
+        return install(data, file.filename or "")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.delete("/api/packages/{package_id}", status_code=204)
+def packages_remove(package_id: str) -> None:
+    from .effect_packages import PackageInUse, remove
+
+    try:
+        remove(package_id)
+    except PackageInUse as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, "No package by that id") from exc
+    except PermissionError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
 @app.get("/api/diagnostics")
 def diagnostics() -> dict:
     """Version, platform, encoders and models present; never a provider key."""
@@ -280,3 +302,13 @@ def diagnostics() -> dict:
 def diagnostics_log() -> Response:
     text = RUN_LOG.read_text(encoding="utf-8", errors="replace") if RUN_LOG.is_file() else ""
     return Response(text[-200000:], media_type="text/plain; charset=utf-8")
+
+
+# The interface is mounted last. A mount at "/" matches every path, and routes
+# are matched in the order they are added, so every route declared after it was
+# unreachable wherever FORMCUT_DIST is set, which is the desktop app:
+# /api/locales, /api/proxies/settings, /api/packages and /api/diagnostics
+# answered 404, 403 or 405 there.
+_dist = Path(os.environ.get("FORMCUT_DIST", ""))
+if os.environ.get("FORMCUT_DIST") and _dist.is_dir():
+    app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")
