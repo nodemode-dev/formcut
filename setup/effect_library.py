@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LIBRARY = ROOT / "backend" / "app" / "effect_library"
-LANGUAGES = ("de", "es", "fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant")
+LANGUAGES = ("de", "es", "fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant", "ar", "fa", "he", "hr")
 NAMES = json.loads((Path(__file__).with_name("effect_library_names.json")).read_text(encoding="utf-8"))
 
 # English name and the grade; the translations are in effect_library_names.json.

@@ -7,7 +7,7 @@ formcut is a local video editor: a TypeScript interface, a Python engine that re
 - [Architecture](Architecture) — how the pieces fit, and where a frame comes from
 - [Creator workflow](Creator-workflow) — what you can do to a clip, in the order you would do it
 - [Automation](Automation) — driving the editor from outside, over RPC or MCP
-- [Translation](Translation) — the twelve languages, and adding or correcting one
+- [Translation](Translation) — the sixteen languages, and adding or correcting one
 - [Packaging](Packaging) — desktop and portable builds
 - [Models](Models) — every open-weight model, its link, licence and loader
 - [Licences](Licences) — model and asset licences, and the gate that keeps them honest

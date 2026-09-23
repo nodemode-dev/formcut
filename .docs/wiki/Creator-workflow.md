@@ -20,7 +20,7 @@ Studio > Stock media searches Pexels for video or photos with orientation, size 
 
 Templates are full timeline documents. Studio > Templates can save the current document, export/import .fctemplate files, and bind each named media slot to available media. Duration fitting adjusts source rate. LUTs, shaders and imported fonts are embedded and remapped on import. Source footage is represented by slots, not embedded. Filled templates create an unsaved independent project.
 
-Text can use an uploaded TTF/OTF font from the inspector. Use a font containing the script you intend to render; platform fallback cannot guarantee all glyphs. The interface is fully translated into twelve languages from one key table: 171 keys in each of English, Spanish and German, and 192 rows carrying the other nine.
+Text can use an uploaded TTF/OTF font from the inspector. Use a font containing the script you intend to render; platform fallback cannot guarantee all glyphs. The interface is fully translated into sixteen languages, every key and every phrase in each, with Arabic, Persian and Hebrew right to left; the [Translation](Translation) page says where the strings live.
 
 ## The effect browser
 

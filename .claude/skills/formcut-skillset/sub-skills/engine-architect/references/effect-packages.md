@@ -34,4 +34,4 @@ A folder with a `manifest.json` (`id`, `name`, `kind`, optional `category` and `
 
 - **A new built-in look:** add a grade or finish to `setup/effect_library.py` (names in `effect_library_names.json`, all eleven languages), run it, commit the generated folders.
 - **A new stack grade setting:** add it to `pixel_effects.grade`, then to `GRADE_RANGES`; the schema route and the guide follow.
-- **A new effect parameter:** read it in the effect's branch of `process` with its old constant as the default, add it to `PARAM_SPECS` (unknown keys are dropped by `clamp_params`) and `EFFECT_DEFAULTS`, a label in `PARAM_LABELS` if the general name says too little, and the label in twelve languages. `tests/test_effect_controls.py` fails any control that changes nothing.
+- **A new effect parameter:** read it in the effect's branch of `process` with its old constant as the default, add it to `PARAM_SPECS` (unknown keys are dropped by `clamp_params`) and `EFFECT_DEFAULTS`, a label in `PARAM_LABELS` if the general name says too little, and the label in sixteen languages. `tests/test_effect_controls.py` fails any control that changes nothing.

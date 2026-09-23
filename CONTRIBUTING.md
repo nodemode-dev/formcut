@@ -10,8 +10,8 @@ contributions.
   and your platform, is one of the most useful things you can give.
 - **Look at the open issues.** Comment on one before starting larger work, so nobody
   builds the same thing twice.
-- **Translations** are welcome: formcut ships in twelve languages, and every new
-  string needs all twelve.
+- **Translations** are welcome: formcut ships in sixteen languages, and every
+  new string needs all sixteen.
 
 ## Setting up
 
@@ -46,7 +46,9 @@ python -m pytest tests -q
 - Keep each pull request to one change, with tests for what it adds or fixes.
 - Write commit subjects the way the history does: `feat(export): ...`,
   `fix(timeline): ...`, `test(...)`, `docs(...)`.
-- Interface text goes through the translation files, in all twelve languages.
+- Interface text goes through the translation files, in all sixteen languages:
+  twelve in `frontend/src/i18n`, and Arabic, Persian, Hebrew and Croatian in
+  `frontend/public/locales` (see the Translation page of the wiki).
 - ffmpeg stays LGPL. Nothing that would make formcut's builds GPL (such as libx264)
   can be bundled; formcut's own ffmpeg builds live in the formcut-binaries
   repository.

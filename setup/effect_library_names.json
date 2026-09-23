@@ -10,7 +10,11 @@
     "ru": "Золотой час",
     "tr": "Altın saat",
     "zh-Hans": "黄金时刻",
-    "zh-Hant": "黃金時刻"
+    "zh-Hant": "黃金時刻",
+    "ar": "الساعة الذهبية",
+    "fa": "ساعت طلایی",
+    "he": "שעת זהב",
+    "hr": "Zlatni sat"
   },
   "Blue Hour": {
     "de": "Blaue Stunde",
@@ -23,7 +27,11 @@
     "ru": "Синий час",
     "tr": "Mavi saat",
     "zh-Hans": "蓝调时刻",
-    "zh-Hant": "藍調時刻"
+    "zh-Hant": "藍調時刻",
+    "ar": "الساعة الزرقاء",
+    "fa": "ساعت آبی",
+    "he": "השעה הכחולה",
+    "hr": "Plavi sat"
   },
   "Faded Film": {
     "de": "Verblasster Film",
@@ -36,7 +44,11 @@
     "ru": "Выцветшая плёнка",
     "tr": "Solmuş film",
     "zh-Hans": "褪色胶片",
-    "zh-Hant": "褪色膠片"
+    "zh-Hant": "褪色膠片",
+    "ar": "فيلم باهت",
+    "fa": "فیلم رنگ‌پریده",
+    "he": "פילם דהוי",
+    "hr": "Izblijedjeli film"
   },
   "Teal and Orange": {
     "de": "Petrol und Orange",
@@ -49,7 +61,11 @@
     "ru": "Бирюзовый и оранжевый",
     "tr": "Camgöbeği ve turuncu",
     "zh-Hans": "青橙色调",
-    "zh-Hant": "青橙色調"
+    "zh-Hant": "青橙色調",
+    "ar": "أزرق مخضر وبرتقالي",
+    "fa": "فیروزه‌ای و نارنجی",
+    "he": "טורקיז וכתום",
+    "hr": "Tirkizno i narančasto"
   },
   "Bleach Bypass": {
     "de": "Bleach Bypass",
@@ -62,7 +78,11 @@
     "ru": "Отбеливание в обход",
     "tr": "Ağartma atlama",
     "zh-Hans": "漂白效果",
-    "zh-Hant": "漂白效果"
+    "zh-Hant": "漂白效果",
+    "ar": "تخطي التبييض",
+    "fa": "بی‌رنگ‌بری ناقص",
+    "he": "דילוג הלבנה",
+    "hr": "Preskočeno izbjeljivanje"
   },
   "Noir": {
     "de": "Noir",
@@ -75,7 +95,11 @@
     "ru": "Нуар",
     "tr": "Noir",
     "zh-Hans": "黑色电影",
-    "zh-Hant": "黑色電影"
+    "zh-Hant": "黑色電影",
+    "ar": "نوار",
+    "fa": "نوآر",
+    "he": "נואר",
+    "hr": "Noir"
   },
   "Silver Mono": {
     "de": "Silber-Monochrom",
@@ -88,7 +112,11 @@
     "ru": "Серебристый монохром",
     "tr": "Gümüş tek renk",
     "zh-Hans": "银色单色",
-    "zh-Hant": "銀色單色"
+    "zh-Hant": "銀色單色",
+    "ar": "أحادي فضي",
+    "fa": "تک‌رنگ نقره‌ای",
+    "he": "מונו כסוף",
+    "hr": "Srebrno jednobojno"
   },
   "Sepia Print": {
     "de": "Sepiadruck",
@@ -101,7 +129,11 @@
     "ru": "Сепия",
     "tr": "Sepya baskı",
     "zh-Hans": "棕褐色印相",
-    "zh-Hant": "棕褐色印相"
+    "zh-Hant": "棕褐色印相",
+    "ar": "طباعة بنية داكنة",
+    "fa": "چاپ سپیا",
+    "he": "הדפס ספיה",
+    "hr": "Sepija otisak"
   },
   "Pastel": {
     "de": "Pastell",
@@ -114,7 +146,11 @@
     "ru": "Пастель",
     "tr": "Pastel",
     "zh-Hans": "粉彩",
-    "zh-Hant": "粉彩"
+    "zh-Hant": "粉彩",
+    "ar": "باستيل",
+    "fa": "پاستلی",
+    "he": "פסטל",
+    "hr": "Pastelno"
   },
   "Vivid Pop": {
     "de": "Lebhaft",
@@ -127,7 +163,11 @@
     "ru": "Яркие цвета",
     "tr": "Canlı renkler",
     "zh-Hans": "鲜艳",
-    "zh-Hant": "鮮豔"
+    "zh-Hant": "鮮豔",
+    "ar": "ألوان زاهية",
+    "fa": "رنگ‌های زنده",
+    "he": "צבעים עזים",
+    "hr": "Živa boja"
   },
   "Cross Process": {
     "de": "Crossentwicklung",
@@ -140,7 +180,11 @@
     "ru": "Кросс-процесс",
     "tr": "Çapraz işlem",
     "zh-Hans": "交叉冲印",
-    "zh-Hant": "交叉沖印"
+    "zh-Hant": "交叉沖印",
+    "ar": "معالجة متقاطعة",
+    "fa": "پردازش متقاطع",
+    "he": "עיבוד צולב",
+    "hr": "Križno razvijanje"
   },
   "Moody Green": {
     "de": "Düsteres Grün",
@@ -153,7 +197,11 @@
     "ru": "Мрачный зелёный",
     "tr": "Kasvetli yeşil",
     "zh-Hans": "忧郁绿",
-    "zh-Hant": "憂鬱綠"
+    "zh-Hant": "憂鬱綠",
+    "ar": "أخضر قاتم",
+    "fa": "سبز غمگین",
+    "he": "ירוק קודר",
+    "hr": "Tmurno zeleno"
   },
   "Arctic": {
     "de": "Arktis",
@@ -166,7 +214,11 @@
     "ru": "Арктика",
     "tr": "Arktik",
     "zh-Hans": "极地",
-    "zh-Hant": "極地"
+    "zh-Hant": "極地",
+    "ar": "قطبي",
+    "fa": "قطبی",
+    "he": "ארקטי",
+    "hr": "Arktik"
   },
   "Desert": {
     "de": "Wüste",
@@ -179,7 +231,11 @@
     "ru": "Пустыня",
     "tr": "Çöl",
     "zh-Hans": "沙漠",
-    "zh-Hant": "沙漠"
+    "zh-Hant": "沙漠",
+    "ar": "صحراء",
+    "fa": "صحرا",
+    "he": "מדבר",
+    "hr": "Pustinja"
   },
   "Rose Tint": {
     "de": "Rosé",
@@ -192,7 +248,11 @@
     "ru": "Розовый оттенок",
     "tr": "Gül tonu",
     "zh-Hans": "玫瑰色调",
-    "zh-Hant": "玫瑰色調"
+    "zh-Hant": "玫瑰色調",
+    "ar": "صبغة وردية",
+    "fa": "ته‌رنگ صورتی",
+    "he": "גוון ורדרד",
+    "hr": "Ružičasta nijansa"
   },
   "Night City": {
     "de": "Nachtstadt",
@@ -205,7 +265,11 @@
     "ru": "Ночной город",
     "tr": "Gece şehri",
     "zh-Hans": "夜色城市",
-    "zh-Hant": "夜色城市"
+    "zh-Hant": "夜色城市",
+    "ar": "مدينة ليلية",
+    "fa": "شهر شب",
+    "he": "עיר לילה",
+    "hr": "Noćni grad"
   },
   "Matte": {
     "de": "Matt",
@@ -218,7 +282,11 @@
     "ru": "Матовый",
     "tr": "Mat",
     "zh-Hans": "哑光",
-    "zh-Hant": "霧面"
+    "zh-Hant": "霧面",
+    "ar": "مطفأ",
+    "fa": "مات",
+    "he": "מט",
+    "hr": "Mat"
   },
   "Punchy Contrast": {
     "de": "Kräftiger Kontrast",
@@ -231,7 +299,11 @@
     "ru": "Сочный контраст",
     "tr": "Güçlü kontrast",
     "zh-Hans": "强烈对比",
-    "zh-Hant": "強烈對比"
+    "zh-Hant": "強烈對比",
+    "ar": "تباين قوي",
+    "fa": "کنتراست پرقدرت",
+    "he": "ניגודיות חזקה",
+    "hr": "Snažan kontrast"
   },
   "Autumn": {
     "de": "Herbst",
@@ -244,7 +316,11 @@
     "ru": "Осень",
     "tr": "Sonbahar",
     "zh-Hans": "秋日",
-    "zh-Hant": "秋日"
+    "zh-Hant": "秋日",
+    "ar": "خريف",
+    "fa": "پاییز",
+    "he": "סתיו",
+    "hr": "Jesen"
   },
   "Mint": {
     "de": "Minze",
@@ -257,7 +333,11 @@
     "ru": "Мята",
     "tr": "Nane",
     "zh-Hans": "薄荷",
-    "zh-Hant": "薄荷"
+    "zh-Hant": "薄荷",
+    "ar": "نعناع",
+    "fa": "نعنایی",
+    "he": "מנטה",
+    "hr": "Metvica"
   },
   "Grain": {
     "de": "Körnung",
@@ -270,7 +350,11 @@
     "ru": "Зерно",
     "tr": "Gren",
     "zh-Hans": "颗粒",
-    "zh-Hant": "顆粒"
+    "zh-Hant": "顆粒",
+    "ar": "حبيبات",
+    "fa": "دانه",
+    "he": "גרעין",
+    "hr": "Zrno"
   },
   "Vignette": {
     "de": "Vignette",
@@ -283,7 +367,11 @@
     "ru": "Виньетка",
     "tr": "Vinyet",
     "zh-Hans": "暗角",
-    "zh-Hant": "暗角"
+    "zh-Hant": "暗角",
+    "ar": "تظليل الحواف",
+    "fa": "وینیت",
+    "he": "וינייט",
+    "hr": "Vinjeta"
   },
   "Light Leak": {
     "de": "Lichtleck",
@@ -296,7 +384,11 @@
     "ru": "Засветка",
     "tr": "Işık sızıntısı",
     "zh-Hans": "漏光",
-    "zh-Hant": "漏光"
+    "zh-Hant": "漏光",
+    "ar": "تسرّب الضوء",
+    "fa": "نشت نور",
+    "he": "דליפת אור",
+    "hr": "Curenje svjetla"
   },
   "Dust and Scratches": {
     "de": "Staub und Kratzer",
@@ -309,7 +401,11 @@
     "ru": "Пыль и царапины",
     "tr": "Toz ve çizikler",
     "zh-Hans": "灰尘与划痕",
-    "zh-Hant": "灰塵與刮痕"
+    "zh-Hant": "灰塵與刮痕",
+    "ar": "غبار وخدوش",
+    "fa": "گرد و خراش",
+    "he": "אבק ושריטות",
+    "hr": "Prašina i ogrebotine"
   },
   "Soft Glow": {
     "de": "Weiches Leuchten",
@@ -322,7 +418,11 @@
     "ru": "Мягкое свечение",
     "tr": "Yumuşak parıltı",
     "zh-Hans": "柔光",
-    "zh-Hant": "柔光"
+    "zh-Hant": "柔光",
+    "ar": "توهج ناعم",
+    "fa": "درخشش نرم",
+    "he": "זוהר רך",
+    "hr": "Blagi sjaj"
   },
   "Halftone Print": {
     "de": "Rasterdruck",
@@ -335,7 +435,11 @@
     "ru": "Растровая печать",
     "tr": "Yarım ton baskı",
     "zh-Hans": "半色调印刷",
-    "zh-Hant": "半色調印刷"
+    "zh-Hant": "半色調印刷",
+    "ar": "طباعة نقطية",
+    "fa": "چاپ هاف‌تون",
+    "he": "הדפס רסטר",
+    "hr": "Rasterski otisak"
   },
   "Retro Screen": {
     "de": "Retro-Bildschirm",
@@ -348,7 +452,11 @@
     "ru": "Ретро-экран",
     "tr": "Retro ekran",
     "zh-Hans": "复古屏幕",
-    "zh-Hant": "復古螢幕"
+    "zh-Hant": "復古螢幕",
+    "ar": "شاشة قديمة",
+    "fa": "صفحهٔ نوستالژیک",
+    "he": "מסך רטרו",
+    "hr": "Retro zaslon"
   },
   "Paper Texture": {
     "de": "Papierstruktur",
@@ -361,6 +469,10 @@
     "ru": "Текстура бумаги",
     "tr": "Kâğıt dokusu",
     "zh-Hans": "纸张纹理",
-    "zh-Hant": "紙張紋理"
+    "zh-Hant": "紙張紋理",
+    "ar": "ملمس الورق",
+    "fa": "بافت کاغذ",
+    "he": "מרקם נייר",
+    "hr": "Tekstura papira"
   }
 }

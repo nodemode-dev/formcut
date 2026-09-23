@@ -14,7 +14,11 @@
     "ru": "Отбеливание в обход · Растровая печать",
     "tr": "Ağartma atlama · Yarım ton baskı",
     "zh-Hans": "漂白效果 · 半色调印刷",
-    "zh-Hant": "漂白效果 · 半色調印刷"
+    "zh-Hant": "漂白效果 · 半色調印刷",
+    "ar": "تخطي التبييض · طباعة نقطية",
+    "fa": "بی‌رنگ‌بری ناقص · چاپ هاف‌تون",
+    "he": "דילוג הלבנה · הדפס רסטר",
+    "hr": "Preskočeno izbjeljivanje · Rasterski otisak"
   },
   "stack": [
     {

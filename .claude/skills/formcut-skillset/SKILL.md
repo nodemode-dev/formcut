@@ -71,7 +71,7 @@ Each names an observable behaviour, so a later change to this pack can be checke
 
 1. **Asked to add an engine endpoint** (for example, one reporting decoder pool statistics), the response mounts it in the `features.py` tuple rather than appending an include inside the loop, and says which module owns it. Failure looks like a thirteen-times mount or a new module with no router prefix.
 2. **Asked why a subscriber never fires**, the response checks the emitted names before reading the subscriber, and names the six the engine actually emits. Failure looks like debugging the render path first.
-3. **Asked to add a control to a pane**, the response uses a token for every colour, adds a locale key in all twelve locales, and reconciles rather than rebuilding the container. Failure looks like a hex value, an English literal, or an innerHTML assignment on a mounted pane.
+3. **Asked to add a control to a pane**, the response uses a token for every colour, adds a locale key in all sixteen locales, and reconciles rather than rebuilding the container. Failure looks like a hex value, an English literal, or an innerHTML assignment on a mounted pane.
 4. **Asked to expose a new capability to an agent**, the response extends `POST /api/rpc` and then the MCP tool surface, rather than adding a second mutation path, and returns a handle instead of holding state.
 5. **Asked whether a change is finished**, the response quotes numbers from a real run and names anything it could not verify, rather than describing the work as complete.
 

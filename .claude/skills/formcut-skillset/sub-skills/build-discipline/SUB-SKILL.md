@@ -14,7 +14,7 @@ Hand-made single-region edits to existing files. No scripted rewrites, no patch 
 
 ## Interface rules
 
-Stable mounted DOM: patch in place, never rebuild a container, no flash and no layout jump. Every colour, radius, spacing and z value from a token. Inline currentColor SVG icons, no icon dependency. No emoji anywhere. Every user-visible string a locale key in all twelve locales.
+Stable mounted DOM: patch in place, never rebuild a container, no flash and no layout jump. Every colour, radius, spacing and z value from a token. Inline currentColor SVG icons, no icon dependency. No emoji anywhere. Every user-visible string a locale key in all sixteen locales.
 
 ## Verification
 

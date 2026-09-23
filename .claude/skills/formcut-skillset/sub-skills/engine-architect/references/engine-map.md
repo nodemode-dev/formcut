@@ -72,7 +72,7 @@ the automation transports.
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
 - `effect_packages.py` (394L)
-- `encoders.py` (283L)
+- `encoders.py` (292L)
 - `expressions.py` (51L)
 - `fast_export.py` (292L)
 - `fast_layers.py` (395L)

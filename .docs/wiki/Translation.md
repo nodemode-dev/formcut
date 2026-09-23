@@ -1,9 +1,10 @@
 # Translation
 
-formcut ships in 12 languages: English, Spanish, German, French, Italian,
-Japanese, Korean, Brazilian Portuguese, Russian, Turkish, Simplified Chinese and
-Traditional Chinese. The language is chosen on the home screen or in Settings;
-switching reloads the app, because panes render their chrome once.
+formcut ships in 16 languages: English, Spanish, German, French, Italian,
+Japanese, Korean, Brazilian Portuguese, Russian, Turkish, Simplified Chinese,
+Traditional Chinese, Arabic, Persian, Hebrew and Croatian; Arabic, Persian and
+Hebrew turn the interface right to left. The language is chosen on the home
+screen, and switching rewrites what is on screen in place, without a reload.
 
 ## Where strings live
 
@@ -18,6 +19,11 @@ switching reloads the app, because panes render their chrome once.
   the interface: `text(phrase)` for one string, `localizeElement(root)` for the
   text, `title`, `placeholder` and `aria-label` of a whole subtree. German and
   Spanish phrases that have no key live in its `additional` maps.
+- `frontend/public/locales/ar.json`, `fa.json`, `he.json` and `hr.json` hold the
+  other four as files, loaded at start through `/api/locales`: every key of
+  `en.json`, plus a `phrase:<English>` entry for every phrase the pack
+  translates by its wording. A file dropped into the data folder's `locales/`
+  works the same way, and wins over a shipped one for its language.
 
 ## The rule
 

@@ -20,7 +20,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 ## Highlights
 
 - **One renderer for preview and export.** The same decode, crop, colour, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Pixel-measured parameters follow the resolution actually decoded, so a blur looks the same in a small preview and a full-resolution export.
-- **Effect catalogue, browsable and real**: 74 colour grades, 76 visual effects, 48 audio chains, 23 transitions, a library of 180 looks (twenty colour grades, each with nine finishes, named in all twelve languages), and effect packages you import from the effects browser: a manifest with a stack of formcut's own effects and grades for video, or a filter-chain template for audio, each checked before it loads. Every card's thumbnail is rendered by the engine through that effect.
+- **Effect catalogue, browsable and real**: 74 colour grades, 76 visual effects, 48 audio chains, 23 transitions, a library of 180 looks (twenty colour grades, each with nine finishes, named in all sixteen languages), and effect packages you import from the effects browser: a manifest with a stack of formcut's own effects and grades for video, or a filter-chain template for audio, each checked before it loads. Every card's thumbnail is rendered by the engine through that effect.
 - **Voiceover recording** straight onto the timeline, with a peak-holding level meter so a muted or wrong input shows before a take is wasted.
 - **Scene detection** from the inspector, which finds a long clip's cuts and splits there, so it can become short ones, **smooth slow motion** that makes the frames between rather than repeating them, and **canvas backgrounds**: a colour, a gradient, an image, or a blurred copy of the clip.
 - **Picture repair**: stabilisation from a measured camera path, flicker removal, noise removal that keeps edges, and colour matching between clips.
@@ -40,7 +40,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 - **Speed**: a content-keyed preview frame cache with read-ahead, per-clip audio cached and mixed live so a volume change is heard at once, probed hardware decode, and a bounded worker pool for export.
 - **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, covering every edit the interface can make, with optimistic concurrency on every edit.
 - **MCP server**: built into the app (`formcut-engine --mcp`), so Claude Code, Codex, Cursor or any MCP client can import media, build a project, render it and collect the file without touching the interface; Settings, Connections gives each client the text to add, and the server finds the running app by itself.
-- **Interface**: 12 languages covering every string, switched in place without a reload or losing your work, drop-in locale files that may be written right to left, an Easy mode with its own tool tray and clip panel, movable panes that stack as tabs, an appearance that can follow the operating system, and inline `currentColor` icons on a 24-unit grid.
+- **Interface**: 16 languages covering every string, Arabic, Persian and Hebrew right to left, switched in place without a reload or losing your work, drop-in locale files that may be written right to left, an Easy mode with its own tool tray and clip panel, movable panes that stack as tabs, an appearance that can follow the operating system, and inline `currentColor` icons on a 24-unit grid.
 - **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, remote access needs a token you set, model downloads are pinned by SHA-256, and diagnostics report secrets as set or unset rather than by value.
 
 ## Quick Start
@@ -154,7 +154,7 @@ examples/  LUT and shader examples, plus the ignored demo media folder
 .github/   publish-wiki.yml (mirrors .docs/wiki to the GitHub wiki)
 ```
 
-Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut/wiki); the editable source sits in [`.docs/wiki/`](.docs/wiki/Home.md) and is published by a GitHub Action on every push to `main`. Licences for assets and dependencies are in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md); the mobile surface is described in [`.docs/wiki/Mobile-notes.md`](.docs/wiki/Mobile-notes.md), and how every string reaches all 12 languages in [`.docs/wiki/Translation.md`](.docs/wiki/Translation.md).
+Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut/wiki); the editable source sits in [`.docs/wiki/`](.docs/wiki/Home.md) and is published by a GitHub Action on every push to `main`. Licences for assets and dependencies are in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md); the mobile surface is described in [`.docs/wiki/Mobile-notes.md`](.docs/wiki/Mobile-notes.md), and how every string reaches all 16 languages in [`.docs/wiki/Translation.md`](.docs/wiki/Translation.md).
 
 ## MCP server
 

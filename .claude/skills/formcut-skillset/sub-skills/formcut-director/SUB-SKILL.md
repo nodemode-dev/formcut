@@ -36,5 +36,5 @@ Entry point for formcut work. Scope the request, load the specialists it needs, 
 
 - Does the engine already expose this? Eighty routes exist and three features in this project were built twice before someone checked.
 - Is this a cache key problem? Ask what the output depends on, not what the input was. Two defects here came from keying a cache on the project revision when the answer only depended on the audio, or on the media rather than the clip window.
-- Will this be visible in all 28 appearance profiles and 12 locales? If it introduces a colour or a string, the answer decides whether the change is finished.
+- Will this be visible in all 28 appearance profiles and 16 locales? If it introduces a colour or a string, the answer decides whether the change is finished.
 - Can it be verified without a real key, a real render or real hardware? If not, say so in the note rather than implying it passed.
