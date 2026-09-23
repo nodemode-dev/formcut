@@ -1,6 +1,6 @@
 # formcut MCP tools
 
-Generated from `mcp/formcut_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, with its exact name, its parameters (limits and defaults as the server enforces them) and whether it changes anything. Names are case sensitive. If a host's tool listing disagrees with this file, the listing is current and this file is stale.
+Generated from `backend/app/agent_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, with its exact name, its parameters (limits and defaults as the server enforces them) and whether it changes anything. Names are case sensitive. If a host's tool listing disagrees with this file, the listing is current and this file is stale.
 
 The server declares 21 tools.
 

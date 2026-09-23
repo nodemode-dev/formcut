@@ -103,7 +103,7 @@ Everything lives in `.env` beside the launcher, never committed. The template is
 | `FORMCUT_AI_PYTHON` | Interpreter carrying the local speech runtime |
 | `PEXELS_BASE` / `ELEVENLABS_BASE` | Provider endpoints, for a proxy, a mirror or a local stub |
 | `PEXELS_HOSTS` | Hosts the stock importer is allowed to fetch from |
-| `FORMCUT_ENGINE` | Engine address the MCP server talks to, default `http://127.0.0.1:8040` |
+| `FORMCUT_ENGINE` | Engine address the MCP server talks to; by default it finds the running app, then tries `http://127.0.0.1:8040` |
 | `FORMCUT_MCP_SESSION` | Session name the MCP server registers under, shown in Settings, Connections |
 
 ## Demo media
@@ -153,17 +153,13 @@ Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut
 
 ## MCP server
 
-`mcp/` carries an MCP server that puts the editor in front of an agent: 21
-workflow tools over stdio, built on the official Python SDK. It runs as its own
-process with its own virtualenv, because the SDK pins a newer starlette than the
-engine's FastAPI accepts.
+formcut carries an MCP server, so Claude Code, Codex, Cursor, Claude Desktop, VS Code or any MCP client can drive the editor: 21 workflow tools over stdio, built on the official Python SDK, which answers both the 2025-11-25 protocol and the stateless 2026-07-28 revision.
 
-```bash
-cd mcp && ./oc_install          # prints the command and args to register
-```
+The installed app includes it. Open **Settings, Connections, AI agents**: it shows, for each client, the exact command or config to add, with this copy of formcut's path already filled in, and a Copy button. The client runs the app's own engine as `formcut-engine --mcp`; nothing else is installed. While formcut is running, the server finds it by itself: the engine publishes its address in `engine.json` in formcut's data folder, and every call reads it afresh, so quitting and reopening formcut breaks no connection. If formcut is not running, a call says so and asks for it to be opened.
 
-Register the printed interpreter and script path with any MCP host. The tools
-are workflow shaped rather than one per endpoint: `formcut_status`,
+From a checkout, the same server runs as `mcp/formcut_mcp.py` with the engine's virtualenv, or with its own from `cd mcp && ./oc_install`.
+
+The tools are workflow shaped rather than one per endpoint: `formcut_status`,
 `formcut_import_media`, `formcut_create_project`, `formcut_add_clip`,
 `formcut_set_frame`, `formcut_render`, `formcut_render_status`,
 `formcut_cancel_render`, `formcut_list_media`, `formcut_list_projects`,

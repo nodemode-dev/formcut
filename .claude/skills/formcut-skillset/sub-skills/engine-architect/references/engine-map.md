@@ -22,6 +22,7 @@ The rest is written by hand.
 | Module | Lines | Prefix | Routes |
 | --- | --- | --- | --- |
 | addons.py | 194 | /api/addons | 3 |
+| agent_connect.py | 92 | /api/agents | 1 |
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 597 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
@@ -36,7 +37,7 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 1049 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 357 | /api/health | 11 |
+| main.py | 360 | /api/health | 11 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -63,10 +64,12 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
+- `agent_mcp.py` (739L)
 - `ai_upscale.py` (132L)
 - `audio_render.py` (207L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
+- `discovery.py` (65L)
 - `effect_packages.py` (394L)
 - `encoders.py` (282L)
 - `expressions.py` (51L)

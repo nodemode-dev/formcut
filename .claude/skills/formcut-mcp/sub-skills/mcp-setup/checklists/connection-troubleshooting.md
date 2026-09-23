@@ -4,13 +4,13 @@ Work in order and stop at the first step that fails.
 
 **1. Is the server connected to the host**
 
-- [ ] The host lists `formcut` (Claude Code: `claude mcp list`; Claude Desktop: the tools menu), and it reads as connected, not only configured.
-- [ ] If it fails to start: run the registered command by hand. `ModuleNotFoundError: mcp` or `cannot import name MCPServer` means `mcp/.venv` is missing or holds an SDK older than 2.2: rerun `mcp/oc_install`.
+- [ ] The client lists `formcut` (Claude Code: `claude mcp list`; Codex: `codex mcp list`; Claude Desktop and Cursor: their tools list), and it reads as connected, not only configured.
+- [ ] If it fails to start: run the registered command by hand, and copy it again from Settings, Connections, AI agents if the app has moved. From a checkout, `ModuleNotFoundError: mcp` means the virtualenv lacks the SDK: install `backend/requirements.txt`, or rerun `mcp/oc_install`.
 
 **2. Is the engine answering**
 
-- [ ] `formcut_status` returns a version. If it says the engine is not answering at an address, start the engine with `./formcut` in the checkout, or set `FORMCUT_ENGINE` to where it listens.
-- [ ] The engine is a source run or an engine at a known address, not the desktop app, whose port is random.
+- [ ] `formcut_status` returns a version and an address. If it says formcut is not running, open the formcut app (or start `./formcut` in a checkout) and call again; nothing needs restarting on the agent's side.
+- [ ] If the app runs with a custom data folder, the server needs the same `FORMCUT_DATA_DIR` to find `engine.json`; or set `FORMCUT_ENGINE` to the address directly.
 - [ ] A timeout on a long call: raise `FORMCUT_MCP_TIMEOUT`, or poll a render with `formcut_render_status` instead of waiting on one call.
 
 **3. Is it the server or the skill**

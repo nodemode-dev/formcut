@@ -21,7 +21,7 @@ A folder with a `manifest.json` (`id`, `name`, `kind`, optional `category` and `
 | Thumbnails | `backend/app/effect_previews.py`, `known` accepts stack ids |
 | The 180 built-in looks | `backend/app/effect_library/` written by `setup/effect_library.py` from its recipes and `setup/effect_library_names.json`; never edit the manifests by hand; `--check` in tests |
 | Interface | `frontend/src/ui/media-pane.ts`: Looks and Packages categories, Import package, remove on a card, `refreshPackages` |
-| MCP | `mcp/formcut_mcp.py`: `formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`, `formcut_list_packages`, `formcut_remove_package` |
+| MCP | `backend/app/agent_mcp.py`: `formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`, `formcut_list_packages`, `formcut_remove_package` |
 | Tests | `tests/test_effect_library.py`, `tests/test_package_import.py` |
 
 ## Rules the loader holds

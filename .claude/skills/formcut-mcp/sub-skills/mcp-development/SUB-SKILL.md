@@ -13,9 +13,11 @@ Change the server without breaking the agents that depend on it. A tool's name, 
 
 | File | What it holds |
 | --- | --- |
-| `mcp/formcut_mcp.py` | The whole server: the `MCPServer` instance and its instructions, the engine helpers, and every tool. |
-| `mcp/requirements.txt` | The MCP SDK (from 2.2 up to 3) and httpx. The server runs in its own `mcp/.venv`, apart from the engine's environment. |
-| `mcp/oc_install` | Creates `mcp/.venv` and prints what a host registers. |
+| `backend/app/agent_mcp.py` | The whole server: the `MCPServer` instance and its instructions, the engine helpers, and every tool. Part of the engine, so the frozen app carries it (`formcut-engine --mcp`, in `backend/desktop_entry.py`). |
+| `backend/app/discovery.py` | The engine's published address (`engine.json`) and how the server finds a running engine. |
+| `backend/app/agent_connect.py` | `GET /api/agents/connect`: the text each client needs, shown in Settings, Connections. |
+| `backend/requirements.txt` | The MCP SDK (`mcp==2.2.*`) is an engine dependency; installing from this file keeps starlette where FastAPI needs it. |
+| `mcp/formcut_mcp.py`, `mcp/oc_install` | Run the server from a checkout, with the engine's virtualenv or a separate `mcp/.venv`. |
 | `setup/mcp_tool_reference.py` | Writes this pack's tool reference from the server's source; `--check` reports whether it is current. |
 | `tests/test_mcp_tools_documented.py` | Checks the README lists every tool, tool descriptions name only real tools, and this pack's tool reference matches the server. |
 

@@ -32,7 +32,7 @@
       "files": [],
       "expected_behavior": [
         "Calls formcut_status first",
-        "When the reply says the engine is not answering, stops the workflow and tells the user to start the engine with ./formcut or set FORMCUT_ENGINE, rather than calling the render tools",
+        "When the reply says the engine is not answering, stops the workflow and tells the user to open the formcut app (or start ./formcut in a checkout) or set FORMCUT_ENGINE, rather than calling the render tools",
         "Does not claim a render was started"
       ]
     },

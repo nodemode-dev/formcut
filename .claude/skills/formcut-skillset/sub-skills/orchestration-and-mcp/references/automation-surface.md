@@ -50,7 +50,8 @@ formcut-mcp pack, `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/reference
 generated from the server by `setup/mcp_tool_reference.py`; this map does not keep its own copy.
 
 Built on mcp 2.2.0: the server class is `MCPServer`, imported from
-`mcp.server.mcpserver`, and transport is stdio. Its own virtualenv exists
-because the SDK pins a newer starlette than the engine's FastAPI accepts.
+`mcp.server.mcpserver`, and transport is stdio. It is part of the engine
+(app/agent_mcp.py), so the installed app runs it as `formcut-engine --mcp`; it
+finds the running engine through engine.json (app/discovery.py).
 `FORMCUT_ENGINE` overrides the engine address; `FORMCUT_MCP_SESSION` names the
 session the app shows.
