@@ -302,7 +302,9 @@ def formcut_media_proxy(
     name="formcut_find_scenes",
     description=(
         "Find the cuts in a piece of footage, so a long recording can be split into its shots. Returns each cut's "
-        "time in seconds and the segments between them. Nothing is changed; use formcut_split_clip to act on it."
+        "time in seconds and the segments between them. Nothing is changed: to act on it, add each segment kept "
+        "with formcut_add_clip (source_in at its start), or split a clip at the cut times with formcut_edit "
+        "(the clip.split operation)."
     ),
     annotations={"readOnlyHint": True, "openWorldHint": False},
 )
