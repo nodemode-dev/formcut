@@ -1,0 +1,11 @@
+formcut
+Copyright 2026 nodemode-ai
+https://github.com/nodemode-ai/formcut
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes third-party components under their own licences, among them the
+timeline glyphs derived from the Lucide icon set (ISC) and, in release builds,
+formcut's LGPL-2.1 build of FFmpeg. The demo media in examples/demo keep their
+own licences (examples/demo/README.md). Every component and its obligations are
+listed in .docs/wiki/Licences.md.
