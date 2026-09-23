@@ -177,6 +177,13 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       menu.hidden = true;
     }
   });
+  // Escape closes it, as it closes Edit and View, and focus returns to File.
+  window.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !menu.hidden) {
+      menu.hidden = true;
+      fileBtn.focus();
+    }
+  });
   menu.addEventListener("click", async (ev) => {
     const hit = (ev.target as HTMLElement).closest<HTMLElement>(".dropdown-item");
     if (!hit) return;
