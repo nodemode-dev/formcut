@@ -916,5 +916,9 @@
   "tt.cinematic": "Cinematográfico",
   "tt.newlabel": "Etiqueta nuevo",
   "tt.threewords": "Tres palabras",
-  "tt.captionbox": "Caja de subtítulo"
+  "tt.captionbox": "Caja de subtítulo",
+  "library.cat.Weather": "Tiempo",
+  "library.cat.Celebration": "Celebración",
+  "library.cat.Nature": "Naturaleza",
+  "library.cat.Food": "Comida"
 }

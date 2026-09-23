@@ -56,6 +56,18 @@ async def _prepare_models() -> None:
     auto_download()
 
 
+@app.on_event("startup")
+async def _warm_library() -> None:
+    # The stickers are drawn in the background, so the Stickers tab opens full.
+    # The test suite sets FORMCUT_NO_WARM: its library tests use their own folders.
+    import os
+
+    if not os.environ.get("FORMCUT_NO_WARM"):
+        from .library import warm_stickers
+
+        warm_stickers()
+
+
 app.add_middleware(LocalOnly)
 from .agent_connect import router as agents_router
 from .codecs_api import router as codecs_router

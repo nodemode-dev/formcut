@@ -916,5 +916,9 @@
   "tt.cinematic": "Cinematic",
   "tt.newlabel": "New label",
   "tt.threewords": "Three words",
-  "tt.captionbox": "Caption box"
+  "tt.captionbox": "Caption box",
+  "library.cat.Weather": "Weather",
+  "library.cat.Celebration": "Celebration",
+  "library.cat.Nature": "Nature",
+  "library.cat.Food": "Food"
 }

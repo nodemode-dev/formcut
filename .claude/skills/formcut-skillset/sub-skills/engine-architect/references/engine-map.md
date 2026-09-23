@@ -36,9 +36,9 @@ The rest is written by hand.
 | generate.py | 233 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
-| library.py | 1049 | /api/library | 3 |
+| library.py | 1698 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 362 | /api/health | 11 |
+| main.py | 374 | /api/health | 11 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |

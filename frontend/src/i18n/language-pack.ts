@@ -389,6 +389,10 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Weather|Météo|Meteo|天気|날씨|Clima|Погода|Hava durumu|天气|天氣
+Celebration|Fête|Festa|お祝い|축하|Celebração|Праздник|Kutlama|庆祝|慶祝
+Nature|Nature|Natura|自然|자연|Natureza|Природа|Doğa|自然|自然
+Food|Nourriture|Cibo|食べ物|음식|Comida|Еда|Yiyecek|食物|食物
 Animated titles|Titres animés|Titoli animati|アニメーションタイトル|애니메이션 제목|Títulos animados|Анимированные титры|Animasyonlu başlıklar|动画标题|動畫標題
 click one to add it at the playhead, on a new track above everything|cliquez-en un pour l'ajouter à la tête de lecture, sur une nouvelle piste au-dessus de tout|fai clic su uno per aggiungerlo alla testina, su una nuova traccia sopra tutto|クリックすると、再生ヘッドの位置に、すべての上の新しいトラックとして追加されます|클릭하면 재생 헤드 위치의 맨 위 새 트랙에 추가됩니다|clique em um para adicioná-lo no cursor, em uma nova faixa acima de tudo|нажмите, чтобы добавить на новую дорожку поверх всего в позиции курсора|oynatma kafasına, her şeyin üstünde yeni bir parçaya eklemek için birine tıklayın|点击即可在播放头处、于最上层的新轨道添加|點擊即可在播放頭處、於最上層的新軌道加入
 Titles|Titres|Titoli|タイトル|제목|Títulos|Титры|Başlıklar|标题|標題

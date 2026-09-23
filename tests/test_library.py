@@ -23,7 +23,7 @@ def shelf(tmp_path, monkeypatch):
 
 def test_the_catalogue_lists_every_kind():
     counts = {kind: len(client.get(f"/api/library/{kind}").json()["items"]) for kind in library.KINDS}
-    assert counts == {"stickers": 32, "sounds": 17, "music": 6}
+    assert counts == {"stickers": 86, "sounds": 17, "music": 6}
 
 
 def test_ids_are_unique_and_urls_point_at_their_files():

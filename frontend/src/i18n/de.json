@@ -916,5 +916,9 @@
   "tt.cinematic": "Kinoreif",
   "tt.newlabel": "Neu-Etikett",
   "tt.threewords": "Drei Wörter",
-  "tt.captionbox": "Untertitelkasten"
+  "tt.captionbox": "Untertitelkasten",
+  "library.cat.Weather": "Wetter",
+  "library.cat.Celebration": "Feier",
+  "library.cat.Nature": "Natur",
+  "library.cat.Food": "Essen"
 }

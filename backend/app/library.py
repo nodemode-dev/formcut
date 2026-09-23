@@ -437,6 +437,560 @@ def pin():
     return art
 
 
+# More stickers: the same palette, canvas and finish as those above ------------
+
+GREEN = (76, 200, 90, 255)
+LEAF = (46, 160, 80, 255)
+PINK = (255, 128, 190, 255)
+SKY = (120, 190, 255, 255)
+CLOUD = (214, 228, 246, 255)
+BROWN = (150, 95, 60, 255)
+CREAM = (255, 232, 196, 255)
+GREY = (150, 156, 168, 255)
+RED = (230, 57, 70, 255)
+GOLD = (240, 170, 30, 255)
+
+
+def _badge(text: str, fill, ink, size: int = 440, half: int = 820, height: int = 340) -> Image.Image:
+    art, draw = _canvas()
+    draw.rounded_rectangle((C - half, C - height, C + half, C + height), radius=height, fill=fill)
+    _words(draw, C, C + 10, text, size, ink)
+    return art
+
+
+def _cloud(draw: ImageDraw.ImageDraw, cx: float, cy: float, scale: float, fill) -> None:
+    for x, y, r in ((-420, 120, 330), (0, -60, 460), (420, 120, 330), (-180, 170, 330), (200, 170, 330)):
+        _disc(draw, cx + x * scale, cy + y * scale, r * scale, fill)
+    draw.rectangle((cx - 420 * scale, cy + 120 * scale, cx + 420 * scale, cy + 450 * scale), fill=fill)
+
+
+def _turned(art: Image.Image, degrees: float) -> Image.Image:
+    return art.rotate(degrees, resample=Image.Resampling.BICUBIC)
+
+
+def gem():
+    art, draw = _canvas()
+    top, belt, tip = C - 560, C - 180, C + 820
+    draw.polygon([(C - 520, top), (C + 520, top), (C + 820, belt), (C, tip), (C - 820, belt)], fill=SKY)
+    draw.polygon([(C - 520, top), (C + 520, top), (C + 820, belt), (C - 820, belt)], fill=(170, 215, 255, 255))
+    for x in (-300, 300):
+        _stroke(draw, [(C + x, belt), (C, tip)], 30, (80, 150, 230, 255))
+    _stroke(draw, [(C - 820, belt), (C + 820, belt)], 30, (80, 150, 230, 255))
+    return art
+
+
+def burst():
+    art, draw = _canvas()
+    draw.polygon(_star(C, C, 880, 640, points=12), fill=CORAL)
+    _disc(draw, C, C, 470, SUN)
+    return art
+
+
+def ring():
+    art, draw = _canvas()
+    _disc(draw, C, C, 820, VIOLET)
+    _disc(draw, C, C, 470, CLEAR)
+    return art
+
+
+def hexagon():
+    art, draw = _canvas()
+    draw.polygon([(C + 840 * math.cos(math.radians(60 * i)), C + 840 * math.sin(math.radians(60 * i))) for i in range(6)], fill=TEAL)
+    return art
+
+
+def rainbow():
+    art, draw = _canvas()
+    for index, colour in enumerate((CORAL, ORANGE, SUN, GREEN, BLUE)):
+        radius = 860 - index * 130
+        draw.pieslice((C - radius, C + 300 - radius, C + radius, C + 300 + radius), start=180, end=360, fill=colour)
+    draw.pieslice((C - 210, C + 90, C + 210, C + 510), start=180, end=360, fill=CLEAR)
+    draw.rectangle((0, C + 300, S, S), fill=CLEAR)
+    return art
+
+
+def arrow_left():
+    return arrow_right().transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+
+
+def arrow_up():
+    return _turned(arrow_right(), 90)
+
+
+def double_arrow():
+    art, draw = _canvas()
+    draw.rectangle((C - 520, C - 130, C + 520, C + 130), fill=CORAL)
+    draw.polygon([(C - 880, C), (C - 440, C - 430), (C - 440, C + 430)], fill=CORAL)
+    draw.polygon([(C + 880, C), (C + 440, C - 430), (C + 440, C + 430)], fill=CORAL)
+    return art
+
+
+def circular_arrow():
+    art, draw = _canvas()
+    draw.arc((C - 720, C - 720, C + 720, C + 720), start=-40, end=250, fill=TEAL, width=230)
+    angle = math.radians(-40)
+    ex, ey = C + 605 * math.cos(angle), C + 605 * math.sin(angle)
+    draw.polygon([(ex - 330, ey - 60), (ex + 330, ey - 60), (ex, ey + 340)], fill=TEAL)
+    return art
+
+
+def pow_burst():
+    art, draw = _canvas()
+    points = []
+    for index in range(28):
+        radius = 880 if index % 2 == 0 else (560 if index % 4 == 1 else 640)
+        angle = math.radians(-90 + index * 360 / 28)
+        points.append((C + radius * math.cos(angle), C + radius * math.sin(angle)))
+    draw.polygon(points, fill=SUN)
+    _words(draw, C, C + 20, "POW!", 400, RED)
+    return art
+
+
+def plus():
+    art, draw = _canvas()
+    draw.rounded_rectangle((C - 230, C - 800, C + 230, C + 800), radius=120, fill=GREEN)
+    draw.rounded_rectangle((C - 800, C - 230, C + 800, C + 230), radius=120, fill=GREEN)
+    return art
+
+
+def zigzag():
+    art, draw = _canvas()
+    _stroke(draw, [(C - 820 + i * 205, C + (-260 if i % 2 else 260)) for i in range(9)], 150, CORAL)
+    return art
+
+
+def hot():
+    art, draw = _canvas()
+    draw.polygon(_star(C, C, 860, 700, points=16), fill=RED)
+    _words(draw, C, C + 20, "HOT", 520, SUN)
+    return art
+
+
+def free():
+    return _badge("FREE", TEAL, PAPER)
+
+
+def soon():
+    return _badge("SOON", VIOLET, PAPER)
+
+
+def deal():
+    art, draw = _canvas()
+    draw.polygon(_star(C, C, 860, 700, points=16), fill=ORANGE)
+    _words(draw, C, C + 20, "DEAL", 420, PAPER)
+    return art
+
+
+def top():
+    art, draw = _canvas()
+    draw.polygon(_star(C, C + 40, 880, 420), fill=GOLD)
+    _words(draw, C, C + 90, "TOP", 300, INK)
+    return art
+
+
+def omg():
+    art, draw = _canvas()
+    draw.polygon(_star(C, C, 880, 600, points=12), fill=SUN)
+    _words(draw, C, C + 20, "OMG", 430, CORAL)
+    return art
+
+
+def lol():
+    return _badge("LOL", PINK, PAPER, size=500)
+
+
+def like():
+    art, draw = _canvas()
+    draw.rounded_rectangle((C - 840, C - 320, C + 840, C + 320), radius=320, fill=BLUE)
+    draw.polygon(_heart(C - 480, C - 30, 250), fill=PAPER)
+    _words(draw, C + 180, C + 10, "LIKE", 380, PAPER)
+    return art
+
+
+def subscribe():
+    return _badge("SUBSCRIBE", RED, PAPER, size=250, half=860, height=260)
+
+
+def sad():
+    art, draw = _face()
+    _eyes(draw)
+    draw.arc((C - 380, C + 180, C + 380, C + 720), start=200, end=340, fill=INK, width=90)
+    return art
+
+
+def angry():
+    art, draw = _canvas()
+    _disc(draw, C, C, 820, CORAL)
+    _eyes(draw, 80, 110)
+    _stroke(draw, [(C - 520, C - 520), (C - 170, C - 380)], 90, INK)
+    _stroke(draw, [(C + 520, C - 520), (C + 170, C - 380)], 90, INK)
+    draw.arc((C - 380, C + 200, C + 380, C + 700), start=200, end=340, fill=INK, width=90)
+    return art
+
+
+def sleepy():
+    art, draw = _face()
+    for x in (C - 330, C + 330):
+        draw.arc((x - 170, C - 360, x + 170, C - 160), start=20, end=160, fill=INK, width=70)
+    draw.ellipse((C - 120, C + 250, C + 120, C + 450), fill=INK)
+    _words(draw, C + 560, C - 620, "z", 360, BLUE)
+    return art
+
+
+def star_eyes():
+    art, draw = _face()
+    for x in (C - 330, C + 330):
+        draw.polygon(_star(x, C - 260, 230, 100), fill=ORANGE)
+    draw.pieslice((C - 470, C - 120, C + 470, C + 520), start=0, end=180, fill=INK)
+    return art
+
+
+def kiss():
+    art, draw = _face()
+    _eyes(draw)
+    draw.arc((C - 160, C + 180, C + 100, C + 360), start=270, end=90, fill=INK, width=70)
+    draw.arc((C - 160, C + 330, C + 100, C + 510), start=270, end=90, fill=INK, width=70)
+    draw.polygon(_heart(C + 520, C + 360, 200), fill=CORAL)
+    return art
+
+
+def crying():
+    art, draw = _face()
+    _eyes(draw)
+    for x in (C - 330, C + 330):
+        draw.polygon([(x - 90, C - 60), (x + 90, C - 60), (x, C - 240)], fill=SKY)
+        _disc(draw, x, C - 40, 95, SKY)
+    draw.arc((C - 380, C + 220, C + 380, C + 720), start=200, end=340, fill=INK, width=90)
+    return art
+
+
+def neutral():
+    art, draw = _face()
+    _eyes(draw)
+    _stroke(draw, [(C - 340, C + 360), (C + 340, C + 360)], 90, INK)
+    return art
+
+
+def play():
+    art, draw = _canvas()
+    _disc(draw, C, C, 820, RED)
+    draw.polygon([(C - 250, C - 420), (C - 250, C + 420), (C + 460, C)], fill=PAPER)
+    return art
+
+
+def camera():
+    art, draw = _canvas()
+    draw.rounded_rectangle((C - 330, C - 600, C + 330, C - 300), radius=90, fill=INK)
+    draw.rounded_rectangle((C - 820, C - 420, C + 820, C + 620), radius=180, fill=INK)
+    _disc(draw, C, C + 100, 400, GREY)
+    _disc(draw, C, C + 100, 280, SKY)
+    _disc(draw, C + 560, C - 210, 80, SUN)
+    return art
+
+
+def microphone():
+    art, draw = _canvas()
+    draw.rounded_rectangle((C - 290, C - 840, C + 290, C + 200), radius=290, fill=GREY)
+    for y in range(-640, 120, 160):
+        _stroke(draw, [(C - 180, C + y), (C + 180, C + y)], 26, (120, 126, 138, 255))
+    draw.arc((C - 470, C - 220, C + 470, C + 460), start=0, end=180, fill=INK, width=90)
+    draw.rectangle((C - 45, C + 440, C + 45, C + 700), fill=INK)
+    draw.rounded_rectangle((C - 360, C + 680, C + 360, C + 780), radius=50, fill=INK)
+    return art
+
+
+def clock():
+    art, draw = _canvas()
+    _disc(draw, C, C, 820, SUN)
+    _disc(draw, C, C, 650, CREAM)
+    for hour in range(12):
+        angle = math.radians(hour * 30)
+        _disc(draw, C + 540 * math.sin(angle), C - 540 * math.cos(angle), 40 if hour % 3 else 60, INK)
+    _stroke(draw, [(C, C), (C, C - 400)], 80, INK)
+    _stroke(draw, [(C, C), (C + 300, C + 110)], 80, INK)
+    _disc(draw, C, C, 80, CORAL)
+    return art
+
+
+def gift():
+    art, draw = _canvas()
+    draw.rectangle((C - 700, C - 160, C + 700, C + 800), fill=CORAL)
+    draw.rectangle((C - 800, C - 400, C + 800, C - 120), fill=(235, 70, 78, 255))
+    draw.rectangle((C - 110, C - 400, C + 110, C + 800), fill=SUN)
+    for side in (-1, 1):
+        draw.ellipse((C + side * 380 - 280, C - 760, C + side * 380 + 280, C - 400), fill=SUN)
+        draw.ellipse((C + side * 380 - 130, C - 650, C + side * 380 + 130, C - 510), fill=CLEAR)
+    return art
+
+
+def trophy():
+    art, draw = _canvas()
+    for side in (-1, 1):
+        draw.ellipse((C + side * 560 - 260, C - 620, C + side * 560 + 260, C - 60), fill=GOLD)
+        draw.ellipse((C + side * 560 - 140, C - 500, C + side * 560 + 140, C - 180), fill=CLEAR)
+    draw.pieslice((C - 520, C - 1100, C + 520, C + 180), start=0, end=180, fill=GOLD)
+    draw.rectangle((C - 520, C - 680, C + 520, C - 460), fill=GOLD)
+    draw.rectangle((C - 110, C + 150, C + 110, C + 520), fill=GOLD)
+    draw.rounded_rectangle((C - 440, C + 500, C + 440, C + 760), radius=60, fill=BROWN)
+    draw.polygon(_star(C, C - 330, 200, 85), fill=SUN)
+    return art
+
+
+def light_bulb():
+    art, draw = _canvas()
+    _disc(draw, C, C - 170, 560, SUN)
+    draw.polygon([(C - 400, C + 200), (C + 400, C + 200), (C + 240, C + 480), (C - 240, C + 480)], fill=SUN)
+    draw.rounded_rectangle((C - 260, C + 470, C + 260, C + 780), radius=60, fill=GREY)
+    for y in (560, 660):
+        _stroke(draw, [(C - 230, C + y), (C + 230, C + y)], 30, (120, 126, 138, 255))
+    _stroke(draw, [(C - 150, C + 60), (C, C - 160), (C + 150, C + 60)], 50, ORANGE)
+    return art
+
+
+def lock():
+    art, draw = _canvas()
+    draw.arc((C - 430, C - 830, C + 430, C + 30), start=180, end=360, fill=GREY, width=170)
+    draw.rectangle((C - 430 + 0, C - 400, C - 260, C - 50), fill=GREY)
+    draw.rectangle((C + 260, C - 400, C + 430, C - 50), fill=GREY)
+    draw.rounded_rectangle((C - 700, C - 100, C + 700, C + 800), radius=140, fill=SUN)
+    _disc(draw, C, C + 280, 130, INK)
+    draw.rectangle((C - 55, C + 280, C + 55, C + 560), fill=INK)
+    return art
+
+
+def sun():
+    art, draw = _canvas()
+    for index in range(12):
+        angle = math.radians(index * 30)
+        tip = (C + 880 * math.cos(angle), C + 880 * math.sin(angle))
+        side = math.radians(index * 30 + 90)
+        base = (C + 560 * math.cos(angle), C + 560 * math.sin(angle))
+        draw.polygon(
+            [
+                tip,
+                (base[0] + 130 * math.cos(side), base[1] + 130 * math.sin(side)),
+                (base[0] - 130 * math.cos(side), base[1] - 130 * math.sin(side)),
+            ],
+            fill=ORANGE,
+        )
+    _disc(draw, C, C, 520, SUN)
+    return art
+
+
+def cloud():
+    art, draw = _canvas()
+    _cloud(draw, C, C - 120, 1.0, CLOUD)
+    return art
+
+
+def rain():
+    art, draw = _canvas()
+    _cloud(draw, C, C - 420, 0.9, CLOUD)
+    for x, y in ((-420, 300), (0, 420), (420, 300), (-210, 640), (210, 640)):
+        draw.polygon([(C + x - 90, C + y), (C + x + 90, C + y), (C + x, C + y - 200)], fill=BLUE)
+        _disc(draw, C + x, C + y + 10, 95, BLUE)
+    return art
+
+
+def snowflake():
+    art, draw = _canvas()
+    for index in range(6):
+        angle = math.radians(index * 60 - 90)
+        end = (C + 820 * math.cos(angle), C + 820 * math.sin(angle))
+        _stroke(draw, [(C, C), end], 110, SKY)
+        for along, reach in ((0.55, 260), (0.8, 180)):
+            px, py = C + 820 * along * math.cos(angle), C + 820 * along * math.sin(angle)
+            for turn in (-40, 40):
+                branch = angle + math.radians(turn)
+                _stroke(draw, [(px, py), (px + reach * math.cos(branch), py + reach * math.sin(branch))], 80, SKY)
+    return art
+
+
+def moon():
+    art, draw = _canvas()
+    _disc(draw, C, C, 800, SUN)
+    _disc(draw, C + 380, C - 260, 680, CLEAR)
+    for x, y in ((380, 320), (560, -80)):
+        draw.polygon(_star(C + x, C + y, 120, 50, points=4), fill=SUN)
+    return art
+
+
+def balloon():
+    art, draw = _canvas()
+    draw.ellipse((C - 560, C - 880, C + 560, C + 400), fill=CORAL)
+    draw.ellipse((C - 330, C - 700, C - 120, C - 440), fill=(255, 150, 150, 255))
+    draw.polygon([(C - 110, C + 480), (C + 110, C + 480), (C, C + 380)], fill=CORAL)
+    draw.line([(C, C + 480), (C - 120, C + 620), (C + 80, C + 760), (C - 40, C + 880)], fill=INK, width=30, joint="curve")
+    return art
+
+
+def confetti():
+    art, draw = _canvas()
+    colours = (CORAL, SUN, TEAL, BLUE, VIOLET, PINK, ORANGE, GREEN)
+    spots = (
+        (-600, -560),
+        (-120, -700),
+        (380, -600),
+        (680, -250),
+        (-700, -100),
+        (-300, -250),
+        (200, -200),
+        (600, 200),
+        (-560, 350),
+        (-120, 150),
+        (300, 420),
+        (-300, 620),
+        (100, 700),
+        (560, 640),
+        (-720, 620),
+        (720, -620),
+    )
+    for index, (x, y) in enumerate(spots):
+        colour = colours[index % len(colours)]
+        if index % 3 == 0:
+            _disc(draw, C + x, C + y, 90, colour)
+        else:
+            angle = math.radians(index * 37)
+            dx, dy = 150 * math.cos(angle), 150 * math.sin(angle)
+            _stroke(draw, [(C + x - dx, C + y - dy), (C + x + dx, C + y + dy)], 90, colour)
+    return art
+
+
+def party_popper():
+    art, draw = _canvas()
+    draw.polygon([(C - 780, C + 780), (C - 60, C - 60), (C + 260, C + 260)], fill=VIOLET)
+    for along in (0.35, 0.6):
+        ax, ay = C - 780 + (C - 60 - (C - 780)) * along, C + 780 + (C - 60 - (C + 780)) * along
+        bx, by = C - 780 + (C + 260 - (C - 780)) * along, C + 780 + (C + 260 - (C + 780)) * along
+        _stroke(draw, [(ax, ay), (bx, by)], 70, SUN)
+    for index, (x, y) in enumerate(((150, -620), (520, -520), (640, -150), (330, -330), (-120, -760), (760, 200))):
+        colour = (CORAL, TEAL, SUN, BLUE, PINK, ORANGE)[index]
+        _stroke(draw, [(C + x - 90, C + y + 60), (C + x + 90, C + y - 60)], 90, colour)
+    return art
+
+
+def firework():
+    art, draw = _canvas()
+    colours = (CORAL, SUN, TEAL, PINK, BLUE, ORANGE)
+    for index in range(16):
+        angle = math.radians(index * 22.5)
+        start, end = 260, 820 if index % 2 == 0 else 640
+        _stroke(
+            draw,
+            [(C + start * math.cos(angle), C + start * math.sin(angle)), (C + end * math.cos(angle), C + end * math.sin(angle))],
+            80,
+            colours[index % len(colours)],
+        )
+    draw.polygon(_star(C, C, 200, 80, points=4), fill=SUN)
+    return art
+
+
+def cake():
+    art, draw = _canvas()
+    draw.rounded_rectangle((C - 760, C + 60, C + 760, C + 760), radius=90, fill=PINK)
+    draw.rounded_rectangle((C - 580, C - 330, C + 580, C + 120), radius=80, fill=CREAM)
+    for x in range(-560, 600, 280):
+        _disc(draw, C + x, C + 60, 120, (255, 255, 255, 255))
+    draw.rectangle((C - 60, C - 700, C + 60, C - 330), fill=SKY)
+    draw.polygon([(C - 90, C - 720), (C + 90, C - 720), (C, C - 920)], fill=ORANGE)
+    return art
+
+
+def leaf():
+    art, draw = _canvas()
+    body = Image.new("RGBA", (S, S), CLEAR)
+    ImageDraw.Draw(body).ellipse((C - 460, C - 860, C + 460, C + 860), fill=GREEN)
+    shape = _turned(body, -35)
+    draw.bitmap((0, 0), shape.split()[3], fill=GREEN)
+    _stroke(draw, [(C - 470, C + 680), (C + 420, C - 640)], 60, LEAF)
+    return art
+
+
+def flower():
+    art, draw = _canvas()
+    for index in range(6):
+        angle = math.radians(index * 60)
+        _disc(draw, C + 460 * math.cos(angle), C + 460 * math.sin(angle), 360, PINK)
+    _disc(draw, C, C, 330, SUN)
+    return art
+
+
+def tree():
+    art, draw = _canvas()
+    draw.rectangle((C - 120, C + 420, C + 120, C + 860), fill=BROWN)
+    for top_y, half, base_y in ((-880, 360, -300), (-560, 560, 120), (-220, 760, 520)):
+        draw.polygon([(C, C + top_y), (C + half, C + base_y), (C - half, C + base_y)], fill=GREEN if top_y != -560 else LEAF)
+    return art
+
+
+def drop():
+    art, draw = _canvas()
+    _disc(draw, C, C + 240, 580, BLUE)
+    draw.polygon([(C - 500, C - 50), (C + 500, C - 50), (C, C - 880)], fill=BLUE)
+    draw.ellipse((C - 330, C + 100, C - 150, C + 380), fill=SKY)
+    return art
+
+
+def coffee():
+    art, draw = _canvas()
+    draw.arc((C + 280, C - 120, C + 820, C + 380), start=-90, end=90, fill=CREAM, width=120)
+    draw.rounded_rectangle((C - 700, C - 300, C + 460, C + 620), radius=180, fill=CREAM)
+    draw.rectangle((C - 700, C - 300, C + 460, C - 120), fill=BROWN)
+    for x in (-420, -120, 180):
+        draw.line(
+            [(C + x, C - 420), (C + x + 70, C - 560), (C + x - 20, C - 700), (C + x + 60, C - 840)], fill=GREY, width=60, joint="curve"
+        )
+    return art
+
+
+def pizza():
+    art, draw = _canvas()
+    draw.polygon([(C, C + 860), (C - 760, C - 520), (C + 760, C - 520)], fill=SUN)
+    draw.rounded_rectangle((C - 840, C - 740, C + 840, C - 460), radius=140, fill=ORANGE)
+    for x, y in ((-260, -260), (240, -200), (-30, 140), (160, 420), (-230, 340)):
+        _disc(draw, C + x, C + y, 110, RED)
+    return art
+
+
+def donut():
+    art, draw = _canvas()
+    _disc(draw, C, C, 820, BROWN)
+    _disc(draw, C, C - 30, 740, PINK)
+    colours = (SUN, TEAL, PAPER, BLUE, CORAL)
+    for index in range(14):
+        angle = math.radians(index * 360 / 14 + 10)
+        radius = 470 if index % 2 else 590
+        x, y = C + radius * math.cos(angle), C - 30 + radius * math.sin(angle)
+        _stroke(
+            draw,
+            [(x - 50 * math.cos(angle + 1), y - 50 * math.sin(angle + 1)), (x + 50 * math.cos(angle + 1), y + 50 * math.sin(angle + 1))],
+            55,
+            colours[index % len(colours)],
+        )
+    _disc(draw, C, C, 270, CLEAR)
+    return art
+
+
+def ice_cream():
+    art, draw = _canvas()
+    # The waffle lines are drawn on the cone's own layer and cut to its shape.
+    corners = [(C - 460, C - 60), (C + 460, C - 60), (C, C + 880)]
+    cone = Image.new("RGBA", (S, S), CLEAR)
+    cone_draw = ImageDraw.Draw(cone)
+    cone_draw.polygon(corners, fill=ORANGE)
+    for step in range(-4, 5):
+        _stroke(cone_draw, [(C + step * 150 - 230, C - 60), (C + step * 150 + 140, C + 540)], 26, (220, 110, 20, 255))
+        _stroke(cone_draw, [(C + step * 150 + 230, C - 60), (C + step * 150 - 140, C + 540)], 26, (220, 110, 20, 255))
+    shape = Image.new("L", (S, S), 0)
+    ImageDraw.Draw(shape).polygon(corners, fill=255)
+    art.paste(cone, (0, 0), shape)
+    _disc(draw, C, C - 380, 460, PINK)
+    _disc(draw, C - 320, C - 170, 250, PINK)
+    _disc(draw, C + 320, C - 170, 250, PINK)
+    _disc(draw, C + 110, C - 720, 110, RED)
+    return art
+
+
 STICKERS = [
     Item("star", "Star", "Shapes", star),
     Item("heart", "Heart", "Shapes", heart),
@@ -470,6 +1024,60 @@ STICKERS = [
     Item("music-note", "Music note", "Icons", music_note),
     Item("bell", "Bell", "Icons", bell),
     Item("pin", "Pin", "Icons", pin),
+    Item("gem", "Gem", "Shapes", gem),
+    Item("burst", "Burst", "Shapes", burst),
+    Item("ring", "Ring", "Shapes", ring),
+    Item("hexagon", "Hexagon", "Shapes", hexagon),
+    Item("rainbow", "Rainbow", "Shapes", rainbow),
+    Item("arrow-left", "Arrow left", "Arrows", arrow_left),
+    Item("arrow-up", "Arrow up", "Arrows", arrow_up),
+    Item("double-arrow", "Double arrow", "Arrows", double_arrow),
+    Item("circular-arrow", "Circular arrow", "Arrows", circular_arrow),
+    Item("pow", "Pow", "Callouts", pow_burst),
+    Item("plus", "Plus", "Callouts", plus),
+    Item("zigzag", "Zigzag", "Callouts", zigzag),
+    Item("hot", "Hot", "Labels", hot),
+    Item("free", "Free", "Labels", free),
+    Item("soon", "Soon", "Labels", soon),
+    Item("deal", "Deal", "Labels", deal),
+    Item("top", "Top", "Labels", top),
+    Item("omg", "OMG", "Labels", omg),
+    Item("lol", "LOL", "Labels", lol),
+    Item("like", "Like", "Labels", like),
+    Item("subscribe", "Subscribe", "Labels", subscribe),
+    Item("sad", "Sad", "Faces", sad),
+    Item("angry", "Angry", "Faces", angry),
+    Item("sleepy", "Sleepy", "Faces", sleepy),
+    Item("star-eyes", "Star eyes", "Faces", star_eyes),
+    Item("kiss", "Kiss", "Faces", kiss),
+    Item("crying", "Crying", "Faces", crying),
+    Item("neutral", "Neutral", "Faces", neutral),
+    Item("play", "Play", "Icons", play),
+    Item("camera", "Camera", "Icons", camera),
+    Item("microphone", "Microphone", "Icons", microphone),
+    Item("clock", "Clock", "Icons", clock),
+    Item("gift", "Gift", "Icons", gift),
+    Item("trophy", "Trophy", "Icons", trophy),
+    Item("light-bulb", "Light bulb", "Icons", light_bulb),
+    Item("lock", "Lock", "Icons", lock),
+    Item("sun", "Sun", "Weather", sun),
+    Item("cloud", "Cloud", "Weather", cloud),
+    Item("rain", "Rain", "Weather", rain),
+    Item("snowflake", "Snowflake", "Weather", snowflake),
+    Item("moon", "Moon", "Weather", moon),
+    Item("balloon", "Balloon", "Celebration", balloon),
+    Item("confetti", "Confetti", "Celebration", confetti),
+    Item("party-popper", "Party popper", "Celebration", party_popper),
+    Item("firework", "Firework", "Celebration", firework),
+    Item("cake", "Cake", "Celebration", cake),
+    Item("leaf", "Leaf", "Nature", leaf),
+    Item("flower", "Flower", "Nature", flower),
+    Item("tree", "Tree", "Nature", tree),
+    Item("drop", "Drop", "Nature", drop),
+    Item("coffee", "Coffee", "Food", coffee),
+    Item("pizza", "Pizza", "Food", pizza),
+    Item("donut", "Donut", "Food", donut),
+    Item("ice-cream", "Ice cream", "Food", ice_cream),
 ]
 
 
@@ -986,16 +1594,32 @@ def _folder(kind: str) -> Path:
     return folder
 
 
+_item_locks: dict[tuple[str, str], threading.Lock] = {}
+
+
+def _item_lock(kind: str, item_id: str) -> threading.Lock:
+    with _lock:
+        return _item_locks.setdefault((kind, item_id), threading.Lock())
+
+
 def render(kind: str, item_id: str) -> Path:
-    """The item's file, made on first request and kept."""
+    """The item's file, made on first request and kept.
+
+    The folder is set up under the library's lock; each item then has its own,
+    so different items are made at once (the drawing is OpenCV and NumPy, which
+    release the interpreter lock) and one item is never made twice at once.
+    """
     item = find(kind, item_id)
     with _lock:
         folder = _folder(kind)
+    with _item_lock(kind, item.id):
         for known in folder.glob(f"{item.id}.*"):
             return known
         if kind == "stickers":
             path = folder / f"{item.id}.png"
-            _finish(item.make()).save(path)
+            staged = folder / f".{item.id}.png.part"  # hidden from the glob above until it is whole
+            _finish(item.make()).save(staged, format="PNG")
+            staged.replace(path)
             return path
         if kind == "sounds":
             path = folder / f"{item.id}.wav"
@@ -1015,6 +1639,31 @@ def render(kind: str, item_id: str) -> Path:
             path = folder / f"{item.id}.wav"
             shutil.move(str(raw), path)
             return path
+
+
+def warm_stickers() -> None:
+    """Draw every sticker not yet drawn, on a background thread at startup.
+
+    Each is drawn the first time it is asked for; with 86 that kept the Stickers
+    tab blank for most of a minute on a first visit. render() caches and locks,
+    so a sticker asked for meanwhile waits at most for the one being drawn.
+    """
+    import os
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(item: Item) -> None:
+        try:
+            render("stickers", item.id)
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).debug("could not draw sticker %s ahead of time", item.id, exc_info=True)
+
+    def run() -> None:
+        with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2), thread_name_prefix="warm-sticker") as pool:
+            list(pool.map(one, STICKERS))
+
+    threading.Thread(target=run, name="warm-stickers", daemon=True).start()
 
 
 def describe(kind: str, item: Item) -> dict:
