@@ -148,10 +148,9 @@ export async function transcribeClip(
   const occupied = !!existing && existing.clips.some((c) => c.start < span.end && c.start + c.duration > span.start);
   let destination = trackIndex;
   if (occupied) {
-    const before = new Set(engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks.map((track) => track.id));
-    engine.dispatch("track.add", { name: "Captions" });
-    const added = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks.findIndex((track) => !before.has(track.id));
-    if (added >= 0) destination = added;
+    // Directly above the busy track: track 0 draws on top, and a track added at
+    // the end would put the captions beneath the footage they caption.
+    engine.dispatch("track.insert", { index: trackIndex, name: "Captions" });
   }
   engine.dispatch("captions.add", { trackIndex: destination, clips: captions });
   onStatus(`${t(destination === trackIndex ? "cap.added" : "cap.addednew")}: ${captions.length}`);

@@ -2,7 +2,7 @@ import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
 import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
+export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
 
 /** Whether the given clips form a rejoinable chain; the reason key names why not. */
 export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
@@ -159,6 +159,11 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     for (const key of ["locked", "hidden", "muted", "magnetic"] as const) if (key in patch) target[key] = Boolean(patch[key]);
   } else if (command === "track.add") {
     timeline.tracks.push({ id: crypto.randomUUID(), name: String(p.name || `Track ${timeline.tracks.length + 1}`), clips: [] });
+  } else if (command === "track.insert") {
+    // A track at a given place. Track 0 draws on top, so a title or caption track
+    // added with track.add (at the end) would sit beneath the footage.
+    const index = Math.max(0, Math.min(timeline.tracks.length, Math.round(Number(p.index) || 0)));
+    timeline.tracks.splice(index, 0, { id: crypto.randomUUID(), name: String(p.name || `Track ${timeline.tracks.length + 1}`), clips: [] });
   } else if (command === "track.remove") {
     const index = Number(p.index);
     if (timeline.tracks.length < 2 || !timeline.tracks[index]) throw new Error("Keep at least one track");
