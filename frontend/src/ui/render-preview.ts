@@ -113,6 +113,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
           if (!controller.signal.aborted && current === revision) {
             if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) { canvas.width = bitmap.width; canvas.height = bitmap.height; }
             context.drawImage(bitmap, 0, 0);
+            canvas.dispatchEvent(new Event("frame")); // the Color section's scopes read each new frame
             canvas.dataset.revision = String(current);
             canvas.dataset.streamTime = at.toFixed(3);
             lastFrame = -1;
@@ -149,6 +150,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
       if (current === revision) {
         if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) { canvas.width = bitmap.width; canvas.height = bitmap.height; }
         context.drawImage(bitmap, 0, 0);
+        canvas.dispatchEvent(new Event("frame"));
         canvas.dataset.revision = String(current);
         lastFrame = frame;
         status("");

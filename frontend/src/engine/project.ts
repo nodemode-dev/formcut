@@ -377,6 +377,21 @@ export class ProjectEngine {
         this.emit("clip-selection");
         this.emit("playhead");
         break;
+      case "clip.colour": {
+        // The Color section: a patch to the colour panel, a whole grade, or null to reset either.
+        const p = payload as { clipId: string; colour?: Partial<import("./types").ColourPanel> | null; grade?: import("./types").ColorGrade | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        const parts = [p.colour ? Object.keys(p.colour).sort().join(",") : String(p.colour), p.grade === undefined ? "" : "grade"];
+        this.pushHistory(`clip.colour:${p.clipId}:${parts.join(":")}`);
+        if (p.colour === null) found.clip.colour = undefined;
+        else if (p.colour) found.clip.colour = { ...(found.clip.colour ?? {}), ...p.colour };
+        if (p.grade === null) found.clip.colorGrade = undefined;
+        else if (p.grade) found.clip.colorGrade = structuredClone(p.grade);
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.transform": {
         const p = payload as { clipId: string; patch: Partial<import("./types").ClipTransform> };
         const found = this.findClip(p.clipId);

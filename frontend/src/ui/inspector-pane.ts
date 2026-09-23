@@ -1,3 +1,4 @@
+import { buildColorSection } from "./color-section";
 import { installFontTools } from "./font-tools";
 import { installTracking } from "./tracking";
 import type { ProjectEngine } from "../engine/project";
@@ -65,7 +66,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     </div>
     <div class="inspector-subtabs">
       <div class="seg" data-ref="subtabs">
-        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">${t("subtab.adjust")}</button><button data-tab="repair" data-feature="subtab.repair">${t("subtab.repair")}</button>
+        <button class="is-active" data-tab="basic" data-feature="subtab.basic">Basic</button><button data-tab="color" data-feature="subtab.color">Color</button><button data-tab="speed" data-feature="subtab.speed">Speed</button><button data-tab="animation" data-feature="subtab.animation">Animation</button><button data-tab="adjust" data-feature="subtab.adjust">${t("subtab.adjust")}</button><button data-tab="repair" data-feature="subtab.repair">${t("subtab.repair")}</button>
       </div>
     </div>
     <div class="inspector-body">
@@ -416,6 +417,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
 
   const TAB_VIEWS: Record<string, { sections: string[]; pages: string[] }> = {
     "video:basic": { sections: ["transform", "text", "blend", "canvas"], pages: [] },
+    "video:color": { sections: ["color"], pages: [] },
     "video:speed": { sections: ["timing"], pages: ["speed"] },
     "video:animation": { sections: ["track"], pages: ["motion"] },
     // Repair is a subtab of its own: stabilisation, flicker, noise, colour match
@@ -429,11 +431,12 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   const groupSeg = el.querySelector<HTMLElement>('[data-ref="group"]')!;
   const subtabSeg = el.querySelector<HTMLElement>('[data-ref="subtabs"]')!;
   const inspectorBody = el.querySelector<HTMLElement>(".inspector-body")!;
+  inspectorBody.appendChild(buildColorSection(engine));
   let activeGroup = "video";
   let activeSubtab = "basic";
   let showAll = false;
   const everything = {
-    sections: ["transform", "text", "blend", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas", "rhythm"],
+    sections: ["transform", "text", "blend", "color", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas", "rhythm"],
     pages: ["speed", "motion", "effects", "audio", "transition", "cutout", "advanced"],
   };
   const showAllChip = el.querySelector<HTMLButtonElement>('[data-ref="show-all"]')!;

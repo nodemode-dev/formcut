@@ -389,6 +389,38 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Color|Couleur|Colore|カラー|색상|Cor|Цвет|Renk|调色|調色
+Select a video or image clip to grade it.|Sélectionnez un clip vidéo ou image pour l'étalonner.|Seleziona una clip video o immagine per correggerne il colore.|グレーディングするビデオまたは画像クリップを選択してください。|색 보정할 비디오나 이미지 클립을 선택하세요.|Selecione um clipe de vídeo ou imagem para fazer a correção de cor.|Выберите видео- или графический клип для цветокоррекции.|Renk düzenlemek için bir video veya görsel klibi seçin.|选择一个视频或图像片段进行调色。|選擇一個影片或圖像片段進行調色。
+Scopes|Moniteurs|Scope|スコープ|스코프|Scopes|Мониторы|Ölçekler|示波器|示波器
+Waveform|Forme d'onde|Forma d'onda|波形|파형|Forma de onda|Осциллограф|Dalga formu|波形图|波形圖
+RGB parade|Parade RVB|Parata RGB|RGBパレード|RGB 퍼레이드|Parada RGB|RGB-парад|RGB geçit|RGB 分量图|RGB 分量圖
+Vectorscope|Vectorscope|Vettorscopio|ベクトルスコープ|벡터스코프|Vectorscópio|Вектороскоп|Vektörskop|矢量示波器|向量示波器
+Histogram|Histogramme|Istogramma|ヒストグラム|히스토그램|Histograma|Гистограмма|Histogram|直方图|直方圖
+Wheels|Roues|Ruote|ホイール|휠|Rodas|Круги|Tekerlekler|色轮|色輪
+Drag to balance the colour; double-click to reset|Faites glisser pour équilibrer la couleur ; double-cliquez pour réinitialiser|Trascina per bilanciare il colore; doppio clic per ripristinare|ドラッグで色のバランスを調整、ダブルクリックでリセット|드래그해 색 균형을 조정하고, 더블클릭하면 초기화합니다|Arraste para equilibrar a cor; clique duas vezes para redefinir|Перетащите, чтобы сбалансировать цвет; двойной щелчок сбрасывает|Rengi dengelemek için sürükleyin; sıfırlamak için çift tıklayın|拖动以调整色彩平衡；双击重置|拖曳以調整色彩平衡；按兩下重設
+Gain|Gain|Guadagno|ゲイン|게인|Ganho|Усиление|Kazanç|增益|增益
+Offset|Offset|Offset|オフセット|오프셋|Deslocamento|Смещение|Kaydırma|偏移|偏移
+Primaries|Primaires|Primarie|プライマリー|프라이머리|Primárias|Первичная коррекция|Birincil|一级调色|一級調色
+Pivot|Pivot|Pivot|ピボット|피벗|Pivô|Опорная точка|Pivot|轴心|軸心
+Color boost|Renfort des couleurs|Potenziamento colore|カラーブースト|색상 부스트|Reforço de cor|Усиление цвета|Renk güçlendirme|色彩增强|色彩增強
+Hue|Teinte|Tonalità|色相|색조|Matiz|Оттенок|Ton|色相|色相
+Curves|Courbes|Curve|カーブ|커브|Curvas|Кривые|Eğriler|曲线|曲線
+Luma|Luma|Luma|輝度|루마|Luma|Яркость|Luma|亮度|亮度
+Red|Rouge|Rosso|赤|빨강|Vermelho|Красный|Kırmızı|红|紅
+Green|Vert|Verde|緑|초록|Verde|Зелёный|Yeşil|绿|綠
+Blue|Bleu|Blu|青|파랑|Azul|Синий|Mavi|蓝|藍
+Hue vs hue|Teinte/teinte|Tonalità vs tonalità|色相対色相|색조 대 색조|Matiz vs. matiz|Оттенок/оттенок|Ton/ton|色相对色相|色相對色相
+Hue vs sat|Teinte/saturation|Tonalità vs sat.|色相対彩度|색조 대 채도|Matiz vs. sat.|Оттенок/насыщенность|Ton/doygunluk|色相对饱和度|色相對飽和度
+Lum vs sat|Luminance/saturation|Luminanza vs sat.|輝度対彩度|휘도 대 채도|Lum. vs. sat.|Яркость/насыщенность|Parlaklık/doygunluk|亮度对饱和度|亮度對飽和度
+Click to add a point, drag to move it, double-click to remove it.|Cliquez pour ajouter un point, faites-le glisser pour le déplacer, double-cliquez pour le supprimer.|Fai clic per aggiungere un punto, trascinalo per spostarlo, doppio clic per rimuoverlo.|クリックで点を追加、ドラッグで移動、ダブルクリックで削除します。|클릭해 점을 추가하고, 드래그해 옮기고, 더블클릭해 지웁니다.|Clique para adicionar um ponto, arraste para movê-lo e clique duas vezes para removê-lo.|Щелчок добавляет точку, перетаскивание перемещает, двойной щелчок удаляет.|Nokta eklemek için tıklayın, taşımak için sürükleyin, kaldırmak için çift tıklayın.|单击添加点，拖动移动，双击删除。|按一下新增點，拖曳移動，按兩下刪除。
+Highlights|Hautes lumières|Luci|ハイライト|하이라이트|Realces|Света|Parlak alanlar|高光|亮部
+Shadows|Ombres|Ombre|シャドウ|그림자|Sombras|Тени|Gölgeler|阴影|陰影
+Whites|Blancs|Bianchi|白レベル|흰색 계열|Brancos|Белые|Beyazlar|白色|白色
+Blacks|Noirs|Neri|黒レベル|검은색 계열|Pretos|Чёрные|Siyahlar|黑色|黑色
+Brightness|Luminosité|Luminosità|明るさ|밝기|Brilho|Яркость|Parlaklık|亮度|亮度
+Reset grade|Réinitialiser l'étalonnage|Ripristina correzione|グレードをリセット|색 보정 초기화|Redefinir correção|Сбросить цветокоррекцию|Renk düzenlemeyi sıfırla|重置调色|重設調色
+Copy grade|Copier l'étalonnage|Copia correzione|グレードをコピー|색 보정 복사|Copiar correção|Копировать цветокоррекцию|Renk düzenlemeyi kopyala|复制调色|複製調色
+Paste grade|Coller l'étalonnage|Incolla correzione|グレードを貼り付け|색 보정 붙여넣기|Colar correção|Вставить цветокоррекцию|Renk düzenlemeyi yapıştır|粘贴调色|貼上調色
 Looks|Looks|Look|ルック|룩|Visuais|Образы|Görünümler|风格|風格
 Packages|Paquets|Pacchetti|パッケージ|패키지|Pacotes|Пакеты|Paketler|效果包|效果包
 Oil Paint|Peinture à l'huile|Pittura a olio|油絵|유화|Pintura a óleo|Масляная живопись|Yağlı boya|油画|油畫

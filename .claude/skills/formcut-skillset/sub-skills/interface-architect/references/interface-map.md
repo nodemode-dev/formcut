@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (77L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1016L)
+- `engine/project.ts` (1031L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
-- `engine/types.ts` (242L)
+- `engine/types.ts` (260L)
 - `i18n/index.ts` (190L)
-- `i18n/language-pack.ts` (938L)
+- `i18n/language-pack.ts` (970L)
 - `i18n/text.ts` (29L)
 - `main.ts` (92L)
 - `types/assets.d.ts` (6L)
@@ -42,6 +42,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/category-icons.ts` (37L)
 - `ui/clip-visuals.ts` (158L)
 - `ui/cloud.ts` (313L)
+- `ui/color-section.ts` (505L)
 - `ui/compact.ts` (10L)
 - `ui/creator-panel.ts` (359L)
 - `ui/editor-actions.ts` (155L)
@@ -51,7 +52,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
 - `ui/icons.ts` (54L)
-- `ui/inspector-pane.ts` (1559L)
+- `ui/inspector-pane.ts` (1562L)
 - `ui/instagram.ts` (185L)
 - `ui/interface-mode.ts` (246L)
 - `ui/library-view.ts` (145L)
@@ -60,7 +61,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (545L)
 - `ui/remote-settings.ts` (93L)
-- `ui/render-preview.ts` (233L)
+- `ui/render-preview.ts` (235L)
 - `ui/safe-text.ts` (3L)
 - `ui/settings-link.ts` (8L)
 - `ui/settings-popout.ts` (511L)
@@ -92,6 +93,7 @@ and a UI module that mutates state directly is a defect.
 - `captions.add`
 - `clip.add`
 - `clip.audiofx`
+- `clip.colour`
 - `clip.cutout`
 - `clip.effect`
 - `clip.effects`

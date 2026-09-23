@@ -1425,3 +1425,23 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* While picking, the picture says so. */
 .stage[data-pick-cutout="on"] { cursor: crosshair; }
 .stage[data-pick-cutout="on"] .preview-canvas { outline: 2px solid var(--cue); outline-offset: -2px; }
+
+/* The Color section: scopes, wheels, primaries, curves and the basic panel. */
+.color-section .color-sub { margin: var(--sp-3) 0 var(--sp-1); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+.color-scope-wrap { display: grid; gap: var(--sp-1); }
+.color-scope { width: 100%; aspect-ratio: 16 / 9; background: var(--ground); border: 1px solid var(--edge); border-radius: 6px; display: block; }
+.color-wheels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+.color-wheel { display: grid; justify-items: center; gap: 4px; }
+.color-wheel canvas { width: 100%; max-width: 116px; aspect-ratio: 1; touch-action: none; cursor: crosshair; }
+.color-wheel .wheel-name { font-size: 11px; color: var(--ink-soft); }
+.color-wheel input[type="range"] { width: 100%; }
+.color-wheel output { font-size: 10px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.color-curve-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.color-curve-tabs button { font-size: 11px; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--edge); background: var(--control); color: var(--ink); }
+.color-curve-tabs button[aria-pressed="true"] { border-color: var(--cue); color: var(--cue); }
+.color-curve { width: 100%; aspect-ratio: 1; background: var(--ground); border: 1px solid var(--edge); border-radius: 6px; touch-action: none; display: block; }
+.color-curve .grid line { stroke: var(--edge); stroke-width: 0.5; }
+.color-curve .curve { fill: none; stroke-width: 1.6; }
+.color-curve .point { fill: var(--pane); stroke: var(--ink); stroke-width: 1.2; cursor: grab; }
+.color-hint { font-size: 10px; color: var(--ink-faint); }
+.color-actions { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }

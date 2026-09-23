@@ -120,6 +120,7 @@ export interface Clip {
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;
+  colorGrade?: ColorGrade;
   pitchFollowsSpeed?: boolean;
   lutIntensity?: number;
   volumeKeys?: ValueKey[];
@@ -188,6 +189,23 @@ export interface ColourPanel {
   sharpen?: number;
   fade?: number;
   vignette?: number;
+}
+
+/** The Color section's grade: wheels, primaries and curves, run after the colour panel. Absent means neutral. */
+export type WheelLevels = { r?: number; g?: number; b?: number; y?: number };
+export interface ColorGrade {
+  lift?: WheelLevels;
+  gamma?: WheelLevels;
+  gain?: WheelLevels;
+  offset?: WheelLevels;
+  contrast?: number;
+  pivot?: number;
+  boost?: number;
+  hue?: number;
+  curves?: { y?: number[][]; r?: number[][]; g?: number[][]; b?: number[][] };
+  hueHue?: number[][];
+  hueSat?: number[][];
+  lumSat?: number[][];
 }
 
 export const COLOUR_NEUTRAL: Required<ColourPanel> = {
