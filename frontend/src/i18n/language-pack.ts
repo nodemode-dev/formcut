@@ -389,6 +389,24 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+No effects match your search.|Aucun effet ne correspond à votre recherche.|Nessun effetto corrisponde alla ricerca.|検索に一致するエフェクトはありません。|검색과 일치하는 효과가 없습니다.|Nenhum efeito corresponde à sua pesquisa.|Нет эффектов, подходящих под запрос.|Aramanızla eşleşen efekt yok.|没有与搜索匹配的效果。|沒有與搜尋相符的效果。
+Nothing here yet.|Rien ici pour l'instant.|Ancora niente qui.|まだ何もありません。|아직 아무것도 없습니다.|Nada aqui ainda.|Здесь пока ничего нет.|Burada henüz bir şey yok.|这里还没有内容。|這裡還沒有內容。
+Your own effect packages appear here. Put a package folder in the effects folder inside formcut's data folder, then restart formcut.|Vos propres paquets d'effets apparaissent ici. Placez un dossier de paquet dans le dossier effects du dossier de données de formcut, puis redémarrez formcut.|I tuoi pacchetti di effetti compaiono qui. Metti una cartella di pacchetto nella cartella effects dentro la cartella dati di formcut, poi riavvia formcut.|自分のエフェクトパッケージはここに表示されます。formcut のデータフォルダ内の effects フォルダにパッケージのフォルダを入れ、formcut を再起動してください。|직접 만든 효과 패키지가 여기에 표시됩니다. formcut 데이터 폴더 안의 effects 폴더에 패키지 폴더를 넣고 formcut을 다시 시작하세요.|Seus próprios pacotes de efeitos aparecem aqui. Coloque uma pasta de pacote na pasta effects, dentro da pasta de dados do formcut, e reinicie o formcut.|Здесь появляются ваши пакеты эффектов. Поместите папку пакета в папку effects внутри папки данных formcut и перезапустите formcut.|Kendi efekt paketleriniz burada görünür. Bir paket klasörünü formcut veri klasöründeki effects klasörüne koyun ve formcut'ı yeniden başlatın.|你自己的效果包会显示在这里。把包文件夹放进 formcut 数据文件夹中的 effects 文件夹,然后重新启动 formcut。|你自己的效果包會顯示在這裡。把套件資料夾放進 formcut 資料資料夾中的 effects 資料夾,然後重新啟動 formcut。
+Intensity|Intensité|Intensità|強さ|강도|Intensidade|Интенсивность|Yoğunluk|强度|強度
+Segments|Segments|Segmenti|セグメント|분할 수|Segmentos|Сегменты|Bölümler|分段|分段
+Spacing|Espacement|Spaziatura|間隔|간격|Espaçamento|Интервал|Aralık|间距|間距
+Twist|Torsion|Torsione|ねじれ|비틀림|Torção|Закручивание|Bükülme|扭曲|扭曲
+Tiles|Tuiles|Tessere|タイル|타일|Blocos|Плитки|Döşemeler|平铺数|平鋪數
+Density|Densité|Densità|密度|밀도|Densidade|Плотность|Yoğunluk derecesi|密度|密度
+Curvature|Courbure|Curvatura|湾曲|곡률|Curvatura|Кривизна|Eğrilik|曲率|曲率
+Horizontal position|Position horizontale|Posizione orizzontale|水平位置|가로 위치|Posição horizontal|Положение по горизонтали|Yatay konum|水平位置|水平位置
+Vertical position|Position verticale|Posizione verticale|垂直位置|세로 위치|Posição vertical|Положение по вертикали|Dikey konum|垂直位置|垂直位置
+Pixel size|Taille des pixels|Dimensione pixel|ピクセルサイズ|픽셀 크기|Tamanho do pixel|Размер пикселя|Piksel boyutu|像素大小|像素大小
+Cell size|Taille des cellules|Dimensione cella|セルサイズ|셀 크기|Tamanho da célula|Размер ячейки|Hücre boyutu|单元大小|單元大小
+LED size|Taille des LED|Dimensione LED|LEDサイズ|LED 크기|Tamanho do LED|Размер светодиода|LED boyutu|LED 大小|LED 大小
+Dot size|Taille des points|Dimensione punti|ドットサイズ|점 크기|Tamanho do ponto|Размер точки|Nokta boyutu|网点大小|網點大小
+Line detail|Détail des lignes|Dettaglio linee|線の細かさ|선 세부|Detalhe da linha|Детализация линий|Çizgi ayrıntısı|线条细节|線條細節
+Noise|Bruit|Rumore|ノイズ|노이즈|Ruído|Шум|Gürültü|噪点|雜訊
 Engine|Moteur|Motore|エンジン|엔진|Mecanismo|Движок|Motor|引擎|引擎
 Install|Installer|Installa|インストール|설치|Instalar|Установить|Yükle|安装|安裝
 Clone a voice from|Cloner une voix depuis|Clona una voce da|声をクローンする元|음성 복제 원본|Clonar uma voz de|Клонировать голос из|Sesi şuradan klonla|克隆声音来源|複製聲音來源

@@ -25,7 +25,7 @@ The rest is written by hand.
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 597 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
-| catalogue.py | 774 | /api/catalogue | 1 |
+| catalogue.py | 832 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
 | demo.py | 59 | /api/demo | 2 |
@@ -35,7 +35,7 @@ The rest is written by hand.
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 1049 | /api/library | 3 |
-| local_speech.py | 345 | /api/speech | 4 |
+| local_speech.py | 374 | /api/speech | 4 |
 | main.py | 282 | /api/health | 8 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
@@ -78,7 +78,7 @@ the automation transports.
 - `gpu.py` (92L)
 - `matte_cache.py` (126L)
 - `paths.py` (32L)
-- `pixel_effects.py` (818L)
+- `pixel_effects.py` (852L)
 - `processes.py` (22L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)

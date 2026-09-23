@@ -24,6 +24,8 @@ export function effectParameters(
   if (!panel) {
     panel = document.createElement("details");
     panel.className = "effect-parameters";
+    // Open from the start: an effect's controls are what someone adds it to reach.
+    panel.open = true;
     const summary = document.createElement("summary");
     summary.textContent = t("fx.parameters");
     panel.append(summary);
