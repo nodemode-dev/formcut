@@ -97,6 +97,7 @@ the automation transports.
 - `tools.py` (232L)
 - `validation.py` (209L)
 - `video_source.py` (228L)
+- `windows_console.py` (43L)
 
 ## Reading order for a change
 
