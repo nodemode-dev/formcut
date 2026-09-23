@@ -255,6 +255,19 @@ def inputs(plan: Plan, stills: dict[int, Path] | None = None) -> list[str]:
     return args
 
 
+def filter_path(path: Path) -> str:
+    """A file path as a filter option value, for both levels of ffmpeg's parsing.
+
+    A filter graph is unescaped twice: the graph parser removes quotes, then the
+    filter's option parser splits on ':'. A Windows path's drive colon (C:/...)
+    ended the option there, and every graded clip on the layered path failed to
+    export on Windows. The colon is escaped for the option parser, and the whole
+    value quoted so the graph parser keeps that backslash.
+    """
+    text = path.as_posix().replace(":", "\\:")
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
 def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
     """The background, then each layer overlaid in the renderer's order, then sized as the frame path sizes."""
     red, green, blue = plan.background
@@ -272,7 +285,7 @@ def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
                 f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={layer.frames}",
             ]
         if number in cubes:
-            steps.append(f"lut3d=file='{cubes[number].as_posix()}':interp=trilinear")
+            steps.append(f"lut3d=file={filter_path(cubes[number])}:interp=trilinear")
         if (layer.w, layer.h) != (layer.width, layer.height):
             steps.append(f"scale={layer.w}:{layer.h}:flags=bilinear")
         if layer.flip_h:
