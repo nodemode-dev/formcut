@@ -1461,3 +1461,11 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .agent-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 .agent-card small { color: var(--ink-soft); }
 .agent-snippet { margin: 0; padding: var(--sp-2); background: var(--inset); border-radius: var(--radius-s); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; user-select: all; }
+
+/* Settings, Advanced: H.264 through OpenH264. */
+.h264-panel { display: grid; gap: 6px; }
+.h264-toggle { display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
+.h264-notice { margin: 0; font-weight: 600; }
+.h264-panel small { color: var(--ink-soft); }
+.h264-actions { display: flex; gap: var(--sp-2); }
+.h264-licence { max-height: 240px; overflow: auto; }

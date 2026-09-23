@@ -853,5 +853,17 @@
   "conn.agents.addTo": "Añade esto a {file}:",
   "conn.agents.any": "Cualquier otro cliente MCP: el comando y sus argumentos",
   "conn.agents.copy": "Copiar",
-  "conn.agents.copied": "Copiado"
+  "conn.agents.copied": "Copiado",
+  "set.h264": "H.264 sin codificador por hardware",
+  "set.h264.hint": "Para ordenadores que no pueden codificar H.264 por sí mismos.",
+  "set.h264.use": "Usar OpenH264 cuando este ordenador no tenga codificador H.264",
+  "set.h264.notNeeded": "Este ordenador codifica H.264 por sí mismo, así que no se usa OpenH264.",
+  "set.h264.pending": "Se descarga de Cisco (alrededor de 1 MB) la primera vez que una exportación H.264 lo necesita.",
+  "set.h264.installed": "Descargado de Cisco (versión {version}).",
+  "set.h264.off": "Desactivado: las exportaciones MP4 se guardan como WebM en este ordenador.",
+  "set.h264.unsupported": "Cisco no publica una biblioteca OpenH264 para este ordenador, así que las exportaciones MP4 se guardan como WebM.",
+  "set.h264.patent": "La licencia de patentes H.264 de Cisco cubre el uso personal y los usos que no generan ingresos. Para lo demás, obtén tu propia licencia o exporta en WebM.",
+  "set.h264.licence": "Licencia",
+  "set.h264.remove": "Quitar",
+  "export.webmFallback": "Guardado como WebM: este ordenador no tiene codificador H.264 y OpenH264 está desactivado o no se pudo descargar."
 }

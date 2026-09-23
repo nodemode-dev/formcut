@@ -401,14 +401,14 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     cancelExport.hidden = false;
     showToast("Exporting 0%");
     try {
-      const jobId = await exportProject(state, format, quality, showToast, exportController.signal, {
+      const done = await exportProject(state, format, quality, showToast, exportController.signal, {
         codec: segValue("codec") || null,
         tenBit: modal.querySelector('[data-ref="tenbit"]')!.classList.contains("is-on"),
         exact: modal.querySelector('[data-ref="exact"]')!.classList.contains("is-on"),
         size: segValue("size") || null,
       });
-      showToast("Export complete");
-      lastExport = { jobId, name: `formcut-export.${format}` };
+      showToast(done.result?.fellBackTo === "webm" ? t("export.webmFallback") : "Export complete");
+      lastExport = { jobId: done.jobId, name: done.result?.name ?? `formcut-export.${format}` };
       if (postLast.hidden) postLast.hidden = false;
       if (postLastIg.hidden) postLastIg.hidden = false;
       if (saveLast.hidden) saveLast.hidden = false;

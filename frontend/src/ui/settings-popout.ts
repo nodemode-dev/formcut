@@ -454,6 +454,65 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   keysNote.className = "panel-note";
   keysNote.textContent = t("set.keys.note");
   keys.append(keysNote);
+  // H.264 through Cisco's OpenH264 where the computer has no H.264 encoder. Cisco's
+  // licence asks for a switch, its notice beside the switch, and the licence itself.
+  const h264 = group(advanced, "set.h264", "set.h264.hint");
+  const h264Body = document.createElement("div");
+  h264Body.className = "h264-panel";
+  h264.append(h264Body);
+  const drawH264 = async () => {
+    const res = await fetch("/api/codecs/openh264");
+    if (!res.ok) return;
+    const s = (await res.json()) as { supported: boolean; enabled: boolean; installed: boolean; needed: boolean; version: string; notice: string };
+    h264Body.replaceChildren();
+    const row = document.createElement("label");
+    row.className = "h264-toggle";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = s.enabled;
+    box.disabled = !s.supported;
+    box.addEventListener("change", async () => {
+      await fetch("/api/codecs/openh264", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: box.checked }) });
+      void drawH264();
+    });
+    const label = document.createElement("span");
+    label.textContent = t("set.h264.use");
+    row.append(box, label);
+    const notice = document.createElement("p");
+    notice.className = "h264-notice";
+    notice.textContent = s.notice;
+    const state = document.createElement("small");
+    state.textContent = !s.supported ? t("set.h264.unsupported") : !s.needed ? t("set.h264.notNeeded") : !s.enabled ? t("set.h264.off") : s.installed ? t("set.h264.installed").replace("{version}", s.version) : t("set.h264.pending");
+    const patent = document.createElement("small");
+    patent.textContent = t("set.h264.patent");
+    const actions = document.createElement("div");
+    actions.className = "h264-actions";
+    const text = document.createElement("pre");
+    text.className = "agent-snippet h264-licence";
+    text.hidden = true;
+    const show = document.createElement("button");
+    show.type = "button";
+    show.className = "tool-chip";
+    show.textContent = t("set.h264.licence");
+    show.addEventListener("click", async () => {
+      if (!text.textContent) text.textContent = await (await fetch("/api/codecs/openh264/licence")).text();
+      text.hidden = !text.hidden;
+    });
+    actions.append(show);
+    if (s.installed) {
+      const drop = document.createElement("button");
+      drop.type = "button";
+      drop.className = "tool-chip";
+      drop.textContent = t("set.h264.remove");
+      drop.addEventListener("click", async () => {
+        await fetch("/api/codecs/openh264", { method: "DELETE" });
+        void drawH264();
+      });
+      actions.append(drop);
+    }
+    h264Body.append(row, notice, state, patent, actions, text);
+  };
+  void drawH264();
   const reseter = group(advanced, "set.reset", "set.reset.hint");
   const clearAppearance = document.createElement("button");
   clearAppearance.className = "tool-chip";

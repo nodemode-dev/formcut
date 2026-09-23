@@ -853,5 +853,17 @@
   "conn.agents.addTo": "Add this to {file}:",
   "conn.agents.any": "Any other MCP client: the command and its arguments",
   "conn.agents.copy": "Copy",
-  "conn.agents.copied": "Copied"
+  "conn.agents.copied": "Copied",
+  "set.h264": "H.264 without a hardware encoder",
+  "set.h264.hint": "For computers that cannot encode H.264 themselves.",
+  "set.h264.use": "Use OpenH264 when this computer has no H.264 encoder",
+  "set.h264.notNeeded": "This computer encodes H.264 itself, so OpenH264 is not used.",
+  "set.h264.pending": "Downloads from Cisco, about 1 MB, the first time an H.264 export needs it.",
+  "set.h264.installed": "Downloaded from Cisco (version {version}).",
+  "set.h264.off": "Off: MP4 exports on this computer are saved as WebM.",
+  "set.h264.unsupported": "Cisco publishes no OpenH264 library for this computer, so MP4 exports are saved as WebM.",
+  "set.h264.patent": "Cisco's H.264 patent licence covers personal use and uses that earn no money. For anything else, get your own licence or export WebM.",
+  "set.h264.licence": "Licence",
+  "set.h264.remove": "Remove",
+  "export.webmFallback": "Saved as WebM: this computer has no H.264 encoder, and OpenH264 is off or could not be downloaded."
 }

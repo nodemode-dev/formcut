@@ -10,16 +10,18 @@ export interface ExportOptions {
   rate?: string | null;
 }
 
-export async function exportProject(project: ProjectState, format: string, quality: string, status: (text: string) => void, signal: AbortSignal, options: ExportOptions = {}): Promise<string> {
+export async function exportProject(project: ProjectState, format: string, quality: string, status: (text: string) => void, signal: AbortSignal, options: ExportOptions = {}): Promise<{ jobId: string; result: any }> {
   const created = await api("/api/render/export", {
     project: structuredClone(project), format, quality,
     codec: options.codec || null, tenBit: Boolean(options.tenBit), exact: Boolean(options.exact),
     size: options.size || null, rate: options.rate || null,
   });
-  await waitJob(created.job_id, status, signal);
+  // The engine names the file: an MP4 export saved as WebM on a computer with no
+  // H.264 encoder must not be downloaded as .mp4.
+  const result = await waitJob(created.job_id, status, signal);
   const link = document.createElement("a");
   link.href = `/api/jobs/${created.job_id}/file`;
-  link.download = `formcut-export.${format}`;
+  link.download = result?.name ?? `formcut-export.${format}`;
   link.click();
-  return created.job_id;
+  return { jobId: created.job_id as string, result };
 }
