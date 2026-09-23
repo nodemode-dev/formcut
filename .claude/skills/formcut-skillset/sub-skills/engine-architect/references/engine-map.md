@@ -29,6 +29,7 @@ The rest is written by hand.
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
+| codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 207 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
@@ -37,7 +38,7 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 1049 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 360 | /api/health | 11 |
+| main.py | 362 | /api/health | 11 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -47,7 +48,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 666 | /api/render | 13 |
+| render_api.py | 708 | /api/render | 13 |
 | render_stream.py | 71 | /api/render | 1 |
 | stock.py | 287 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
@@ -71,7 +72,7 @@ the automation transports.
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
 - `effect_packages.py` (394L)
-- `encoders.py` (282L)
+- `encoders.py` (283L)
 - `expressions.py` (51L)
 - `fast_export.py` (292L)
 - `fast_layers.py` (395L)
@@ -80,6 +81,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gpu.py` (92L)
 - `matte_cache.py` (126L)
+- `openh264.py` (410L)
 - `paths.py` (32L)
 - `pixel_effects.py` (853L)
 - `processes.py` (22L)

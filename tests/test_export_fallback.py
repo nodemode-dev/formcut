@@ -1,9 +1,11 @@
 """Exporting when the preferred encoder is not there.
 
-formcut's own LGPL ffmpeg for Linux and Windows has no H.264 encoder, and an
-MP4 export used to stop with "This build has no working video encoder". The
-container's own codecs are now tried best first, so MP4 falls back to MPEG-4
-Part 2, which every ffmpeg can write.
+formcut's own LGPL ffmpeg has no software H.264 encoder; it encodes H.264
+through the computer's hardware. Where there is none, an MP4 export uses Cisco's
+OpenH264 (test_openh264.py), and where that is off or cannot be fetched, the
+container's other codecs, then WebM, which formcut's ffmpeg writes everywhere.
+MPEG-4 Part 2 is used only when asked for by name. These tests keep OpenH264 out
+of the way, so none of them reaches Cisco's server.
 """
 
 from __future__ import annotations
@@ -16,6 +18,11 @@ from app.encoders import CONTAINERS, estimate_size, tier_flags
 from conftest import make_project, text_clip
 
 HAVE_FFMPEG = bool(shutil.which("ffmpeg"))
+
+
+@pytest.fixture(autouse=True)
+def no_openh264(monkeypatch):
+    monkeypatch.setattr(render_api.openh264, "library", lambda download=False: None)
 
 
 def encoders_here(monkeypatch, **available: str | None) -> None:
@@ -34,10 +41,18 @@ def test_mp4_takes_mpeg4_last():
 
 
 @pytest.mark.skipif(not HAVE_FFMPEG, reason="ffmpeg writes the file")
-def test_an_mp4_without_an_h264_encoder_is_written_with_mpeg4(monkeypatch):
-    encoders_here(monkeypatch, mpeg4="mpeg4")
+def test_an_mp4_with_no_mp4_encoder_becomes_webm_and_says_so(monkeypatch):
+    encoders_here(monkeypatch, mpeg4="mpeg4", vp9="libvpx-vp9")
     result = export("mp4")
-    assert result["codec"] == "mpeg4" and result["encoder"] == "mpeg4" and result["name"].endswith(".mp4")
+    assert result["codec"] == "vp9" and result["fellBackTo"] == "webm"
+    assert result["name"].endswith(".webm") and result["file"].endswith(".webm") and result["media_type"] == "video/webm"
+
+
+@pytest.mark.skipif(not HAVE_FFMPEG, reason="ffmpeg writes the file")
+def test_mpeg4_is_written_when_asked_for_by_name(monkeypatch):
+    encoders_here(monkeypatch, mpeg4="mpeg4")
+    result = export("mp4", "mpeg4")
+    assert result["codec"] == "mpeg4" and result["name"].endswith(".mp4") and "fellBackTo" not in result
 
 
 @pytest.mark.skipif(not HAVE_FFMPEG, reason="ffmpeg writes the file")

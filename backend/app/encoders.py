@@ -21,7 +21,8 @@ CANDIDATES: dict[str, tuple[str, ...]] = {
     "av1": ("av1_nvenc", "av1_qsv", "libsvtav1", "libaom-av1"),
     "vp9": ("libvpx-vp9",),
     # ffmpeg's own MPEG-4 Part 2 encoder is in every build, the LGPL ones
-    # included, so MP4 can always be written even with no H.264 encoder.
+    # included. An MP4 export uses it only when asked for by name: with no H.264
+    # encoder, render_api uses Cisco's OpenH264 (openh264.py), then WebM.
     "mpeg4": ("mpeg4",),
 }
 

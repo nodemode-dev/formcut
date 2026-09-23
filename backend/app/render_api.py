@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from fractions import Fraction
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
@@ -15,9 +16,9 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import fast_export, fast_layers, gpu, jobs, webhooks
+from . import fast_export, fast_layers, gpu, jobs, openh264, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
-from .encoders import CONTAINERS, addon_binary_for, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
+from .encoders import CONTAINERS, addon_binary_for, estimate_bitrate, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
 from .encoders import status as encoder_status
 from .frame_cache import FrameCache, ReadAhead
@@ -245,6 +246,7 @@ def export_media(
     log = OUTPUTS / (job_id + ".log")
     renderer = FrameRenderer(project)
     process = None
+    final, cisco = path, None
     try:
         render_audio(project, audio, cancelled)
         report(0.1)
@@ -253,13 +255,24 @@ def export_media(
         # it, else the container's default; hardware is preferred inside choose.
         wanted = codec_name or ("h264" if format == "mp4" else "vp9")
         encoder = choose_encoder(wanted)
-        # Else the container's own codecs, best first. The LGPL ffmpeg formcut
-        # ships for Linux and Windows has no H.264 encoder, and still writes MP4
-        # with MPEG-4 Part 2, which desktop players and video sites read.
+        # H.264 with no encoder on this computer: Cisco's OpenH264, fetched the
+        # first time an export needs it, unless it is turned off (openh264.py).
+        cisco = openh264.library(download=True) if not encoder and wanted == "h264" else None
+        if cisco:
+            encoder = "libopenh264"
+        # Else the container's other codecs, best first. MPEG-4 Part 2 is used
+        # only when asked for by name: players take it, but it looks its age.
         for fallback in CONTAINERS.get(format, ()):
             if encoder:
                 break
-            encoder, wanted = choose_encoder(fallback), fallback
+            if fallback != "mpeg4":
+                encoder, wanted = choose_encoder(fallback), fallback
+        fell_back = None
+        if not encoder and format == "mp4":
+            # No MP4 encoder at all here: WebM, which formcut's ffmpeg writes on
+            # every computer. The result says so, and the file is .webm.
+            format, wanted, encoder, fell_back = "webm", "vp9", choose_encoder("vp9"), "webm"
+            path = final = OUTPUTS / (job_id + ".webm")
         if not encoder:
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
@@ -276,6 +289,28 @@ def export_media(
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags]
         count = math.ceil(project["duration"] * fps)
+        if cisco:
+            # Whichever path renders writes a lossless intermediate, and finish()
+            # encodes it through OpenH264: the same pixels any encoder would get.
+            path = OUTPUTS / (job_id + ".intermediate.mkv")
+            codec, pix = ["-c:v", "ffv1", "-level", "3", "-c:a", "pcm_s16le"], "yuv420p"
+            outer_report = report
+
+            def report(fraction: float) -> None:
+                outer_report(fraction * 0.6)
+
+        def finish(result: dict) -> dict:
+            if fell_back:
+                result["fellBackTo"] = fell_back
+            if not cisco:
+                return result
+            bits = round(estimate_bitrate("h264", out_w, out_h, float(Fraction(out_rate)), quality) * 1000 * 1.3)
+            openh264.encode_mp4(
+                cisco, path, final, out_w, out_h, out_rate, bits, lambda done: outer_report(0.6 + 0.4 * done), cancelled, log
+            )
+            path.unlink(missing_ok=True)
+            return {**result, "file": str(final), "encoder": "libopenh264", "pixelFormat": "yuv420p"}
+
         # An H.264 add-on the person installed runs from its own binary; the
         # bundled LGPL ffmpeg drives everything else.
         program = str(addon_binary_for(encoder) or "ffmpeg")
@@ -284,19 +319,21 @@ def export_media(
             fast_export.run(
                 native, program, audio, [*codec, "-pix_fmt", pix], out_w, out_h, out_rate, project["duration"], path, log, report, cancelled
             )
-            return {
-                "file": str(path),
-                "name": "formcut-export." + format,
-                "media_type": "video/mp4" if format == "mp4" else "video/webm",
-                "frames": count,
-                "width": out_w,
-                "height": out_h,
-                "codec": wanted,
-                "encoder": encoder,
-                "pixelFormat": pix,
-                "rate": out_rate,
-                "renderPath": "native",
-            }
+            return finish(
+                {
+                    "file": str(path),
+                    "name": "formcut-export." + format,
+                    "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                    "frames": count,
+                    "width": out_w,
+                    "height": out_h,
+                    "codec": wanted,
+                    "encoder": encoder,
+                    "pixelFormat": pix,
+                    "rate": out_rate,
+                    "renderPath": "native",
+                }
+            )
         layered = (
             None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload else fast_layers.plan(project, count)
         )
@@ -321,19 +358,21 @@ def export_media(
                 report,
                 cancelled,
             )
-            return {
-                "file": str(path),
-                "name": "formcut-export." + format,
-                "media_type": "video/mp4" if format == "mp4" else "video/webm",
-                "frames": count,
-                "width": out_w,
-                "height": out_h,
-                "codec": wanted,
-                "encoder": encoder,
-                "pixelFormat": pix,
-                "rate": out_rate,
-                "renderPath": "layered",
-            }
+            return finish(
+                {
+                    "file": str(path),
+                    "name": "formcut-export." + format,
+                    "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                    "frames": count,
+                    "width": out_w,
+                    "height": out_h,
+                    "codec": wanted,
+                    "encoder": encoder,
+                    "pixelFormat": pix,
+                    "rate": out_rate,
+                    "renderPath": "layered",
+                }
+            )
         command = [
             program,
             "-v",
@@ -397,24 +436,27 @@ def export_media(
             process.wait(timeout=600)
         if process.returncode:
             raise ValueError(log.read_text(errors="replace")[-2000:])
-        return {
-            "file": str(path),
-            "name": "formcut-export." + format,
-            "media_type": "video/mp4" if format == "mp4" else "video/webm",
-            "frames": count,
-            "width": out_w,
-            "height": out_h,
-            "codec": wanted,
-            "encoder": encoder,
-            "pixelFormat": pix,
-            "rate": out_rate,
-            "renderPath": "frames",
-        }
+        return finish(
+            {
+                "file": str(path),
+                "name": "formcut-export." + format,
+                "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                "frames": count,
+                "width": out_w,
+                "height": out_h,
+                "codec": wanted,
+                "encoder": encoder,
+                "pixelFormat": pix,
+                "rate": out_rate,
+                "renderPath": "frames",
+            }
+        )
     except BaseException:
         if process and process.poll() is None:
             process.kill()
             process.wait()
         path.unlink(missing_ok=True)
+        final.unlink(missing_ok=True)
         raise
     finally:
         renderer.close()

@@ -48,6 +48,8 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
+# Cisco's OpenH264 licence must be reproduced exactly, curly apostrophes included.
+"backend/app/openh264.py" = ["RUF001"]
 # A test asserts. S101 exists to catch asserts used as runtime checks in
 # shipped code, which is not what these are.
 "tests/*" = ["S101"]
