@@ -182,8 +182,21 @@ def check_engine() -> None:
     notes.append(f"the engine imports, {len(app.routes)} routes mounted")
 
 
+def check_generated() -> None:
+    """Every generated file is current. 1.41.1 shipped a stale skill map, and every
+    engine job in checks failed on it, because nothing here asked the generators."""
+    import subprocess
+
+    for script in ("skill_maps.py", "mcp_tool_reference.py", "effect_library.py"):
+        run = subprocess.run([sys.executable, str(ROOT / "setup" / script), "--check"], capture_output=True, text=True, check=False)
+        if run.returncode:
+            problems.append(f"{script}: {(run.stdout or run.stderr).strip().splitlines()[0][:160]}")
+    notes.append("the skill maps, the MCP tool reference and the looks library are current")
+
+
 def main() -> int:
     check_versions()
+    check_generated()
     check_files()
     check_tauri()
     check_workflows()
