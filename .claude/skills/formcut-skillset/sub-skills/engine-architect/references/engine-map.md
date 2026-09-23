@@ -31,7 +31,7 @@ The rest is written by hand.
 | cloud.py | 447 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 59 | /api/demo | 2 |
-| effect_previews.py | 207 | /api/catalogue/preview | 1 |
+| effect_previews.py | 216 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 233 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
@@ -42,7 +42,7 @@ The rest is written by hand.
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| presets.py | 300 | /api/presets | 6 |
+| presets.py | 308 | /api/presets | 7 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 172 | /api/projects | 9 |
 | providers.py | 161 | /api/providers | 4 |
@@ -98,7 +98,8 @@ the automation transports.
 - `store.py` (57L)
 - `subject.py` (220L)
 - `template_assets.py` (92L)
-- `template_library.py` (450L)
+- `template_library.py` (452L)
+- `text_templates.py` (393L)
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (209L)

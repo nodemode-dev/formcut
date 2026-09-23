@@ -45,6 +45,10 @@ def known(kind: str, item: str) -> bool:
         from .presets import TITLE_STYLE_IDS
 
         return item in TITLE_STYLE_IDS
+    if kind == "texttemplate":
+        from .text_templates import IDS
+
+        return item in IDS
     return (
         (kind == "effect" and (item in GRADES or item in VIDEO_EFFECTS or _is_stack(item)))
         or (kind == "transition" and item in TRANSITIONS)
@@ -157,6 +161,11 @@ def render(kind: str, item: str) -> np.ndarray:
         return over(apply_lut(base_image(), item), dark)
     if kind == "title":
         return title_style_preview(item)
+    if kind == "texttemplate":
+        # An animated title, drawn through the renderer at the moment that shows it best.
+        from .text_templates import hero, project
+
+        return FrameRenderer(project(item, WIDTH, HEIGHT)).frame(hero(item))
     image = base_image()
     dark = np.zeros_like(image)
     dark[:, :, :3] = 28

@@ -389,6 +389,22 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Animated titles|Titres animés|Titoli animati|アニメーションタイトル|애니메이션 제목|Títulos animados|Анимированные титры|Animasyonlu başlıklar|动画标题|動畫標題
+click one to add it at the playhead, on a new track above everything|cliquez-en un pour l'ajouter à la tête de lecture, sur une nouvelle piste au-dessus de tout|fai clic su uno per aggiungerlo alla testina, su una nuova traccia sopra tutto|クリックすると、再生ヘッドの位置に、すべての上の新しいトラックとして追加されます|클릭하면 재생 헤드 위치의 맨 위 새 트랙에 추가됩니다|clique em um para adicioná-lo no cursor, em uma nova faixa acima de tudo|нажмите, чтобы добавить на новую дорожку поверх всего в позиции курсора|oynatma kafasına, her şeyin üstünde yeni bir parçaya eklemek için birine tıklayın|点击即可在播放头处、于最上层的新轨道添加|點擊即可在播放頭處、於最上層的新軌道加入
+Titles|Titres|Titoli|タイトル|제목|Títulos|Титры|Başlıklar|标题|標題
+Pop in|Apparition éclair|Comparsa a scatto|ポップイン|팝 인|Surgir|Появление|Belirme|弹入|彈入
+Rise up|Montée|Salita|ライズアップ|올라오기|Subir|Подъём|Yükselme|上升|上升
+Drop in|Chute|Caduta|ドロップイン|드롭 인|Cair|Падение|Düşme|下落|下落
+Subtitle bar|Barre de sous-titre|Barra sottotitoli|字幕バー|자막 바|Barra de legenda|Строка субтитров|Altyazı çubuğu|字幕条|字幕條
+Kicker and headline|Surtitre et titre|Occhiello e titolo|見出しとリード|키커와 헤드라인|Chapéu e manchete|Надзаголовок и заголовок|Üst başlık ve manşet|引题与标题|引題與標題
+Neon flicker|Néon clignotant|Neon tremolante|ネオンのちらつき|네온 깜빡임|Neon piscando|Мерцающий неон|Titreyen neon|霓虹闪烁|霓虹閃爍
+Stamp|Tampon|Timbro|スタンプ|도장|Carimbo|Штамп|Damga|印章|印章
+Call to action|Appel à l'action|Invito all'azione|行動喚起|행동 유도|Chamada para ação|Призыв к действию|Harekete geçirici|行动号召|行動呼籲
+Quote|Citation|Citazione|引用|인용|Citação|Цитата|Alıntı|引言|引言
+Cinematic|Cinématique|Cinematografico|シネマティック|시네마틱|Cinematográfico|Кинематографичный|Sinematik|电影感|電影感
+New label|Étiquette nouveau|Etichetta nuovo|NEW ラベル|NEW 라벨|Etiqueta novo|Метка «новое»|Yeni etiketi|“新”标签|「新」標籤
+Three words|Trois mots|Tre parole|3 つの言葉|세 단어|Três palavras|Три слова|Üç kelime|三个词|三個詞
+Caption box|Encadré de sous-titre|Riquadro didascalia|キャプションボックス|자막 상자|Caixa de legenda|Блок подписи|Altyazı kutusu|字幕框|字幕框
 Built in|Intégré|Integrato|組み込み|기본 제공|Incluído|Встроенный|Yerleşik|内置|內建
 Cinematic intro|Intro cinématique|Intro cinematografica|シネマティックイントロ|시네마틱 인트로|Intro cinematográfica|Кинематографичное интро|Sinematik giriş|电影感片头|電影感片頭
 Lower third|Bandeau|Sottopancia|ローワーサード|하단 자막|Terço inferior|Нижняя плашка|Alt bant|下方字幕条|下方字幕條

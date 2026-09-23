@@ -298,3 +298,11 @@ TITLE_STYLE_IDS = {entry["id"] for entry in TITLE_STYLES}
 @router.get("/titles")
 def list_title_styles() -> list[dict]:
     return TITLE_STYLES
+
+
+@router.get("/texttemplates")
+def list_text_templates() -> list[dict]:
+    """Animated titles (text_templates.py), timed from where they are added."""
+    from .text_templates import listing
+
+    return listing()

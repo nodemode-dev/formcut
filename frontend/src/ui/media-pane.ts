@@ -121,6 +121,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
           <button class="tool-chip" data-ref="typed-add">${icon("plus")}${t("cap.typed.add")}</button>
           <div class="text-add-hint">${t("title.gallery")}</div>
           <div class="card-grid title-grid" data-ref="title-grid"></div>
+          <div class="text-add-hint">${t("tt.section")}: ${t("tt.hint")}</div>
+          <div class="card-grid title-grid" data-ref="text-template-grid"></div>
           <div class="prop-row">
             <span>${t("cap.voice")}</span>
             <select class="mini-select" data-ref="tts-voice">
@@ -675,6 +677,35 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     box.value = "";
     capStatus.hidden = false;
     capStatus.textContent = `${t("cap.added")}: ${made.length}`;
+  });
+
+  // Animated titles (text_templates.py): finished designs added at the playhead on
+  // a new track at the top, so they draw above the footage.
+  const textTemplateGrid = el.querySelector<HTMLElement>('[data-ref="text-template-grid"]')!;
+  let textTemplates: Array<{ id: string; name: string; nameKey: string; clips: Array<Record<string, unknown>> }> = [];
+  void fetch("/api/presets/texttemplates")
+    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+    .then((entries: typeof textTemplates) => {
+      textTemplates = entries;
+      textTemplateGrid.insertAdjacentHTML("beforeend", entries.map((entry) =>
+        `<div class="effect-card title-card" data-text-template="${escapeHtml(entry.id)}">` +
+        `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/texttemplate/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
+        `<div class="effect-name">${escapeHtml(t(entry.nameKey))}</div></div>`).join(""));
+    })
+    .catch(() => { /* the gallery is optional if the engine is offline */ });
+  textTemplateGrid.addEventListener("click", (ev) => {
+    const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-text-template]");
+    const entry = card && textTemplates.find((e) => e.id === card.dataset.textTemplate);
+    if (!entry) return;
+    const at = engine.snapshot.playhead;
+    engine.dispatch("track.insert", { index: 0, name: t("tt.track") });
+    const clips = entry.clips.map((source) => {
+      const { offset, ...clip } = structuredClone(source) as Record<string, unknown> & { offset: number };
+      return { ...clip, id: crypto.randomUUID(), start: at + offset } as unknown as Clip;
+    });
+    engine.dispatch("clips.add", { entries: clips.map((clip) => ({ trackIndex: 0, clip })) });
+    capStatus.hidden = false;
+    capStatus.textContent = `${t("tt.added")}: ${t(entry.nameKey)}`;
   });
 
   // TI3: the built-in style gallery, thumbnails rendered by the engine
