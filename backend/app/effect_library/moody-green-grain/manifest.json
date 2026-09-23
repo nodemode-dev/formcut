@@ -1,0 +1,34 @@
+{
+  "id": "moody-green-grain",
+  "name": "Moody Green · Grain",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Körnung",
+    "es": "Verde sombrío · Grano",
+    "fr": "Vert sombre · Grain",
+    "it": "Verde cupo · Grana",
+    "ja": "ムーディーグリーン · グレイン",
+    "ko": "무디 그린 · 그레인",
+    "pt-BR": "Verde sombrio · Granulação",
+    "ru": "Мрачный зелёный · Зерно",
+    "tr": "Kasvetli yeşil · Gren",
+    "zh-Hans": "忧郁绿 · 颗粒",
+    "zh-Hant": "憂鬱綠 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

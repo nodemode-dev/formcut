@@ -1,0 +1,32 @@
+{
+  "id": "punchy-contrast-grain",
+  "name": "Punchy Contrast · Grain",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Körnung",
+    "es": "Contraste intenso · Grano",
+    "fr": "Contraste marqué · Grain",
+    "it": "Contrasto deciso · Grana",
+    "ja": "強コントラスト · グレイン",
+    "ko": "강한 대비 · 그레인",
+    "pt-BR": "Contraste forte · Granulação",
+    "ru": "Сочный контраст · Зерно",
+    "tr": "Güçlü kontrast · Gren",
+    "zh-Hans": "强烈对比 · 颗粒",
+    "zh-Hant": "強烈對比 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

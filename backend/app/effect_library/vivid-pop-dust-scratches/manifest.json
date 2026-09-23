@@ -1,0 +1,36 @@
+{
+  "id": "vivid-pop-dust-scratches",
+  "name": "Vivid Pop · Dust and Scratches",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Staub und Kratzer",
+    "es": "Colores vivos · Polvo y rayas",
+    "fr": "Couleurs vives · Poussière et rayures",
+    "it": "Colori vividi · Polvere e graffi",
+    "ja": "ビビッド · ほこりと傷",
+    "ko": "비비드 팝 · 먼지와 스크래치",
+    "pt-BR": "Cores vivas · Poeira e riscos",
+    "ru": "Яркие цвета · Пыль и царапины",
+    "tr": "Canlı renkler · Toz ve çizikler",
+    "zh-Hans": "鲜艳 · 灰尘与划痕",
+    "zh-Hant": "鮮豔 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

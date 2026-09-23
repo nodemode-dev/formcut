@@ -1,0 +1,34 @@
+{
+  "id": "moody-green-paper-texture",
+  "name": "Moody Green · Paper Texture",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Papierstruktur",
+    "es": "Verde sombrío · Textura de papel",
+    "fr": "Vert sombre · Texture papier",
+    "it": "Verde cupo · Trama della carta",
+    "ja": "ムーディーグリーン · 紙の質感",
+    "ko": "무디 그린 · 종이 질감",
+    "pt-BR": "Verde sombrio · Textura de papel",
+    "ru": "Мрачный зелёный · Текстура бумаги",
+    "tr": "Kasvetli yeşil · Kâğıt dokusu",
+    "zh-Hans": "忧郁绿 · 纸张纹理",
+    "zh-Hant": "憂鬱綠 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

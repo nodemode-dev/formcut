@@ -1,0 +1,32 @@
+{
+  "id": "sepia-print-halftone-print",
+  "name": "Sepia Print · Halftone Print",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Rasterdruck",
+    "es": "Impresión sepia · Impresión de semitonos",
+    "fr": "Tirage sépia · Impression tramée",
+    "it": "Stampa seppia · Stampa a retino",
+    "ja": "セピアプリント · ハーフトーン印刷",
+    "ko": "세피아 인화 · 하프톤 인쇄",
+    "pt-BR": "Impressão sépia · Impressão em meio-tom",
+    "ru": "Сепия · Растровая печать",
+    "tr": "Sepya baskı · Yarım ton baskı",
+    "zh-Hans": "棕褐色印相 · 半色调印刷",
+    "zh-Hant": "棕褐色印相 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

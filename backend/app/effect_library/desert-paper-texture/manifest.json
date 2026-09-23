@@ -1,0 +1,34 @@
+{
+  "id": "desert-paper-texture",
+  "name": "Desert · Paper Texture",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Papierstruktur",
+    "es": "Desierto · Textura de papel",
+    "fr": "Désert · Texture papier",
+    "it": "Deserto · Trama della carta",
+    "ja": "砂漠 · 紙の質感",
+    "ko": "사막 · 종이 질감",
+    "pt-BR": "Deserto · Textura de papel",
+    "ru": "Пустыня · Текстура бумаги",
+    "tr": "Çöl · Kâğıt dokusu",
+    "zh-Hans": "沙漠 · 纸张纹理",
+    "zh-Hant": "沙漠 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

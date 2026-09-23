@@ -1,0 +1,36 @@
+{
+  "id": "punchy-contrast-retro-screen",
+  "name": "Punchy Contrast · Retro Screen",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Retro-Bildschirm",
+    "es": "Contraste intenso · Pantalla retro",
+    "fr": "Contraste marqué · Écran rétro",
+    "it": "Contrasto deciso · Schermo retrò",
+    "ja": "強コントラスト · レトロスクリーン",
+    "ko": "강한 대비 · 레트로 화면",
+    "pt-BR": "Contraste forte · Tela retrô",
+    "ru": "Сочный контраст · Ретро-экран",
+    "tr": "Güçlü kontrast · Retro ekran",
+    "zh-Hans": "强烈对比 · 复古屏幕",
+    "zh-Hant": "強烈對比 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "desert-retro-screen",
+  "name": "Desert · Retro Screen",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Retro-Bildschirm",
+    "es": "Desierto · Pantalla retro",
+    "fr": "Désert · Écran rétro",
+    "it": "Deserto · Schermo retrò",
+    "ja": "砂漠 · レトロスクリーン",
+    "ko": "사막 · 레트로 화면",
+    "pt-BR": "Deserto · Tela retrô",
+    "ru": "Пустыня · Ретро-экран",
+    "tr": "Çöl · Retro ekran",
+    "zh-Hans": "沙漠 · 复古屏幕",
+    "zh-Hant": "沙漠 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

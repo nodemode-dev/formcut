@@ -1,0 +1,38 @@
+{
+  "id": "moody-green-dust-scratches",
+  "name": "Moody Green · Dust and Scratches",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Staub und Kratzer",
+    "es": "Verde sombrío · Polvo y rayas",
+    "fr": "Vert sombre · Poussière et rayures",
+    "it": "Verde cupo · Polvere e graffi",
+    "ja": "ムーディーグリーン · ほこりと傷",
+    "ko": "무디 그린 · 먼지와 스크래치",
+    "pt-BR": "Verde sombrio · Poeira e riscos",
+    "ru": "Мрачный зелёный · Пыль и царапины",
+    "tr": "Kasvetli yeşil · Toz ve çizikler",
+    "zh-Hans": "忧郁绿 · 灰尘与划痕",
+    "zh-Hant": "憂鬱綠 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

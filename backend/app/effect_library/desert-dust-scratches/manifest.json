@@ -1,0 +1,38 @@
+{
+  "id": "desert-dust-scratches",
+  "name": "Desert · Dust and Scratches",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Staub und Kratzer",
+    "es": "Desierto · Polvo y rayas",
+    "fr": "Désert · Poussière et rayures",
+    "it": "Deserto · Polvere e graffi",
+    "ja": "砂漠 · ほこりと傷",
+    "ko": "사막 · 먼지와 스크래치",
+    "pt-BR": "Deserto · Poeira e riscos",
+    "ru": "Пустыня · Пыль и царапины",
+    "tr": "Çöl · Toz ve çizikler",
+    "zh-Hans": "沙漠 · 灰尘与划痕",
+    "zh-Hant": "沙漠 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

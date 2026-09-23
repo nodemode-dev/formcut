@@ -1,0 +1,34 @@
+{
+  "id": "mint-grain",
+  "name": "Mint · Grain",
+  "kind": "video",
+  "category": "Mint",
+  "names": {
+    "de": "Minze · Körnung",
+    "es": "Menta · Grano",
+    "fr": "Menthe · Grain",
+    "it": "Menta · Grana",
+    "ja": "ミント · グレイン",
+    "ko": "민트 · 그레인",
+    "pt-BR": "Menta · Granulação",
+    "ru": "Мята · Зерно",
+    "tr": "Nane · Gren",
+    "zh-Hans": "薄荷 · 颗粒",
+    "zh-Hant": "薄荷 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.1,
+        "temperature": -0.1,
+        "lift": 0.05,
+        "saturation": 0.9,
+        "highlights_g": 0.04
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

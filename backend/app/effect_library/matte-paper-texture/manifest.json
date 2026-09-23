@@ -1,0 +1,32 @@
+{
+  "id": "matte-paper-texture",
+  "name": "Matte · Paper Texture",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Papierstruktur",
+    "es": "Mate · Textura de papel",
+    "fr": "Mat · Texture papier",
+    "it": "Opaco · Trama della carta",
+    "ja": "マット · 紙の質感",
+    "ko": "매트 · 종이 질감",
+    "pt-BR": "Fosco · Textura de papel",
+    "ru": "Матовый · Текстура бумаги",
+    "tr": "Mat · Kâğıt dokusu",
+    "zh-Hans": "哑光 · 纸张纹理",
+    "zh-Hant": "霧面 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

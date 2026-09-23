@@ -1,0 +1,35 @@
+{
+  "id": "teal-orange-paper-texture",
+  "name": "Teal and Orange · Paper Texture",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Papierstruktur",
+    "es": "Verde azulado y naranja · Textura de papel",
+    "fr": "Sarcelle et orange · Texture papier",
+    "it": "Ottanio e arancio · Trama della carta",
+    "ja": "ティール＆オレンジ · 紙の質感",
+    "ko": "틸 앤 오렌지 · 종이 질감",
+    "pt-BR": "Azul-petróleo e laranja · Textura de papel",
+    "ru": "Бирюзовый и оранжевый · Текстура бумаги",
+    "tr": "Camgöbeği ve turuncu · Kâğıt dokusu",
+    "zh-Hans": "青橙色调 · 纸张纹理",
+    "zh-Hant": "青橙色調 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

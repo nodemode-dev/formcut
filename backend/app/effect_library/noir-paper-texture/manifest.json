@@ -1,0 +1,32 @@
+{
+  "id": "noir-paper-texture",
+  "name": "Noir · Paper Texture",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Papierstruktur",
+    "es": "Noir · Textura de papel",
+    "fr": "Noir · Texture papier",
+    "it": "Noir · Trama della carta",
+    "ja": "ノワール · 紙の質感",
+    "ko": "누아르 · 종이 질감",
+    "pt-BR": "Noir · Textura de papel",
+    "ru": "Нуар · Текстура бумаги",
+    "tr": "Noir · Kâğıt dokusu",
+    "zh-Hans": "黑色电影 · 纸张纹理",
+    "zh-Hant": "黑色電影 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

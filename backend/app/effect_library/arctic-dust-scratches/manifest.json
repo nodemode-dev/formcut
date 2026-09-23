@@ -1,0 +1,37 @@
+{
+  "id": "arctic-dust-scratches",
+  "name": "Arctic · Dust and Scratches",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Staub und Kratzer",
+    "es": "Ártico · Polvo y rayas",
+    "fr": "Arctique · Poussière et rayures",
+    "it": "Artico · Polvere e graffi",
+    "ja": "北極 · ほこりと傷",
+    "ko": "북극 · 먼지와 스크래치",
+    "pt-BR": "Ártico · Poeira e riscos",
+    "ru": "Арктика · Пыль и царапины",
+    "tr": "Arktik · Toz ve çizikler",
+    "zh-Hans": "极地 · 灰尘与划痕",
+    "zh-Hant": "極地 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

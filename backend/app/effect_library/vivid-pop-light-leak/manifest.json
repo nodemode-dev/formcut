@@ -1,0 +1,32 @@
+{
+  "id": "vivid-pop-light-leak",
+  "name": "Vivid Pop · Light Leak",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Lichtleck",
+    "es": "Colores vivos · Fuga de luz",
+    "fr": "Couleurs vives · Fuite de lumière",
+    "it": "Colori vividi · Infiltrazione di luce",
+    "ja": "ビビッド · ライトリーク",
+    "ko": "비비드 팝 · 빛 번짐",
+    "pt-BR": "Cores vivas · Vazamento de luz",
+    "ru": "Яркие цвета · Засветка",
+    "tr": "Canlı renkler · Işık sızıntısı",
+    "zh-Hans": "鲜艳 · 漏光",
+    "zh-Hant": "鮮豔 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

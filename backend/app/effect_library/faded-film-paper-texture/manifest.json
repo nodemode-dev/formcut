@@ -1,0 +1,33 @@
+{
+  "id": "faded-film-paper-texture",
+  "name": "Faded Film · Paper Texture",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Papierstruktur",
+    "es": "Película desvaída · Textura de papel",
+    "fr": "Pellicule délavée · Texture papier",
+    "it": "Pellicola sbiadita · Trama della carta",
+    "ja": "色あせたフィルム · 紙の質感",
+    "ko": "바랜 필름 · 종이 질감",
+    "pt-BR": "Filme desbotado · Textura de papel",
+    "ru": "Выцветшая плёнка · Текстура бумаги",
+    "tr": "Solmuş film · Kâğıt dokusu",
+    "zh-Hans": "褪色胶片 · 纸张纹理",
+    "zh-Hant": "褪色膠片 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

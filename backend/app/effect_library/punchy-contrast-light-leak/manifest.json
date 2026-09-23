@@ -1,0 +1,32 @@
+{
+  "id": "punchy-contrast-light-leak",
+  "name": "Punchy Contrast · Light Leak",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Lichtleck",
+    "es": "Contraste intenso · Fuga de luz",
+    "fr": "Contraste marqué · Fuite de lumière",
+    "it": "Contrasto deciso · Infiltrazione di luce",
+    "ja": "強コントラスト · ライトリーク",
+    "ko": "강한 대비 · 빛 번짐",
+    "pt-BR": "Contraste forte · Vazamento de luz",
+    "ru": "Сочный контраст · Засветка",
+    "tr": "Güçlü kontrast · Işık sızıntısı",
+    "zh-Hans": "强烈对比 · 漏光",
+    "zh-Hant": "強烈對比 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

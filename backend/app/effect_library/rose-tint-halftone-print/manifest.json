@@ -1,0 +1,32 @@
+{
+  "id": "rose-tint-halftone-print",
+  "name": "Rose Tint · Halftone Print",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Rasterdruck",
+    "es": "Tono rosado · Impresión de semitonos",
+    "fr": "Teinte rose · Impression tramée",
+    "it": "Tinta rosa · Stampa a retino",
+    "ja": "ローズティント · ハーフトーン印刷",
+    "ko": "로즈 틴트 · 하프톤 인쇄",
+    "pt-BR": "Tom rosado · Impressão em meio-tom",
+    "ru": "Розовый оттенок · Растровая печать",
+    "tr": "Gül tonu · Yarım ton baskı",
+    "zh-Hans": "玫瑰色调 · 半色调印刷",
+    "zh-Hant": "玫瑰色調 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

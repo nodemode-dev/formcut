@@ -1,0 +1,34 @@
+{
+  "id": "autumn-halftone-print",
+  "name": "Autumn · Halftone Print",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Rasterdruck",
+    "es": "Otoño · Impresión de semitonos",
+    "fr": "Automne · Impression tramée",
+    "it": "Autunno · Stampa a retino",
+    "ja": "秋 · ハーフトーン印刷",
+    "ko": "가을 · 하프톤 인쇄",
+    "pt-BR": "Outono · Impressão em meio-tom",
+    "ru": "Осень · Растровая печать",
+    "tr": "Sonbahar · Yarım ton baskı",
+    "zh-Hans": "秋日 · 半色调印刷",
+    "zh-Hant": "秋日 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

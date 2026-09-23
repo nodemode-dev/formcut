@@ -1,0 +1,32 @@
+{
+  "id": "rose-tint-vignette",
+  "name": "Rose Tint · Vignette",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Vignette",
+    "es": "Tono rosado · Viñeta",
+    "fr": "Teinte rose · Vignette",
+    "it": "Tinta rosa · Vignettatura",
+    "ja": "ローズティント · ビネット",
+    "ko": "로즈 틴트 · 비네트",
+    "pt-BR": "Tom rosado · Vinheta",
+    "ru": "Розовый оттенок · Виньетка",
+    "tr": "Gül tonu · Vinyet",
+    "zh-Hans": "玫瑰色调 · 暗角",
+    "zh-Hant": "玫瑰色調 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

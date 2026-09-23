@@ -1,0 +1,36 @@
+{
+  "id": "vivid-pop-soft-glow",
+  "name": "Vivid Pop · Soft Glow",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Weiches Leuchten",
+    "es": "Colores vivos · Brillo suave",
+    "fr": "Couleurs vives · Lueur douce",
+    "it": "Colori vividi · Bagliore morbido",
+    "ja": "ビビッド · ソフトグロー",
+    "ko": "비비드 팝 · 소프트 글로우",
+    "pt-BR": "Cores vivas · Brilho suave",
+    "ru": "Яркие цвета · Мягкое свечение",
+    "tr": "Canlı renkler · Yumuşak parıltı",
+    "zh-Hans": "鲜艳 · 柔光",
+    "zh-Hant": "鮮豔 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

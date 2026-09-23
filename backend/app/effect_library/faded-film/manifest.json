@@ -1,0 +1,29 @@
+{
+  "id": "faded-film",
+  "name": "Faded Film",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film",
+    "es": "Película desvaída",
+    "fr": "Pellicule délavée",
+    "it": "Pellicola sbiadita",
+    "ja": "色あせたフィルム",
+    "ko": "바랜 필름",
+    "pt-BR": "Filme desbotado",
+    "ru": "Выцветшая плёнка",
+    "tr": "Solmuş film",
+    "zh-Hans": "褪色胶片",
+    "zh-Hant": "褪色膠片"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    }
+  ]
+}

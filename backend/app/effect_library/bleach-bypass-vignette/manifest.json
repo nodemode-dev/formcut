@@ -1,0 +1,32 @@
+{
+  "id": "bleach-bypass-vignette",
+  "name": "Bleach Bypass · Vignette",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Vignette",
+    "es": "Blanqueo parcial · Viñeta",
+    "fr": "Sans blanchiment · Vignette",
+    "it": "Bleach bypass · Vignettatura",
+    "ja": "ブリーチバイパス · ビネット",
+    "ko": "블리치 바이패스 · 비네트",
+    "pt-BR": "Bleach bypass · Vinheta",
+    "ru": "Отбеливание в обход · Виньетка",
+    "tr": "Ağartma atlama · Vinyet",
+    "zh-Hans": "漂白效果 · 暗角",
+    "zh-Hant": "漂白效果 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

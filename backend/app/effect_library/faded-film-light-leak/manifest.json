@@ -1,0 +1,33 @@
+{
+  "id": "faded-film-light-leak",
+  "name": "Faded Film · Light Leak",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Lichtleck",
+    "es": "Película desvaída · Fuga de luz",
+    "fr": "Pellicule délavée · Fuite de lumière",
+    "it": "Pellicola sbiadita · Infiltrazione di luce",
+    "ja": "色あせたフィルム · ライトリーク",
+    "ko": "바랜 필름 · 빛 번짐",
+    "pt-BR": "Filme desbotado · Vazamento de luz",
+    "ru": "Выцветшая плёнка · Засветка",
+    "tr": "Solmuş film · Işık sızıntısı",
+    "zh-Hans": "褪色胶片 · 漏光",
+    "zh-Hant": "褪色膠片 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

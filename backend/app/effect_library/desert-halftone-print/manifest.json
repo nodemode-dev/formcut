@@ -1,0 +1,34 @@
+{
+  "id": "desert-halftone-print",
+  "name": "Desert · Halftone Print",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Rasterdruck",
+    "es": "Desierto · Impresión de semitonos",
+    "fr": "Désert · Impression tramée",
+    "it": "Deserto · Stampa a retino",
+    "ja": "砂漠 · ハーフトーン印刷",
+    "ko": "사막 · 하프톤 인쇄",
+    "pt-BR": "Deserto · Impressão em meio-tom",
+    "ru": "Пустыня · Растровая печать",
+    "tr": "Çöl · Yarım ton baskı",
+    "zh-Hans": "沙漠 · 半色调印刷",
+    "zh-Hant": "沙漠 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

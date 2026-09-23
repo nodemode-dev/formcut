@@ -1,0 +1,28 @@
+{
+  "id": "sepia-print",
+  "name": "Sepia Print",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck",
+    "es": "Impresión sepia",
+    "fr": "Tirage sépia",
+    "it": "Stampa seppia",
+    "ja": "セピアプリント",
+    "ko": "세피아 인화",
+    "pt-BR": "Impressão sépia",
+    "ru": "Сепия",
+    "tr": "Sepya baskı",
+    "zh-Hans": "棕褐色印相",
+    "zh-Hant": "棕褐色印相"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    }
+  ]
+}

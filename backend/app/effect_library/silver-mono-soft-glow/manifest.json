@@ -1,0 +1,37 @@
+{
+  "id": "silver-mono-soft-glow",
+  "name": "Silver Mono · Soft Glow",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Weiches Leuchten",
+    "es": "Monocromo plateado · Brillo suave",
+    "fr": "Mono argenté · Lueur douce",
+    "it": "Mono argento · Bagliore morbido",
+    "ja": "シルバーモノクロ · ソフトグロー",
+    "ko": "실버 모노 · 소프트 글로우",
+    "pt-BR": "Mono prateado · Brilho suave",
+    "ru": "Серебристый монохром · Мягкое свечение",
+    "tr": "Gümüş tek renk · Yumuşak parıltı",
+    "zh-Hans": "银色单色 · 柔光",
+    "zh-Hant": "銀色單色 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

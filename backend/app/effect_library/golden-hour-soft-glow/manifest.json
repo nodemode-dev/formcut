@@ -1,0 +1,37 @@
+{
+  "id": "golden-hour-soft-glow",
+  "name": "Golden Hour · Soft Glow",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Weiches Leuchten",
+    "es": "Hora dorada · Brillo suave",
+    "fr": "Heure dorée · Lueur douce",
+    "it": "Ora d'oro · Bagliore morbido",
+    "ja": "ゴールデンアワー · ソフトグロー",
+    "ko": "골든 아워 · 소프트 글로우",
+    "pt-BR": "Hora dourada · Brilho suave",
+    "ru": "Золотой час · Мягкое свечение",
+    "tr": "Altın saat · Yumuşak parıltı",
+    "zh-Hans": "黄金时刻 · 柔光",
+    "zh-Hant": "黃金時刻 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

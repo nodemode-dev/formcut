@@ -1,0 +1,34 @@
+{
+  "id": "desert-vignette",
+  "name": "Desert · Vignette",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Vignette",
+    "es": "Desierto · Viñeta",
+    "fr": "Désert · Vignette",
+    "it": "Deserto · Vignettatura",
+    "ja": "砂漠 · ビネット",
+    "ko": "사막 · 비네트",
+    "pt-BR": "Deserto · Vinheta",
+    "ru": "Пустыня · Виньетка",
+    "tr": "Çöl · Vinyet",
+    "zh-Hans": "沙漠 · 暗角",
+    "zh-Hant": "沙漠 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

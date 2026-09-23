@@ -1,0 +1,36 @@
+{
+  "id": "punchy-contrast-soft-glow",
+  "name": "Punchy Contrast · Soft Glow",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Weiches Leuchten",
+    "es": "Contraste intenso · Brillo suave",
+    "fr": "Contraste marqué · Lueur douce",
+    "it": "Contrasto deciso · Bagliore morbido",
+    "ja": "強コントラスト · ソフトグロー",
+    "ko": "강한 대비 · 소프트 글로우",
+    "pt-BR": "Contraste forte · Brilho suave",
+    "ru": "Сочный контраст · Мягкое свечение",
+    "tr": "Güçlü kontrast · Yumuşak parıltı",
+    "zh-Hans": "强烈对比 · 柔光",
+    "zh-Hant": "強烈對比 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

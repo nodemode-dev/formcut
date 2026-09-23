@@ -1,0 +1,37 @@
+{
+  "id": "golden-hour-retro-screen",
+  "name": "Golden Hour · Retro Screen",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Retro-Bildschirm",
+    "es": "Hora dorada · Pantalla retro",
+    "fr": "Heure dorée · Écran rétro",
+    "it": "Ora d'oro · Schermo retrò",
+    "ja": "ゴールデンアワー · レトロスクリーン",
+    "ko": "골든 아워 · 레트로 화면",
+    "pt-BR": "Hora dourada · Tela retrô",
+    "ru": "Золотой час · Ретро-экран",
+    "tr": "Altın saat · Retro ekran",
+    "zh-Hans": "黄金时刻 · 复古屏幕",
+    "zh-Hant": "黃金時刻 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

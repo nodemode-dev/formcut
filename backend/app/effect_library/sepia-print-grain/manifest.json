@@ -1,0 +1,32 @@
+{
+  "id": "sepia-print-grain",
+  "name": "Sepia Print · Grain",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Körnung",
+    "es": "Impresión sepia · Grano",
+    "fr": "Tirage sépia · Grain",
+    "it": "Stampa seppia · Grana",
+    "ja": "セピアプリント · グレイン",
+    "ko": "세피아 인화 · 그레인",
+    "pt-BR": "Impressão sépia · Granulação",
+    "ru": "Сепия · Зерно",
+    "tr": "Sepya baskı · Gren",
+    "zh-Hans": "棕褐色印相 · 颗粒",
+    "zh-Hant": "棕褐色印相 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

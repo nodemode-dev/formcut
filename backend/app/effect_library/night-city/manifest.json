@@ -1,0 +1,31 @@
+{
+  "id": "night-city",
+  "name": "Night City",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt",
+    "es": "Ciudad nocturna",
+    "fr": "Ville de nuit",
+    "it": "Città notturna",
+    "ja": "ナイトシティ",
+    "ko": "밤의 도시",
+    "pt-BR": "Cidade à noite",
+    "ru": "Ночной город",
+    "tr": "Gece şehri",
+    "zh-Hans": "夜色城市",
+    "zh-Hant": "夜色城市"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    }
+  ]
+}

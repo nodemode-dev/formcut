@@ -1,0 +1,34 @@
+{
+  "id": "desert-grain",
+  "name": "Desert · Grain",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Körnung",
+    "es": "Desierto · Grano",
+    "fr": "Désert · Grain",
+    "it": "Deserto · Grana",
+    "ja": "砂漠 · グレイン",
+    "ko": "사막 · 그레인",
+    "pt-BR": "Deserto · Granulação",
+    "ru": "Пустыня · Зерно",
+    "tr": "Çöl · Gren",
+    "zh-Hans": "沙漠 · 颗粒",
+    "zh-Hant": "沙漠 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

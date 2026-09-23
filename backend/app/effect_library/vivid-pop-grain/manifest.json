@@ -1,0 +1,32 @@
+{
+  "id": "vivid-pop-grain",
+  "name": "Vivid Pop · Grain",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Körnung",
+    "es": "Colores vivos · Grano",
+    "fr": "Couleurs vives · Grain",
+    "it": "Colori vividi · Grana",
+    "ja": "ビビッド · グレイン",
+    "ko": "비비드 팝 · 그레인",
+    "pt-BR": "Cores vivas · Granulação",
+    "ru": "Яркие цвета · Зерно",
+    "tr": "Canlı renkler · Gren",
+    "zh-Hans": "鲜艳 · 颗粒",
+    "zh-Hant": "鮮豔 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "arctic-halftone-print",
+  "name": "Arctic · Halftone Print",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Rasterdruck",
+    "es": "Ártico · Impresión de semitonos",
+    "fr": "Arctique · Impression tramée",
+    "it": "Artico · Stampa a retino",
+    "ja": "北極 · ハーフトーン印刷",
+    "ko": "북극 · 하프톤 인쇄",
+    "pt-BR": "Ártico · Impressão em meio-tom",
+    "ru": "Арктика · Растровая печать",
+    "tr": "Arktik · Yarım ton baskı",
+    "zh-Hans": "极地 · 半色调印刷",
+    "zh-Hant": "極地 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

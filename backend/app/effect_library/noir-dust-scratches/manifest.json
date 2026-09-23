@@ -1,0 +1,36 @@
+{
+  "id": "noir-dust-scratches",
+  "name": "Noir · Dust and Scratches",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Staub und Kratzer",
+    "es": "Noir · Polvo y rayas",
+    "fr": "Noir · Poussière et rayures",
+    "it": "Noir · Polvere e graffi",
+    "ja": "ノワール · ほこりと傷",
+    "ko": "누아르 · 먼지와 스크래치",
+    "pt-BR": "Noir · Poeira e riscos",
+    "ru": "Нуар · Пыль и царапины",
+    "tr": "Noir · Toz ve çizikler",
+    "zh-Hans": "黑色电影 · 灰尘与划痕",
+    "zh-Hant": "黑色電影 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

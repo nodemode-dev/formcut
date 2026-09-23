@@ -1,0 +1,32 @@
+{
+  "id": "sepia-print-paper-texture",
+  "name": "Sepia Print · Paper Texture",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Papierstruktur",
+    "es": "Impresión sepia · Textura de papel",
+    "fr": "Tirage sépia · Texture papier",
+    "it": "Stampa seppia · Trama della carta",
+    "ja": "セピアプリント · 紙の質感",
+    "ko": "세피아 인화 · 종이 질감",
+    "pt-BR": "Impressão sépia · Textura de papel",
+    "ru": "Сепия · Текстура бумаги",
+    "tr": "Sepya baskı · Kâğıt dokusu",
+    "zh-Hans": "棕褐色印相 · 纸张纹理",
+    "zh-Hant": "棕褐色印相 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

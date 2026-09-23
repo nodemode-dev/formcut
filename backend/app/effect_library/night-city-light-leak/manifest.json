@@ -1,0 +1,35 @@
+{
+  "id": "night-city-light-leak",
+  "name": "Night City · Light Leak",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Lichtleck",
+    "es": "Ciudad nocturna · Fuga de luz",
+    "fr": "Ville de nuit · Fuite de lumière",
+    "it": "Città notturna · Infiltrazione di luce",
+    "ja": "ナイトシティ · ライトリーク",
+    "ko": "밤의 도시 · 빛 번짐",
+    "pt-BR": "Cidade à noite · Vazamento de luz",
+    "ru": "Ночной город · Засветка",
+    "tr": "Gece şehri · Işık sızıntısı",
+    "zh-Hans": "夜色城市 · 漏光",
+    "zh-Hant": "夜色城市 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

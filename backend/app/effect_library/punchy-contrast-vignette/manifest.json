@@ -1,0 +1,32 @@
+{
+  "id": "punchy-contrast-vignette",
+  "name": "Punchy Contrast · Vignette",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Vignette",
+    "es": "Contraste intenso · Viñeta",
+    "fr": "Contraste marqué · Vignette",
+    "it": "Contrasto deciso · Vignettatura",
+    "ja": "強コントラスト · ビネット",
+    "ko": "강한 대비 · 비네트",
+    "pt-BR": "Contraste forte · Vinheta",
+    "ru": "Сочный контраст · Виньетка",
+    "tr": "Güçlü kontrast · Vinyet",
+    "zh-Hans": "强烈对比 · 暗角",
+    "zh-Hant": "強烈對比 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

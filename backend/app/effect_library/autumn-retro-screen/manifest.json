@@ -1,0 +1,38 @@
+{
+  "id": "autumn-retro-screen",
+  "name": "Autumn · Retro Screen",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Retro-Bildschirm",
+    "es": "Otoño · Pantalla retro",
+    "fr": "Automne · Écran rétro",
+    "it": "Autunno · Schermo retrò",
+    "ja": "秋 · レトロスクリーン",
+    "ko": "가을 · 레트로 화면",
+    "pt-BR": "Outono · Tela retrô",
+    "ru": "Осень · Ретро-экран",
+    "tr": "Sonbahar · Retro ekran",
+    "zh-Hans": "秋日 · 复古屏幕",
+    "zh-Hant": "秋日 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

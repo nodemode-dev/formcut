@@ -1,0 +1,37 @@
+{
+  "id": "arctic-soft-glow",
+  "name": "Arctic · Soft Glow",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Weiches Leuchten",
+    "es": "Ártico · Brillo suave",
+    "fr": "Arctique · Lueur douce",
+    "it": "Artico · Bagliore morbido",
+    "ja": "北極 · ソフトグロー",
+    "ko": "북극 · 소프트 글로우",
+    "pt-BR": "Ártico · Brilho suave",
+    "ru": "Арктика · Мягкое свечение",
+    "tr": "Arktik · Yumuşak parıltı",
+    "zh-Hans": "极地 · 柔光",
+    "zh-Hant": "極地 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

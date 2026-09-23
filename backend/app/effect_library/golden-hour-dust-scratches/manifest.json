@@ -1,0 +1,37 @@
+{
+  "id": "golden-hour-dust-scratches",
+  "name": "Golden Hour · Dust and Scratches",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Staub und Kratzer",
+    "es": "Hora dorada · Polvo y rayas",
+    "fr": "Heure dorée · Poussière et rayures",
+    "it": "Ora d'oro · Polvere e graffi",
+    "ja": "ゴールデンアワー · ほこりと傷",
+    "ko": "골든 아워 · 먼지와 스크래치",
+    "pt-BR": "Hora dourada · Poeira e riscos",
+    "ru": "Золотой час · Пыль и царапины",
+    "tr": "Altın saat · Toz ve çizikler",
+    "zh-Hans": "黄金时刻 · 灰尘与划痕",
+    "zh-Hant": "黃金時刻 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

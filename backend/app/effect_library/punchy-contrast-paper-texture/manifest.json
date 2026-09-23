@@ -1,0 +1,32 @@
+{
+  "id": "punchy-contrast-paper-texture",
+  "name": "Punchy Contrast · Paper Texture",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Papierstruktur",
+    "es": "Contraste intenso · Textura de papel",
+    "fr": "Contraste marqué · Texture papier",
+    "it": "Contrasto deciso · Trama della carta",
+    "ja": "強コントラスト · 紙の質感",
+    "ko": "강한 대비 · 종이 질감",
+    "pt-BR": "Contraste forte · Textura de papel",
+    "ru": "Сочный контраст · Текстура бумаги",
+    "tr": "Güçlü kontrast · Kâğıt dokusu",
+    "zh-Hans": "强烈对比 · 纸张纹理",
+    "zh-Hant": "強烈對比 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

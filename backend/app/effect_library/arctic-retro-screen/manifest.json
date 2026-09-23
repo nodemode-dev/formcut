@@ -1,0 +1,37 @@
+{
+  "id": "arctic-retro-screen",
+  "name": "Arctic · Retro Screen",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Retro-Bildschirm",
+    "es": "Ártico · Pantalla retro",
+    "fr": "Arctique · Écran rétro",
+    "it": "Artico · Schermo retrò",
+    "ja": "北極 · レトロスクリーン",
+    "ko": "북극 · 레트로 화면",
+    "pt-BR": "Ártico · Tela retrô",
+    "ru": "Арктика · Ретро-экран",
+    "tr": "Arktik · Retro ekran",
+    "zh-Hans": "极地 · 复古屏幕",
+    "zh-Hant": "極地 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

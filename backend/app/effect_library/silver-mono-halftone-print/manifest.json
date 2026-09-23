@@ -1,0 +1,33 @@
+{
+  "id": "silver-mono-halftone-print",
+  "name": "Silver Mono · Halftone Print",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Rasterdruck",
+    "es": "Monocromo plateado · Impresión de semitonos",
+    "fr": "Mono argenté · Impression tramée",
+    "it": "Mono argento · Stampa a retino",
+    "ja": "シルバーモノクロ · ハーフトーン印刷",
+    "ko": "실버 모노 · 하프톤 인쇄",
+    "pt-BR": "Mono prateado · Impressão em meio-tom",
+    "ru": "Серебристый монохром · Растровая печать",
+    "tr": "Gümüş tek renk · Yarım ton baskı",
+    "zh-Hans": "银色单色 · 半色调印刷",
+    "zh-Hant": "銀色單色 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

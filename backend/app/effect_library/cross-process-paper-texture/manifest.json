@@ -1,0 +1,34 @@
+{
+  "id": "cross-process-paper-texture",
+  "name": "Cross Process · Paper Texture",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Papierstruktur",
+    "es": "Proceso cruzado · Textura de papel",
+    "fr": "Traitement croisé · Texture papier",
+    "it": "Processo incrociato · Trama della carta",
+    "ja": "クロスプロセス · 紙の質感",
+    "ko": "크로스 프로세스 · 종이 질감",
+    "pt-BR": "Processo cruzado · Textura de papel",
+    "ru": "Кросс-процесс · Текстура бумаги",
+    "tr": "Çapraz işlem · Kâğıt dokusu",
+    "zh-Hans": "交叉冲印 · 纸张纹理",
+    "zh-Hant": "交叉沖印 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

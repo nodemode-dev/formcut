@@ -1,0 +1,29 @@
+{
+  "id": "silver-mono",
+  "name": "Silver Mono",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom",
+    "es": "Monocromo plateado",
+    "fr": "Mono argenté",
+    "it": "Mono argento",
+    "ja": "シルバーモノクロ",
+    "ko": "실버 모노",
+    "pt-BR": "Mono prateado",
+    "ru": "Серебристый монохром",
+    "tr": "Gümüş tek renk",
+    "zh-Hans": "银色单色",
+    "zh-Hant": "銀色單色"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    }
+  ]
+}

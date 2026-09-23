@@ -1,0 +1,36 @@
+{
+  "id": "matte-soft-glow",
+  "name": "Matte · Soft Glow",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Weiches Leuchten",
+    "es": "Mate · Brillo suave",
+    "fr": "Mat · Lueur douce",
+    "it": "Opaco · Bagliore morbido",
+    "ja": "マット · ソフトグロー",
+    "ko": "매트 · 소프트 글로우",
+    "pt-BR": "Fosco · Brilho suave",
+    "ru": "Матовый · Мягкое свечение",
+    "tr": "Mat · Yumuşak parıltı",
+    "zh-Hans": "哑光 · 柔光",
+    "zh-Hant": "霧面 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

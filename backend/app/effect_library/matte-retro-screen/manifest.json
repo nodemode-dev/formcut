@@ -1,0 +1,36 @@
+{
+  "id": "matte-retro-screen",
+  "name": "Matte · Retro Screen",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Retro-Bildschirm",
+    "es": "Mate · Pantalla retro",
+    "fr": "Mat · Écran rétro",
+    "it": "Opaco · Schermo retrò",
+    "ja": "マット · レトロスクリーン",
+    "ko": "매트 · 레트로 화면",
+    "pt-BR": "Fosco · Tela retrô",
+    "ru": "Матовый · Ретро-экран",
+    "tr": "Mat · Retro ekran",
+    "zh-Hans": "哑光 · 复古屏幕",
+    "zh-Hant": "霧面 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

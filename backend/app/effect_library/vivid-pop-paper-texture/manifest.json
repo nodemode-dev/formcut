@@ -1,0 +1,32 @@
+{
+  "id": "vivid-pop-paper-texture",
+  "name": "Vivid Pop · Paper Texture",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Papierstruktur",
+    "es": "Colores vivos · Textura de papel",
+    "fr": "Couleurs vives · Texture papier",
+    "it": "Colori vividi · Trama della carta",
+    "ja": "ビビッド · 紙の質感",
+    "ko": "비비드 팝 · 종이 질감",
+    "pt-BR": "Cores vivas · Textura de papel",
+    "ru": "Яркие цвета · Текстура бумаги",
+    "tr": "Canlı renkler · Kâğıt dokusu",
+    "zh-Hans": "鲜艳 · 纸张纹理",
+    "zh-Hant": "鮮豔 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "bleach-bypass",
+  "name": "Bleach Bypass",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass",
+    "es": "Blanqueo parcial",
+    "fr": "Sans blanchiment",
+    "it": "Bleach bypass",
+    "ja": "ブリーチバイパス",
+    "ko": "블리치 바이패스",
+    "pt-BR": "Bleach bypass",
+    "ru": "Отбеливание в обход",
+    "tr": "Ağartma atlama",
+    "zh-Hans": "漂白效果",
+    "zh-Hant": "漂白效果"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    }
+  ]
+}

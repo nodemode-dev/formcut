@@ -1,0 +1,33 @@
+{
+  "id": "silver-mono-light-leak",
+  "name": "Silver Mono · Light Leak",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Lichtleck",
+    "es": "Monocromo plateado · Fuga de luz",
+    "fr": "Mono argenté · Fuite de lumière",
+    "it": "Mono argento · Infiltrazione di luce",
+    "ja": "シルバーモノクロ · ライトリーク",
+    "ko": "실버 모노 · 빛 번짐",
+    "pt-BR": "Mono prateado · Vazamento de luz",
+    "ru": "Серебристый монохром · Засветка",
+    "tr": "Gümüş tek renk · Işık sızıntısı",
+    "zh-Hans": "银色单色 · 漏光",
+    "zh-Hant": "銀色單色 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "blue-hour-soft-glow",
+  "name": "Blue Hour · Soft Glow",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Weiches Leuchten",
+    "es": "Hora azul · Brillo suave",
+    "fr": "Heure bleue · Lueur douce",
+    "it": "Ora blu · Bagliore morbido",
+    "ja": "ブルーアワー · ソフトグロー",
+    "ko": "블루 아워 · 소프트 글로우",
+    "pt-BR": "Hora azul · Brilho suave",
+    "ru": "Синий час · Мягкое свечение",
+    "tr": "Mavi saat · Yumuşak parıltı",
+    "zh-Hans": "蓝调时刻 · 柔光",
+    "zh-Hant": "藍調時刻 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

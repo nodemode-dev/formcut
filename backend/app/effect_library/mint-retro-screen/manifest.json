@@ -1,0 +1,38 @@
+{
+  "id": "mint-retro-screen",
+  "name": "Mint · Retro Screen",
+  "kind": "video",
+  "category": "Mint",
+  "names": {
+    "de": "Minze · Retro-Bildschirm",
+    "es": "Menta · Pantalla retro",
+    "fr": "Menthe · Écran rétro",
+    "it": "Menta · Schermo retrò",
+    "ja": "ミント · レトロスクリーン",
+    "ko": "민트 · 레트로 화면",
+    "pt-BR": "Menta · Tela retrô",
+    "ru": "Мята · Ретро-экран",
+    "tr": "Nane · Retro ekran",
+    "zh-Hans": "薄荷 · 复古屏幕",
+    "zh-Hant": "薄荷 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.1,
+        "temperature": -0.1,
+        "lift": 0.05,
+        "saturation": 0.9,
+        "highlights_g": 0.04
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

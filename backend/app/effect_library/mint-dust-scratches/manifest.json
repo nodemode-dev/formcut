@@ -1,0 +1,38 @@
+{
+  "id": "mint-dust-scratches",
+  "name": "Mint · Dust and Scratches",
+  "kind": "video",
+  "category": "Mint",
+  "names": {
+    "de": "Minze · Staub und Kratzer",
+    "es": "Menta · Polvo y rayas",
+    "fr": "Menthe · Poussière et rayures",
+    "it": "Menta · Polvere e graffi",
+    "ja": "ミント · ほこりと傷",
+    "ko": "민트 · 먼지와 스크래치",
+    "pt-BR": "Menta · Poeira e riscos",
+    "ru": "Мята · Пыль и царапины",
+    "tr": "Nane · Toz ve çizikler",
+    "zh-Hans": "薄荷 · 灰尘与划痕",
+    "zh-Hant": "薄荷 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.1,
+        "temperature": -0.1,
+        "lift": 0.05,
+        "saturation": 0.9,
+        "highlights_g": 0.04
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "night-city-paper-texture",
+  "name": "Night City · Paper Texture",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Papierstruktur",
+    "es": "Ciudad nocturna · Textura de papel",
+    "fr": "Ville de nuit · Texture papier",
+    "it": "Città notturna · Trama della carta",
+    "ja": "ナイトシティ · 紙の質感",
+    "ko": "밤의 도시 · 종이 질감",
+    "pt-BR": "Cidade à noite · Textura de papel",
+    "ru": "Ночной город · Текстура бумаги",
+    "tr": "Gece şehri · Kâğıt dokusu",
+    "zh-Hans": "夜色城市 · 纸张纹理",
+    "zh-Hant": "夜色城市 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

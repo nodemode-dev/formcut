@@ -1,0 +1,33 @@
+{
+  "id": "silver-mono-vignette",
+  "name": "Silver Mono · Vignette",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Vignette",
+    "es": "Monocromo plateado · Viñeta",
+    "fr": "Mono argenté · Vignette",
+    "it": "Mono argento · Vignettatura",
+    "ja": "シルバーモノクロ · ビネット",
+    "ko": "실버 모노 · 비네트",
+    "pt-BR": "Mono prateado · Vinheta",
+    "ru": "Серебристый монохром · Виньетка",
+    "tr": "Gümüş tek renk · Vinyet",
+    "zh-Hans": "银色单色 · 暗角",
+    "zh-Hant": "銀色單色 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

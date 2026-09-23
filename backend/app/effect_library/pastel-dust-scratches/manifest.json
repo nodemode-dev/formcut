@@ -1,0 +1,38 @@
+{
+  "id": "pastel-dust-scratches",
+  "name": "Pastel · Dust and Scratches",
+  "kind": "video",
+  "category": "Pastel",
+  "names": {
+    "de": "Pastell · Staub und Kratzer",
+    "es": "Pastel · Polvo y rayas",
+    "fr": "Pastel · Poussière et rayures",
+    "it": "Pastello · Polvere e graffi",
+    "ja": "パステル · ほこりと傷",
+    "ko": "파스텔 · 먼지와 스크래치",
+    "pt-BR": "Pastel · Poeira e riscos",
+    "ru": "Пастель · Пыль и царапины",
+    "tr": "Pastel · Toz ve çizikler",
+    "zh-Hans": "粉彩 · 灰尘与划痕",
+    "zh-Hant": "粉彩 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.75,
+        "lift": 0.08,
+        "contrast": 0.85,
+        "exposure": 0.15,
+        "tint": 0.04
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "noir-retro-screen",
+  "name": "Noir · Retro Screen",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Retro-Bildschirm",
+    "es": "Noir · Pantalla retro",
+    "fr": "Noir · Écran rétro",
+    "it": "Noir · Schermo retrò",
+    "ja": "ノワール · レトロスクリーン",
+    "ko": "누아르 · 레트로 화면",
+    "pt-BR": "Noir · Tela retrô",
+    "ru": "Нуар · Ретро-экран",
+    "tr": "Noir · Retro ekran",
+    "zh-Hans": "黑色电影 · 复古屏幕",
+    "zh-Hant": "黑色電影 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

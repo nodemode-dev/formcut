@@ -1,0 +1,36 @@
+{
+  "id": "matte-dust-scratches",
+  "name": "Matte · Dust and Scratches",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Staub und Kratzer",
+    "es": "Mate · Polvo y rayas",
+    "fr": "Mat · Poussière et rayures",
+    "it": "Opaco · Polvere e graffi",
+    "ja": "マット · ほこりと傷",
+    "ko": "매트 · 먼지와 스크래치",
+    "pt-BR": "Fosco · Poeira e riscos",
+    "ru": "Матовый · Пыль и царапины",
+    "tr": "Mat · Toz ve çizikler",
+    "zh-Hans": "哑光 · 灰尘与划痕",
+    "zh-Hant": "霧面 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

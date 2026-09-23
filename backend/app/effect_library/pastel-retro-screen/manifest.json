@@ -1,0 +1,38 @@
+{
+  "id": "pastel-retro-screen",
+  "name": "Pastel · Retro Screen",
+  "kind": "video",
+  "category": "Pastel",
+  "names": {
+    "de": "Pastell · Retro-Bildschirm",
+    "es": "Pastel · Pantalla retro",
+    "fr": "Pastel · Écran rétro",
+    "it": "Pastello · Schermo retrò",
+    "ja": "パステル · レトロスクリーン",
+    "ko": "파스텔 · 레트로 화면",
+    "pt-BR": "Pastel · Tela retrô",
+    "ru": "Пастель · Ретро-экран",
+    "tr": "Pastel · Retro ekran",
+    "zh-Hans": "粉彩 · 复古屏幕",
+    "zh-Hant": "粉彩 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.75,
+        "lift": 0.08,
+        "contrast": 0.85,
+        "exposure": 0.15,
+        "tint": 0.04
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

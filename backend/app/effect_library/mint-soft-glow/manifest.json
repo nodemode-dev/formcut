@@ -1,0 +1,38 @@
+{
+  "id": "mint-soft-glow",
+  "name": "Mint · Soft Glow",
+  "kind": "video",
+  "category": "Mint",
+  "names": {
+    "de": "Minze · Weiches Leuchten",
+    "es": "Menta · Brillo suave",
+    "fr": "Menthe · Lueur douce",
+    "it": "Menta · Bagliore morbido",
+    "ja": "ミント · ソフトグロー",
+    "ko": "민트 · 소프트 글로우",
+    "pt-BR": "Menta · Brilho suave",
+    "ru": "Мята · Мягкое свечение",
+    "tr": "Nane · Yumuşak parıltı",
+    "zh-Hans": "薄荷 · 柔光",
+    "zh-Hant": "薄荷 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.1,
+        "temperature": -0.1,
+        "lift": 0.05,
+        "saturation": 0.9,
+        "highlights_g": 0.04
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

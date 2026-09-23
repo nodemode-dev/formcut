@@ -1,0 +1,35 @@
+{
+  "id": "night-city-vignette",
+  "name": "Night City · Vignette",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Vignette",
+    "es": "Ciudad nocturna · Viñeta",
+    "fr": "Ville de nuit · Vignette",
+    "it": "Città notturna · Vignettatura",
+    "ja": "ナイトシティ · ビネット",
+    "ko": "밤의 도시 · 비네트",
+    "pt-BR": "Cidade à noite · Vinheta",
+    "ru": "Ночной город · Виньетка",
+    "tr": "Gece şehri · Vinyet",
+    "zh-Hans": "夜色城市 · 暗角",
+    "zh-Hant": "夜色城市 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

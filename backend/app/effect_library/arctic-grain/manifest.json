@@ -1,0 +1,33 @@
+{
+  "id": "arctic-grain",
+  "name": "Arctic · Grain",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Körnung",
+    "es": "Ártico · Grano",
+    "fr": "Arctique · Grain",
+    "it": "Artico · Grana",
+    "ja": "北極 · グレイン",
+    "ko": "북극 · 그레인",
+    "pt-BR": "Ártico · Granulação",
+    "ru": "Арктика · Зерно",
+    "tr": "Arktik · Gren",
+    "zh-Hans": "极地 · 颗粒",
+    "zh-Hant": "極地 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

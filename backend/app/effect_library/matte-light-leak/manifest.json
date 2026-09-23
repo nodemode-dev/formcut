@@ -1,0 +1,32 @@
+{
+  "id": "matte-light-leak",
+  "name": "Matte · Light Leak",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Lichtleck",
+    "es": "Mate · Fuga de luz",
+    "fr": "Mat · Fuite de lumière",
+    "it": "Opaco · Infiltrazione di luce",
+    "ja": "マット · ライトリーク",
+    "ko": "매트 · 빛 번짐",
+    "pt-BR": "Fosco · Vazamento de luz",
+    "ru": "Матовый · Засветка",
+    "tr": "Mat · Işık sızıntısı",
+    "zh-Hans": "哑光 · 漏光",
+    "zh-Hant": "霧面 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

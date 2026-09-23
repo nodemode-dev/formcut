@@ -1,0 +1,35 @@
+{
+  "id": "teal-orange-vignette",
+  "name": "Teal and Orange · Vignette",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Vignette",
+    "es": "Verde azulado y naranja · Viñeta",
+    "fr": "Sarcelle et orange · Vignette",
+    "it": "Ottanio e arancio · Vignettatura",
+    "ja": "ティール＆オレンジ · ビネット",
+    "ko": "틸 앤 오렌지 · 비네트",
+    "pt-BR": "Azul-petróleo e laranja · Vinheta",
+    "ru": "Бирюзовый и оранжевый · Виньетка",
+    "tr": "Camgöbeği ve turuncu · Vinyet",
+    "zh-Hans": "青橙色调 · 暗角",
+    "zh-Hant": "青橙色調 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

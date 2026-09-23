@@ -1,0 +1,37 @@
+{
+  "id": "faded-film-dust-scratches",
+  "name": "Faded Film · Dust and Scratches",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Staub und Kratzer",
+    "es": "Película desvaída · Polvo y rayas",
+    "fr": "Pellicule délavée · Poussière et rayures",
+    "it": "Pellicola sbiadita · Polvere e graffi",
+    "ja": "色あせたフィルム · ほこりと傷",
+    "ko": "바랜 필름 · 먼지와 스크래치",
+    "pt-BR": "Filme desbotado · Poeira e riscos",
+    "ru": "Выцветшая плёнка · Пыль и царапины",
+    "tr": "Solmuş film · Toz ve çizikler",
+    "zh-Hans": "褪色胶片 · 灰尘与划痕",
+    "zh-Hant": "褪色膠片 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

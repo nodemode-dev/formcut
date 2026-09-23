@@ -1,0 +1,33 @@
+{
+  "id": "silver-mono-paper-texture",
+  "name": "Silver Mono · Paper Texture",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Papierstruktur",
+    "es": "Monocromo plateado · Textura de papel",
+    "fr": "Mono argenté · Texture papier",
+    "it": "Mono argento · Trama della carta",
+    "ja": "シルバーモノクロ · 紙の質感",
+    "ko": "실버 모노 · 종이 질감",
+    "pt-BR": "Mono prateado · Textura de papel",
+    "ru": "Серебристый монохром · Текстура бумаги",
+    "tr": "Gümüş tek renk · Kâğıt dokusu",
+    "zh-Hans": "银色单色 · 纸张纹理",
+    "zh-Hant": "銀色單色 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

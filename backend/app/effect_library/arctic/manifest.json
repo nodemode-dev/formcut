@@ -1,0 +1,29 @@
+{
+  "id": "arctic",
+  "name": "Arctic",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis",
+    "es": "Ártico",
+    "fr": "Arctique",
+    "it": "Artico",
+    "ja": "北極",
+    "ko": "북극",
+    "pt-BR": "Ártico",
+    "ru": "Арктика",
+    "tr": "Arktik",
+    "zh-Hans": "极地",
+    "zh-Hant": "極地"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    }
+  ]
+}

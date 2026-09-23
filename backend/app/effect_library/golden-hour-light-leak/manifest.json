@@ -1,0 +1,33 @@
+{
+  "id": "golden-hour-light-leak",
+  "name": "Golden Hour · Light Leak",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Lichtleck",
+    "es": "Hora dorada · Fuga de luz",
+    "fr": "Heure dorée · Fuite de lumière",
+    "it": "Ora d'oro · Infiltrazione di luce",
+    "ja": "ゴールデンアワー · ライトリーク",
+    "ko": "골든 아워 · 빛 번짐",
+    "pt-BR": "Hora dourada · Vazamento de luz",
+    "ru": "Золотой час · Засветка",
+    "tr": "Altın saat · Işık sızıntısı",
+    "zh-Hans": "黄金时刻 · 漏光",
+    "zh-Hant": "黃金時刻 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

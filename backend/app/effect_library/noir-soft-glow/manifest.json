@@ -1,0 +1,36 @@
+{
+  "id": "noir-soft-glow",
+  "name": "Noir · Soft Glow",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Weiches Leuchten",
+    "es": "Noir · Brillo suave",
+    "fr": "Noir · Lueur douce",
+    "it": "Noir · Bagliore morbido",
+    "ja": "ノワール · ソフトグロー",
+    "ko": "누아르 · 소프트 글로우",
+    "pt-BR": "Noir · Brilho suave",
+    "ru": "Нуар · Мягкое свечение",
+    "tr": "Noir · Yumuşak parıltı",
+    "zh-Hans": "黑色电影 · 柔光",
+    "zh-Hant": "黑色電影 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

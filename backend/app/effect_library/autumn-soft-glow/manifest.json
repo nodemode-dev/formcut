@@ -1,0 +1,38 @@
+{
+  "id": "autumn-soft-glow",
+  "name": "Autumn · Soft Glow",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Weiches Leuchten",
+    "es": "Otoño · Brillo suave",
+    "fr": "Automne · Lueur douce",
+    "it": "Autunno · Bagliore morbido",
+    "ja": "秋 · ソフトグロー",
+    "ko": "가을 · 소프트 글로우",
+    "pt-BR": "Outono · Brilho suave",
+    "ru": "Осень · Мягкое свечение",
+    "tr": "Sonbahar · Yumuşak parıltı",
+    "zh-Hans": "秋日 · 柔光",
+    "zh-Hant": "秋日 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

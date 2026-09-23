@@ -1,0 +1,33 @@
+{
+  "id": "golden-hour-paper-texture",
+  "name": "Golden Hour · Paper Texture",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Papierstruktur",
+    "es": "Hora dorada · Textura de papel",
+    "fr": "Heure dorée · Texture papier",
+    "it": "Ora d'oro · Trama della carta",
+    "ja": "ゴールデンアワー · 紙の質感",
+    "ko": "골든 아워 · 종이 질감",
+    "pt-BR": "Hora dourada · Textura de papel",
+    "ru": "Золотой час · Текстура бумаги",
+    "tr": "Altın saat · Kâğıt dokusu",
+    "zh-Hans": "黄金时刻 · 纸张纹理",
+    "zh-Hant": "黃金時刻 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

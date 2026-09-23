@@ -1,0 +1,32 @@
+{
+  "id": "sepia-print-light-leak",
+  "name": "Sepia Print · Light Leak",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Lichtleck",
+    "es": "Impresión sepia · Fuga de luz",
+    "fr": "Tirage sépia · Fuite de lumière",
+    "it": "Stampa seppia · Infiltrazione di luce",
+    "ja": "セピアプリント · ライトリーク",
+    "ko": "세피아 인화 · 빛 번짐",
+    "pt-BR": "Impressão sépia · Vazamento de luz",
+    "ru": "Сепия · Засветка",
+    "tr": "Sepya baskı · Işık sızıntısı",
+    "zh-Hans": "棕褐色印相 · 漏光",
+    "zh-Hant": "棕褐色印相 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

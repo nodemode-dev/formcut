@@ -1,0 +1,32 @@
+{
+  "id": "bleach-bypass-halftone-print",
+  "name": "Bleach Bypass · Halftone Print",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Rasterdruck",
+    "es": "Blanqueo parcial · Impresión de semitonos",
+    "fr": "Sans blanchiment · Impression tramée",
+    "it": "Bleach bypass · Stampa a retino",
+    "ja": "ブリーチバイパス · ハーフトーン印刷",
+    "ko": "블리치 바이패스 · 하프톤 인쇄",
+    "pt-BR": "Bleach bypass · Impressão em meio-tom",
+    "ru": "Отбеливание в обход · Растровая печать",
+    "tr": "Ağartma atlama · Yarım ton baskı",
+    "zh-Hans": "漂白效果 · 半色调印刷",
+    "zh-Hant": "漂白效果 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

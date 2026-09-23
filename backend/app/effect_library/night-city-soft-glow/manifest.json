@@ -1,0 +1,39 @@
+{
+  "id": "night-city-soft-glow",
+  "name": "Night City · Soft Glow",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Weiches Leuchten",
+    "es": "Ciudad nocturna · Brillo suave",
+    "fr": "Ville de nuit · Lueur douce",
+    "it": "Città notturna · Bagliore morbido",
+    "ja": "ナイトシティ · ソフトグロー",
+    "ko": "밤의 도시 · 소프트 글로우",
+    "pt-BR": "Cidade à noite · Brilho suave",
+    "ru": "Ночной город · Мягкое свечение",
+    "tr": "Gece şehri · Yumuşak parıltı",
+    "zh-Hans": "夜色城市 · 柔光",
+    "zh-Hant": "夜色城市 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

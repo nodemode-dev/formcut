@@ -1,0 +1,39 @@
+{
+  "id": "teal-orange-dust-scratches",
+  "name": "Teal and Orange · Dust and Scratches",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Staub und Kratzer",
+    "es": "Verde azulado y naranja · Polvo y rayas",
+    "fr": "Sarcelle et orange · Poussière et rayures",
+    "it": "Ottanio e arancio · Polvere e graffi",
+    "ja": "ティール＆オレンジ · ほこりと傷",
+    "ko": "틸 앤 오렌지 · 먼지와 스크래치",
+    "pt-BR": "Azul-petróleo e laranja · Poeira e riscos",
+    "ru": "Бирюзовый и оранжевый · Пыль и царапины",
+    "tr": "Camgöbeği ve turuncu · Toz ve çizikler",
+    "zh-Hans": "青橙色调 · 灰尘与划痕",
+    "zh-Hant": "青橙色調 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

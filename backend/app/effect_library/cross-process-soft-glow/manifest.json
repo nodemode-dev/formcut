@@ -1,0 +1,38 @@
+{
+  "id": "cross-process-soft-glow",
+  "name": "Cross Process · Soft Glow",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Weiches Leuchten",
+    "es": "Proceso cruzado · Brillo suave",
+    "fr": "Traitement croisé · Lueur douce",
+    "it": "Processo incrociato · Bagliore morbido",
+    "ja": "クロスプロセス · ソフトグロー",
+    "ko": "크로스 프로세스 · 소프트 글로우",
+    "pt-BR": "Processo cruzado · Brilho suave",
+    "ru": "Кросс-процесс · Мягкое свечение",
+    "tr": "Çapraz işlem · Yumuşak parıltı",
+    "zh-Hans": "交叉冲印 · 柔光",
+    "zh-Hant": "交叉沖印 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

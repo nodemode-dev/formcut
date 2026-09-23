@@ -1,0 +1,34 @@
+{
+  "id": "cross-process-halftone-print",
+  "name": "Cross Process · Halftone Print",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Rasterdruck",
+    "es": "Proceso cruzado · Impresión de semitonos",
+    "fr": "Traitement croisé · Impression tramée",
+    "it": "Processo incrociato · Stampa a retino",
+    "ja": "クロスプロセス · ハーフトーン印刷",
+    "ko": "크로스 프로세스 · 하프톤 인쇄",
+    "pt-BR": "Processo cruzado · Impressão em meio-tom",
+    "ru": "Кросс-процесс · Растровая печать",
+    "tr": "Çapraz işlem · Yarım ton baskı",
+    "zh-Hans": "交叉冲印 · 半色调印刷",
+    "zh-Hant": "交叉沖印 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "blue-hour-retro-screen",
+  "name": "Blue Hour · Retro Screen",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Retro-Bildschirm",
+    "es": "Hora azul · Pantalla retro",
+    "fr": "Heure bleue · Écran rétro",
+    "it": "Ora blu · Schermo retrò",
+    "ja": "ブルーアワー · レトロスクリーン",
+    "ko": "블루 아워 · 레트로 화면",
+    "pt-BR": "Hora azul · Tela retrô",
+    "ru": "Синий час · Ретро-экран",
+    "tr": "Mavi saat · Retro ekran",
+    "zh-Hans": "蓝调时刻 · 复古屏幕",
+    "zh-Hant": "藍調時刻 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

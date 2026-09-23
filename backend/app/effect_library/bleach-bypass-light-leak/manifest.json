@@ -1,0 +1,32 @@
+{
+  "id": "bleach-bypass-light-leak",
+  "name": "Bleach Bypass · Light Leak",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Lichtleck",
+    "es": "Blanqueo parcial · Fuga de luz",
+    "fr": "Sans blanchiment · Fuite de lumière",
+    "it": "Bleach bypass · Infiltrazione di luce",
+    "ja": "ブリーチバイパス · ライトリーク",
+    "ko": "블리치 바이패스 · 빛 번짐",
+    "pt-BR": "Bleach bypass · Vazamento de luz",
+    "ru": "Отбеливание в обход · Засветка",
+    "tr": "Ağartma atlama · Işık sızıntısı",
+    "zh-Hans": "漂白效果 · 漏光",
+    "zh-Hant": "漂白效果 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

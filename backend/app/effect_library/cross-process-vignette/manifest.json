@@ -1,0 +1,34 @@
+{
+  "id": "cross-process-vignette",
+  "name": "Cross Process · Vignette",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Vignette",
+    "es": "Proceso cruzado · Viñeta",
+    "fr": "Traitement croisé · Vignette",
+    "it": "Processo incrociato · Vignettatura",
+    "ja": "クロスプロセス · ビネット",
+    "ko": "크로스 프로세스 · 비네트",
+    "pt-BR": "Processo cruzado · Vinheta",
+    "ru": "Кросс-процесс · Виньетка",
+    "tr": "Çapraz işlem · Vinyet",
+    "zh-Hans": "交叉冲印 · 暗角",
+    "zh-Hant": "交叉沖印 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

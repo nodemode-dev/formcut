@@ -1,0 +1,32 @@
+{
+  "id": "rose-tint-paper-texture",
+  "name": "Rose Tint · Paper Texture",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Papierstruktur",
+    "es": "Tono rosado · Textura de papel",
+    "fr": "Teinte rose · Texture papier",
+    "it": "Tinta rosa · Trama della carta",
+    "ja": "ローズティント · 紙の質感",
+    "ko": "로즈 틴트 · 종이 질감",
+    "pt-BR": "Tom rosado · Textura de papel",
+    "ru": "Розовый оттенок · Текстура бумаги",
+    "tr": "Gül tonu · Kâğıt dokusu",
+    "zh-Hans": "玫瑰色调 · 纸张纹理",
+    "zh-Hant": "玫瑰色調 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

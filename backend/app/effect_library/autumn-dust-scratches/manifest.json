@@ -1,0 +1,38 @@
+{
+  "id": "autumn-dust-scratches",
+  "name": "Autumn · Dust and Scratches",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Staub und Kratzer",
+    "es": "Otoño · Polvo y rayas",
+    "fr": "Automne · Poussière et rayures",
+    "it": "Autunno · Polvere e graffi",
+    "ja": "秋 · ほこりと傷",
+    "ko": "가을 · 먼지와 스크래치",
+    "pt-BR": "Outono · Poeira e riscos",
+    "ru": "Осень · Пыль и царапины",
+    "tr": "Sonbahar · Toz ve çizikler",
+    "zh-Hans": "秋日 · 灰尘与划痕",
+    "zh-Hant": "秋日 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

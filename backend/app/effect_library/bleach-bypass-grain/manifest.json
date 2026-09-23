@@ -1,0 +1,32 @@
+{
+  "id": "bleach-bypass-grain",
+  "name": "Bleach Bypass · Grain",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Körnung",
+    "es": "Blanqueo parcial · Grano",
+    "fr": "Sans blanchiment · Grain",
+    "it": "Bleach bypass · Grana",
+    "ja": "ブリーチバイパス · グレイン",
+    "ko": "블리치 바이패스 · 그레인",
+    "pt-BR": "Bleach bypass · Granulação",
+    "ru": "Отбеливание в обход · Зерно",
+    "tr": "Ağartma atlama · Gren",
+    "zh-Hans": "漂白效果 · 颗粒",
+    "zh-Hant": "漂白效果 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

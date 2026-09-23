@@ -1,0 +1,37 @@
+{
+  "id": "silver-mono-dust-scratches",
+  "name": "Silver Mono · Dust and Scratches",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Staub und Kratzer",
+    "es": "Monocromo plateado · Polvo y rayas",
+    "fr": "Mono argenté · Poussière et rayures",
+    "it": "Mono argento · Polvere e graffi",
+    "ja": "シルバーモノクロ · ほこりと傷",
+    "ko": "실버 모노 · 먼지와 스크래치",
+    "pt-BR": "Mono prateado · Poeira e riscos",
+    "ru": "Серебристый монохром · Пыль и царапины",
+    "tr": "Gümüş tek renk · Toz ve çizikler",
+    "zh-Hans": "银色单色 · 灰尘与划痕",
+    "zh-Hant": "銀色單色 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

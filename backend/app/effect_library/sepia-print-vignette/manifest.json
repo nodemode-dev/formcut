@@ -1,0 +1,32 @@
+{
+  "id": "sepia-print-vignette",
+  "name": "Sepia Print · Vignette",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Vignette",
+    "es": "Impresión sepia · Viñeta",
+    "fr": "Tirage sépia · Vignette",
+    "it": "Stampa seppia · Vignettatura",
+    "ja": "セピアプリント · ビネット",
+    "ko": "세피아 인화 · 비네트",
+    "pt-BR": "Impressão sépia · Vinheta",
+    "ru": "Сепия · Виньетка",
+    "tr": "Sepya baskı · Vinyet",
+    "zh-Hans": "棕褐色印相 · 暗角",
+    "zh-Hant": "棕褐色印相 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

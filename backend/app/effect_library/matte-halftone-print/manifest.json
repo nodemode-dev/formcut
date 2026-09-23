@@ -1,0 +1,32 @@
+{
+  "id": "matte-halftone-print",
+  "name": "Matte · Halftone Print",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Rasterdruck",
+    "es": "Mate · Impresión de semitonos",
+    "fr": "Mat · Impression tramée",
+    "it": "Opaco · Stampa a retino",
+    "ja": "マット · ハーフトーン印刷",
+    "ko": "매트 · 하프톤 인쇄",
+    "pt-BR": "Fosco · Impressão em meio-tom",
+    "ru": "Матовый · Растровая печать",
+    "tr": "Mat · Yarım ton baskı",
+    "zh-Hans": "哑光 · 半色调印刷",
+    "zh-Hant": "霧面 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

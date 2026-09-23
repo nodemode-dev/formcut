@@ -1,0 +1,28 @@
+{
+  "id": "noir",
+  "name": "Noir",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir",
+    "es": "Noir",
+    "fr": "Noir",
+    "it": "Noir",
+    "ja": "ノワール",
+    "ko": "누아르",
+    "pt-BR": "Noir",
+    "ru": "Нуар",
+    "tr": "Noir",
+    "zh-Hans": "黑色电影",
+    "zh-Hant": "黑色電影"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    }
+  ]
+}

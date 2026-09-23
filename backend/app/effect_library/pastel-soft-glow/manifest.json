@@ -1,0 +1,38 @@
+{
+  "id": "pastel-soft-glow",
+  "name": "Pastel · Soft Glow",
+  "kind": "video",
+  "category": "Pastel",
+  "names": {
+    "de": "Pastell · Weiches Leuchten",
+    "es": "Pastel · Brillo suave",
+    "fr": "Pastel · Lueur douce",
+    "it": "Pastello · Bagliore morbido",
+    "ja": "パステル · ソフトグロー",
+    "ko": "파스텔 · 소프트 글로우",
+    "pt-BR": "Pastel · Brilho suave",
+    "ru": "Пастель · Мягкое свечение",
+    "tr": "Pastel · Yumuşak parıltı",
+    "zh-Hans": "粉彩 · 柔光",
+    "zh-Hant": "粉彩 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.75,
+        "lift": 0.08,
+        "contrast": 0.85,
+        "exposure": 0.15,
+        "tint": 0.04
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

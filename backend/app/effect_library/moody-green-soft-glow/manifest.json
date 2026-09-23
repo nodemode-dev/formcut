@@ -1,0 +1,38 @@
+{
+  "id": "moody-green-soft-glow",
+  "name": "Moody Green · Soft Glow",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Weiches Leuchten",
+    "es": "Verde sombrío · Brillo suave",
+    "fr": "Vert sombre · Lueur douce",
+    "it": "Verde cupo · Bagliore morbido",
+    "ja": "ムーディーグリーン · ソフトグロー",
+    "ko": "무디 그린 · 소프트 글로우",
+    "pt-BR": "Verde sombrio · Brilho suave",
+    "ru": "Мрачный зелёный · Мягкое свечение",
+    "tr": "Kasvetli yeşil · Yumuşak parıltı",
+    "zh-Hans": "忧郁绿 · 柔光",
+    "zh-Hant": "憂鬱綠 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

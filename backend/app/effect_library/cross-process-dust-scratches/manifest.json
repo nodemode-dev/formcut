@@ -1,0 +1,38 @@
+{
+  "id": "cross-process-dust-scratches",
+  "name": "Cross Process · Dust and Scratches",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Staub und Kratzer",
+    "es": "Proceso cruzado · Polvo y rayas",
+    "fr": "Traitement croisé · Poussière et rayures",
+    "it": "Processo incrociato · Polvere e graffi",
+    "ja": "クロスプロセス · ほこりと傷",
+    "ko": "크로스 프로세스 · 먼지와 스크래치",
+    "pt-BR": "Processo cruzado · Poeira e riscos",
+    "ru": "Кросс-процесс · Пыль и царапины",
+    "tr": "Çapraz işlem · Toz ve çizikler",
+    "zh-Hans": "交叉冲印 · 灰尘与划痕",
+    "zh-Hant": "交叉沖印 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

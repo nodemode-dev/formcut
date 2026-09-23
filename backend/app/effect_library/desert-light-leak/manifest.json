@@ -1,0 +1,34 @@
+{
+  "id": "desert-light-leak",
+  "name": "Desert · Light Leak",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Lichtleck",
+    "es": "Desierto · Fuga de luz",
+    "fr": "Désert · Fuite de lumière",
+    "it": "Deserto · Infiltrazione di luce",
+    "ja": "砂漠 · ライトリーク",
+    "ko": "사막 · 빛 번짐",
+    "pt-BR": "Deserto · Vazamento de luz",
+    "ru": "Пустыня · Засветка",
+    "tr": "Çöl · Işık sızıntısı",
+    "zh-Hans": "沙漠 · 漏光",
+    "zh-Hant": "沙漠 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "bleach-bypass-retro-screen",
+  "name": "Bleach Bypass · Retro Screen",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Retro-Bildschirm",
+    "es": "Blanqueo parcial · Pantalla retro",
+    "fr": "Sans blanchiment · Écran rétro",
+    "it": "Bleach bypass · Schermo retrò",
+    "ja": "ブリーチバイパス · レトロスクリーン",
+    "ko": "블리치 바이패스 · 레트로 화면",
+    "pt-BR": "Bleach bypass · Tela retrô",
+    "ru": "Отбеливание в обход · Ретро-экран",
+    "tr": "Ağartma atlama · Retro ekran",
+    "zh-Hans": "漂白效果 · 复古屏幕",
+    "zh-Hant": "漂白效果 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

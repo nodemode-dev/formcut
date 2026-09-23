@@ -1,0 +1,34 @@
+{
+  "id": "mint-light-leak",
+  "name": "Mint · Light Leak",
+  "kind": "video",
+  "category": "Mint",
+  "names": {
+    "de": "Minze · Lichtleck",
+    "es": "Menta · Fuga de luz",
+    "fr": "Menthe · Fuite de lumière",
+    "it": "Menta · Infiltrazione di luce",
+    "ja": "ミント · ライトリーク",
+    "ko": "민트 · 빛 번짐",
+    "pt-BR": "Menta · Vazamento de luz",
+    "ru": "Мята · Засветка",
+    "tr": "Nane · Işık sızıntısı",
+    "zh-Hans": "薄荷 · 漏光",
+    "zh-Hant": "薄荷 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.1,
+        "temperature": -0.1,
+        "lift": 0.05,
+        "saturation": 0.9,
+        "highlights_g": 0.04
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

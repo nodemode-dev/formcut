@@ -1,0 +1,33 @@
+{
+  "id": "golden-hour-halftone-print",
+  "name": "Golden Hour · Halftone Print",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Rasterdruck",
+    "es": "Hora dorada · Impresión de semitonos",
+    "fr": "Heure dorée · Impression tramée",
+    "it": "Ora d'oro · Stampa a retino",
+    "ja": "ゴールデンアワー · ハーフトーン印刷",
+    "ko": "골든 아워 · 하프톤 인쇄",
+    "pt-BR": "Hora dourada · Impressão em meio-tom",
+    "ru": "Золотой час · Растровая печать",
+    "tr": "Altın saat · Yarım ton baskı",
+    "zh-Hans": "黄金时刻 · 半色调印刷",
+    "zh-Hant": "黃金時刻 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

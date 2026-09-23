@@ -1,0 +1,34 @@
+{
+  "id": "blue-hour-paper-texture",
+  "name": "Blue Hour · Paper Texture",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Papierstruktur",
+    "es": "Hora azul · Textura de papel",
+    "fr": "Heure bleue · Texture papier",
+    "it": "Ora blu · Trama della carta",
+    "ja": "ブルーアワー · 紙の質感",
+    "ko": "블루 아워 · 종이 질감",
+    "pt-BR": "Hora azul · Textura de papel",
+    "ru": "Синий час · Текстура бумаги",
+    "tr": "Mavi saat · Kâğıt dokusu",
+    "zh-Hans": "蓝调时刻 · 纸张纹理",
+    "zh-Hant": "藍調時刻 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

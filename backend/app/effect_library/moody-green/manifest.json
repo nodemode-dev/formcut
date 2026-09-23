@@ -1,0 +1,30 @@
+{
+  "id": "moody-green",
+  "name": "Moody Green",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün",
+    "es": "Verde sombrío",
+    "fr": "Vert sombre",
+    "it": "Verde cupo",
+    "ja": "ムーディーグリーン",
+    "ko": "무디 그린",
+    "pt-BR": "Verde sombrio",
+    "ru": "Мрачный зелёный",
+    "tr": "Kasvetli yeşil",
+    "zh-Hans": "忧郁绿",
+    "zh-Hant": "憂鬱綠"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    }
+  ]
+}

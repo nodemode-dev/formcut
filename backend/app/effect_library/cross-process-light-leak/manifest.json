@@ -1,0 +1,34 @@
+{
+  "id": "cross-process-light-leak",
+  "name": "Cross Process · Light Leak",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Lichtleck",
+    "es": "Proceso cruzado · Fuga de luz",
+    "fr": "Traitement croisé · Fuite de lumière",
+    "it": "Processo incrociato · Infiltrazione di luce",
+    "ja": "クロスプロセス · ライトリーク",
+    "ko": "크로스 프로세스 · 빛 번짐",
+    "pt-BR": "Processo cruzado · Vazamento de luz",
+    "ru": "Кросс-процесс · Засветка",
+    "tr": "Çapraz işlem · Işık sızıntısı",
+    "zh-Hans": "交叉冲印 · 漏光",
+    "zh-Hant": "交叉沖印 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

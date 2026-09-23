@@ -1,0 +1,28 @@
+{
+  "id": "rose-tint",
+  "name": "Rose Tint",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé",
+    "es": "Tono rosado",
+    "fr": "Teinte rose",
+    "it": "Tinta rosa",
+    "ja": "ローズティント",
+    "ko": "로즈 틴트",
+    "pt-BR": "Tom rosado",
+    "ru": "Розовый оттенок",
+    "tr": "Gül tonu",
+    "zh-Hans": "玫瑰色调",
+    "zh-Hant": "玫瑰色調"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "punchy-contrast-dust-scratches",
+  "name": "Punchy Contrast · Dust and Scratches",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Staub und Kratzer",
+    "es": "Contraste intenso · Polvo y rayas",
+    "fr": "Contraste marqué · Poussière et rayures",
+    "it": "Contrasto deciso · Polvere e graffi",
+    "ja": "強コントラスト · ほこりと傷",
+    "ko": "강한 대비 · 먼지와 스크래치",
+    "pt-BR": "Contraste forte · Poeira e riscos",
+    "ru": "Сочный контраст · Пыль и царапины",
+    "tr": "Güçlü kontrast · Toz ve çizikler",
+    "zh-Hans": "强烈对比 · 灰尘与划痕",
+    "zh-Hant": "強烈對比 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

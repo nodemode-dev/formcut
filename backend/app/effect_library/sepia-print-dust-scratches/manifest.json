@@ -1,0 +1,36 @@
+{
+  "id": "sepia-print-dust-scratches",
+  "name": "Sepia Print · Dust and Scratches",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Staub und Kratzer",
+    "es": "Impresión sepia · Polvo y rayas",
+    "fr": "Tirage sépia · Poussière et rayures",
+    "it": "Stampa seppia · Polvere e graffi",
+    "ja": "セピアプリント · ほこりと傷",
+    "ko": "세피아 인화 · 먼지와 스크래치",
+    "pt-BR": "Impressão sépia · Poeira e riscos",
+    "ru": "Сепия · Пыль и царапины",
+    "tr": "Sepya baskı · Toz ve çizikler",
+    "zh-Hans": "棕褐色印相 · 灰尘与划痕",
+    "zh-Hant": "棕褐色印相 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

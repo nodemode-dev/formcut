@@ -1,0 +1,34 @@
+{
+  "id": "autumn-grain",
+  "name": "Autumn · Grain",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Körnung",
+    "es": "Otoño · Grano",
+    "fr": "Automne · Grain",
+    "it": "Autunno · Grana",
+    "ja": "秋 · グレイン",
+    "ko": "가을 · 그레인",
+    "pt-BR": "Outono · Granulação",
+    "ru": "Осень · Зерно",
+    "tr": "Sonbahar · Gren",
+    "zh-Hans": "秋日 · 颗粒",
+    "zh-Hant": "秋日 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

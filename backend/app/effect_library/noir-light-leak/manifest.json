@@ -1,0 +1,32 @@
+{
+  "id": "noir-light-leak",
+  "name": "Noir · Light Leak",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Lichtleck",
+    "es": "Noir · Fuga de luz",
+    "fr": "Noir · Fuite de lumière",
+    "it": "Noir · Infiltrazione di luce",
+    "ja": "ノワール · ライトリーク",
+    "ko": "누아르 · 빛 번짐",
+    "pt-BR": "Noir · Vazamento de luz",
+    "ru": "Нуар · Засветка",
+    "tr": "Noir · Işık sızıntısı",
+    "zh-Hans": "黑色电影 · 漏光",
+    "zh-Hant": "黑色電影 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

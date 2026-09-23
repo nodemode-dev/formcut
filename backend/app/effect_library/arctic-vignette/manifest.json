@@ -1,0 +1,33 @@
+{
+  "id": "arctic-vignette",
+  "name": "Arctic · Vignette",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Vignette",
+    "es": "Ártico · Viñeta",
+    "fr": "Arctique · Vignette",
+    "it": "Artico · Vignettatura",
+    "ja": "北極 · ビネット",
+    "ko": "북극 · 비네트",
+    "pt-BR": "Ártico · Vinheta",
+    "ru": "Арктика · Виньетка",
+    "tr": "Arktik · Vinyet",
+    "zh-Hans": "极地 · 暗角",
+    "zh-Hant": "極地 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

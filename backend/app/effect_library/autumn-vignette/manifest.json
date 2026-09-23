@@ -1,0 +1,34 @@
+{
+  "id": "autumn-vignette",
+  "name": "Autumn · Vignette",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Vignette",
+    "es": "Otoño · Viñeta",
+    "fr": "Automne · Vignette",
+    "it": "Autunno · Vignettatura",
+    "ja": "秋 · ビネット",
+    "ko": "가을 · 비네트",
+    "pt-BR": "Outono · Vinheta",
+    "ru": "Осень · Виньетка",
+    "tr": "Sonbahar · Vinyet",
+    "zh-Hans": "秋日 · 暗角",
+    "zh-Hant": "秋日 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

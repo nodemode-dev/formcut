@@ -18,6 +18,7 @@ arguments = [
     '--onefile' if args.onefile else '--onedir',
     '--add-data', str(root.parent / 'frontend' / 'dist') + os.pathsep + 'frontend_dist',
     '--add-data', str(root.parent / 'src-tauri' / 'binaries' / 'ffmpeg-licence.json') + os.pathsep + '.',
+    '--add-data', str(root / 'app' / 'effect_library') + os.pathsep + 'app/effect_library',
     '--collect-all', 'uvicorn',
     '--collect-binaries', 'wgpu', '--collect-data', 'wgpu',
     '--hidden-import', 'wgpu.backends.wgpu_native', '--hidden-import', 'wgpu.utils.compute',

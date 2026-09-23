@@ -1,0 +1,34 @@
+{
+  "id": "moody-green-light-leak",
+  "name": "Moody Green · Light Leak",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Lichtleck",
+    "es": "Verde sombrío · Fuga de luz",
+    "fr": "Vert sombre · Fuite de lumière",
+    "it": "Verde cupo · Infiltrazione di luce",
+    "ja": "ムーディーグリーン · ライトリーク",
+    "ko": "무디 그린 · 빛 번짐",
+    "pt-BR": "Verde sombrio · Vazamento de luz",
+    "ru": "Мрачный зелёный · Засветка",
+    "tr": "Kasvetli yeşil · Işık sızıntısı",
+    "zh-Hans": "忧郁绿 · 漏光",
+    "zh-Hant": "憂鬱綠 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

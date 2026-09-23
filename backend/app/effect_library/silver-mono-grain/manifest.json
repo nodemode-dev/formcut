@@ -1,0 +1,33 @@
+{
+  "id": "silver-mono-grain",
+  "name": "Silver Mono · Grain",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Körnung",
+    "es": "Monocromo plateado · Grano",
+    "fr": "Mono argenté · Grain",
+    "it": "Mono argento · Grana",
+    "ja": "シルバーモノクロ · グレイン",
+    "ko": "실버 모노 · 그레인",
+    "pt-BR": "Mono prateado · Granulação",
+    "ru": "Серебристый монохром · Зерно",
+    "tr": "Gümüş tek renk · Gren",
+    "zh-Hans": "银色单色 · 颗粒",
+    "zh-Hant": "銀色單色 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

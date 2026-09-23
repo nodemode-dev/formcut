@@ -1,0 +1,32 @@
+{
+  "id": "vivid-pop-vignette",
+  "name": "Vivid Pop · Vignette",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Vignette",
+    "es": "Colores vivos · Viñeta",
+    "fr": "Couleurs vives · Vignette",
+    "it": "Colori vividi · Vignettatura",
+    "ja": "ビビッド · ビネット",
+    "ko": "비비드 팝 · 비네트",
+    "pt-BR": "Cores vivas · Vinheta",
+    "ru": "Яркие цвета · Виньетка",
+    "tr": "Canlı renkler · Vinyet",
+    "zh-Hans": "鲜艳 · 暗角",
+    "zh-Hant": "鮮豔 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

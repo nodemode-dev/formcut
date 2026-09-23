@@ -1,0 +1,38 @@
+{
+  "id": "desert-soft-glow",
+  "name": "Desert · Soft Glow",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste · Weiches Leuchten",
+    "es": "Desierto · Brillo suave",
+    "fr": "Désert · Lueur douce",
+    "it": "Deserto · Bagliore morbido",
+    "ja": "砂漠 · ソフトグロー",
+    "ko": "사막 · 소프트 글로우",
+    "pt-BR": "Deserto · Brilho suave",
+    "ru": "Пустыня · Мягкое свечение",
+    "tr": "Çöl · Yumuşak parıltı",
+    "zh-Hans": "沙漠 · 柔光",
+    "zh-Hant": "沙漠 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

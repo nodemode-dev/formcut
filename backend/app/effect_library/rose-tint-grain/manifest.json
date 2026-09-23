@@ -1,0 +1,32 @@
+{
+  "id": "rose-tint-grain",
+  "name": "Rose Tint · Grain",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Körnung",
+    "es": "Tono rosado · Grano",
+    "fr": "Teinte rose · Grain",
+    "it": "Tinta rosa · Grana",
+    "ja": "ローズティント · グレイン",
+    "ko": "로즈 틴트 · 그레인",
+    "pt-BR": "Tom rosado · Granulação",
+    "ru": "Розовый оттенок · Зерно",
+    "tr": "Gül tonu · Gren",
+    "zh-Hans": "玫瑰色调 · 颗粒",
+    "zh-Hant": "玫瑰色調 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

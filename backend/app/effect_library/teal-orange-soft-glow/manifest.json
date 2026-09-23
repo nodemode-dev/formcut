@@ -1,0 +1,39 @@
+{
+  "id": "teal-orange-soft-glow",
+  "name": "Teal and Orange · Soft Glow",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Weiches Leuchten",
+    "es": "Verde azulado y naranja · Brillo suave",
+    "fr": "Sarcelle et orange · Lueur douce",
+    "it": "Ottanio e arancio · Bagliore morbido",
+    "ja": "ティール＆オレンジ · ソフトグロー",
+    "ko": "틸 앤 오렌지 · 소프트 글로우",
+    "pt-BR": "Azul-petróleo e laranja · Brilho suave",
+    "ru": "Бирюзовый и оранжевый · Мягкое свечение",
+    "tr": "Camgöbeği ve turuncu · Yumuşak parıltı",
+    "zh-Hans": "青橙色调 · 柔光",
+    "zh-Hant": "青橙色調 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

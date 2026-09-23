@@ -1,0 +1,37 @@
+{
+  "id": "faded-film-retro-screen",
+  "name": "Faded Film · Retro Screen",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Retro-Bildschirm",
+    "es": "Película desvaída · Pantalla retro",
+    "fr": "Pellicule délavée · Écran rétro",
+    "it": "Pellicola sbiadita · Schermo retrò",
+    "ja": "色あせたフィルム · レトロスクリーン",
+    "ko": "바랜 필름 · 레트로 화면",
+    "pt-BR": "Filme desbotado · Tela retrô",
+    "ru": "Выцветшая плёнка · Ретро-экран",
+    "tr": "Solmuş film · Retro ekran",
+    "zh-Hans": "褪色胶片 · 复古屏幕",
+    "zh-Hant": "褪色膠片 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "vivid-pop",
+  "name": "Vivid Pop",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft",
+    "es": "Colores vivos",
+    "fr": "Couleurs vives",
+    "it": "Colori vividi",
+    "ja": "ビビッド",
+    "ko": "비비드 팝",
+    "pt-BR": "Cores vivas",
+    "ru": "Яркие цвета",
+    "tr": "Canlı renkler",
+    "zh-Hans": "鲜艳",
+    "zh-Hant": "鮮豔"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    }
+  ]
+}

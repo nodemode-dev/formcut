@@ -1,0 +1,33 @@
+{
+  "id": "arctic-light-leak",
+  "name": "Arctic · Light Leak",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Lichtleck",
+    "es": "Ártico · Fuga de luz",
+    "fr": "Arctique · Fuite de lumière",
+    "it": "Artico · Infiltrazione di luce",
+    "ja": "北極 · ライトリーク",
+    "ko": "북극 · 빛 번짐",
+    "pt-BR": "Ártico · Vazamento de luz",
+    "ru": "Арктика · Засветка",
+    "tr": "Arktik · Işık sızıntısı",
+    "zh-Hans": "极地 · 漏光",
+    "zh-Hant": "極地 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "cross-process-grain",
+  "name": "Cross Process · Grain",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Körnung",
+    "es": "Proceso cruzado · Grano",
+    "fr": "Traitement croisé · Grain",
+    "it": "Processo incrociato · Grana",
+    "ja": "クロスプロセス · グレイン",
+    "ko": "크로스 프로세스 · 그레인",
+    "pt-BR": "Processo cruzado · Granulação",
+    "ru": "Кросс-процесс · Зерно",
+    "tr": "Çapraz işlem · Gren",
+    "zh-Hans": "交叉冲印 · 颗粒",
+    "zh-Hant": "交叉沖印 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

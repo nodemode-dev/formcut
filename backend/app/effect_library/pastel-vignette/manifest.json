@@ -1,0 +1,34 @@
+{
+  "id": "pastel-vignette",
+  "name": "Pastel · Vignette",
+  "kind": "video",
+  "category": "Pastel",
+  "names": {
+    "de": "Pastell · Vignette",
+    "es": "Pastel · Viñeta",
+    "fr": "Pastel · Vignette",
+    "it": "Pastello · Vignettatura",
+    "ja": "パステル · ビネット",
+    "ko": "파스텔 · 비네트",
+    "pt-BR": "Pastel · Vinheta",
+    "ru": "Пастель · Виньетка",
+    "tr": "Pastel · Vinyet",
+    "zh-Hans": "粉彩 · 暗角",
+    "zh-Hant": "粉彩 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.75,
+        "lift": 0.08,
+        "contrast": 0.85,
+        "exposure": 0.15,
+        "tint": 0.04
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

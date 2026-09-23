@@ -1,0 +1,34 @@
+{
+  "id": "blue-hour-halftone-print",
+  "name": "Blue Hour · Halftone Print",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Rasterdruck",
+    "es": "Hora azul · Impresión de semitonos",
+    "fr": "Heure bleue · Impression tramée",
+    "it": "Ora blu · Stampa a retino",
+    "ja": "ブルーアワー · ハーフトーン印刷",
+    "ko": "블루 아워 · 하프톤 인쇄",
+    "pt-BR": "Hora azul · Impressão em meio-tom",
+    "ru": "Синий час · Растровая печать",
+    "tr": "Mavi saat · Yarım ton baskı",
+    "zh-Hans": "蓝调时刻 · 半色调印刷",
+    "zh-Hant": "藍調時刻 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "night-city-halftone-print",
+  "name": "Night City · Halftone Print",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Rasterdruck",
+    "es": "Ciudad nocturna · Impresión de semitonos",
+    "fr": "Ville de nuit · Impression tramée",
+    "it": "Città notturna · Stampa a retino",
+    "ja": "ナイトシティ · ハーフトーン印刷",
+    "ko": "밤의 도시 · 하프톤 인쇄",
+    "pt-BR": "Cidade à noite · Impressão em meio-tom",
+    "ru": "Ночной город · Растровая печать",
+    "tr": "Gece şehri · Yarım ton baskı",
+    "zh-Hans": "夜色城市 · 半色调印刷",
+    "zh-Hant": "夜色城市 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

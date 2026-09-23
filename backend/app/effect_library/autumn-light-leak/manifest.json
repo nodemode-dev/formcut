@@ -1,0 +1,34 @@
+{
+  "id": "autumn-light-leak",
+  "name": "Autumn · Light Leak",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst · Lichtleck",
+    "es": "Otoño · Fuga de luz",
+    "fr": "Automne · Fuite de lumière",
+    "it": "Autunno · Infiltrazione di luce",
+    "ja": "秋 · ライトリーク",
+    "ko": "가을 · 빛 번짐",
+    "pt-BR": "Outono · Vazamento de luz",
+    "ru": "Осень · Засветка",
+    "tr": "Sonbahar · Işık sızıntısı",
+    "zh-Hans": "秋日 · 漏光",
+    "zh-Hant": "秋日 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

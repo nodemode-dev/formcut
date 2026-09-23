@@ -1,0 +1,34 @@
+{
+  "id": "mint-paper-texture",
+  "name": "Mint · Paper Texture",
+  "kind": "video",
+  "category": "Mint",
+  "names": {
+    "de": "Minze · Papierstruktur",
+    "es": "Menta · Textura de papel",
+    "fr": "Menthe · Texture papier",
+    "it": "Menta · Trama della carta",
+    "ja": "ミント · 紙の質感",
+    "ko": "민트 · 종이 질감",
+    "pt-BR": "Menta · Textura de papel",
+    "ru": "Мята · Текстура бумаги",
+    "tr": "Nane · Kâğıt dokusu",
+    "zh-Hans": "薄荷 · 纸张纹理",
+    "zh-Hant": "薄荷 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.1,
+        "temperature": -0.1,
+        "lift": 0.05,
+        "saturation": 0.9,
+        "highlights_g": 0.04
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

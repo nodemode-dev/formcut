@@ -1,0 +1,28 @@
+{
+  "id": "matte",
+  "name": "Matte",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt",
+    "es": "Mate",
+    "fr": "Mat",
+    "it": "Opaco",
+    "ja": "マット",
+    "ko": "매트",
+    "pt-BR": "Fosco",
+    "ru": "Матовый",
+    "tr": "Mat",
+    "zh-Hans": "哑光",
+    "zh-Hant": "霧面"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    }
+  ]
+}

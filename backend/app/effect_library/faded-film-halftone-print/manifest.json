@@ -1,0 +1,33 @@
+{
+  "id": "faded-film-halftone-print",
+  "name": "Faded Film · Halftone Print",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Rasterdruck",
+    "es": "Película desvaída · Impresión de semitonos",
+    "fr": "Pellicule délavée · Impression tramée",
+    "it": "Pellicola sbiadita · Stampa a retino",
+    "ja": "色あせたフィルム · ハーフトーン印刷",
+    "ko": "바랜 필름 · 하프톤 인쇄",
+    "pt-BR": "Filme desbotado · Impressão em meio-tom",
+    "ru": "Выцветшая плёнка · Растровая печать",
+    "tr": "Solmuş film · Yarım ton baskı",
+    "zh-Hans": "褪色胶片 · 半色调印刷",
+    "zh-Hant": "褪色膠片 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

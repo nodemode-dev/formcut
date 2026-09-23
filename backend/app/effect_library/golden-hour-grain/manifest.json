@@ -1,0 +1,33 @@
+{
+  "id": "golden-hour-grain",
+  "name": "Golden Hour · Grain",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Körnung",
+    "es": "Hora dorada · Grano",
+    "fr": "Heure dorée · Grain",
+    "it": "Ora d'oro · Grana",
+    "ja": "ゴールデンアワー · グレイン",
+    "ko": "골든 아워 · 그레인",
+    "pt-BR": "Hora dourada · Granulação",
+    "ru": "Золотой час · Зерно",
+    "tr": "Altın saat · Gren",
+    "zh-Hans": "黄金时刻 · 颗粒",
+    "zh-Hant": "黃金時刻 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

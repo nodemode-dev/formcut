@@ -1,0 +1,34 @@
+{
+  "id": "moody-green-halftone-print",
+  "name": "Moody Green · Halftone Print",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Rasterdruck",
+    "es": "Verde sombrío · Impresión de semitonos",
+    "fr": "Vert sombre · Impression tramée",
+    "it": "Verde cupo · Stampa a retino",
+    "ja": "ムーディーグリーン · ハーフトーン印刷",
+    "ko": "무디 그린 · 하프톤 인쇄",
+    "pt-BR": "Verde sombrio · Impressão em meio-tom",
+    "ru": "Мрачный зелёный · Растровая печать",
+    "tr": "Kasvetli yeşil · Yarım ton baskı",
+    "zh-Hans": "忧郁绿 · 半色调印刷",
+    "zh-Hant": "憂鬱綠 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

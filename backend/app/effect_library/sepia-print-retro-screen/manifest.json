@@ -1,0 +1,36 @@
+{
+  "id": "sepia-print-retro-screen",
+  "name": "Sepia Print · Retro Screen",
+  "kind": "video",
+  "category": "Sepia Print",
+  "names": {
+    "de": "Sepiadruck · Retro-Bildschirm",
+    "es": "Impresión sepia · Pantalla retro",
+    "fr": "Tirage sépia · Écran rétro",
+    "it": "Stampa seppia · Schermo retrò",
+    "ja": "セピアプリント · レトロスクリーン",
+    "ko": "세피아 인화 · 레트로 화면",
+    "pt-BR": "Impressão sépia · Tela retrô",
+    "ru": "Сепия · Ретро-экран",
+    "tr": "Sepya baskı · Retro ekran",
+    "zh-Hans": "棕褐色印相 · 复古屏幕",
+    "zh-Hant": "棕褐色印相 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "sepia": 0.85,
+        "contrast": 1.05,
+        "lift": 0.03
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

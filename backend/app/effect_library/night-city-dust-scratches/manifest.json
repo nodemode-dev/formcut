@@ -1,0 +1,39 @@
+{
+  "id": "night-city-dust-scratches",
+  "name": "Night City · Dust and Scratches",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Staub und Kratzer",
+    "es": "Ciudad nocturna · Polvo y rayas",
+    "fr": "Ville de nuit · Poussière et rayures",
+    "it": "Città notturna · Polvere e graffi",
+    "ja": "ナイトシティ · ほこりと傷",
+    "ko": "밤의 도시 · 먼지와 스크래치",
+    "pt-BR": "Cidade à noite · Poeira e riscos",
+    "ru": "Ночной город · Пыль и царапины",
+    "tr": "Gece şehri · Toz ve çizikler",
+    "zh-Hans": "夜色城市 · 灰尘与划痕",
+    "zh-Hant": "夜色城市 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

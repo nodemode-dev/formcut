@@ -1,0 +1,33 @@
+{
+  "id": "faded-film-vignette",
+  "name": "Faded Film · Vignette",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Vignette",
+    "es": "Película desvaída · Viñeta",
+    "fr": "Pellicule délavée · Vignette",
+    "it": "Pellicola sbiadita · Vignettatura",
+    "ja": "色あせたフィルム · ビネット",
+    "ko": "바랜 필름 · 비네트",
+    "pt-BR": "Filme desbotado · Vinheta",
+    "ru": "Выцветшая плёнка · Виньетка",
+    "tr": "Solmuş film · Vinyet",
+    "zh-Hans": "褪色胶片 · 暗角",
+    "zh-Hant": "褪色膠片 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

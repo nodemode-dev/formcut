@@ -1,0 +1,36 @@
+{
+  "id": "vivid-pop-retro-screen",
+  "name": "Vivid Pop · Retro Screen",
+  "kind": "video",
+  "category": "Vivid Pop",
+  "names": {
+    "de": "Lebhaft · Retro-Bildschirm",
+    "es": "Colores vivos · Pantalla retro",
+    "fr": "Couleurs vives · Écran rétro",
+    "it": "Colori vividi · Schermo retrò",
+    "ja": "ビビッド · レトロスクリーン",
+    "ko": "비비드 팝 · 레트로 화면",
+    "pt-BR": "Cores vivas · Tela retrô",
+    "ru": "Яркие цвета · Ретро-экран",
+    "tr": "Canlı renkler · Retro ekran",
+    "zh-Hans": "鲜艳 · 复古屏幕",
+    "zh-Hant": "鮮豔 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 1.45,
+        "vibrance": 0.3,
+        "contrast": 1.12
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

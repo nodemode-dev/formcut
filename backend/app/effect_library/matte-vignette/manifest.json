@@ -1,0 +1,32 @@
+{
+  "id": "matte-vignette",
+  "name": "Matte · Vignette",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Vignette",
+    "es": "Mate · Viñeta",
+    "fr": "Mat · Vignette",
+    "it": "Opaco · Vignettatura",
+    "ja": "マット · ビネット",
+    "ko": "매트 · 비네트",
+    "pt-BR": "Fosco · Vinheta",
+    "ru": "Матовый · Виньетка",
+    "tr": "Mat · Vinyet",
+    "zh-Hans": "哑光 · 暗角",
+    "zh-Hant": "霧面 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

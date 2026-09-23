@@ -1,0 +1,36 @@
+{
+  "id": "rose-tint-dust-scratches",
+  "name": "Rose Tint · Dust and Scratches",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Staub und Kratzer",
+    "es": "Tono rosado · Polvo y rayas",
+    "fr": "Teinte rose · Poussière et rayures",
+    "it": "Tinta rosa · Polvere e graffi",
+    "ja": "ローズティント · ほこりと傷",
+    "ko": "로즈 틴트 · 먼지와 스크래치",
+    "pt-BR": "Tom rosado · Poeira e riscos",
+    "ru": "Розовый оттенок · Пыль и царапины",
+    "tr": "Gül tonu · Toz ve çizikler",
+    "zh-Hans": "玫瑰色调 · 灰尘与划痕",
+    "zh-Hant": "玫瑰色調 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

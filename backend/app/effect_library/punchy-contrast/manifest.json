@@ -1,0 +1,28 @@
+{
+  "id": "punchy-contrast",
+  "name": "Punchy Contrast",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast",
+    "es": "Contraste intenso",
+    "fr": "Contraste marqué",
+    "it": "Contrasto deciso",
+    "ja": "強コントラスト",
+    "ko": "강한 대비",
+    "pt-BR": "Contraste forte",
+    "ru": "Сочный контраст",
+    "tr": "Güçlü kontrast",
+    "zh-Hans": "强烈对比",
+    "zh-Hant": "強烈對比"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    }
+  ]
+}

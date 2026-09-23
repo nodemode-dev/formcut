@@ -1,0 +1,32 @@
+{
+  "id": "punchy-contrast-halftone-print",
+  "name": "Punchy Contrast · Halftone Print",
+  "kind": "video",
+  "category": "Punchy Contrast",
+  "names": {
+    "de": "Kräftiger Kontrast · Rasterdruck",
+    "es": "Contraste intenso · Impresión de semitonos",
+    "fr": "Contraste marqué · Impression tramée",
+    "it": "Contrasto deciso · Stampa a retino",
+    "ja": "強コントラスト · ハーフトーン印刷",
+    "ko": "강한 대비 · 하프톤 인쇄",
+    "pt-BR": "Contraste forte · Impressão em meio-tom",
+    "ru": "Сочный контраст · Растровая печать",
+    "tr": "Güçlü kontrast · Yarım ton baskı",
+    "zh-Hans": "强烈对比 · 半色调印刷",
+    "zh-Hant": "強烈對比 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 1.4,
+        "saturation": 1.1,
+        "gamma": 0.95
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

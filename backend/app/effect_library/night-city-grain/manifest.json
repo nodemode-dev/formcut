@@ -1,0 +1,35 @@
+{
+  "id": "night-city-grain",
+  "name": "Night City · Grain",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Körnung",
+    "es": "Ciudad nocturna · Grano",
+    "fr": "Ville de nuit · Grain",
+    "it": "Città notturna · Grana",
+    "ja": "ナイトシティ · グレイン",
+    "ko": "밤의 도시 · 그레인",
+    "pt-BR": "Cidade à noite · Granulação",
+    "ru": "Ночной город · Зерно",
+    "tr": "Gece şehri · Gren",
+    "zh-Hans": "夜色城市 · 颗粒",
+    "zh-Hant": "夜色城市 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

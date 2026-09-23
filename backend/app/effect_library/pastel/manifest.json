@@ -1,0 +1,30 @@
+{
+  "id": "pastel",
+  "name": "Pastel",
+  "kind": "video",
+  "category": "Pastel",
+  "names": {
+    "de": "Pastell",
+    "es": "Pastel",
+    "fr": "Pastel",
+    "it": "Pastello",
+    "ja": "パステル",
+    "ko": "파스텔",
+    "pt-BR": "Pastel",
+    "ru": "Пастель",
+    "tr": "Pastel",
+    "zh-Hans": "粉彩",
+    "zh-Hant": "粉彩"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.75,
+        "lift": 0.08,
+        "contrast": 0.85,
+        "exposure": 0.15,
+        "tint": 0.04
+      }
+    }
+  ]
+}

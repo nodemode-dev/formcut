@@ -1,0 +1,39 @@
+{
+  "id": "teal-orange-retro-screen",
+  "name": "Teal and Orange · Retro Screen",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Retro-Bildschirm",
+    "es": "Verde azulado y naranja · Pantalla retro",
+    "fr": "Sarcelle et orange · Écran rétro",
+    "it": "Ottanio e arancio · Schermo retrò",
+    "ja": "ティール＆オレンジ · レトロスクリーン",
+    "ko": "틸 앤 오렌지 · 레트로 화면",
+    "pt-BR": "Azul-petróleo e laranja · Tela retrô",
+    "ru": "Бирюзовый и оранжевый · Ретро-экран",
+    "tr": "Camgöbeği ve turuncu · Retro ekran",
+    "zh-Hans": "青橙色调 · 复古屏幕",
+    "zh-Hant": "青橙色調 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

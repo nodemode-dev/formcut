@@ -1,0 +1,38 @@
+{
+  "id": "moody-green-retro-screen",
+  "name": "Moody Green · Retro Screen",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Retro-Bildschirm",
+    "es": "Verde sombrío · Pantalla retro",
+    "fr": "Vert sombre · Écran rétro",
+    "it": "Verde cupo · Schermo retrò",
+    "ja": "ムーディーグリーン · レトロスクリーン",
+    "ko": "무디 그린 · 레트로 화면",
+    "pt-BR": "Verde sombrio · Tela retrô",
+    "ru": "Мрачный зелёный · Ретро-экран",
+    "tr": "Kasvetli yeşil · Retro ekran",
+    "zh-Hans": "忧郁绿 · 复古屏幕",
+    "zh-Hant": "憂鬱綠 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "cross-process-retro-screen",
+  "name": "Cross Process · Retro Screen",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung · Retro-Bildschirm",
+    "es": "Proceso cruzado · Pantalla retro",
+    "fr": "Traitement croisé · Écran rétro",
+    "it": "Processo incrociato · Schermo retrò",
+    "ja": "クロスプロセス · レトロスクリーン",
+    "ko": "크로스 프로세스 · 레트로 화면",
+    "pt-BR": "Processo cruzado · Tela retrô",
+    "ru": "Кросс-процесс · Ретро-экран",
+    "tr": "Çapraz işlem · Retro ekran",
+    "zh-Hans": "交叉冲印 · 复古屏幕",
+    "zh-Hant": "交叉沖印 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

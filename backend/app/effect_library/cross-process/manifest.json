@@ -1,0 +1,30 @@
+{
+  "id": "cross-process",
+  "name": "Cross Process",
+  "kind": "video",
+  "category": "Cross Process",
+  "names": {
+    "de": "Crossentwicklung",
+    "es": "Proceso cruzado",
+    "fr": "Traitement croisé",
+    "it": "Processo incrociato",
+    "ja": "クロスプロセス",
+    "ko": "크로스 프로세스",
+    "pt-BR": "Processo cruzado",
+    "ru": "Кросс-процесс",
+    "tr": "Çapraz işlem",
+    "zh-Hans": "交叉冲印",
+    "zh-Hant": "交叉沖印"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.1,
+        "highlights_g": 0.06,
+        "highlights_r": 0.05,
+        "contrast": 1.2,
+        "saturation": 1.2
+      }
+    }
+  ]
+}

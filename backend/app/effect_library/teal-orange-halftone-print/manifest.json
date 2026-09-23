@@ -1,0 +1,35 @@
+{
+  "id": "teal-orange-halftone-print",
+  "name": "Teal and Orange · Halftone Print",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Rasterdruck",
+    "es": "Verde azulado y naranja · Impresión de semitonos",
+    "fr": "Sarcelle et orange · Impression tramée",
+    "it": "Ottanio e arancio · Stampa a retino",
+    "ja": "ティール＆オレンジ · ハーフトーン印刷",
+    "ko": "틸 앤 오렌지 · 하프톤 인쇄",
+    "pt-BR": "Azul-petróleo e laranja · Impressão em meio-tom",
+    "ru": "Бирюзовый и оранжевый · Растровая печать",
+    "tr": "Camgöbeği ve turuncu · Yarım ton baskı",
+    "zh-Hans": "青橙色调 · 半色调印刷",
+    "zh-Hant": "青橙色調 · 半色調印刷"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "halftone",
+      "amount": 0.35
+    }
+  ]
+}

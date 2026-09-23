@@ -1,0 +1,34 @@
+{
+  "id": "moody-green-vignette",
+  "name": "Moody Green · Vignette",
+  "kind": "video",
+  "category": "Moody Green",
+  "names": {
+    "de": "Düsteres Grün · Vignette",
+    "es": "Verde sombrío · Viñeta",
+    "fr": "Vert sombre · Vignette",
+    "it": "Verde cupo · Vignettatura",
+    "ja": "ムーディーグリーン · ビネット",
+    "ko": "무디 그린 · 비네트",
+    "pt-BR": "Verde sombrio · Vinheta",
+    "ru": "Мрачный зелёный · Виньетка",
+    "tr": "Kasvetli yeşil · Vinyet",
+    "zh-Hans": "忧郁绿 · 暗角",
+    "zh-Hant": "憂鬱綠 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": -0.12,
+        "saturation": 0.85,
+        "contrast": 1.1,
+        "exposure": -0.15,
+        "shadows_g": 0.04
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

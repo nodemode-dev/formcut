@@ -1,0 +1,38 @@
+{
+  "id": "blue-hour-dust-scratches",
+  "name": "Blue Hour · Dust and Scratches",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Staub und Kratzer",
+    "es": "Hora azul · Polvo y rayas",
+    "fr": "Heure bleue · Poussière et rayures",
+    "it": "Ora blu · Polvere e graffi",
+    "ja": "ブルーアワー · ほこりと傷",
+    "ko": "블루 아워 · 먼지와 스크래치",
+    "pt-BR": "Hora azul · Poeira e riscos",
+    "ru": "Синий час · Пыль и царапины",
+    "tr": "Mavi saat · Toz ve çizikler",
+    "zh-Hans": "蓝调时刻 · 灰尘与划痕",
+    "zh-Hant": "藍調時刻 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

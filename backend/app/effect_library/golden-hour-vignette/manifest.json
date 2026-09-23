@@ -1,0 +1,33 @@
+{
+  "id": "golden-hour-vignette",
+  "name": "Golden Hour · Vignette",
+  "kind": "video",
+  "category": "Golden Hour",
+  "names": {
+    "de": "Goldene Stunde · Vignette",
+    "es": "Hora dorada · Viñeta",
+    "fr": "Heure dorée · Vignette",
+    "it": "Ora d'oro · Vignettatura",
+    "ja": "ゴールデンアワー · ビネット",
+    "ko": "골든 아워 · 비네트",
+    "pt-BR": "Hora dourada · Vinheta",
+    "ru": "Золотой час · Виньетка",
+    "tr": "Altın saat · Vinyet",
+    "zh-Hans": "黄金时刻 · 暗角",
+    "zh-Hant": "黃金時刻 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.35,
+        "saturation": 1.15,
+        "contrast": 1.05,
+        "highlights_r": 0.04
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

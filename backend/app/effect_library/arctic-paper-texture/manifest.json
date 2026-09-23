@@ -1,0 +1,33 @@
+{
+  "id": "arctic-paper-texture",
+  "name": "Arctic · Paper Texture",
+  "kind": "video",
+  "category": "Arctic",
+  "names": {
+    "de": "Arktis · Papierstruktur",
+    "es": "Ártico · Textura de papel",
+    "fr": "Arctique · Texture papier",
+    "it": "Artico · Trama della carta",
+    "ja": "北極 · 紙の質感",
+    "ko": "북극 · 종이 질감",
+    "pt-BR": "Ártico · Textura de papel",
+    "ru": "Арктика · Текстура бумаги",
+    "tr": "Arktik · Kâğıt dokusu",
+    "zh-Hans": "极地 · 纸张纹理",
+    "zh-Hant": "極地 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.45,
+        "saturation": 0.8,
+        "exposure": 0.1,
+        "highlights_b": 0.05
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "rose-tint-retro-screen",
+  "name": "Rose Tint · Retro Screen",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Retro-Bildschirm",
+    "es": "Tono rosado · Pantalla retro",
+    "fr": "Teinte rose · Écran rétro",
+    "it": "Tinta rosa · Schermo retrò",
+    "ja": "ローズティント · レトロスクリーン",
+    "ko": "로즈 틴트 · 레트로 화면",
+    "pt-BR": "Tom rosado · Tela retrô",
+    "ru": "Розовый оттенок · Ретро-экран",
+    "tr": "Gül tonu · Retro ekran",
+    "zh-Hans": "玫瑰色调 · 复古屏幕",
+    "zh-Hant": "玫瑰色調 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

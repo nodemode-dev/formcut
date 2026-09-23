@@ -1,0 +1,34 @@
+{
+  "id": "blue-hour-light-leak",
+  "name": "Blue Hour · Light Leak",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Lichtleck",
+    "es": "Hora azul · Fuga de luz",
+    "fr": "Heure bleue · Fuite de lumière",
+    "it": "Ora blu · Infiltrazione di luce",
+    "ja": "ブルーアワー · ライトリーク",
+    "ko": "블루 아워 · 빛 번짐",
+    "pt-BR": "Hora azul · Vazamento de luz",
+    "ru": "Синий час · Засветка",
+    "tr": "Mavi saat · Işık sızıntısı",
+    "zh-Hans": "蓝调时刻 · 漏光",
+    "zh-Hant": "藍調時刻 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

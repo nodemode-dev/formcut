@@ -1,0 +1,32 @@
+{
+  "id": "matte-grain",
+  "name": "Matte · Grain",
+  "kind": "video",
+  "category": "Matte",
+  "names": {
+    "de": "Matt · Körnung",
+    "es": "Mate · Grano",
+    "fr": "Mat · Grain",
+    "it": "Opaco · Grana",
+    "ja": "マット · グレイン",
+    "ko": "매트 · 그레인",
+    "pt-BR": "Fosco · Granulação",
+    "ru": "Матовый · Зерно",
+    "tr": "Mat · Gren",
+    "zh-Hans": "哑光 · 颗粒",
+    "zh-Hant": "霧面 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "lift": 0.1,
+        "contrast": 0.9,
+        "saturation": 0.9
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

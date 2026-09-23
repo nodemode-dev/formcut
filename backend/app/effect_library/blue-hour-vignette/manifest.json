@@ -1,0 +1,34 @@
+{
+  "id": "blue-hour-vignette",
+  "name": "Blue Hour · Vignette",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Vignette",
+    "es": "Hora azul · Viñeta",
+    "fr": "Heure bleue · Vignette",
+    "it": "Ora blu · Vignettatura",
+    "ja": "ブルーアワー · ビネット",
+    "ko": "블루 아워 · 비네트",
+    "pt-BR": "Hora azul · Vinheta",
+    "ru": "Синий час · Виньетка",
+    "tr": "Mavi saat · Vinyet",
+    "zh-Hans": "蓝调时刻 · 暗角",
+    "zh-Hant": "藍調時刻 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

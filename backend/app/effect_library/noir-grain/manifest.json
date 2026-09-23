@@ -1,0 +1,32 @@
+{
+  "id": "noir-grain",
+  "name": "Noir · Grain",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Körnung",
+    "es": "Noir · Grano",
+    "fr": "Noir · Grain",
+    "it": "Noir · Grana",
+    "ja": "ノワール · グレイン",
+    "ko": "누아르 · 그레인",
+    "pt-BR": "Noir · Granulação",
+    "ru": "Нуар · Зерно",
+    "tr": "Noir · Gren",
+    "zh-Hans": "黑色电影 · 颗粒",
+    "zh-Hant": "黑色電影 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

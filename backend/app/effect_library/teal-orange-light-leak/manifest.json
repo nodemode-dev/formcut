@@ -1,0 +1,35 @@
+{
+  "id": "teal-orange-light-leak",
+  "name": "Teal and Orange · Light Leak",
+  "kind": "video",
+  "category": "Teal and Orange",
+  "names": {
+    "de": "Petrol und Orange · Lichtleck",
+    "es": "Verde azulado y naranja · Fuga de luz",
+    "fr": "Sarcelle et orange · Fuite de lumière",
+    "it": "Ottanio e arancio · Infiltrazione di luce",
+    "ja": "ティール＆オレンジ · ライトリーク",
+    "ko": "틸 앤 오렌지 · 빛 번짐",
+    "pt-BR": "Azul-petróleo e laranja · Vazamento de luz",
+    "ru": "Бирюзовый и оранжевый · Засветка",
+    "tr": "Camgöbeği ve turuncu · Işık sızıntısı",
+    "zh-Hans": "青橙色调 · 漏光",
+    "zh-Hant": "青橙色調 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "shadows_b": 0.08,
+        "shadows_g": 0.03,
+        "highlights_r": 0.08,
+        "highlights_g": 0.02,
+        "saturation": 1.1,
+        "contrast": 1.1
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

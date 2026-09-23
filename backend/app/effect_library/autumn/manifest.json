@@ -1,0 +1,30 @@
+{
+  "id": "autumn",
+  "name": "Autumn",
+  "kind": "video",
+  "category": "Autumn",
+  "names": {
+    "de": "Herbst",
+    "es": "Otoño",
+    "fr": "Automne",
+    "it": "Autunno",
+    "ja": "秋",
+    "ko": "가을",
+    "pt-BR": "Outono",
+    "ru": "Осень",
+    "tr": "Sonbahar",
+    "zh-Hans": "秋日",
+    "zh-Hant": "秋日"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.25,
+        "tint": 0.05,
+        "saturation": 1.2,
+        "highlights_r": 0.06,
+        "shadows_r": 0.03
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "faded-film-grain",
+  "name": "Faded Film · Grain",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Körnung",
+    "es": "Película desvaída · Grano",
+    "fr": "Pellicule délavée · Grain",
+    "it": "Pellicola sbiadita · Grana",
+    "ja": "色あせたフィルム · グレイン",
+    "ko": "바랜 필름 · 그레인",
+    "pt-BR": "Filme desbotado · Granulação",
+    "ru": "Выцветшая плёнка · Зерно",
+    "tr": "Solmuş film · Gren",
+    "zh-Hans": "褪色胶片 · 颗粒",
+    "zh-Hant": "褪色膠片 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}

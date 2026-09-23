@@ -1,0 +1,32 @@
+{
+  "id": "bleach-bypass-paper-texture",
+  "name": "Bleach Bypass · Paper Texture",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Papierstruktur",
+    "es": "Blanqueo parcial · Textura de papel",
+    "fr": "Sans blanchiment · Texture papier",
+    "it": "Bleach bypass · Trama della carta",
+    "ja": "ブリーチバイパス · 紙の質感",
+    "ko": "블리치 바이패스 · 종이 질감",
+    "pt-BR": "Bleach bypass · Textura de papel",
+    "ru": "Отбеливание в обход · Текстура бумаги",
+    "tr": "Ağartma atlama · Kâğıt dokusu",
+    "zh-Hans": "漂白效果 · 纸张纹理",
+    "zh-Hant": "漂白效果 · 紙張紋理"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "paper-texture",
+      "amount": 0.7
+    }
+  ]
+}

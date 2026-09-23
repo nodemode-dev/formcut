@@ -1,0 +1,30 @@
+{
+  "id": "desert",
+  "name": "Desert",
+  "kind": "video",
+  "category": "Desert",
+  "names": {
+    "de": "Wüste",
+    "es": "Desierto",
+    "fr": "Désert",
+    "it": "Deserto",
+    "ja": "砂漠",
+    "ko": "사막",
+    "pt-BR": "Deserto",
+    "ru": "Пустыня",
+    "tr": "Çöl",
+    "zh-Hans": "沙漠",
+    "zh-Hant": "沙漠"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": 0.45,
+        "saturation": 0.9,
+        "contrast": 1.05,
+        "lift": 0.03,
+        "highlights_r": 0.05
+      }
+    }
+  ]
+}

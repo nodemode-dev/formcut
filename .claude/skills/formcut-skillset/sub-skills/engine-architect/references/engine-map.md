@@ -25,11 +25,11 @@ The rest is written by hand.
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 597 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
-| catalogue.py | 773 | /api/catalogue | 1 |
+| catalogue.py | 774 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
 | demo.py | 59 | /api/demo | 2 |
-| effect_previews.py | 147 | /api/catalogue/preview | 1 |
+| effect_previews.py | 154 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 233 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
@@ -66,7 +66,7 @@ the automation transports.
 - `ai_upscale.py` (132L)
 - `audio_render.py` (207L)
 - `cli.py` (61L)
-- `effect_packages.py` (216L)
+- `effect_packages.py` (287L)
 - `encoders.py` (282L)
 - `expressions.py` (51L)
 - `fast_export.py` (291L)
@@ -77,7 +77,7 @@ the automation transports.
 - `gpu.py` (92L)
 - `matte_cache.py` (126L)
 - `paths.py` (32L)
-- `pixel_effects.py` (793L)
+- `pixel_effects.py` (818L)
 - `processes.py` (22L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)

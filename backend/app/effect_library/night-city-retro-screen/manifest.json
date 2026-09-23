@@ -1,0 +1,39 @@
+{
+  "id": "night-city-retro-screen",
+  "name": "Night City · Retro Screen",
+  "kind": "video",
+  "category": "Night City",
+  "names": {
+    "de": "Nachtstadt · Retro-Bildschirm",
+    "es": "Ciudad nocturna · Pantalla retro",
+    "fr": "Ville de nuit · Écran rétro",
+    "it": "Città notturna · Schermo retrò",
+    "ja": "ナイトシティ · レトロスクリーン",
+    "ko": "밤의 도시 · 레트로 화면",
+    "pt-BR": "Cidade à noite · Tela retrô",
+    "ru": "Ночной город · Ретро-экран",
+    "tr": "Gece şehri · Retro ekran",
+    "zh-Hans": "夜色城市 · 复古屏幕",
+    "zh-Hant": "夜色城市 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.2,
+        "contrast": 1.25,
+        "exposure": -0.3,
+        "shadows_b": 0.08,
+        "highlights_r": 0.04,
+        "saturation": 1.2
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

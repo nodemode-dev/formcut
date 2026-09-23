@@ -1,0 +1,36 @@
+{
+  "id": "bleach-bypass-dust-scratches",
+  "name": "Bleach Bypass · Dust and Scratches",
+  "kind": "video",
+  "category": "Bleach Bypass",
+  "names": {
+    "de": "Bleach Bypass · Staub und Kratzer",
+    "es": "Blanqueo parcial · Polvo y rayas",
+    "fr": "Sans blanchiment · Poussière et rayures",
+    "it": "Bleach bypass · Polvere e graffi",
+    "ja": "ブリーチバイパス · ほこりと傷",
+    "ko": "블리치 바이패스 · 먼지와 스크래치",
+    "pt-BR": "Bleach bypass · Poeira e riscos",
+    "ru": "Отбеливание в обход · Пыль и царапины",
+    "tr": "Ağartma atlama · Toz ve çizikler",
+    "zh-Hans": "漂白效果 · 灰尘与划痕",
+    "zh-Hant": "漂白效果 · 灰塵與刮痕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.45,
+        "contrast": 1.35,
+        "gamma": 1.05
+      }
+    },
+    {
+      "effect": "dust",
+      "amount": 0.6
+    },
+    {
+      "effect": "film-scratches",
+      "amount": 0.5
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "rose-tint-light-leak",
+  "name": "Rose Tint · Light Leak",
+  "kind": "video",
+  "category": "Rose Tint",
+  "names": {
+    "de": "Rosé · Lichtleck",
+    "es": "Tono rosado · Fuga de luz",
+    "fr": "Teinte rose · Fuite de lumière",
+    "it": "Tinta rosa · Infiltrazione di luce",
+    "ja": "ローズティント · ライトリーク",
+    "ko": "로즈 틴트 · 빛 번짐",
+    "pt-BR": "Tom rosado · Vazamento de luz",
+    "ru": "Розовый оттенок · Засветка",
+    "tr": "Gül tonu · Işık sızıntısı",
+    "zh-Hans": "玫瑰色调 · 漏光",
+    "zh-Hant": "玫瑰色調 · 漏光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "tint": 0.18,
+        "highlights_r": 0.05,
+        "saturation": 1.05
+      }
+    },
+    {
+      "effect": "light-leak",
+      "amount": 0.6
+    }
+  ]
+}

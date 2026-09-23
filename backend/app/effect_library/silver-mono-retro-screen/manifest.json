@@ -1,0 +1,37 @@
+{
+  "id": "silver-mono-retro-screen",
+  "name": "Silver Mono · Retro Screen",
+  "kind": "video",
+  "category": "Silver Mono",
+  "names": {
+    "de": "Silber-Monochrom · Retro-Bildschirm",
+    "es": "Monocromo plateado · Pantalla retro",
+    "fr": "Mono argenté · Écran rétro",
+    "it": "Mono argento · Schermo retrò",
+    "ja": "シルバーモノクロ · レトロスクリーン",
+    "ko": "실버 모노 · 레트로 화면",
+    "pt-BR": "Mono prateado · Tela retrô",
+    "ru": "Серебристый монохром · Ретро-экран",
+    "tr": "Gümüş tek renk · Retro ekran",
+    "zh-Hans": "银色单色 · 复古屏幕",
+    "zh-Hant": "銀色單色 · 復古螢幕"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.1,
+        "lift": 0.03,
+        "highlights_b": 0.02
+      }
+    },
+    {
+      "effect": "scanlines",
+      "amount": 0.6
+    },
+    {
+      "effect": "chroma-noise",
+      "amount": 0.4
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "id": "faded-film-soft-glow",
+  "name": "Faded Film · Soft Glow",
+  "kind": "video",
+  "category": "Faded Film",
+  "names": {
+    "de": "Verblasster Film · Weiches Leuchten",
+    "es": "Película desvaída · Brillo suave",
+    "fr": "Pellicule délavée · Lueur douce",
+    "it": "Pellicola sbiadita · Bagliore morbido",
+    "ja": "色あせたフィルム · ソフトグロー",
+    "ko": "바랜 필름 · 소프트 글로우",
+    "pt-BR": "Filme desbotado · Brilho suave",
+    "ru": "Выцветшая плёнка · Мягкое свечение",
+    "tr": "Solmuş film · Yumuşak parıltı",
+    "zh-Hans": "褪色胶片 · 柔光",
+    "zh-Hant": "褪色膠片 · 柔光"
+  },
+  "stack": [
+    {
+      "grade": {
+        "contrast": 0.82,
+        "lift": 0.06,
+        "saturation": 0.8,
+        "highlights_r": 0.03
+      }
+    },
+    {
+      "effect": "soft-focus",
+      "amount": 0.5
+    },
+    {
+      "effect": "glow",
+      "amount": 0.4
+    }
+  ]
+}

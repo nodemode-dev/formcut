@@ -1,0 +1,32 @@
+{
+  "id": "noir-vignette",
+  "name": "Noir · Vignette",
+  "kind": "video",
+  "category": "Noir",
+  "names": {
+    "de": "Noir · Vignette",
+    "es": "Noir · Viñeta",
+    "fr": "Noir · Vignette",
+    "it": "Noir · Vignettatura",
+    "ja": "ノワール · ビネット",
+    "ko": "누아르 · 비네트",
+    "pt-BR": "Noir · Vinheta",
+    "ru": "Нуар · Виньетка",
+    "tr": "Noir · Vinyet",
+    "zh-Hans": "黑色电影 · 暗角",
+    "zh-Hant": "黑色電影 · 暗角"
+  },
+  "stack": [
+    {
+      "grade": {
+        "saturation": 0.0,
+        "contrast": 1.4,
+        "gamma": 1.1
+      }
+    },
+    {
+      "effect": "vignette",
+      "amount": 0.8
+    }
+  ]
+}

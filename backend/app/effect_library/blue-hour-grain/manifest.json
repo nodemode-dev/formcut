@@ -1,0 +1,34 @@
+{
+  "id": "blue-hour-grain",
+  "name": "Blue Hour · Grain",
+  "kind": "video",
+  "category": "Blue Hour",
+  "names": {
+    "de": "Blaue Stunde · Körnung",
+    "es": "Hora azul · Grano",
+    "fr": "Heure bleue · Grain",
+    "it": "Ora blu · Grana",
+    "ja": "ブルーアワー · グレイン",
+    "ko": "블루 아워 · 그레인",
+    "pt-BR": "Hora azul · Granulação",
+    "ru": "Синий час · Зерно",
+    "tr": "Mavi saat · Gren",
+    "zh-Hans": "蓝调时刻 · 颗粒",
+    "zh-Hant": "藍調時刻 · 顆粒"
+  },
+  "stack": [
+    {
+      "grade": {
+        "temperature": -0.3,
+        "tint": 0.05,
+        "saturation": 0.9,
+        "exposure": -0.1,
+        "shadows_b": 0.06
+      }
+    },
+    {
+      "effect": "grain",
+      "amount": 0.4
+    }
+  ]
+}
