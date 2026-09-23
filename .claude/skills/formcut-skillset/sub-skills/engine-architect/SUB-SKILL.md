@@ -7,6 +7,7 @@ description: >-
 # engine architect
 
 The Python engine: 44 modules under `backend/app`, about eighty routes, one shared renderer, one job runner. Load `references/engine-map.md` for the module and route inventory.
+- `references/effect-packages.md`: data-defined effects: the stack format, the loader's rules, where each piece lives, and how to add a look, a grade setting or an effect parameter.
 
 ## How it is put together
 

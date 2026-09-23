@@ -31,7 +31,7 @@ import os
 from typing import Annotated, Any
 
 import httpx
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Image, MCPServer
 from pydantic import Field
 
 ENGINE = os.environ.get("FORMCUT_ENGINE", "http://127.0.0.1:8040").rstrip("/")
@@ -549,6 +549,152 @@ def formcut_edit(
     if not ok:
         return f"{edited}\nCall formcut_capabilities for the accepted operations, or formcut_get_project for the current revision."
     return f"applied {len(commands)} command(s); project is now revision {edited.get('revision')}"
+
+
+# Effect packages: an agent can learn the format, add one, look at it, list and remove.
+
+
+def _upload(path: str, filename: str, data: bytes) -> tuple[bool, Any]:
+    try:
+        with httpx.Client(timeout=TIMEOUT, headers=HEADERS) as client:
+            response = client.post(f"{ENGINE}{path}", files={"file": (filename, data, "application/json")})
+    except httpx.HTTPError as error:
+        return False, _explain(error)
+    if response.status_code >= 400:
+        try:
+            detail = str(response.json().get("detail", ""))
+        except ValueError:
+            detail = response.text[:200]
+        return False, f"The engine refused the package: {detail or response.status_code}"
+    return True, response.json()
+
+
+@mcp.tool(
+    name="formcut_package_guide",
+    description=(
+        "Everything needed to write an effect package: the manifest format, the stack a video package is made of, "
+        "every effect id with its parameters and ranges, every custom grade setting with its range, the audio "
+        "filters a chain package may use, and a working example. Read it before formcut_add_package."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_package_guide(
+    group: Annotated[str, Field(description="Optional effect group to list in full, for example Blur, Stylize, Distort or Texture")] = "",
+) -> str:
+    ok, schema = _rest("GET", "/api/packages/schema")
+    if not ok:
+        return schema
+    lines = [
+        "An effect package is a manifest (JSON). A video package is a stack: steps run in order, each blended by its amount.",
+        (
+            f"Manifest fields: id (matching {schema['idPattern']}), name, kind (video or audio), optional category, optional names "
+            f"(a name per language: {', '.join(schema['languages'])}), and for video a stack of 1 to {schema['maxSteps']} steps."
+        ),
+        'A step is {"effect": id, "amount": 0 to 1, "params": {name: number}} or {"grade": {setting: number}, "amount": 0 to 1}.',
+        "An effect step may also name one of the colour grades by id. Parameters left out take their defaults.",
+        "Adding a package with an id you already added replaces it, so refine by re-adding. formcut's own looks cannot be replaced.",
+        "",
+        "Grade settings (neutral value, range):",
+    ]
+    lines += [f"  {key}: neutral {spec['neutral']:g}, {spec['min']:g} to {spec['max']:g}" for key, spec in schema["gradeSettings"].items()]
+    lines.append("")
+    groups: dict[str, list] = {}
+    for effect in schema["effects"]:
+        groups.setdefault(effect["group"], []).append(effect)
+    for name, effects in groups.items():
+        if group and name.lower() != group.lower():
+            lines.append(f"{name}: {len(effects)} effects (pass group={name} to list them)")
+            continue
+        lines.append(f"{name}:")
+        for effect in effects:
+            params = ", ".join(f"{p['key']} {p['min']:g} to {p['max']:g} (default {p['default']:g})" for p in effect["parameters"])
+            lines.append(f"  {effect['id']}{': ' + params if params else ''}")
+    lines += [
+        "",
+        f"Named colour grades usable as effect steps: {', '.join(schema['grades'][:40])}{' ...' if len(schema['grades']) > 40 else ''}",
+        f"Audio packages are a chain.txt of these filters only, not a stack: {', '.join(schema['audioFilters'])}. Add those as a .zip through the interface.",
+        "",
+        "Example:",
+        json.dumps(schema["example"], indent=2, ensure_ascii=False),
+        "",
+        "Then formcut_add_package with the manifest, and formcut_preview_package to look at the result.",
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool(
+    name="formcut_add_package",
+    description=(
+        "Add a video effect package from its manifest (see formcut_package_guide). The engine checks it exactly as "
+        "it checks every package and refuses it with the reason; accepted, it appears under Packages in the effects "
+        "browser and can be used by id in edits. Adding the same id again replaces it."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
+)
+def formcut_add_package(
+    manifest: Annotated[dict, Field(description="The package manifest: id, name, kind video, optional category and names, and its stack")],
+) -> str:
+    ok, result = _upload("/api/packages/import", "manifest.json", json.dumps(manifest).encode("utf-8"))
+    if not ok:
+        return result
+    verb = "Replaced" if result.get("replaced") else "Added"
+    return f"{verb} {result.get('name')} as {result.get('id')}. Look at it with formcut_preview_package, or apply it by id in an edit."
+
+
+@mcp.tool(
+    name="formcut_preview_package",
+    description=(
+        "Render an effect package, or any effect or grade id, on formcut's example picture and return the image, "
+        "exactly as the effects browser shows it. Use it to judge a package and adjust its stack."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_preview_package(
+    package_id: Annotated[str, Field(description="The id of a package, effect or grade")],
+) -> Image | str:
+    try:
+        with httpx.Client(timeout=TIMEOUT, headers=HEADERS) as client:
+            response = client.get(f"{ENGINE}/api/catalogue/preview/effect/{package_id}")
+    except httpx.HTTPError as error:
+        return _explain(error)
+    if response.status_code == 404:
+        return f"No package, effect or grade has the id {package_id}. formcut_list_packages lists yours."
+    if response.status_code >= 400:
+        return f"The engine could not render {package_id}: {response.status_code}"
+    return Image(data=response.content, format="png")
+
+
+@mcp.tool(
+    name="formcut_list_packages",
+    description="List the effect packages a person has added, with their kind and category, and any that failed to load with the reason.",
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_list_packages() -> str:
+    ok, result = _rest("GET", "/api/packages")
+    if not ok:
+        return result
+    packages = result.get("packages", [])
+    own = [p for p in packages if not p.get("library")]
+    lines = [f"{len(own)} added package(s); formcut also has {len(packages) - len(own)} built-in looks, which cannot be changed."]
+    lines += [f"  {p['id']}: {p['name']} ({p['kind']}, {p.get('category', 'Packages')})" for p in own]
+    for failure in result.get("failures", []):
+        lines.append(f"  failed to load {failure['package']}: {failure['reason']}")
+    return "\n".join(lines)
+
+
+@mcp.tool(
+    name="formcut_remove_package",
+    description=(
+        "Remove an effect package a person added. formcut's built-in looks cannot be removed, and a package that a "
+        "saved project still uses is refused, naming the projects, since they would no longer load without it."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False},
+)
+def formcut_remove_package(
+    package_id: Annotated[str, Field(description="The id of a package you added")],
+) -> str:
+    ok, result = _rest("DELETE", f"/api/packages/{package_id}")
+    return f"Removed {package_id}." if ok else result
 
 
 @mcp.tool(

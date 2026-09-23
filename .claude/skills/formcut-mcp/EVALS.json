@@ -45,6 +45,29 @@
         "Answers from what formcut is (MP4 or WebM, local first with no account) without importing media, creating a project or starting a render",
         "Does not walk the user through installing the MCP server they did not ask about"
       ]
+    },
+    {
+      "id": 5,
+      "name": "make-a-look-package",
+      "prompt": "Make me a warm faded film look called Sunday Film that I can reuse on my clips, and show me what it looks like.",
+      "files": [],
+      "expected_behavior": [
+        "Calls formcut_package_guide before writing the manifest, and uses only effect ids, parameters and grade settings it lists, within their ranges",
+        "Builds a video stack: a grade step for the warmth and fade, then one to three finishing effects with amounts below 1",
+        "Adds it with formcut_add_package, then calls formcut_preview_package and describes the result",
+        "To change it, adds again with the same id rather than a new one"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "package-no-invented-settings",
+      "prompt": "Add a package that gives a strong glow with radius 50 and a warmth of 80.",
+      "files": [],
+      "expected_behavior": [
+        "Looks up glow's parameters and the temperature range in formcut_package_guide instead of inventing a radius or warmth key",
+        "Maps the request onto real settings (glow's radius within its range, the grade's temperature within -1 to 1) and says what it chose",
+        "If the engine refuses the package, fixes exactly the setting the reason names"
+      ]
     }
   ]
 }

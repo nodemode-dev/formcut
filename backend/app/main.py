@@ -238,6 +238,49 @@ def packages_reload() -> dict:
     return reload_packages()
 
 
+@app.get("/api/packages/schema")
+def packages_schema() -> dict:
+    """What a package may contain, from the same tables the loader checks against."""
+    from .catalogue import EFFECT_DEFAULTS, EFFECT_GROUPS, GRADES, VIDEO_EFFECTS, declare, group_of, label
+    from .effect_packages import ALLOWED_FILTERS, GRADE_RANGES, MAX_UPLOAD, STACK_STEPS
+
+    return {
+        "idPattern": "^[a-z0-9][a-z0-9-]{1,63}$",
+        "maxSteps": STACK_STEPS,
+        "maxUploadBytes": MAX_UPLOAD,
+        "gradeSettings": {
+            key: {"min": low, "max": high, "neutral": 1.0 if key in ("contrast", "gamma", "saturation") else 0.0}
+            for key, (low, high) in GRADE_RANGES.items()
+        },
+        "effects": [
+            {
+                "id": effect,
+                "name": label(effect),
+                "group": group_of(effect, EFFECT_GROUPS),
+                "parameters": [
+                    {k: d[k] for k in ("key", "min", "max", "default", "unit")} for d in declare(EFFECT_DEFAULTS.get(effect, {}), effect)
+                ],
+            }
+            for effect in VIDEO_EFFECTS
+        ],
+        "grades": list(GRADES),
+        "languages": ["de", "es", "fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"],
+        "audioFilters": sorted(ALLOWED_FILTERS),
+        "example": {
+            "id": "warm-dust",
+            "name": "Warm Dust",
+            "kind": "video",
+            "category": "My looks",
+            "names": {"de": "Warmer Staub", "es": "Polvo cálido"},
+            "stack": [
+                {"grade": {"temperature": 0.3, "saturation": 1.1, "lift": 0.03}},
+                {"effect": "dust", "amount": 0.5},
+                {"effect": "vignette", "amount": 0.7, "params": {"intensity": 1.2}},
+            ],
+        },
+    }
+
+
 @app.post("/api/packages/import", status_code=201)
 def packages_import(file: UploadFile) -> dict:
     """Add an effect package from a .zip of its folder or its manifest.json."""

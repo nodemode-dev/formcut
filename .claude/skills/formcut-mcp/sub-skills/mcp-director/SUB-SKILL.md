@@ -17,6 +17,7 @@ Route a formcut MCP request to the right specialist, and make sure the ground is
 | --- | --- |
 | install, register, config, host, cannot see the tools, not answering, FORMCUT_ENGINE | `../mcp-setup/SUB-SKILL.md` |
 | make, cut, assemble, edit, trim, add effects, find scenes, render, export, where is my file | `../mcp-workflows/SUB-SKILL.md` |
+| make or design a look, filter, preset or effect package; list or remove packages | `../mcp-workflows/SUB-SKILL.md` (workflow 4) |
 | add a tool, change a tool, rename, parameter, SDK, formcut_mcp.py itself | `../mcp-development/SUB-SKILL.md` |
 
 A request can span two. Setup always comes first: if the tools are not reachable, no workflow can run.

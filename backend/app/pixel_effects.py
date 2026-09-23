@@ -565,7 +565,8 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
                     if "grade" in step:
                         changed = grade(result[:, :, :3], step["grade"])
                     else:
-                        changed = process(result[:, :, :3], step["effect"], local, clamp_params(step.get("params") or {}))
+                        settings = {**EFFECT_DEFAULTS.get(step["effect"], {}), **(step.get("params") or {})}
+                        changed = process(result[:, :, :3], step["effect"], local, clamp_params(settings))
                     result[:, :, :3] = np.clip(changed * share + result[:, :, :3] * (1 - share), 0, 1)
             continue
         # An effect turned all the way down was still being computed in full and

@@ -47,11 +47,30 @@ Trigger: "split this recording into its shots", "keep the best moments", "cut ou
 
 For large or awkwardly encoded footage, `formcut_media_proxy` with `build` true makes previewing fast. Exports always read the original, so a proxy never lowers render quality.
 
+## Workflow 4: make an effect package
+
+Trigger: "make a look", "create a filter", "design a preset", "a vintage film effect I can reuse", "add an effect package".
+
+A video package is a stack of formcut's own effects and grades, run by the same renderer as everything else, so it previews and exports alike and needs no code. Audio packages are filter chains added through the interface as a .zip; the tools here add video packages.
+
+1. `formcut_package_guide`: the manifest format, every effect id with its parameters and ranges, and every grade setting with its range. Pass `group` (Blur, Stylize, Distort or Texture) to list one group in full. Use only ids, parameter names and values it lists.
+2. Design the stack, usually a grade first and a finish after it:
+   - A `grade` step sets the colour: temperature and tint for warmth, lift and contrast for the tone, saturation, per-channel shadows and highlights for split toning, sepia. Settings not named stay neutral.
+   - Then one to three effect steps for texture: grain, vignette, light-leak, dust, halftone and the rest, each with an `amount` from 0 to 1 and `params` for its controls. Amounts from 0.3 to 0.8 read as a finish; 1 is the full effect.
+   - Every step costs render time on every frame. Four steps is plenty; the heavier effects (oil-paint, crt-screen, clarity, lens-flare, stained-glass) are best alone.
+   - Give it a lowercase id with hyphens, a name, and a `category` to group it in the browser. `names` can carry the name in each interface language.
+3. `formcut_add_package` with the manifest. A refusal names the exact problem, such as a setting a grade does not have or a value outside its range; fix that and add again.
+4. `formcut_preview_package` with its id: the rendered picture, as the effects browser shows it. Judge it; to refine, change the stack and add again with the same id, which replaces it.
+5. Use it like any effect: its id is in `formcut_catalogue` (group Packages), and workflow 2 applies it to a clip with `formcut_edit`.
+
+`formcut_list_packages` lists what has been added and any that failed to load. `formcut_remove_package` deletes one; formcut's own looks cannot be removed, and a package a saved project uses is refused with the projects' names, since they would not load without it.
+
 ## When something goes wrong
 
 - **Stale revision.** The edit is refused and the reply carries the current revision. Call `formcut_get_project`, rebuild the command against what the project now contains (someone, or another agent, changed it), and retry once. Never retry with a guessed revision.
 - **Engine not answering.** The reply names the address it tried. Stop and load `../mcp-setup/SUB-SKILL.md`; nothing in a workflow fixes a stopped engine.
 - **A tool name does not resolve.** Compare with the host's listing and `references/tools.md`. There is no tool for a verb the list does not have; use `formcut_edit` with an operation from `formcut_capabilities`.
+- **A package refused.** The reply names the step and the setting. Correct that one thing against `formcut_package_guide` and add again; do not guess other keys.
 - **An edit refused as invalid.** Call `formcut_capabilities` and correct the operation name or property; do not invent operation names.
 - **A render fails or is cancelled.** `formcut_render_status` gives the reason. Fix the cause it names, then call `formcut_render` again; `formcut_cancel_render` stops a render that is no longer wanted, and discards its partial output.
 - **An interrupted, half-finished job.** Do not start over. `formcut_list_projects` and `formcut_get_project` show what already exists; `formcut_list_media` shows what was imported. Continue from the last step that landed, so nothing is imported or added twice.

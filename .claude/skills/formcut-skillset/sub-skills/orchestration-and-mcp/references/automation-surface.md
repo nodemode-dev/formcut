@@ -45,7 +45,7 @@ the event type.
 
 ## MCP tools
 
-The server declares 16 tools. Their exact names, parameters, limits and effects are in the
+The server declares 21 tools. Their exact names, parameters, limits and effects are in the
 formcut-mcp pack, `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`,
 generated from the server by `setup/mcp_tool_reference.py`; this map does not keep its own copy.
 

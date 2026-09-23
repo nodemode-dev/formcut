@@ -2,7 +2,7 @@
 
 Generated from `mcp/formcut_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, with its exact name, its parameters (limits and defaults as the server enforces them) and whether it changes anything. Names are case sensitive. If a host's tool listing disagrees with this file, the listing is current and this file is stale.
 
-The server declares 16 tools.
+The server declares 21 tools.
 
 | Tool | Parameters | Effect | What it does |
 | --- | --- | --- | --- |
@@ -21,4 +21,9 @@ The server declares 16 tools.
 | `formcut_cancel_render` | `job_id` str | destructive | Stop a render that is still running. The partial output is discarded. |
 | `formcut_catalogue` | `kind` str = 'all'; `group` str = '' | read only | List what the formcut renderer can apply, with the ids an edit uses: video entries (colour grades and visual effects, each with a category and group), audio chains, transitions and blend modes. Use it before naming an effect, so the id is real. |
 | `formcut_edit` | `project_id` str; `revision` int (ge 0); `commands_json` str | changes state | Apply raw edit commands to a project for anything the named tools do not cover, such as trimming, splitting, effects, keyframes or transitions, and return the new revision. Commands are the engine's own edit operations; call formcut_capabilities to see which are accepted. |
+| `formcut_package_guide` | `group` str = '' | read only | Everything needed to write an effect package: the manifest format, the stack a video package is made of, every effect id with its parameters and ranges, every custom grade setting with its range, the audio filters a chain package may use, and a working example. Read it before formcut_add_package. |
+| `formcut_add_package` | `manifest` dict | changes state | Add a video effect package from its manifest (see formcut_package_guide). The engine checks it exactly as it checks every package and refuses it with the reason; accepted, it appears under Packages in the effects browser and can be used by id in edits. Adding the same id again replaces it. |
+| `formcut_preview_package` | `package_id` str | read only | Render an effect package, or any effect or grade id, on formcut's example picture and return the image, exactly as the effects browser shows it. Use it to judge a package and adjust its stack. |
+| `formcut_list_packages` | none | read only | List the effect packages a person has added, with their kind and category, and any that failed to load with the reason. |
+| `formcut_remove_package` | `package_id` str | destructive | Remove an effect package a person added. formcut's built-in looks cannot be removed, and a package that a saved project still uses is refused, naming the projects, since they would no longer load without it. |
 | `formcut_capabilities` | none | read only | Report the engine's automation surface: the methods it accepts, the project properties an edit may set and the edit operation names. Use it when an edit is refused, or before constructing raw commands. |

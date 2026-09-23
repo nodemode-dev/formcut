@@ -151,7 +151,7 @@ Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut
 
 ## MCP server
 
-`mcp/` carries an MCP server that puts the editor in front of an agent: 16
+`mcp/` carries an MCP server that puts the editor in front of an agent: 21
 workflow tools over stdio, built on the official Python SDK. It runs as its own
 process with its own virtualenv, because the SDK pins a newer starlette than the
 engine's FastAPI accepts.
@@ -166,7 +166,9 @@ are workflow shaped rather than one per endpoint: `formcut_status`,
 `formcut_set_frame`, `formcut_render`, `formcut_render_status`,
 `formcut_cancel_render`, `formcut_list_media`, `formcut_list_projects`,
 `formcut_get_project`, `formcut_media_proxy`, `formcut_find_scenes`,
-`formcut_catalogue`, `formcut_edit` and `formcut_capabilities`. Every call returns the handles the next one needs, and a
+`formcut_catalogue`, `formcut_edit`, `formcut_capabilities`, and for effect packages
+`formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`,
+`formcut_list_packages` and `formcut_remove_package`. Every call returns the handles the next one needs, and a
 failure comes back as text naming the recovery action. The server identifies
 itself to the engine, so Settings, Connections shows the agent that is driving.
 

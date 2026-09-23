@@ -25,18 +25,18 @@ The rest is written by hand.
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 597 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
-| catalogue.py | 832 | /api/catalogue | 1 |
+| catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
 | demo.py | 59 | /api/demo | 2 |
-| effect_previews.py | 154 | /api/catalogue/preview | 1 |
+| effect_previews.py | 207 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 233 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 1049 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 314 | /api/health | 10 |
+| main.py | 357 | /api/health | 11 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -78,12 +78,12 @@ the automation transports.
 - `gpu.py` (92L)
 - `matte_cache.py` (126L)
 - `paths.py` (32L)
-- `pixel_effects.py` (852L)
+- `pixel_effects.py` (853L)
 - `processes.py` (22L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (104L)
-- `renderer.py` (939L)
+- `renderer.py` (942L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)

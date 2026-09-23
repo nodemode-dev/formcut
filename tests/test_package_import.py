@@ -113,3 +113,33 @@ def test_a_package_a_saved_project_uses_cannot_be_removed(monkeypatch):
     with pytest.raises(effect_packages.PackageInUse, match="Trip edit"):
         effect_packages.remove("my-warm")
     assert effect_packages.find("my-warm") is not None
+
+
+def test_the_schemas_example_installs_and_lists_real_controls():
+    from app.main import packages_schema
+
+    schema = packages_schema()
+    added = effect_packages.install(json.dumps(schema["example"]).encode(), "manifest.json")
+    assert added["id"] == schema["example"]["id"]
+    pixelate = next(e for e in schema["effects"] if e["id"] == "pixelate")
+    assert pixelate["parameters"][0]["key"] == "size" and schema["gradeSettings"]["temperature"] == {
+        "min": -1.0,
+        "max": 1.0,
+        "neutral": 0.0,
+    }
+
+
+def test_a_stack_step_takes_the_effects_declared_defaults():
+    import numpy as np
+    from app.catalogue import EFFECT_DEFAULTS
+    from app.pixel_effects import apply_effects
+
+    bare = {**STACK, "id": "bare-oil", "stack": [{"effect": "oil-paint"}]}
+    stated = {**STACK, "id": "stated-oil", "stack": [{"effect": "oil-paint", "params": dict(EFFECT_DEFAULTS["oil-paint"])}]}
+    effect_packages.install(json.dumps(bare).encode(), "manifest.json")
+    effect_packages.install(json.dumps(stated).encode(), "manifest.json")
+    frame = np.random.default_rng(2).integers(0, 256, (40, 64, 4), dtype=np.uint8)
+    assert np.array_equal(
+        apply_effects(frame.copy(), [{"id": "bare-oil", "amount": 1}], 0.5),
+        apply_effects(frame.copy(), [{"id": "stated-oil", "amount": 1}], 0.5),
+    )
