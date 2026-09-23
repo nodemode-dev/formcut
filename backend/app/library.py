@@ -1832,6 +1832,260 @@ def bright_idea(bpm: int, bars: int) -> np.ndarray:
     return _master(piano, low, drums)
 
 
+# More music: the same instruments and mixer ------------------------------------
+
+SQUARE = [(1, 1.0), (3, 0.33), (5, 0.2), (7, 0.14), (9, 0.11)]
+
+
+def _808(note: float, seconds: float) -> np.ndarray:
+    t = _clock(seconds)
+    frequency = _hz(note) * (1 + 0.5 * np.exp(-t / 0.03))
+    return np.tanh(1.6 * np.sin(2 * np.pi * np.cumsum(frequency) / MUSIC_RATE)) * np.exp(-t / 1.2) * np.clip((seconds - t) / 0.05, 0, 1)
+
+
+def _chords_every_bar(bars: int, chords: list[list[int]]) -> list[list[int]]:
+    return [chords[bar % len(chords)] for bar in range(bars)]
+
+
+def sunday_porch(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[55, 59, 62, 67], [52, 55, 59, 64], [48, 52, 55, 60], [50, 54, 57, 62]]
+    pluck, pad, low, perc = Bus(seconds), Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        pattern = [0, 1, 2, 3, 2, 1, 2, 3]
+        for step, index in enumerate(pattern):
+            pluck.add(_voice(chord[index] + 12, 1.2, PLUCK, 0.45), start + step * beat / 2, 0.14, -0.4 + 0.1 * index)
+        pad.add(_pad(chord[0] + 12, 4 * beat + 0.4, attack=1.0), start, 0.05)
+        low.add(_bass(chord[0] - 12, 2 * beat), start, 0.3)
+        low.add(_bass(chord[2] - 12, 2 * beat), start + 2 * beat, 0.22)
+        for step in range(8):
+            perc.add(_shaker(bar * 8 + step), start + step * beat / 2, 0.18 if step % 2 else 0.1, 0.4)
+    return _master(pluck.echo(0.75 * beat, 0.25, 0.25), pad, low, perc)
+
+
+def glass_garden(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[57, 60, 64, 71], [53, 57, 60, 67], [48, 55, 60, 64], [55, 59, 62, 69]]
+    bells, pad = Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        pad.add(_pad(chord[0], 4 * beat + 1.0, attack=1.5, release=1.5), start, 0.07, -0.2)
+        pad.add(_pad(chord[2], 4 * beat + 1.0, attack=1.5, release=1.5), start, 0.05, 0.2)
+        for step, index in enumerate([3, 1, 2, 0, 2, 3]):
+            bells.add(_voice(chord[index] + 12, 2.4, GLASS, 1.1), start + step * beat * 2 / 3, 0.1, -0.6 + 0.24 * step)
+    return _master(bells.echo(beat, 0.4, 0.4), pad)
+
+
+def open_road(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]]
+    keys, low, drums = Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for hit in range(4):
+            drums.add(_kick(), start + hit * beat, 0.5)
+            drums.add(_hat(bar * 16 + hit * 4 + 2, open_=True), start + (hit + 0.5) * beat, 0.12, 0.3)
+        for hit in (1, 3):
+            drums.add(_clap(bar * 2 + hit), start + hit * beat, 0.35)
+        for step in range(8):
+            note = chord[0] - 24 + (12 if step % 2 else 0)
+            low.add(_bass(note, beat / 2 * 0.9, saw=True), start + step * beat / 2, 0.16)
+        for hit in (0, 1.5, 2.5, 3.5):
+            for index, note in enumerate(chord):
+                keys.add(_voice(note, 0.5, PIANO, 0.3), start + hit * beat, 0.12, -0.2 + 0.2 * index)
+    return _master(keys, low, drums)
+
+
+def confetti_song(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]]
+    lead, pad, low, drums = Bus(seconds), Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for step in range(16):
+            note = chord[step % 3] + (12 if step % 4 == 3 else 0)
+            lead.add(_voice(note + 12, 0.3, PLUCK, 0.12), start + step * beat / 4, 0.1, 0.3 if step % 2 else -0.3)
+            drums.add(_hat(bar * 16 + step), start + step * beat / 4, 0.06 if step % 2 else 0.1)
+        for hit in range(4):
+            drums.add(_kick(), start + hit * beat, 0.5)
+            pumped = _pad(chord[1], beat, attack=0.12, release=0.1)
+            pad.add(pumped, start + hit * beat, 0.06)
+            low.add(_bass(chord[0] - 24, beat * 0.8, saw=True), start + (hit + 0.5) * beat, 0.14)
+        for hit in (1, 3):
+            drums.add(_clap(bar * 4 + hit), start + hit * beat, 0.3)
+    return _master(lead.echo(0.75 * beat, 0.25, 0.2), pad, low, drums)
+
+
+def kick_push(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[57, 60, 64, 67], [53, 57, 60, 64], [50, 53, 57, 60], [52, 56, 59, 62]]
+    keys, low, drums = Bus(seconds), Bus(seconds), Bus(seconds)
+    swing = 0.1 * beat
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for hit in (0.0, 1.75, 2.5):
+            drums.add(_kick(), start + hit * beat + (swing if hit % 1 else 0), 0.55)
+        for hit in (1, 3):
+            drums.add(_snare(bar * 2 + hit), start + hit * beat, 0.35)
+        for step in range(8):
+            drums.add(_hat(bar * 8 + step), start + step * beat / 2 + (swing if step % 2 else 0), 0.08, 0.25)
+        for index, note in enumerate(chord):
+            keys.add(_voice(note, 3.2, PIANO, 1.6), start + index * 0.02, 0.1, -0.3 + 0.2 * index)
+            keys.add(_voice(note, 0.8, PIANO, 0.4), start + 2.5 * beat + swing, 0.06, 0.2)
+        low.add(_bass(chord[0] - 12, 1.5 * beat), start, 0.32)
+        low.add(_bass(chord[0] - 12, beat), start + 2.5 * beat + swing, 0.25)
+    return _master(keys.echo(0.5 * beat, 0.3, 0.25), low, drums)
+
+
+def night_shift(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    roots = [45, 45, 41, 43]
+    pad, low, drums = Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar in range(bars):
+        start = bar * 4 * beat
+        root = roots[bar % 4]
+        pad.add(_pad(root + 24, 4 * beat + 0.5, attack=0.8), start, 0.16, -0.3)
+        pad.add(_pad(root + 27, 4 * beat + 0.5, attack=0.8), start, 0.14, 0.3)
+        low.add(_808(root - 12, 1.8 * beat), start, 0.4)
+        low.add(_808(root - 12, beat), start + 2.75 * beat, 0.4)
+        drums.add(_kick(), start, 0.4)
+        drums.add(_kick(), start + 2.75 * beat, 0.35)
+        drums.add(_clap(bar), start + 2 * beat, 0.4)
+        drums.add(_snare(bar + 50), start + 2 * beat, 0.2)
+        for step in range(16):
+            drums.add(_hat(bar * 16 + step), start + step * beat / 4, 0.07 if step % 2 else 0.1, 0.2)
+        if bar % 2 == 1:
+            for roll in range(6):
+                drums.add(_hat(bar * 100 + roll), start + 3 * beat + roll * beat / 6, 0.06, 0.2)
+    return _master(pad, low, drums)
+
+
+def pulse_lines(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]]
+    arp, low, drums = Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for step in range(16):
+            low.add(_bass(chord[0] - 24, beat / 4 * 0.8, saw=True), start + step * beat / 4, 0.10 if step % 4 else 0.13)
+            arp.add(
+                _voice(chord[step % 3] + 12 + (12 if step % 8 >= 4 else 0), 0.25, SQUARE, 0.1),
+                start + step * beat / 4,
+                0.16,
+                -0.4 if step % 2 else 0.4,
+            )
+        for hit in range(4):
+            drums.add(_kick(), start + hit * beat, 0.5)
+            drums.add(_hat(bar * 4 + hit, open_=True), start + (hit + 0.5) * beat, 0.1, 0.3)
+        drums.add(_clap(bar), start + beat, 0.25)
+        drums.add(_clap(bar + 500), start + 3 * beat, 0.25)
+    return _master(arp.echo(0.375 * beat, 0.35, 0.3), low, drums)
+
+
+def deep_current(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[57, 60, 64, 67], [55, 59, 62, 65], [53, 57, 60, 64], [55, 58, 62, 65]]
+    stabs, low, drums = Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for hit in range(4):
+            drums.add(_kick(), start + hit * beat, 0.55)
+            drums.add(_hat(bar * 4 + hit, open_=True), start + (hit + 0.5) * beat, 0.16, 0.25)
+        for hit in (1, 3):
+            drums.add(_clap(bar * 3 + hit), start + hit * beat, 0.25, -0.1)
+        for hit in (0.75, 2.25):
+            for index, note in enumerate(chord):
+                stabs.add(_voice(note, 0.3, KEYS, 0.12), start + hit * beat, 0.24, -0.2 + 0.13 * index)
+        for step, offset in enumerate((0, 0.75, 1.5, 2.5, 3.25)):
+            low.add(_bass(chord[0] - 24 + (7 if step == 3 else 0), beat * 0.6), start + offset * beat, 0.22)
+    return _master(stabs.echo(0.75 * beat, 0.4, 0.35), low, drums)
+
+
+def rising_tide(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    roots = [45, 41, 43, 40]
+    toms, pad, low, hits = Bus(seconds), Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar in range(bars):
+        start = bar * 4 * beat
+        grow = 0.4 + 0.6 * bar / max(1, bars - 1)
+        root = roots[bar % 4]
+        for step in range(8):
+            toms.add(
+                _tom(root - (0 if step % 3 else 5)), start + step * beat / 2, (0.22 if step % 2 else 0.3) * grow, -0.3 if step % 2 else 0.3
+            )
+        pad.add(_pad(root + 12, 4 * beat + 0.4, attack=1.2), start, 0.16 * grow, -0.3)
+        pad.add(_pad(root + 19, 4 * beat + 0.4, attack=1.2), start, 0.14 * grow, 0.3)
+        low.add(_bass(root - 12, 4 * beat, saw=True), start, 0.14 * grow)
+        if bar % 2 == 0:
+            hits.add(_kick(), start, 0.5 * grow)
+            hits.add(_bass(root - 24, 2 * beat, saw=True), start, 0.3 * grow)
+    return _master(toms, pad, low, hits)
+
+
+def last_stand(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[50, 53, 57], [46, 50, 53], [48, 51, 55], [45, 49, 52]]
+    strings, low, toms = Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for index, note in enumerate(chord):
+            strings.add(_pad(note + 12, 4 * beat + 0.3, attack=0.4, harmonics=8), start, 0.05, -0.4 + 0.4 * index)
+        for step in range(8):
+            low.add(_bass(chord[0] - 12, beat / 2 * 0.7), start + step * beat / 2, 0.2 if step % 2 else 0.28)
+        toms.add(_tom(chord[0] - 12), start, 0.4)
+        toms.add(_tom(chord[0] - 17), start + 2.5 * beat, 0.3)
+        if bar % 4 == 3:
+            for roll in range(4):
+                toms.add(_tom(chord[0] - 12 + roll), start + (3 + roll / 4) * beat, 0.25)
+    return _master(strings.echo(beat, 0.2, 0.2), low, toms)
+
+
+def arcade_heart(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]]
+    melody = [0, 2, 1, 2, 0, 1, 2, 1]
+    lead, low, drums = Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for step, index in enumerate(melody):
+            lead.add(_voice(chord[index] + 12, beat / 2 * 0.85, SQUARE, 0.4, attack=0.002), start + step * beat / 2, 0.07, 0.1)
+        for step in range(8):
+            low.add(
+                _voice(chord[0] - 12 + (12 if step % 2 else 0), beat / 2 * 0.8, SQUARE, 0.3, attack=0.002),
+                start + step * beat / 2,
+                0.08,
+                -0.1,
+            )
+        for hit in (0, 2):
+            drums.add(_kick(), start + hit * beat, 0.4)
+        for hit in (1, 3):
+            drums.add(_snare(bar * 2 + hit), start + hit * beat, 0.25)
+        for step in range(8):
+            drums.add(_hat(bar * 8 + step), start + step * beat / 2, 0.08)
+    return _master(lead, low, drums)
+
+
+def cassette_summer(bpm: int, bars: int) -> np.ndarray:
+    beat, seconds = _length(bpm, bars)
+    chords = [[57, 61, 64, 68], [54, 57, 61, 64], [52, 56, 59, 62], [50, 54, 57, 61]]
+    pad, low, drums, keys = Bus(seconds), Bus(seconds), Bus(seconds), Bus(seconds)
+    for bar, chord in enumerate(_chords_every_bar(bars, chords)):
+        start = bar * 4 * beat
+        for index, note in enumerate(chord):
+            pad.add(_pad(note, 4 * beat + 0.2, attack=0.1, release=0.3, harmonics=9), start, 0.04, -0.3 + 0.2 * index)
+        for step in range(8):
+            low.add(_bass(chord[0] - 12, beat / 2 * 0.8, saw=True), start + step * beat / 2, 0.14)
+        for hit in (0, 2, 2.5):
+            drums.add(_kick(), start + hit * beat, 0.45)
+        for hit in (1, 3):
+            drums.add(_snare(bar * 2 + hit, gate=0.16), start + hit * beat, 0.4)
+        for step in range(8):
+            drums.add(_hat(bar * 8 + step), start + step * beat / 2, 0.07, 0.3)
+        keys.add(_voice(chord[3] + 12, 0.6, PLUCK, 0.3), start + 3.5 * beat, 0.08, 0.4)
+    return _master(pad, low, drums, keys.echo(0.75 * beat, 0.35, 0.3))
+
+
 def _track(item_id: str, name: str, mood: str, make: Callable, bpm: int, bars: int) -> Item:
     return Item(item_id, name, mood, lambda: make(bpm, bars), bars * 4 * 60 / bpm + TAIL, bpm)
 
@@ -1843,6 +2097,18 @@ MUSIC = [
     _track("last-light", "Last Light", "Dramatic", last_light, 84, 12),
     _track("neon-avenue", "Neon Avenue", "Retro", neon_avenue, 100, 14),
     _track("bright-idea", "Bright Idea", "Upbeat", bright_idea, 110, 15),
+    _track("sunday-porch", "Sunday Porch", "Calm", sunday_porch, 80, 12),
+    _track("glass-garden", "Glass Garden", "Calm", glass_garden, 66, 8),
+    _track("open-road", "Open Road", "Upbeat", open_road, 124, 16),
+    _track("confetti", "Confetti", "Upbeat", confetti_song, 128, 16),
+    _track("kick-push", "Kick Push", "HipHop", kick_push, 90, 12),
+    _track("night-shift", "Night Shift", "HipHop", night_shift, 76, 12),
+    _track("pulse-lines", "Pulse Lines", "Electronic", pulse_lines, 122, 16),
+    _track("deep-current", "Deep Current", "Electronic", deep_current, 118, 16),
+    _track("rising-tide", "Rising Tide", "Dramatic", rising_tide, 90, 12),
+    _track("last-stand", "Last Stand", "Dramatic", last_stand, 70, 10),
+    _track("arcade-heart", "Arcade Heart", "Retro", arcade_heart, 140, 16),
+    _track("cassette-summer", "Cassette Summer", "Retro", cassette_summer, 104, 12),
 ]
 
 KINDS = {"stickers": STICKERS, "sounds": SOUNDS, "music": MUSIC}

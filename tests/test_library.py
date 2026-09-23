@@ -23,7 +23,7 @@ def shelf(tmp_path, monkeypatch):
 
 def test_the_catalogue_lists_every_kind():
     counts = {kind: len(client.get(f"/api/library/{kind}").json()["items"]) for kind in library.KINDS}
-    assert counts == {"stickers": 86, "sounds": 52, "music": 6}
+    assert counts == {"stickers": 86, "sounds": 52, "music": 18}
 
 
 def test_ids_are_unique_and_urls_point_at_their_files():
@@ -137,3 +137,15 @@ def test_sounds_that_should_be_dark_are_dark(shelf):
     assert centroid("rumble") < 300
     assert centroid("wind") < 1500 and centroid("knock") < 1500 and centroid("waves") < 2500
     assert 3800 < centroid("crickets") < 4600, "the chirp, not the clicks of its gating"
+
+
+def test_every_track_carries_its_melody():
+    """A mix whose chords and melody sit far under the bass and kick plays as a beat;
+    four tracks measured 1 to 4 percent of their power between 250 Hz and 2 kHz
+    before their melodic parts were raised. The existing six measured 7 to 26."""
+    for item in library.MUSIC:
+        mono = item.make().mean(axis=1)
+        power = np.abs(np.fft.rfft(mono)) ** 2
+        freqs = np.fft.rfftfreq(len(mono), 1 / library.MUSIC_RATE)
+        middle = power[(freqs >= 250) & (freqs < 2000)].sum() / power.sum()
+        assert middle >= 0.05, (item.id, round(float(middle), 3))

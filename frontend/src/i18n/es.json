@@ -957,5 +957,7 @@
   "library.sound.rain": "Lluvia",
   "library.sound.wind": "Viento",
   "library.sound.waves": "Olas",
-  "library.sound.crickets": "Grillos"
+  "library.sound.crickets": "Grillos",
+  "library.cat.HipHop": "Hip hop",
+  "library.cat.Electronic": "Electrónica"
 }

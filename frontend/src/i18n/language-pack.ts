@@ -389,6 +389,8 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Hip hop|Hip-hop|Hip hop|ヒップホップ|힙합|Hip-hop|Хип-хоп|Hip hop|嘻哈|嘻哈
+Electronic|Électronique|Elettronica|エレクトロニック|일렉트로닉|Eletrônica|Электроника|Elektronik|电子|電子
 Ambience|Ambiance|Atmosfera|環境音|분위기|Ambiente|Атмосфера|Ortam|环境音|環境音
 Short whoosh|Souffle court|Fruscio breve|短いシュッ|짧은 휙|Zunido curto|Короткий свист|Kısa vın|短嗖声|短嗖聲
 Long whoosh|Souffle long|Fruscio lungo|長いシュッ|긴 휙|Zunido longo|Долгий свист|Uzun vın|长嗖声|長嗖聲
