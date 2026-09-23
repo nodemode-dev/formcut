@@ -488,7 +488,20 @@ class FrameRenderer:
             capture.seek(wanted)
         ok, frame = capture.read()
         if not ok:
-            raise ValueError("Could not decode source frame")
+            # A container's frame count comes from its duration and can promise a
+            # frame or two more than the file holds. Past the last real frame, hold
+            # it, as a player does, rather than failing the whole render: reuse the
+            # frame just read when this one follows it, or step back to one that
+            # decodes. Only a source with nothing decodable near here is an error.
+            frame = self.frames.get(cursor) if wanted == current + 1 else None
+            back = wanted
+            while frame is None and back > 0 and wanted - back < 3:
+                back -= 1
+                capture.seek(back)
+                ok, frame = capture.read()
+                frame = frame if ok else None
+            if frame is None:
+                raise ValueError("Could not decode source frame")
         result = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
         self.frame_numbers[cursor] = wanted
         self.frames[cursor] = frame
