@@ -23,7 +23,7 @@ def shelf(tmp_path, monkeypatch):
 
 def test_the_catalogue_lists_every_kind():
     counts = {kind: len(client.get(f"/api/library/{kind}").json()["items"]) for kind in library.KINDS}
-    assert counts == {"stickers": 86, "sounds": 17, "music": 6}
+    assert counts == {"stickers": 86, "sounds": 52, "music": 6}
 
 
 def test_ids_are_unique_and_urls_point_at_their_files():
@@ -120,3 +120,20 @@ def test_every_label_the_view_shows_is_translated():
         strings = json.loads((I18N / f"{code}.json").read_text(encoding="utf-8"))
         assert not [key for key in keys if key not in strings], code
     assert not [english[key] for key in keys if english[key] not in packed]
+
+
+def test_sounds_that_should_be_dark_are_dark(shelf):
+    """White noise's highs leak through a gentle filter and turn a rumble into a hiss;
+    these were measured at 3.6, 4.8, 8.3 and 10 kHz before _shape() cut them."""
+    import wave
+
+    def centroid(sound_id):
+        with wave.open(str(library.render("sounds", sound_id))) as audio:
+            samples = np.frombuffer(audio.readframes(audio.getnframes()), "<i2") / 32767
+            spectrum = np.abs(np.fft.rfft(samples * np.hanning(len(samples))))
+            freqs = np.fft.rfftfreq(len(samples), 1 / audio.getframerate())
+        return float((spectrum * freqs).sum() / spectrum.sum())
+
+    assert centroid("rumble") < 300
+    assert centroid("wind") < 1500 and centroid("knock") < 1500 and centroid("waves") < 2500
+    assert 3800 < centroid("crickets") < 4600, "the chirp, not the clicks of its gating"

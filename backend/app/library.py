@@ -1247,6 +1247,265 @@ def typewriter(seconds: float) -> np.ndarray:
     return _bright(_noise(len(t), 19)) * np.exp(-t / 0.003) + 0.2 * np.sin(2 * np.pi * 3000 * t) * np.exp(-t / 0.02)
 
 
+# More sound effects: the same kit, each with its own seed ---------------------
+
+
+def _shape(signal: np.ndarray, low: float = 0.0, high: float = 0.0) -> np.ndarray:
+    """Keep what lies between low and high (Hz), with an eighth-order roll-off either
+    side. The moving average and the band-pass above roll off too gently to make
+    noise dark: white noise's highs leak through and it stays a hiss."""
+    spectrum = np.fft.rfft(signal)
+    freqs = np.fft.rfftfreq(len(signal), 1 / SOUND_RATE)
+    gain = np.ones_like(freqs)
+    if high:
+        gain /= np.sqrt(1 + (freqs / high) ** 8)
+    if low:
+        gain *= 1 - 1 / np.sqrt(1 + (np.maximum(freqs, 1e-9) / low) ** 8)
+    return np.fft.irfft(spectrum * gain, n=len(signal))
+
+
+def _saw(frequency: float, t: np.ndarray, partials: int = 24) -> np.ndarray:
+    return sum(np.sin(2 * np.pi * frequency * k * t) / k for k in range(1, partials + 1))
+
+
+def _hit(seconds: float, seed: int, low: float, decay: float) -> np.ndarray:
+    t = _time(seconds)
+    body = _sine(low + 90 * np.exp(-t / 0.03), t) * np.exp(-t / decay)
+    crack = _bright(_noise(len(t), seed)) * np.exp(-t / 0.012)
+    return body + 0.6 * crack
+
+
+def whoosh_short(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    shape = np.sin(np.pi * t / seconds)
+    return _band(_noise(len(t), 21), 500 + 3800 * shape**2) * shape**2
+
+
+def whoosh_long(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    shape = np.sin(np.pi * t / seconds)
+    return _band(_noise(len(t), 22), 200 + 1800 * shape**3, q=2.2) * shape**1.2
+
+
+def sweep_up(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    pitch = 200 * 16 ** (t / seconds)
+    return _sine(pitch, t) * np.sin(np.pi * t / seconds) ** 0.8
+
+
+def reverse_cymbal(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    swell = (t / seconds) ** 3
+    return _band(_bright(_noise(len(t), 23)), 6000 + 2000 * swell, q=1.2) * swell
+
+
+def notification(seconds: float) -> np.ndarray:
+    return _place(seconds, (0.0, 0.8 * _bell(880.0, seconds)), (0.12, _bell(1318.5, seconds - 0.12)))
+
+
+def _blip(start: float, end: float, seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _sine(start * (end / start) ** (t / seconds), t) * np.exp(-t / (seconds / 3)) * (1 - np.exp(-t / 0.002))
+
+
+def toggle_on(seconds: float) -> np.ndarray:
+    return _blip(600, 1200, seconds)
+
+
+def toggle_off(seconds: float) -> np.ndarray:
+    return _blip(1200, 600, seconds)
+
+
+def send(seconds: float) -> np.ndarray:
+    return _place(seconds, (0.0, 0.6 * whoosh_short(0.22)), (0.16, _blip(900, 1800, seconds - 0.16)))
+
+
+def key_tap(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _soft(_bright(_noise(len(t), 24)), 3) * np.exp(-t / 0.006) + 0.3 * np.sin(2 * np.pi * 1800 * t) * np.exp(-t / 0.01)
+
+
+def beep(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return np.sin(2 * np.pi * 1000 * t) * np.minimum(1, t / 0.005) * np.minimum(1, (seconds - t) / 0.01)
+
+
+def countdown(seconds: float) -> np.ndarray:
+    short = beep(0.12)
+    t = _time(0.6)
+    long = np.sin(2 * np.pi * 1500 * t) * np.minimum(1, t / 0.005) * np.minimum(1, (0.6 - t) / 0.05)
+    return _place(seconds, (0.0, short), (1.0, short), (2.0, short), (3.0, long))
+
+
+def level_up(seconds: float) -> np.ndarray:
+    notes = (523.25, 659.25, 783.99, 1046.5, 1318.5)
+    t = _time(0.12)
+    parts = [(i * 0.08, _square(f, t) * np.exp(-t / 0.08) * 0.5) for i, f in enumerate(notes)]
+    tail = _time(seconds - 0.4)
+    parts.append((0.4, _square(1568.0, tail) * np.exp(-tail / 0.25) * 0.5))
+    return _place(seconds, *parts)
+
+
+def bubble(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _sine(400 + 1400 * (t / seconds) ** 0.6, t) * np.exp(-t / 0.05) * (1 - np.exp(-t / 0.002))
+
+
+def hit(seconds: float) -> np.ndarray:
+    return _hit(seconds, 25, 70, 0.12)
+
+
+def thud(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _sine(45 + 40 * np.exp(-t / 0.05), t) * np.exp(-t / 0.2) + 0.4 * _soft(_noise(len(t), 26), 80) * np.exp(-t / 0.04)
+
+
+def slam(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return np.tanh(2 * (_hit(seconds, 27, 60, 0.25) + 0.5 * _soft(_noise(len(t), 28), 20) * np.exp(-t / 0.15)))
+
+
+def braam(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    swell = np.minimum(1, t / 0.25) * np.exp(-np.maximum(0, t - 0.4) / 1.2)
+    chord = _saw(55.0, t) + 0.8 * _saw(82.41, t) + 0.5 * _saw(110.0, t)
+    return np.tanh(0.6 * _soft(chord, 30) * swell) + 0.4 * _sine(41.2, t) * swell
+
+
+def sub_drop(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _sine(120 * (30 / 120) ** (t / seconds), t) * (1 - t / seconds) ** 0.7
+
+
+def rumble(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    shape = np.sin(np.pi * t / seconds) ** 0.7
+    body = _shape(_noise(len(t), 29), high=120)
+    return (body / (np.abs(body).max() or 1) + 0.35 * _sine(38, t)) * shape
+
+
+def drum_roll(seconds: float) -> np.ndarray:
+    parts, at, gap, index = [], 0.0, 0.09, 0
+    while at < seconds - 0.4:
+        t = _time(0.08)
+        level = 0.3 + 0.7 * at / seconds
+        parts.append((at, level * _bright(_noise(len(t), 30 + index)) * np.exp(-t / 0.02)))
+        at += gap
+        gap = max(0.035, gap * 0.97)
+        index += 1
+    t = _time(0.4)
+    parts.append((seconds - 0.4, 1.4 * _bright(_noise(len(t), 99)) * np.exp(-t / 0.12) + _sine(60, t) * np.exp(-t / 0.15)))
+    return _place(seconds, *parts)
+
+
+def cymbal(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _band(_bright(_noise(len(t), 31)), 5500 + 0 * t, q=0.9) * np.exp(-t / 0.7) * (1 - np.exp(-t / 0.002))
+
+
+def boing(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    pitch = 180 + 120 * np.sin(2 * np.pi * 9 * t) * np.exp(-t / 0.3) + 80 * np.exp(-t / 0.2)
+    return _sine(pitch, t) * np.exp(-t / 0.35)
+
+
+def slide_up(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    pitch = 500 * 4 ** (t / seconds) * (1 + 0.02 * np.sin(2 * np.pi * 6 * t))
+    return (_sine(pitch, t) + 0.2 * _sine(pitch * 2, t)) * np.sin(np.pi * t / seconds) ** 0.4
+
+
+def slide_down(seconds: float) -> np.ndarray:
+    return slide_up(seconds)[::-1].copy()
+
+
+def bonk(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return (np.sin(2 * np.pi * 720 * t) + 0.6 * np.sin(2 * np.pi * 1690 * t)) * np.exp(-t / 0.05) * (1 - np.exp(-t / 0.001))
+
+
+def zip_up(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    return _band(_noise(len(t), 32), 1000 * 6 ** (t / seconds), q=6) * np.sin(np.pi * t / seconds)
+
+
+def squeak(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    pitch = 1800 + 600 * np.sin(np.pi * t / seconds)
+    return _sine(pitch, t) * np.sin(np.pi * t / seconds) ** 2
+
+
+def applause(seconds: float) -> np.ndarray:
+    rng = np.random.default_rng(33)
+    clap = _time(0.03)
+    parts = []
+    for index in range(int(seconds * 60)):
+        at = float(rng.uniform(0, seconds - 0.05))
+        parts.append((at, float(rng.uniform(0.3, 1.0)) * _bright(_noise(len(clap), 1000 + index)) * np.exp(-clap / 0.008)))
+    t = _time(seconds)
+    return _place(seconds, *parts) * np.minimum(1, t / 0.4) * np.minimum(1, (seconds - t) / 0.8)
+
+
+def knock(seconds: float) -> np.ndarray:
+    t = _time(0.12)
+    wood = _shape(_noise(len(t), 34), high=1500)
+    wood = wood / (np.abs(wood).max() or 1)
+    rap = (0.8 * wood + np.sin(2 * np.pi * 180 * t) + 0.5 * np.sin(2 * np.pi * 330 * t)) * np.exp(-t / 0.03) * (1 - np.exp(-t / 0.001))
+    return _place(seconds, (0.0, rap), (0.22, 0.9 * rap), (0.44, rap))
+
+
+def phone_buzz(seconds: float) -> np.ndarray:
+    t = _time(0.4)
+    buzz = np.tanh(3 * np.sin(2 * np.pi * 170 * t)) * np.minimum(1, t / 0.02) * np.minimum(1, (0.4 - t) / 0.02)
+    return _place(seconds, (0.0, buzz), (0.6, buzz))
+
+
+def cash_register(seconds: float) -> np.ndarray:
+    t = _time(0.25)
+    drawer = _soft(_noise(len(t), 35), 12) * np.exp(-t / 0.08) * 3
+    return _place(seconds, (0.0, drawer), (0.12, _bell(2093.0, seconds - 0.12)), (0.14, 0.7 * _bell(2637.0, seconds - 0.14)))
+
+
+def rain(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    hush = _soft(_bright(_noise(len(t), 36)), 6) * 0.5
+    rng = np.random.default_rng(37)
+    drop = _time(0.02)
+    drops = [
+        (
+            float(rng.uniform(0, seconds - 0.03)),
+            float(rng.uniform(0.2, 0.8)) * _sine(float(rng.uniform(1500, 4000)), drop) * np.exp(-drop / 0.004),
+        )
+        for _ in range(int(seconds * 40))
+    ]
+    return (hush + _place(seconds, *drops)) * np.minimum(1, t / 0.5) * np.minimum(1, (seconds - t) / 0.5)
+
+
+def wind(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    gust = 0.55 + 0.45 * np.sin(2 * np.pi * 0.23 * t) * np.sin(2 * np.pi * 0.11 * t + 1)
+    howl = _shape(_noise(len(t), 38), low=200, high=900)
+    whistle = _shape(_noise(len(t), 41), low=700, high=1400) * gust**3
+    return (howl * gust + 0.5 * whistle) * np.minimum(1, t / 1.0) * np.minimum(1, (seconds - t) / 1.0)
+
+
+def waves(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    swell = (0.5 - 0.5 * np.cos(2 * np.pi * t / 4.0)) ** 2
+    dark = _shape(_noise(len(t), 39), high=400)
+    crash = _shape(_noise(len(t), 42), low=300, high=2500)
+    dark, crash = dark / (np.abs(dark).max() or 1), crash / (np.abs(crash).max() or 1)
+    return (0.35 + 0.4 * swell) * dark + swell**2 * crash
+
+
+def crickets(seconds: float) -> np.ndarray:
+    t = _time(seconds)
+    # Smooth envelopes: a hard on and off clicks, and the clicks bury the chirp.
+    trill = np.clip(np.sin(2 * np.pi * 30 * t) * 2 - 0.6, 0, 1) ** 2
+    phrase = np.clip(np.sin(2 * np.pi * 1.1 * t) * 3 + 0.6, 0, 1)
+    return np.sin(2 * np.pi * 4200 * t) * _soft(trill, 48) * phrase
+
+
 SOUNDS = [
     Item("whoosh", "Whoosh", "Whooshes", whoosh, 0.9),
     Item("swoosh", "Swoosh", "Whooshes", swoosh, 0.4),
@@ -1265,6 +1524,41 @@ SOUNDS = [
     Item("glitch", "Glitch", "Impacts", glitch, 0.7),
     Item("shutter", "Camera shutter", "Everyday", shutter, 0.4),
     Item("typewriter", "Typewriter", "Everyday", typewriter, 0.09),
+    Item("whoosh-short", "Short whoosh", "Whooshes", whoosh_short, 0.35),
+    Item("whoosh-long", "Long whoosh", "Whooshes", whoosh_long, 1.6),
+    Item("sweep-up", "Sweep up", "Whooshes", sweep_up, 0.8),
+    Item("reverse-cymbal", "Reverse cymbal", "Whooshes", reverse_cymbal, 2.0),
+    Item("notification", "Notification", "Interface", notification, 1.2),
+    Item("toggle-on", "Toggle on", "Interface", toggle_on, 0.12),
+    Item("toggle-off", "Toggle off", "Interface", toggle_off, 0.12),
+    Item("send", "Send", "Interface", send, 0.45),
+    Item("key-tap", "Key tap", "Interface", key_tap, 0.05),
+    Item("beep", "Beep", "Interface", beep, 0.25),
+    Item("countdown", "Countdown", "Interface", countdown, 3.8),
+    Item("level-up", "Level up", "Interface", level_up, 1.1),
+    Item("bubble", "Bubble", "Interface", bubble, 0.16),
+    Item("hit", "Hit", "Impacts", hit, 0.6),
+    Item("thud", "Thud", "Impacts", thud, 0.8),
+    Item("slam", "Slam", "Impacts", slam, 1.0),
+    Item("braam", "Braam", "Impacts", braam, 3.0),
+    Item("sub-drop", "Sub drop", "Impacts", sub_drop, 1.5),
+    Item("rumble", "Rumble", "Impacts", rumble, 3.0),
+    Item("drum-roll", "Drum roll", "Impacts", drum_roll, 2.5),
+    Item("cymbal", "Cymbal crash", "Impacts", cymbal, 2.5),
+    Item("boing", "Boing", "Cartoon", boing, 1.0),
+    Item("slide-up", "Slide whistle up", "Cartoon", slide_up, 0.9),
+    Item("slide-down", "Slide whistle down", "Cartoon", slide_down, 0.9),
+    Item("bonk", "Bonk", "Cartoon", bonk, 0.3),
+    Item("zip", "Zip", "Cartoon", zip_up, 0.35),
+    Item("squeak", "Squeak", "Cartoon", squeak, 0.25),
+    Item("applause", "Applause", "Everyday", applause, 4.0),
+    Item("knock", "Door knock", "Everyday", knock, 0.7),
+    Item("phone-buzz", "Phone buzz", "Everyday", phone_buzz, 1.1),
+    Item("cash-register", "Cash register", "Everyday", cash_register, 1.4),
+    Item("rain", "Rain", "Ambience", rain, 8.0),
+    Item("wind", "Wind", "Ambience", wind, 8.0),
+    Item("waves", "Waves", "Ambience", waves, 8.0),
+    Item("crickets", "Crickets", "Ambience", crickets, 6.0),
 ]
 
 

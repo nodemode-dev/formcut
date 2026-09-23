@@ -389,6 +389,39 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Ambience|Ambiance|Atmosfera|環境音|분위기|Ambiente|Атмосфера|Ortam|环境音|環境音
+Short whoosh|Souffle court|Fruscio breve|短いシュッ|짧은 휙|Zunido curto|Короткий свист|Kısa vın|短嗖声|短嗖聲
+Long whoosh|Souffle long|Fruscio lungo|長いシュッ|긴 휙|Zunido longo|Долгий свист|Uzun vın|长嗖声|長嗖聲
+Sweep up|Balayage montant|Sweep ascendente|上昇スイープ|상승 스윕|Varredura ascendente|Восходящий свип|Yükselen süpürme|上扫|上掃
+Reverse cymbal|Cymbale inversée|Piatto al contrario|リバースシンバル|리버스 심벌|Prato reverso|Обратная тарелка|Ters zil|反向镲片|反向鈸
+Notification|Notification|Notifica|通知|알림|Notificação|Уведомление|Bildirim|通知|通知
+Toggle on|Activer|Attiva|オン|켜기|Ativar|Включение|Aç|开启|開啟
+Toggle off|Désactiver|Disattiva|オフ|끄기|Desativar|Выключение|Kapat|关闭|關閉
+Key tap|Frappe de touche|Tocco di tasto|キータップ|키 입력|Toque de tecla|Нажатие клавиши|Tuş vuruşu|按键声|按鍵聲
+Beep|Bip|Bip|ビープ|삐|Bipe|Писк|Bip|哔声|嗶聲
+Level up|Niveau supérieur|Livello superiore|レベルアップ|레벨 업|Subir de nível|Новый уровень|Seviye atlama|升级|升級
+Bubble|Bulle|Bolla|泡|거품|Bolha|Пузырь|Baloncuk|气泡|氣泡
+Hit|Coup|Colpo|ヒット|타격|Golpe|Удар|Vuruş|击打|擊打
+Thud|Bruit sourd|Tonfo|ドスン|쿵|Baque|Глухой удар|Güm|闷响|悶響
+Slam|Claquement|Sbattimento|バタン|쾅|Batida|Грохот|Çarpma|猛撞|猛撞
+Braam|Braam|Braam|ブラーム|브람|Braam|Браам|Braam|低音轰鸣|低音轟鳴
+Sub drop|Chute grave|Caduta sub|サブドロップ|서브 드롭|Queda grave|Саб-дроп|Alt düşüş|低频下坠|低頻下墜
+Rumble|Grondement|Rombo|ゴロゴロ|우르릉|Estrondo|Грохотание|Gürleme|隆隆声|隆隆聲
+Drum roll|Roulement de tambour|Rullo di tamburi|ドラムロール|드럼 롤|Rufar de tambores|Барабанная дробь|Trampet sesi|鼓声滚奏|鼓聲滾奏
+Cymbal crash|Crash de cymbale|Colpo di piatto|シンバルクラッシュ|심벌 크래시|Batida de prato|Удар тарелки|Zil çarpması|镲片撞击|鈸撞擊
+Boing|Boing|Boing|ボヨン|보잉|Boing|Буэнг|Boing|啵嘤|啵嚶
+Slide whistle up|Sifflet à coulisse montant|Fischietto a coulisse in salita|スライドホイッスル（上）|슬라이드 휘슬 상승|Apito deslizante subindo|Свисток вверх|Kaydırmalı düdük yukarı|滑哨上升|滑哨上升
+Slide whistle down|Sifflet à coulisse descendant|Fischietto a coulisse in discesa|スライドホイッスル（下）|슬라이드 휘슬 하강|Apito deslizante descendo|Свисток вниз|Kaydırmalı düdük aşağı|滑哨下降|滑哨下降
+Bonk|Bonk|Bonk|ポコッ|콩|Bonk|Бонк|Bonk|咚|咚
+Zip|Fermeture éclair|Zip|ジッ|지익|Zíper|Застёжка|Fermuar|拉链声|拉鍊聲
+Squeak|Couinement|Squittio|キュッ|찍|Rangido|Писк игрушки|Gıcırtı|吱吱声|吱吱聲
+Applause|Applaudissements|Applausi|拍手|박수|Aplausos|Аплодисменты|Alkış|掌声|掌聲
+Door knock|Coups à la porte|Bussare alla porta|ノック|노크|Batida na porta|Стук в дверь|Kapı vurma|敲门声|敲門聲
+Phone buzz|Vibreur de téléphone|Vibrazione del telefono|スマホのバイブ|휴대폰 진동|Vibração do celular|Вибрация телефона|Telefon titreşimi|手机震动|手機震動
+Cash register|Caisse enregistreuse|Registratore di cassa|レジ|금전 등록기|Caixa registradora|Кассовый аппарат|Yazar kasa|收银机|收銀機
+Wind|Vent|Vento|風|바람|Vento|Ветер|Rüzgâr|风声|風聲
+Waves|Vagues|Onde|波|파도|Ondas|Волны|Dalgalar|海浪|海浪
+Crickets|Grillons|Grilli|コオロギ|귀뚜라미|Grilos|Сверчки|Cırcır böcekleri|蟋蟀|蟋蟀
 Weather|Météo|Meteo|天気|날씨|Clima|Погода|Hava durumu|天气|天氣
 Celebration|Fête|Festa|お祝い|축하|Celebração|Праздник|Kutlama|庆祝|慶祝
 Nature|Nature|Natura|自然|자연|Natureza|Природа|Doğa|自然|自然

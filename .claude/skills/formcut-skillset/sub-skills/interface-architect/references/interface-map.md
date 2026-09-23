@@ -33,7 +33,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/timing.ts` (96L)
 - `engine/types.ts` (260L)
 - `i18n/index.ts` (190L)
-- `i18n/language-pack.ts` (1093L)
+- `i18n/language-pack.ts` (1126L)
 - `i18n/text.ts` (29L)
 - `main.ts` (92L)
 - `types/assets.d.ts` (6L)
