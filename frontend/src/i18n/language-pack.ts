@@ -389,6 +389,35 @@ Paper Texture|Texture papier|Texture carta|紙のテクスチャ|종이 질감|T
 Snowfall|Chute de neige|Nevicata|降雪|눈 내림|Queda de neve|Снегопад|Kar yağışı|降雪|降雪
 Bokeh Spots|Taches de bokeh|Punti bokeh|ボケの玉|보케 점|Pontos de bokeh|Пятна боке|Bokeh noktaları|散景光斑|散景光斑
 Chroma Noise|Bruit chromatique|Rumore cromatico|カラーノイズ|색상 노이즈|Ruído cromático|Цветовой шум|Renk gürültüsü|色度噪点|色度雜訊
+Oil Paint|Peinture à l'huile|Pittura a olio|油絵|유화|Pintura a óleo|Масляная живопись|Yağlı boya|油画|油畫
+Hex Pixelate|Pixellisation hexagonale|Pixel esagonali|六角形モザイク|육각형 픽셀|Pixelado hexagonal|Шестиугольные пиксели|Altıgen piksel|六边形像素化|六邊形像素化
+Neon Edges|Contours néon|Bordi al neon|ネオンエッジ|네온 윤곽선|Bordas neon|Неоновые контуры|Neon kenarlar|霓虹边缘|霓虹邊緣
+Pop Art Grid|Grille pop art|Griglia pop art|ポップアートグリッド|팝아트 그리드|Grade pop art|Сетка поп-арт|Pop art ızgarası|波普艺术网格|普普藝術網格
+Stained Glass|Vitrail|Vetrata|ステンドグラス|스테인드글라스|Vitral|Витраж|Vitray|彩色玻璃|彩繪玻璃
+Infrared|Infrarouge|Infrarosso|赤外線|적외선|Infravermelho|Инфракрасный|Kızılötesi|红外|紅外線
+Clarity|Clarté|Chiarezza|明瞭度|선명도|Clareza|Чёткость|Netlik|清晰度|清晰度
+Dehaze|Correction du voile|Rimozione foschia|かすみの除去|안개 제거|Remover névoa|Устранение дымки|Pus giderme|去雾|去霧
+Skin Smoothing|Lissage de la peau|Levigatura della pelle|美肌|피부 보정|Suavização de pele|Сглаживание кожи|Cilt yumuşatma|磨皮|磨皮
+Block Glitch|Glitch en blocs|Glitch a blocchi|ブロックグリッチ|블록 글리치|Glitch em blocos|Блочный глитч|Blok bozulması|块状故障|區塊故障
+Anaglyph 3D|Anaglyphe 3D|Anaglifo 3D|アナグリフ3D|애너글리프 3D|Anáglifo 3D|Анаглиф 3D|Anaglif 3D|红蓝 3D|紅藍 3D
+LED Wall|Mur LED|Parete LED|LEDウォール|LED 월|Painel de LED|LED-экран|LED duvar|LED 屏幕墙|LED 螢幕牆
+Retro Dither|Tramage rétro|Retinatura retrò|レトロディザ|레트로 디더|Pontilhado retrô|Ретро-дизеринг|Retro benekleme|复古抖动|復古抖動
+Fog|Brouillard|Nebbia|霧|안개|Neblina|Туман|Sis|雾|霧
+Sparkles|Scintillements|Scintille|きらめき|반짝임|Brilhos|Искры|Pırıltılar|闪光|閃光
+VHS Tape|Cassette VHS|Nastro VHS|VHSテープ|VHS 테이프|Fita VHS|Кассета VHS|VHS kaset|VHS 录像带|VHS 錄影帶
+CRT Screen|Écran cathodique|Schermo CRT|ブラウン管|CRT 화면|Tela CRT|ЭЛТ-экран|CRT ekran|CRT 屏幕|CRT 螢幕
+Lens Flare|Reflet d'objectif|Riflesso dell'obiettivo|レンズフレア|렌즈 플레어|Reflexo de lente|Блик объектива|Lens parlaması|镜头光晕|鏡頭光暈
+Push Down|Pousser vers le bas|Spingi giù|下へプッシュ|아래로 밀기|Empurrar para baixo|Сдвиг вниз|Aşağı it|向下推|向下推
+Cover Left|Recouvrir vers la gauche|Copri a sinistra|左へカバー|왼쪽으로 덮기|Cobrir para a esquerda|Наезд влево|Sola örtme|向左覆盖|向左覆蓋
+Cover Up|Recouvrir vers le haut|Copri verso l'alto|上へカバー|위로 덮기|Cobrir para cima|Наезд вверх|Yukarı örtme|向上覆盖|向上覆蓋
+Clock Wipe|Balayage horaire|Tendina a orologio|時計ワイプ|시계 방향 와이프|Transição de relógio|Часовая шторка|Saat silme|时钟擦除|時鐘擦除
+Blinds|Stores|Veneziane|ブラインド|블라인드|Persianas|Жалюзи|Jaluzi|百叶窗|百葉窗
+Diagonal Wipe|Balayage diagonal|Tendina diagonale|斜めワイプ|대각선 와이프|Transição diagonal|Диагональная шторка|Çapraz silme|对角擦除|對角擦除
+Pixel Dissolve|Fondu pixelisé|Dissolvenza a pixel|ピクセルディゾルブ|픽셀 디졸브|Dissolução em pixels|Пиксельное растворение|Piksel geçişi|像素溶解|像素溶解
+Blur Fade|Fondu flou|Dissolvenza sfocata|ぼかしフェード|블러 페이드|Esmaecer com desfoque|Размытое затухание|Bulanık geçiş|模糊淡化|模糊淡化
+Spin|Rotation|Rotazione|スピン|회전|Giro|Вращение|Döndürme|旋转|旋轉
+Diamond|Losange|Rombo|ダイヤモンド|다이아몬드|Losango|Ромб|Elmas|菱形|菱形
+Barn Door|Porte de grange|Apertura a porta|観音開き|양문 열기|Porta de celeiro|Распашные двери|Ahır kapısı|对开门|對開門
 Pitch Up|Hauteur plus aiguë|Tono più alto|ピッチアップ|피치 올리기|Tom acima|Выше тон|Perdeyi yükselt|升调|升調
 Pitch Down|Hauteur plus grave|Tono più basso|ピッチダウン|피치 내리기|Tom abaixo|Ниже тон|Perdeyi düşür|降调|降調
 Denoise|Débruitage|Riduzione rumore|ノイズ除去|노이즈 제거|Remover ruído|Шумоподавление|Gürültü giderme|降噪|降噪

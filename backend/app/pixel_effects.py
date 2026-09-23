@@ -55,6 +55,37 @@ def _vignette_falloff(h: int, w: int) -> np.ndarray:
     return falloff
 
 
+@functools.lru_cache(maxsize=4)
+def _glass_cells(h: int, w: int, cell: int) -> tuple[np.ndarray, np.ndarray]:
+    """Stained glass panes for one frame size: each pixel's nearest seed, and the lead between panes."""
+    rng = np.random.default_rng(cell)
+    seeds = np.ones((h, w), np.uint8)
+    for top in range(0, h, cell):
+        for left in range(0, w, cell):
+            seeds[min(h - 1, top + int(rng.integers(0, cell))), min(w - 1, left + int(rng.integers(0, cell)))] = 0
+    _, labels = cv2.distanceTransformWithLabels(seeds, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+    edges = np.zeros((h, w), np.uint8)
+    edges[:, :-1] |= (labels[:, :-1] != labels[:, 1:]).astype(np.uint8)
+    edges[:-1, :] |= (labels[:-1, :] != labels[1:, :]).astype(np.uint8)
+    leading = cv2.dilate(edges, np.ones((max(1, cell // 12) * 2 + 1,) * 2, np.uint8)) > 0
+    labels.flags.writeable = False
+    leading.flags.writeable = False
+    return labels, leading
+
+
+@functools.lru_cache(maxsize=4)
+def _fog_field(h: int, w: int) -> np.ndarray:
+    """Soft fog density at three scales, twice the frame wide so it can drift."""
+    rng = np.random.default_rng(5)
+    field = np.zeros((h, w * 2), np.float32)
+    for scale, weight in ((16, 0.55), (48, 0.3), (128, 0.15)):
+        coarse = rng.random((max(2, h * scale // w // 4 + 2), max(2, scale // 2 + 2))).astype(np.float32)
+        field += cv2.resize(coarse, (w * 2, h), interpolation=cv2.INTER_CUBIC) * weight
+    field = (field - field.min()) / max(1e-6, float(field.max() - field.min()))
+    field.flags.writeable = False
+    return field
+
+
 def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndarray:
     if effect in GRADES:
         return grade(rgb, {**GRADES[effect], **params})
@@ -287,6 +318,186 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
     if effect == "chroma-noise":
         noise = np.random.default_rng(int(local * 1000) % (2**32)).normal(0, 1, (h, w, 3)).astype(np.float32)
         return rgb + cv2.GaussianBlur(noise, (0, 0), 0.8) * float(params.get("strength", 0.15))
+    if effect == "oil-paint":
+        # Kuwahara: each pixel takes the mean of whichever of its four corner
+        # windows is flattest, which keeps edges and turns texture into strokes.
+        k = max(3, size // 2) + 1
+        gray = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY)
+        means, spreads = [], []
+        for anchor in ((k - 1, k - 1), (0, k - 1), (k - 1, 0), (0, 0)):
+            means.append(cv2.boxFilter(rgb.astype(np.float32), -1, (k, k), anchor=anchor, borderType=cv2.BORDER_REFLECT))
+            mean_gray = cv2.boxFilter(gray, -1, (k, k), anchor=anchor, borderType=cv2.BORDER_REFLECT)
+            spreads.append(cv2.boxFilter(gray * gray, -1, (k, k), anchor=anchor, borderType=cv2.BORDER_REFLECT) - mean_gray**2)
+        pick = np.argmin(np.stack(spreads), axis=0)[None, :, :, None]
+        return np.take_along_axis(np.stack(means), np.repeat(pick, 3, axis=3), axis=0)[0]
+    if effect == "hex-pixelate":
+        s, root = float(size), math.sqrt(3.0)
+        q, r = (root / 3 * x - y / 3) / s, (2 / 3 * y) / s
+        cube = np.stack([q, -q - r, r])
+        rounded = np.round(cube)
+        diff = np.abs(rounded - cube)
+        rounded[0] = np.where((diff[0] > diff[1]) & (diff[0] > diff[2]), -rounded[1] - rounded[2], rounded[0])
+        rounded[2] = np.where(~((diff[0] > diff[1]) & (diff[0] > diff[2])) & ~(diff[1] > diff[2]), -rounded[0] - rounded[1], rounded[2])
+        cx, cy = s * root * (rounded[0] + rounded[2] / 2), s * 1.5 * rounded[2]
+        soft = cv2.GaussianBlur(rgb.astype(np.float32), (0, 0), max(0.5, s / 3))
+        return cv2.remap(soft, cx.astype(np.float32), cy.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    if effect == "led-wall":
+        cols, rows = max(1, w // size), max(1, h // size)
+        cells = cv2.resize(
+            cv2.resize(rgb.astype(np.float32), (cols, rows), interpolation=cv2.INTER_AREA), (w, h), interpolation=cv2.INTER_NEAREST
+        )
+        fx, fy = (x * cols / w) % 1 - 0.5, (y * rows / h) % 1 - 0.5
+        dots = cells * np.clip((0.42 - np.sqrt(fx * fx + fy * fy)) / 0.08, 0, 1)[:, :, None] * 1.15
+        glow = cv2.GaussianBlur(dots, (0, 0), max(1.0, 0.6 * w / cols)) * 0.6
+        return 1 - (1 - np.clip(dots, 0, 1)) * (1 - np.clip(glow, 0, 1))
+    if effect == "vhs-tape":
+        rng = np.random.default_rng(int(local * 30) % (2**32))
+        ycc = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2YCrCb)
+        ycc[:, :, 0] = cv2.GaussianBlur(ycc[:, :, 0], (0, 0), 0.9)
+        bleed = max(1, w // 120) * 2 + 1
+        ycc[:, :, 1:] = np.roll(cv2.blur(ycc[:, :, 1:], (bleed, 1)), max(1, w // 200), axis=1)
+        tape = cv2.cvtColor(ycc, cv2.COLOR_YCrCb2RGB)
+        band = np.exp(-((((np.arange(h) / h) - ((local * 0.35) % 1.2 - 0.1)) / 0.02) ** 2)).astype(np.float32)
+        offsets = (rng.normal(0, 1.2, h) + band * w * 0.02).astype(np.float32)
+        tape = cv2.remap(
+            tape, (x + offsets[:, None]).astype(np.float32), y.astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT
+        )
+        noise = rng.normal(0, 1, (h, w)).astype(np.float32) * (0.03 + band[:, None] * 0.25)
+        gray = cv2.cvtColor(tape, cv2.COLOR_RGB2GRAY)[:, :, None]
+        return gray + (tape - gray) * 0.85 + noise[:, :, None]
+    if effect == "neon-edges":
+        soft = cv2.GaussianBlur(cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY), (0, 0), 1.0)
+        lines = cv2.dilate(cv2.Canny(np.round(np.clip(soft, 0, 1) * 255).astype(np.uint8), 50, 130), np.ones((3, 3), np.uint8))
+        hue = np.round(((u * 0.6 + v * 0.4 + local * 0.15) % 1) * 179).astype(np.uint8)
+        colour = cv2.cvtColor(np.dstack([hue, np.full_like(hue, 255), np.full_like(hue, 255)]), cv2.COLOR_HSV2RGB).astype(np.float32) / 255
+        neon = colour * (lines.astype(np.float32) / 255)[:, :, None]
+        glow = np.clip(cv2.GaussianBlur(neon, (0, 0), max(2.0, w / 250)) * 2.2, 0, 1)
+        return 1 - (1 - rgb * 0.12) * (1 - np.clip(neon + glow, 0, 1))
+    if effect == "pop-art-grid":
+        half = cv2.resize(rgb.astype(np.float32), (max(1, w // 2), max(1, h // 2)), interpolation=cv2.INTER_AREA)
+        level = np.clip(np.floor(cv2.cvtColor(half, cv2.COLOR_RGB2GRAY) * 3), 0, 2).astype(np.int64)
+        palettes = np.array(
+            [
+                [[0.10, 0.05, 0.35], [0.95, 0.20, 0.55], [1.00, 0.90, 0.20]],
+                [[0.05, 0.25, 0.30], [0.10, 0.75, 0.70], [1.00, 0.60, 0.15]],
+                [[0.30, 0.02, 0.05], [0.95, 0.35, 0.10], [0.98, 0.95, 0.60]],
+                [[0.02, 0.10, 0.30], [0.35, 0.45, 0.95], [0.70, 1.00, 0.40]],
+            ],
+            np.float32,
+        )
+        grid = np.vstack([np.hstack([palettes[0][level], palettes[1][level]]), np.hstack([palettes[2][level], palettes[3][level]])])
+        return cv2.resize(grid, (w, h), interpolation=cv2.INTER_NEAREST)
+    if effect == "stained-glass":
+        labels, leading = _glass_cells(h, w, max(8, int(size * 2.5)))
+        flat, count = labels.ravel(), int(labels.max()) + 1
+        counts = np.maximum(np.bincount(flat, minlength=count), 1)
+        panes = np.stack([np.bincount(flat, weights=rgb[:, :, c].ravel(), minlength=count) / counts for c in range(3)], axis=1)
+        return (panes[labels] * 1.08 * np.where(leading, 0.08, 1.0)[:, :, None]).astype(np.float32)
+    if effect == "bayer-dither":
+        step = max(1, size // 4)
+        small = cv2.resize(rgb.astype(np.float32), (max(1, w // step), max(1, h // step)), interpolation=cv2.INTER_AREA)
+        sh, sw = small.shape[:2]
+        matrix = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], np.float32) / 16
+        threshold = np.tile(matrix, (sh // 4 + 1, sw // 4 + 1))[:sh, :sw, None]
+        dithered = np.floor(np.clip(small, 0, 1) * 3 + threshold) / 3
+        return cv2.resize(dithered.astype(np.float32), (w, h), interpolation=cv2.INTER_NEAREST)
+    if effect == "crt-screen":
+        nu, nv = (u - 0.5) * 2, (v - 0.5) * 2
+        bend = 1 + 0.12 * (nu * nu + nv * nv)
+        su, sv = nu * bend, nv * bend
+        tube = cv2.remap(
+            rgb.astype(np.float32),
+            ((su / 2 + 0.5) * w - 0.5).astype(np.float32),
+            ((sv / 2 + 0.5) * h - 0.5).astype(np.float32),
+            cv2.INTER_LINEAR,
+        )
+        tube *= ((np.abs(su) <= 1) & (np.abs(sv) <= 1))[:, :, None]
+        period = max(2, h // 240)
+        tube *= np.where((y // max(1, period // 2)) % 2 == 1, 0.72, 1.0)[:, :, None]
+        phosphor = np.array([[1.0, 0.86, 0.86], [0.86, 1.0, 0.86], [0.86, 0.86, 1.0]], np.float32)[(x.astype(np.int64) % 3)]
+        tube = tube * phosphor * (1 - 0.18 * (nu * nu + nv * nv))[:, :, None]
+        return tube + cv2.GaussianBlur(tube, (0, 0), max(1.0, w / 400)) * 0.15
+    if effect == "infrared":
+        r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+        false = np.stack([g * 1.15 + r * 0.1, r * 0.75 + b * 0.1, b * 0.9 + g * 0.1], axis=2)
+        gray = cv2.cvtColor(np.clip(false, 0, 1).astype(np.float32), cv2.COLOR_RGB2GRAY)[:, :, None]
+        return gray + (false - gray) * 1.2
+    if effect == "block-glitch":
+        rng = np.random.default_rng(int(local * 12) % (2**32))
+        out = rgb.astype(np.float32).copy()
+        for _ in range(10):
+            height = int(rng.integers(max(1, h // 40), max(2, h // 8)))
+            top = int(rng.integers(0, max(1, h - height)))
+            shift = int(rng.integers(-max(1, w // 12), max(2, w // 12)))
+            out[top : top + height] = np.roll(rgb[top : top + height], shift, axis=1)
+            if rng.random() < 0.5:
+                channel = int(rng.integers(0, 3))
+                out[top : top + height, :, channel] = np.roll(rgb[top : top + height, :, channel], shift * 2, axis=1)
+        return out
+    if effect == "anaglyph":
+        offset = max(1, round(w * 0.004 * size / 12))
+        gray = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY)
+        left, right = np.roll(gray, -offset, axis=1), np.roll(gray, offset, axis=1)
+        return np.stack([left, right, right], axis=2)
+    if effect == "fog":
+        field = _fog_field(h, w)
+        drift = int(local * w * 0.03) % w
+        density = np.clip(field[:, drift : drift + w] * (0.45 + 0.55 * v), 0, 1)[:, :, None] * 0.7
+        return rgb * (1 - density) + 0.82 * density
+    if effect == "lens-flare":
+        px, py = 0.72 * w, 0.22 * h
+        distance = np.hypot(x - px, y - py)
+        light = np.exp(-((distance / (w * 0.03)) ** 2)) + np.exp(-((distance / (w * 0.15)) ** 2)) * 0.35
+        streak = np.exp(-(((y - py) / max(1.0, h * 0.004)) ** 2)) * np.exp(-np.abs(x - px) / (w * 0.35)) * 0.6
+        flare = (light + streak)[:, :, None] * np.array([1.0, 0.9, 0.7], np.float32)
+        for step, radius, tint in ((1.4, 0.05, (0.5, 0.8, 1.0)), (1.8, 0.03, (1.0, 0.6, 0.9)), (2.3, 0.08, (0.6, 1.0, 0.7))):
+            gx, gy = px + (w / 2 - px) * step, py + (h / 2 - py) * step
+            ghost = np.exp(-((np.hypot(x - gx, y - gy) / (w * radius)) ** 4)) * 0.15
+            flare = flare + ghost[:, :, None] * np.array(tint, np.float32)
+        flare = flare * (0.92 + 0.08 * math.sin(local * 7))
+        return 1 - (1 - rgb) * (1 - np.clip(flare, 0, 1))
+    if effect == "sparkles":
+        rng = np.random.default_rng(11)
+        sky = np.zeros((h, w, 3), np.float32)
+        for sx, sy, phase, scale in zip(rng.random(40), rng.random(40), rng.random(40) * 6.3, 0.5 + rng.random(40), strict=True):
+            bright = max(0.0, math.sin(local * 4 + phase)) ** 3
+            if bright < 0.02:
+                continue
+            reach, centre = max(2, int(w * 0.02 * scale * bright)), (int(sx * w), int(sy * h))
+            colour = (bright, bright * 0.95, bright * 0.85)
+            cv2.line(sky, (centre[0] - reach, centre[1]), (centre[0] + reach, centre[1]), colour, 1, cv2.LINE_AA)
+            cv2.line(sky, (centre[0], centre[1] - reach), (centre[0], centre[1] + reach), colour, 1, cv2.LINE_AA)
+        sky = sky + cv2.GaussianBlur(sky, (0, 0), max(1.5, w / 300)) * 2
+        return 1 - (1 - rgb) * (1 - np.clip(sky, 0, 1))
+    if effect == "clarity":
+        blurred = cv2.GaussianBlur(rgb.astype(np.float32), (0, 0), max(2.0, w / 80))
+        midtones = 1 - np.abs(cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY) * 2 - 1)
+        return rgb + (rgb - blurred) * 0.7 * midtones[:, :, None]
+    if effect == "dehaze":
+        # The dark channel: haze lifts the darkest channel everywhere, so its
+        # local minimum estimates how much air lies between camera and scene.
+        dark = cv2.erode(np.min(rgb, axis=2).astype(np.float32), np.ones((max(3, w // 120),) * 2, np.uint8))
+        brightest = dark >= np.percentile(dark, 99.9)
+        air = rgb[brightest].mean(axis=0) if brightest.any() else np.ones(3, np.float32)
+        passing = np.clip(cv2.GaussianBlur(1 - 0.85 * dark / max(float(air.max()), 1e-3), (0, 0), max(1.0, w / 150)), 0.35, 1)
+        return (rgb - air) / passing[:, :, None] + air
+    if effect == "skin-smooth":
+        # A guided filter smooths within skin tones while keeping edges; only
+        # pixels whose chroma falls in the skin range are changed.
+        guide = cv2.cvtColor(rgb.astype(np.float32), cv2.COLOR_RGB2GRAY)
+        radius, eps = (max(2, w // 200) * 2 + 1,) * 2, 0.004
+        mean_guide = cv2.boxFilter(guide, -1, radius)
+        spread = cv2.boxFilter(guide * guide, -1, radius) - mean_guide**2
+        smooth = np.empty_like(rgb, dtype=np.float32)
+        for c in range(3):
+            channel = rgb[:, :, c].astype(np.float32)
+            mean_channel = cv2.boxFilter(channel, -1, radius)
+            gain = (cv2.boxFilter(guide * channel, -1, radius) - mean_guide * mean_channel) / (spread + eps)
+            smooth[:, :, c] = cv2.boxFilter(gain, -1, radius) * guide + cv2.boxFilter(mean_channel - gain * mean_guide, -1, radius)
+        ycc = cv2.cvtColor(np.clip(rgb, 0, 1).astype(np.float32), cv2.COLOR_RGB2YCrCb)
+        skin = ((ycc[:, :, 1] > 0.52) & (ycc[:, :, 1] < 0.68) & (ycc[:, :, 2] > 0.30) & (ycc[:, :, 2] < 0.52)).astype(np.float32)
+        skin = cv2.GaussianBlur(skin, (0, 0), max(1.0, w / 200))[:, :, None]
+        return rgb + (smooth - rgb) * skin * 0.85
     raise ValueError(f"Unknown visual effect: {effect}")
 
 

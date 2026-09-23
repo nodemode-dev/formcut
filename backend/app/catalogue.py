@@ -159,6 +159,24 @@ VIDEO_EFFECTS = [
     "snowfall",
     "bokeh-spots",
     "chroma-noise",
+    "oil-paint",
+    "hex-pixelate",
+    "neon-edges",
+    "pop-art-grid",
+    "stained-glass",
+    "infrared",
+    "clarity",
+    "dehaze",
+    "skin-smooth",
+    "block-glitch",
+    "anaglyph",
+    "led-wall",
+    "bayer-dither",
+    "fog",
+    "sparkles",
+    "vhs-tape",
+    "crt-screen",
+    "lens-flare",
 ]
 
 AUDIO_CHAINS = {
@@ -225,6 +243,17 @@ TRANSITIONS = [
     "iris",
     "dissolve",
     "push-up",
+    "push-down",
+    "cover-left",
+    "cover-up",
+    "clock-wipe",
+    "blinds",
+    "diagonal-wipe",
+    "pixel-dissolve",
+    "blur-fade",
+    "spin",
+    "diamond",
+    "barn-door",
 ]
 
 EFFECT_GROUPS = {
@@ -259,6 +288,15 @@ EFFECT_GROUPS = {
         "night-vision",
         "ink-outline",
         "crosshatch",
+        "oil-paint",
+        "hex-pixelate",
+        "neon-edges",
+        "pop-art-grid",
+        "stained-glass",
+        "infrared",
+        "clarity",
+        "dehaze",
+        "skin-smooth",
     ],
     "Distort": [
         "pixelate",
@@ -275,6 +313,8 @@ EFFECT_GROUPS = {
         "tile-repeat",
         "polar-wrap",
         "heat-haze",
+        "block-glitch",
+        "anaglyph",
     ],
     "Texture": [
         "vignette",
@@ -290,6 +330,13 @@ EFFECT_GROUPS = {
         "snowfall",
         "bokeh-spots",
         "chroma-noise",
+        "led-wall",
+        "bayer-dither",
+        "fog",
+        "sparkles",
+        "vhs-tape",
+        "crt-screen",
+        "lens-flare",
     ],
 }
 VIDEO_GROUPS_EXTRA = {"Repair": ["deflicker", "denoise-picture", "colour-match", "stabilise"]}
@@ -502,6 +549,12 @@ def clamp_params(params: dict) -> dict:
 
 
 NAMES = {
+    "led-wall": "LED Wall",
+    "vhs-tape": "VHS Tape",
+    "bayer-dither": "Retro Dither",
+    "crt-screen": "CRT Screen",
+    "anaglyph": "Anaglyph 3D",
+    "skin-smooth": "Skin Smoothing",
     "gaussian": "Gaussian Blur",
     "box": "Box Blur",
     "edge": "Edge Detect",
@@ -575,6 +628,12 @@ EFFECT_DEFAULTS = {
     "slice-glitch": {"size": 12},
     "heat-haze": {"size": 12},
     "chroma-noise": {"strength": 0.15},
+    "oil-paint": {"size": 9},
+    "hex-pixelate": {"size": 14},
+    "led-wall": {"size": 10},
+    "stained-glass": {"size": 12},
+    "bayer-dither": {"size": 8},
+    "anaglyph": {"size": 12},
 }
 
 

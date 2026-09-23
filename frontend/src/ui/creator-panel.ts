@@ -7,7 +7,7 @@ import { SPEED_PRESETS } from "../engine/timing";
 import { MOTION_PRESETS } from "../engine/motion";
 import { api } from "../engine/api";
 
-const TRANSITIONS = ["crossfade", "dip", "wipe-left", "wipe-right", "wipe-up", "wipe-down", "slide-left", "slide-right", "zoom", "iris", "dissolve", "push-up"];
+const TRANSITIONS = ["crossfade", "dip", "wipe-left", "wipe-right", "wipe-up", "wipe-down", "slide-left", "slide-right", "zoom", "iris", "dissolve", "push-up", "push-down", "cover-left", "cover-up", "clock-wipe", "blinds", "diagonal-wipe", "pixel-dissolve", "blur-fade", "spin", "diamond", "barn-door"];
 
 export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
   const root = document.createElement("section");

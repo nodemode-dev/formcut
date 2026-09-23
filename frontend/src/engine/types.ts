@@ -50,7 +50,7 @@ export interface Keyframe {
 }
 
 export interface ClipTransition {
-  type: "crossfade" | "dip" | "wipe-left" | "wipe-right" | "wipe-up" | "wipe-down" | "slide-left" | "slide-right" | "zoom" | "iris" | "dissolve" | "push-up";
+  type: "crossfade" | "dip" | "wipe-left" | "wipe-right" | "wipe-up" | "wipe-down" | "slide-left" | "slide-right" | "zoom" | "iris" | "dissolve" | "push-up" | "push-down" | "cover-left" | "cover-up" | "clock-wipe" | "blinds" | "diagonal-wipe" | "pixel-dissolve" | "blur-fade" | "spin" | "diamond" | "barn-door";
   duration: number;
 }
 
