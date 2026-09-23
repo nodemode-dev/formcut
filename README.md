@@ -47,6 +47,8 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 
 Each release carries a zip for macOS (Apple silicon), Windows and Linux that runs with nothing else installed, formcut's ffmpeg included; the release notes say how to open each. On an Intel Mac, build it with `setup/build_macos_app --intel`. To run from source instead, read on.
 
+**Tested so far:** the macOS (Apple silicon) and Linux builds have been tested on real machines and work. The Windows build, and the Android and iOS companion apps, are built and published with every release but have not been tested on real devices yet; reports are welcome in the issues.
+
 ### Requirements
 
 Node 18 or newer, Python 3.11 or newer, and `ffmpeg` and `ffprobe` on PATH. Everything else is installed by the scripts below.

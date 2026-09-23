@@ -51,6 +51,10 @@ python -m pytest tests -q
   can be bundled; formcut's own ffmpeg builds live in the formcut-binaries
   repository.
 
+## How changes land
+
+Only the maintainer pushes to `main`. Everyone else forks the repository and opens a pull request into `main`, which the pull request template walks through. A pull request merges when all seven checks pass on an up-to-date branch and the maintainer has approved it after its last push. Other branches run no checks until they are proposed for `main`.
+
 ## Releases
 
 A release is a version: bumping it on `main` makes the release workflow build macOS,

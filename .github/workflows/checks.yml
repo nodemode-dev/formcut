@@ -1,15 +1,26 @@
 name: checks
 
-# The gaps document asks for a check on every push and pull request that
-# type-checks, builds and compiles on all three platforms, so a change that
-# breaks one of them cannot merge. No test runner appears here: this repository
-# forbids self-written tests, and the checks below are the ones that fail on
-# real breakage rather than on a changed line.
+# Every change to main is checked on all three platforms: the interface builds
+# and type-checks, the engine passes its lint and its full test suite, and the
+# desktop shell compiles and is formatted.
+#
+# Only main is checked: pushes to it, and pull requests into it. Other branches
+# run nothing until they are proposed for main. A push to main that touches only
+# documentation skips the run; the Markdown under .claude is generated from the
+# code and held by the tests, so a change there still runs. Pull requests always
+# run, whatever they touch, because a ruleset that requires these checks would
+# otherwise wait forever on a pull request that changes only documentation.
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - "**"
+      - "!**/*.md"
+      - ".claude/**"
+  workflow_dispatch:
 
 concurrency:
   group: checks-${{ github.ref }}
@@ -184,6 +195,7 @@ jobs:
       - name: clippy
         continue-on-error: true
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets
+      # Blocking: it failed unseen behind continue-on-error until 1.41.1. Clippy
+      # stays advisory, since each Rust release can add lints.
       - name: rust formatting
-        continue-on-error: true
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --check

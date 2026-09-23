@@ -10,8 +10,10 @@ In formcut, open Settings, then Phones and other computers. Turn access on, pres
 
 The `mobile` workflow builds both on every version tag, or on demand:
 
-- Android: a debug APK, installable on a phone that allows installing unknown apps.
-- iOS: a debug build for Xcode's iOS simulator.
+- Android: a debug APK, installable on a phone that allows installing unknown apps. Being a debug build it is large (about 120 MB): unoptimised and carrying its debug symbols.
+- iOS: an unsigned device IPA (about 2 MB: the app is one screen, and the formcut it opens runs on your computer), installable with AltStore, SideStore or Sideloadly.
+
+The release workflow builds the same two and attaches them to every release.
 
 To build on your own machine, with the Android SDK and NDK or Xcode installed:
 
