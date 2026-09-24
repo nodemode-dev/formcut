@@ -7,6 +7,7 @@ import { escapeHtml } from "./safe-text";
 import { buildCreatorPanel } from "./creator-panel";
 import { buildVoiceover } from "./voiceover";
 import { icon } from "./icons";
+import { reconcile } from "./keyed-list";
 
 export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const inspector = buildCreatorPanel(engine);
@@ -364,14 +365,13 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     else if (sort === "duration") items = [...items].sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
     const count = localRef<HTMLElement>("local-count");
     if (count) count.textContent = `${items.length} ${t("local.items")}`;
-    const wanted = new Set(items.map((item) => item.id));
-    for (const [id, card] of localCards) {
-      if (wanted.has(id)) continue;
-      card.remove();
+    const present = new Set(bin.all.map((item) => item.id));
+    for (const id of localCards.keys()) {
+      if (present.has(id)) continue;
       localCards.delete(id);
       localItems.delete(id);
     }
-    let cursor: Element | null = grid.firstElementChild;
+    const ordered: HTMLElement[] = [];
     for (const item of items) {
       localItems.set(item.id, item);
       let card = localCards.get(item.id);
@@ -394,9 +394,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         const name = card.querySelector<HTMLElement>(".local-name");
         if (name && name.textContent !== item.name) name.textContent = item.name;
       }
-      if (card === cursor) cursor = cursor.nextElementSibling;
-      else grid.insertBefore(card, cursor);
+      ordered.push(card);
     }
+    reconcile(grid, ordered);
   };
   const openPlace = (item: { id: string; name: string; kind: string; duration?: number }) => {
     pending = item;
