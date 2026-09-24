@@ -1362,5 +1362,6 @@
  "cap.wordStyle.highlight": "تلوين الكلمة",
  "cap.wordStyle.pop": "تكبير الكلمة",
  "cap.wordStyle.box": "إطار حول الكلمة",
- "cap.wordColour": "اللون"
+ "cap.wordColour": "اللون",
+ "export.openh264First": "لا يملك هذا الحاسوب مرمّز H.264 خاصًا به، لذا يستخدم هذا التصدير OpenH264 من Cisco، ويُنزَّل من Cisco (نحو 1 ميغابايت) في المرة الأولى. ترخيصه ومفتاح تشغيله في الإعدادات، متقدم."
 }

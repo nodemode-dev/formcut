@@ -204,7 +204,7 @@ def status() -> dict:
 
         state = openh264.status()
         if state["supported"] and state["enabled"]:
-            codecs["h264"] = {"available": True, "encoder": "libopenh264", "all": ["libopenh264"]}
+            codecs["h264"] = {"available": True, "encoder": "libopenh264", "all": ["libopenh264"], "installed": state["installed"]}
     return {
         "codecs": codecs,
         "containers": {

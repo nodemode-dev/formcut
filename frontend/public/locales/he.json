@@ -1362,5 +1362,6 @@
  "cap.wordStyle.highlight": "צביעת המילה",
  "cap.wordStyle.pop": "הגדלת המילה",
  "cap.wordStyle.box": "מסגרת למילה",
- "cap.wordColour": "צבע"
+ "cap.wordColour": "צבע",
+ "export.openh264First": "למחשב הזה אין מקודד H.264 משלו, ולכן הייצוא הזה משתמש ב-OpenH264 של Cisco, שיורד מ-Cisco (כ-1 MB) בפעם הראשונה. הרישיון והמתג נמצאים בהגדרות, מתקדם."
 }

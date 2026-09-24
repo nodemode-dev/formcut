@@ -269,7 +269,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   const estimateRow = modal.querySelector<HTMLElement>('[data-ref="estimate"]')!;
   const codecSeg = modal.querySelector<HTMLElement>('[data-ref="codec"]')!;
   let available: Record<string, string[]> = {};
-  let encoders: Record<string, { encoder?: string | null }> = {};
+  let encoders: Record<string, { encoder?: string | null; installed?: boolean }> = {};
   void fetch("/api/render/status").then((r) => r.json()).then((status) => {
     available = status.encoders?.containers ?? {};
     encoders = status.encoders?.codecs ?? {};
@@ -288,7 +288,9 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     // when picked by name, which is when its own warning applies.
     const noMp4 = segValue("fmt") === "mp4" && !list.some((name) => name === "h264" || name === "hevc" || name === "av1");
     const fallback = noMp4 && codec === "mpeg4";
+    const fetchesFirst = encoder === "libopenh264" && encoders[codec]?.installed === false;
     const text = noMp4 && !segValue("codec") ? t("export.webmWarning") : !codec || !encoder ? "" : fallback ? t("export.mpeg4Warning")
+      : fetchesFirst ? t("export.openh264First")
       : t("export.encoderUses").replace("{codec}", CODEC_NAMES[codec] ?? codec.toUpperCase()).replace("{encoder}", encoder);
     if (encoderRow.textContent !== text) encoderRow.textContent = text;
     encoderRow.classList.toggle("is-warning", fallback);

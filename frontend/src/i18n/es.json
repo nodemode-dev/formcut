@@ -976,5 +976,6 @@
   "cap.wordStyle.highlight": "Resaltar la palabra",
   "cap.wordStyle.pop": "Agrandar la palabra",
   "cap.wordStyle.box": "Enmarcar la palabra",
-  "cap.wordColour": "Color"
+  "cap.wordColour": "Color",
+  "export.openh264First": "Este equipo no tiene codificador H.264 propio, así que esta exportación usa OpenH264 de Cisco, descargado de Cisco (alrededor de 1 MB) la primera vez. Su licencia y el interruptor están en Ajustes, Avanzado."
 }
