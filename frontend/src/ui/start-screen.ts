@@ -170,13 +170,33 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     body.replaceChildren();
     const grid = document.createElement("div");
     grid.className = "home-grid";
-    body.append(grid);
+    const journalsPending = listJournals();
     let projects: Array<{ id: string; title: string }> = [];
     try {
       projects = await fetch("/api/projects/summaries").then((r) => r.json());
     } catch {
       say(t("home.offline"));
     }
+    const journals = await journalsPending;
+    if (journals.length) {
+      const bar = document.createElement("div");
+      bar.className = "restore-bar";
+      bar.dataset.ref = "restore";
+      const newest = journals.sort((a, b) => b.written - a.written)[0];
+      bar.innerHTML = `<span>${t("save.recover")}: ${newest.title || t("start.new")}</span><button class="tool-chip is-primary" data-restore="${newest.key}">${t("save.restore")}</button><button class="tool-chip" data-discard="${newest.key}">${t("save.discard")}</button>`;
+      bar.querySelector("[data-restore]")!.addEventListener("click", () => void (async () => {
+        if (await restoreJournal(engine, newest.key)) {
+          void clearJournal(newest.key);
+          dismiss();
+        }
+      })());
+      bar.querySelector("[data-discard]")!.addEventListener("click", () => void (async () => {
+        await clearJournal(newest.key);
+        bar.remove();
+      })());
+      body.append(bar);
+    }
+    body.append(grid);
     count(projects.length, t("home.projects").toLowerCase());
     if (!projects.length) {
       const note = document.createElement("p");
@@ -254,25 +274,6 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
         field.addEventListener("blur", () => void finish(true));
       });
       grid.append(card);
-    }
-    const journals = await listJournals();
-    if (journals.length) {
-      const bar = document.createElement("div");
-      bar.className = "restore-bar";
-      bar.dataset.ref = "restore";
-      const newest = journals.sort((a, b) => b.written - a.written)[0];
-      bar.innerHTML = `<span>${t("save.recover")}: ${newest.title || t("start.new")}</span><button class="tool-chip is-primary" data-restore="${newest.key}">${t("save.restore")}</button><button class="tool-chip" data-discard="${newest.key}">${t("save.discard")}</button>`;
-      bar.querySelector("[data-restore]")!.addEventListener("click", () => void (async () => {
-        if (await restoreJournal(engine, newest.key)) {
-          void clearJournal(newest.key);
-          dismiss();
-        }
-      })());
-      bar.querySelector("[data-discard]")!.addEventListener("click", () => void (async () => {
-        await clearJournal(newest.key);
-        bar.remove();
-      })());
-      body.prepend(bar);
     }
   };
 
