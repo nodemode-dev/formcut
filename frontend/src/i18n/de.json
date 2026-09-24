@@ -960,5 +960,12 @@
   "library.sound.crickets": "Grillen",
   "library.cat.HipHop": "Hip-Hop",
   "library.cat.Electronic": "Elektronisch",
-  "export.webmWarning": "Hier funktioniert kein H.264-, HEVC- oder AV1-Encoder und OpenH264 ist aus, daher wird dieser MP4-Export als WebM gespeichert. Wähle MPEG-4 Part 2, um MP4 zu behalten, auch wenn Instagram und manche Player es ablehnen."
+  "export.webmWarning": "Hier funktioniert kein H.264-, HEVC- oder AV1-Encoder und OpenH264 ist aus, daher wird dieser MP4-Export als WebM gespeichert. Wähle MPEG-4 Part 2, um MP4 zu behalten, auch wenn Instagram und manche Player es ablehnen.",
+  "cap.files": "Untertiteldateien: Untertitel aus einer SRT- oder VTT-Datei holen oder die Untertitel dieser Spur als eine solche Datei ausgeben",
+  "cap.import": "Untertitel importieren",
+  "cap.exportSrt": "SRT exportieren",
+  "cap.exportVtt": "VTT exportieren",
+  "cap.import.none": "Keine Untertitel in dieser Datei gefunden: sie sollte SRT oder WebVTT sein",
+  "cap.export.none": "Keine Untertitel auf dieser Spur",
+  "cap.exported": "Exportiert"
 }

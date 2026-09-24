@@ -960,5 +960,12 @@
   "library.sound.crickets": "Grillos",
   "library.cat.HipHop": "Hip hop",
   "library.cat.Electronic": "Electrónica",
-  "export.webmWarning": "Aquí no funciona ningún codificador H.264, HEVC ni AV1 y OpenH264 está desactivado, así que esta exportación MP4 se guardará como WebM. Elige MPEG-4 Part 2 para mantener MP4, aunque Instagram y algunos reproductores lo rechacen."
+  "export.webmWarning": "Aquí no funciona ningún codificador H.264, HEVC ni AV1 y OpenH264 está desactivado, así que esta exportación MP4 se guardará como WebM. Elige MPEG-4 Part 2 para mantener MP4, aunque Instagram y algunos reproductores lo rechacen.",
+  "cap.files": "Archivos de subtítulos: trae subtítulos desde un archivo SRT o VTT, o saca los de esta pista como uno",
+  "cap.import": "Importar subtítulos",
+  "cap.exportSrt": "Exportar SRT",
+  "cap.exportVtt": "Exportar VTT",
+  "cap.import.none": "No se encontraron subtítulos en ese archivo: debería ser SRT o WebVTT",
+  "cap.export.none": "No hay subtítulos en esa pista",
+  "cap.exported": "Exportado"
 }

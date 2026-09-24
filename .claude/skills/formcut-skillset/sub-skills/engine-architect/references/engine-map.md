@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 92 | /api/agents | 1 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 599 | /api/rpc | 2 |
+| automation.py | 629 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
@@ -38,7 +38,7 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 374 | /api/health | 11 |
+| main.py | 376 | /api/health | 11 |
 | media.py | 723 | /api/media | 24 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -52,6 +52,7 @@ The rest is written by hand.
 | render_stream.py | 71 | /api/render | 1 |
 | stock.py | 287 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
+| subtitles.py | 109 | /api/subtitles | 2 |
 | templates.py | 214 | /api/templates | 7 |
 | tiktok.py | 340 | /api/connect/tiktok/app | 7 |
 | track.py | 178 | /api/track | 1 |

@@ -32,7 +32,7 @@ Two invariants worth repeating here, because breaking them is silent:
 - Routers are mounted from the single tuple in `backend/app/features.py`. An
   include written inside that loop mounts once per module in it.
 
-Anything outside the interface drives formcut through `POST /api/rpc`: 19
+Anything outside the interface drives formcut through `POST /api/rpc`: 21
 methods, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
 engine's MCP server (`backend/app/agent_mcp.py`, run as `formcut-engine --mcp`,

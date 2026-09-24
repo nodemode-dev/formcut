@@ -5,7 +5,7 @@ import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
 import { MASK_SHAPES, defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
-import { transcribeClip, typedCaptions } from "../engine/captions";
+import { captionLook, transcribeClip, typedCaptions } from "../engine/captions";
 import { locale, t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
@@ -119,6 +119,13 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
           <div class="text-add-hint">${t("cap.typed.hint")}</div>
           <textarea class="typed-captions" data-ref="typed-lines" rows="3" placeholder="${t("cap.typed.placeholder")}"></textarea>
           <button class="tool-chip" data-ref="typed-add">${icon("plus")}${t("cap.typed.add")}</button>
+          <div class="text-add-hint">${t("cap.files")}</div>
+          <div class="cap-files">
+            <button class="tool-chip" data-ref="cap-import">${icon("plus")}${t("cap.import")}</button>
+            <button class="tool-chip" data-ref="cap-export-srt">${icon("export")}${t("cap.exportSrt")}</button>
+            <button class="tool-chip" data-ref="cap-export-vtt">${icon("export")}${t("cap.exportVtt")}</button>
+          </div>
+          <input type="file" data-ref="cap-file" accept=".srt,.vtt,text/vtt,application/x-subrip" hidden />
           <div class="text-add-hint">${t("title.gallery")}</div>
           <div class="card-grid title-grid" data-ref="title-grid"></div>
           <div class="text-add-hint">${t("tt.section")}: ${t("tt.hint")}</div>
@@ -696,6 +703,52 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     capStatus.hidden = false;
     capStatus.textContent = `${t("cap.added")}: ${made.length}`;
   });
+
+  const capPick = (ref: string) => el.querySelector<HTMLSelectElement>(`[data-ref="${ref}"]`)!.value;
+  const capFile = el.querySelector<HTMLInputElement>('[data-ref="cap-file"]')!;
+  const capSay = (text: string) => { capStatus.hidden = false; capStatus.textContent = text; };
+  el.querySelector('[data-ref="cap-import"]')!.addEventListener("click", () => capFile.click());
+  capFile.addEventListener("change", async () => {
+    const file = capFile.files?.[0];
+    capFile.value = "";
+    if (!file) return;
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch("/api/subtitles/parse", { method: "POST", body, headers: { "x-formcut-local": "1" } });
+    if (!res.ok) { capSay(t("cap.import.none")); return; }
+    const { cues } = (await res.json()) as { cues: Array<{ start: number; end: number; text: string }> };
+    const look = captionLook({ placement: capPick("cap-place") as "top" | "centre" | "bottom", scale: capPick("cap-scale") as "small" | "medium" | "large" });
+    const stamp = Date.now();
+    const clips = cues.map((cue, index) => ({
+      id: `cap${stamp}${index}`,
+      kind: "text" as const,
+      label: cue.text.split("\n")[0],
+      start: cue.start,
+      duration: Math.max(0.1, Math.round((cue.end - cue.start) * 1000) / 1000),
+      textStyle: { ...defaultTextStyle(cue.text), size: look.size, ...captionStyle, content: cue.text },
+      transform: { ...defaultTransform(), posY: look.posY },
+    }));
+    engine.dispatch("captions.add", { trackIndex: Number(capPick("cap-track")) || 0, clips });
+    capSay(`${t("cap.added")}: ${clips.length}`);
+  });
+  const exportCaptions = async (format: "srt" | "vtt") => {
+    const snapshot = engine.snapshot;
+    const track = snapshot.timelines[snapshot.activeTimeline]?.tracks[Number(capPick("cap-track")) || 0];
+    const cues = (track?.clips ?? [])
+      .filter((clip) => clip.kind === "text" && clip.textStyle?.content)
+      .map((clip) => ({ start: clip.start, end: clip.start + clip.duration, text: clip.textStyle!.content }));
+    if (!cues.length) { capSay(t("cap.export.none")); return; }
+    const res = await fetch("/api/subtitles/write", { method: "POST", headers: { "content-type": "application/json", "x-formcut-local": "1" }, body: JSON.stringify({ cues, format }) });
+    if (!res.ok) { capSay(t("cap.export.none")); return; }
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await res.blob());
+    link.download = `captions.${format}`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    capSay(`${t("cap.exported")}: ${cues.length}`);
+  };
+  el.querySelector('[data-ref="cap-export-srt"]')!.addEventListener("click", () => void exportCaptions("srt"));
+  el.querySelector('[data-ref="cap-export-vtt"]')!.addEventListener("click", () => void exportCaptions("vtt"));
 
   // Animated titles (text_templates.py): finished designs added at the playhead on
   // a new track at the top, so they draw above the footage.

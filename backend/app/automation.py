@@ -345,6 +345,34 @@ def dispatch(method: str, params: dict):
         note_operation(session_id, method, {"project": params.get("id")} if isinstance(params, dict) and params.get("id") else None)
     if method == "session.hello":
         return open_session(SessionInput(name=str(params.get("name") or "orchestrator"), agent=params.get("agent")))
+    if method == "captions.import":
+        from .subtitles import parse
+
+        cues = parse(str(params.get("text") or ""))
+        if not cues:
+            raise ValueError("No cues found: expected SRT or WebVTT text")
+        return {"cues": [cue.model_dump() for cue in cues]}
+    if method == "captions.export":
+        from .subtitles import Cue, write
+
+        fmt = "vtt" if params.get("format") == "vtt" else "srt"
+        with _lock:
+            project = store.get_project(str(params.get("id") or ""))
+        if not project:
+            raise ValueError("Project not found")
+        tracks = project["timelines"][project.get("activeTimeline", 0)]["tracks"]
+        track = int(params.get("track") or 0)
+        if not 0 <= track < len(tracks):
+            raise ValueError("No such track")
+        clips = [c for c in tracks[track]["clips"] if c.get("kind") == "text"]
+        cues = [
+            Cue(start=c["start"], end=c["start"] + c["duration"], text=c.get("textStyle", {}).get("content", ""))
+            for c in clips
+            if c.get("textStyle", {}).get("content")
+        ]
+        if not cues:
+            raise ValueError("No captions on that track")
+        return {"format": fmt, "text": write(cues, fmt), "count": len(cues)}
     if method == "media.beats":
         from .media import _samples
         from .rhythm import beats
@@ -423,6 +451,8 @@ def dispatch(method: str, params: dict):
                 "media.scenes",
                 "media.beats",
                 "media.ducking",
+                "captions.import",
+                "captions.export",
                 "project.list",
                 "project.create",
                 "project.get",

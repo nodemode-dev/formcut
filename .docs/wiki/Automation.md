@@ -6,7 +6,7 @@ Use the running desktop engine's loopback URL, or the development engine at `htt
 {"jsonrpc":"2.0","id":1,"method":"capabilities"}
 ```
 
-`capabilities` lists current methods, editable properties and command names. `catalogue` lists effect IDs. `project.list`, `project.create`, `project.get`, `project.edit`, `project.undo`, `project.redo` and `project.export` operate on persisted documents. `job.status` and `job.cancel` operate on jobs in the same engine process.
+`capabilities` lists current methods, editable properties and command names. `catalogue` lists effect IDs. `project.list`, `project.create`, `project.get`, `project.edit`, `project.undo`, `project.redo` and `project.export` operate on persisted documents. `job.status` and `job.cancel` operate on jobs in the same engine process. `captions.export` writes a project track's captions as SRT or WebVTT text; `captions.import` turns SRT or WebVTT text into cues (start, end, text) for `clip.add`.
 
 ```json
 {"jsonrpc":"2.0","id":2,"method":"project.create","params":{"title":"Example"}}

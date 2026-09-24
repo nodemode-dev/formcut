@@ -1346,5 +1346,12 @@
  "phrase:Ready offline": "جاهز دون اتصال",
  "phrase:Not installed": "غير مثبّت",
  "phrase:Full size": "الحجم الكامل",
- "phrase:Saving": "جارٍ الحفظ"
+ "phrase:Saving": "جارٍ الحفظ",
+ "cap.files": "ملفات الترجمة: أدخل الترجمات من ملف SRT أو VTT، أو أخرج ترجمات هذا المسار كملف منها",
+ "cap.import": "استيراد الترجمات",
+ "cap.exportSrt": "تصدير SRT",
+ "cap.exportVtt": "تصدير VTT",
+ "cap.import.none": "لم يُعثر على ترجمات في ذلك الملف: يجب أن يكون SRT أو WebVTT",
+ "cap.export.none": "لا توجد ترجمات على ذلك المسار",
+ "cap.exported": "تم التصدير"
 }

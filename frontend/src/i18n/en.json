@@ -960,5 +960,12 @@
   "library.sound.crickets": "Crickets",
   "library.cat.HipHop": "Hip hop",
   "library.cat.Electronic": "Electronic",
-  "export.webmWarning": "No H.264, HEVC or AV1 encoder works here and OpenH264 is off, so this MP4 export will be saved as WebM. Choose MPEG-4 Part 2 to keep MP4, though Instagram and some players refuse it."
+  "export.webmWarning": "No H.264, HEVC or AV1 encoder works here and OpenH264 is off, so this MP4 export will be saved as WebM. Choose MPEG-4 Part 2 to keep MP4, though Instagram and some players refuse it.",
+  "cap.files": "Subtitle files: bring captions in from an SRT or VTT file, or take this track's captions out as one",
+  "cap.import": "Import subtitles",
+  "cap.exportSrt": "Export SRT",
+  "cap.exportVtt": "Export VTT",
+  "cap.import.none": "No captions found in that file: it should be SRT or WebVTT",
+  "cap.export.none": "No captions on that track",
+  "cap.exported": "Exported"
 }

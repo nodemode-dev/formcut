@@ -11,6 +11,8 @@
 - media.scenes
 - media.beats
 - media.ducking
+- captions.import (SRT or WebVTT text in, cues out)
+- captions.export (a project's track out as SRT or WebVTT)
 - project.list
 - project.create
 - project.get

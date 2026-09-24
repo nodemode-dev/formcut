@@ -975,6 +975,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .audition-frame[hidden] { display: none; }
 
 .typed-captions { width: 100%; margin: 4px 0; padding: 6px; border: 1px solid var(--edge); border-radius: 6px; background: var(--inset); color: var(--ink); font: inherit; font-size: 12px; resize: vertical; }
+.cap-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
 .title-card.is-active .effect-thumb { outline: 2px solid var(--cue); outline-offset: -2px; }
 .title-card.is-active .effect-name { color: var(--ink); }
 

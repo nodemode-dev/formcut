@@ -1346,5 +1346,12 @@
  "phrase:Ready offline": "מוכן ללא חיבור",
  "phrase:Not installed": "לא מותקן",
  "phrase:Full size": "גודל מלא",
- "phrase:Saving": "שומר"
+ "phrase:Saving": "שומר",
+ "cap.files": "קובצי כתוביות: הביאו כתוביות מקובץ SRT או VTT, או הוציאו את הכתוביות של הרצועה הזו כקובץ כזה",
+ "cap.import": "ייבוא כתוביות",
+ "cap.exportSrt": "ייצוא SRT",
+ "cap.exportVtt": "ייצוא VTT",
+ "cap.import.none": "לא נמצאו כתוביות בקובץ הזה: הוא צריך להיות SRT או WebVTT",
+ "cap.export.none": "אין כתוביות ברצועה הזו",
+ "cap.exported": "יוצא"
 }
