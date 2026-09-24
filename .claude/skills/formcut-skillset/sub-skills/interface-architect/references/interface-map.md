@@ -60,7 +60,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/media-pane.ts` (1048L)
 - `ui/mode-popout.ts` (157L)
 - `ui/preset-grid.ts` (20L)
-- `ui/preview-manipulation.ts` (545L)
+- `ui/preview-manipulation.ts` (559L)
 - `ui/remote-settings.ts` (93L)
 - `ui/render-preview.ts` (235L)
 - `ui/safe-text.ts` (3L)
