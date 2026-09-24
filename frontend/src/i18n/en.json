@@ -967,5 +967,8 @@
   "cap.exportVtt": "Export VTT",
   "cap.import.none": "No captions found in that file: it should be SRT or WebVTT",
   "cap.export.none": "No captions on that track",
-  "cap.exported": "Exported"
+  "cap.exported": "Exported",
+  "fx.adjust.add": "Add adjustment layer",
+  "fx.adjust.hint": "A clip with no footage of its own: its effects and colour apply to everything beneath it for as long as it lasts",
+  "fx.adjust.label": "Adjustment"
 }

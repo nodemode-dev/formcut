@@ -201,6 +201,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .inspector-empty { padding: var(--sp-3) var(--sp-2); color: var(--ink-soft); font-size: 12px; text-align: center; }
 .pane-inspector[data-empty="true"] .inspector-body > :not(.inspector-empty) { display: none; }
 .pane-inspector:not([data-empty="true"]) .inspector-empty { display: none; }
+.pane-inspector.kind-adjust :is([data-section="transform"], [data-section="blend"], [data-section="key"], [data-section="mask"], [data-section="removebg"], [data-section="repair"], [data-section="scenes"], [data-section="rhythm"]) { display: none; }
 .trans-body .trans-grid { align-self: stretch; width: 100%; }
 .inspector-body > [data-tab-hidden="true"] { display: none; }
 .inspector-subtabs .seg > button:disabled { opacity: 0.4; cursor: default; }

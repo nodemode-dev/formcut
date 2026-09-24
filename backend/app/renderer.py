@@ -877,7 +877,12 @@ class FrameRenderer:
             if clip.get("effectId"):
                 effects.insert(0, {"id": LEGACY.get(clip["effectId"], clip["effectId"]), "amount": 1})
             if clip["kind"] == "filter":
-                canvas = apply_effects(canvas, effects, local)
+                self.decode_scale.setdefault("canvas", self.width / self.project["width"])
+                canvas = apply_color_grade(apply_colour_panel(canvas, clip.get("colour")), clip.get("colorGrade"))
+                if effects:
+                    canvas = apply_effects(canvas, self.scaled_effects(effects, {"mediaId": "canvas"}), local)
+                if clip.get("lutId"):
+                    canvas = apply_lut(canvas, clip["lutId"], float(clip.get("lutIntensity", 1)))
                 continue
             if clip["kind"] == "image" and not clip.get("shaderId") and all(entry["id"] in GRADES for entry in effects):
                 key = (

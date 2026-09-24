@@ -1353,5 +1353,8 @@
  "cap.exportVtt": "تصدير VTT",
  "cap.import.none": "لم يُعثر على ترجمات في ذلك الملف: يجب أن يكون SRT أو WebVTT",
  "cap.export.none": "لا توجد ترجمات على ذلك المسار",
- "cap.exported": "تم التصدير"
+ "cap.exported": "تم التصدير",
+ "fx.adjust.add": "إضافة طبقة ضبط",
+ "fx.adjust.hint": "مقطع بلا لقطات خاصة به: تُطبَّق تأثيراته وألوانه على كل ما تحته طوال مدته",
+ "fx.adjust.label": "ضبط"
 }

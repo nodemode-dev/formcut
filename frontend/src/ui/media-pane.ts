@@ -63,6 +63,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       </nav>
       <div class="media-main">
         <div class="search-field">${icon("search")}<input data-ref="fx-search" placeholder="${t("fx.search")}" /></div>
+        <div class="cap-files"><button type="button" class="tool-chip" data-ref="fx-adjust" title="${t("fx.adjust.hint")}">${icon("sliders")}${t("fx.adjust.add")}</button></div>
         <div class="fx-status" data-ref="fx-status" role="status"></div>
         <div class="fx-package-bar" data-ref="fx-package-bar" hidden><button type="button" class="tool-chip" data-ref="fx-import">${t("fx.importPackage")}</button><input type="file" accept=".zip,.json,application/zip,application/json" data-ref="fx-import-file" hidden /></div>
         <div class="card-grid" data-ref="fx-grid"></div>
@@ -213,6 +214,15 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const fxStatus = el.querySelector<HTMLElement>('[data-ref="fx-status"]')!;
   const fxEmpty = el.querySelector<HTMLElement>('[data-ref="fx-empty"]')!;
   const fxPackageBar = el.querySelector<HTMLElement>('[data-ref="fx-package-bar"]')!;
+  el.querySelector('[data-ref="fx-adjust"]')!.addEventListener("click", () => {
+    const at = engine.snapshot.playhead;
+    engine.dispatch("track.insert", { index: 0, name: t("fx.adjust.label") });
+    const clip = { id: crypto.randomUUID(), kind: "filter" as const, label: t("fx.adjust.label"), start: at, duration: 5, effects: [] } as unknown as Clip;
+    engine.dispatch("clips.add", { entries: [{ trackIndex: 0, clip }] });
+    engine.dispatch("clip.select", clip.id);
+    fxStatus.hidden = false;
+    fxStatus.textContent = `${t("fx.adjust.label")}: ${t("fx.added")}`;
+  });
   const fxImportFile = el.querySelector<HTMLInputElement>('[data-ref="fx-import-file"]')!;
   let fxLoaded = false;
   const transGrid = el.querySelector<HTMLElement>('[data-ref="trans-grid"]')!;

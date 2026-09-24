@@ -1353,5 +1353,8 @@
  "cap.exportVtt": "ייצוא VTT",
  "cap.import.none": "לא נמצאו כתוביות בקובץ הזה: הוא צריך להיות SRT או WebVTT",
  "cap.export.none": "אין כתוביות ברצועה הזו",
- "cap.exported": "יוצא"
+ "cap.exported": "יוצא",
+ "fx.adjust.add": "הוספת שכבת התאמה",
+ "fx.adjust.hint": "קליפ בלי חומר משלו: האפקטים והצבע שלו חלים על כל מה שמתחתיו כל עוד הוא נמשך",
+ "fx.adjust.label": "התאמה"
 }

@@ -1353,5 +1353,8 @@
  "cap.exportVtt": "Izvezi VTT",
  "cap.import.none": "U toj datoteci nisu pronađeni titlovi: trebala bi biti SRT ili WebVTT",
  "cap.export.none": "Na toj traci nema titlova",
- "cap.exported": "Izvezeno"
+ "cap.exported": "Izvezeno",
+ "fx.adjust.add": "Dodaj sloj za podešavanje",
+ "fx.adjust.hint": "Isječak bez vlastite snimke: njegovi efekti i boja primjenjuju se na sve ispod njega dok traje",
+ "fx.adjust.label": "Podešavanje"
 }

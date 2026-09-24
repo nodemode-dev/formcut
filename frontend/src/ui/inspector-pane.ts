@@ -1420,6 +1420,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     }
     const isText = clip?.kind === "text";
     if (textSection.hidden === isText) textSection.hidden = !isText;
+    el.classList.toggle("kind-adjust", clip?.kind === "filter");
     if (isText && clip) {
       const ts = { ...defaultTextStyle(clip.label), ...clip.textStyle };
       for (const input of el.querySelectorAll<HTMLInputElement>("input[data-xkey]")) {
@@ -1549,6 +1550,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     let shown: string[];
     if (kind === "audio") shown = views["audio"] ?? ["audio"];
     else if (kind === "text") shown = ["transform", "timing", "blend"];
+    else if (kind === "filter") shown = ["timing", ...(views["color"] ?? ["color"])];
     else {
       shown = [...(profile.inspector.subtabs ?? []).flatMap((subtab) => views[`video:${subtab}`] ?? []), ...(views["color"] ?? ["color"])];
       if (!shown.length) shown = ["transform", "timing"];

@@ -18,7 +18,7 @@ function clipHtml(c: Clip, selectedId: string | null): string {
   const compact = c.kind === "text" || c.kind === "filter";
   const label = escapeHtml(c.label);
   const inner = compact
-    ? `<div class="bar">${c.kind === "filter" ? icon("magnet") : ""}${label}</div>${c.fx ? `<span class="fx-chip">fx</span>` : ""}`
+    ? `<div class="bar">${c.kind === "filter" ? icon("sliders") : ""}${label}</div>${c.fx ? `<span class="fx-chip">fx</span>` : ""}`
     : `<div class="bar">${label}</div><div class="body"></div>`;
   const sel = c.id === selectedId ? " is-selected" : "";
   const badges =

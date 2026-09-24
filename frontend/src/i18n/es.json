@@ -967,5 +967,8 @@
   "cap.exportVtt": "Exportar VTT",
   "cap.import.none": "No se encontraron subtítulos en ese archivo: debería ser SRT o WebVTT",
   "cap.export.none": "No hay subtítulos en esa pista",
-  "cap.exported": "Exportado"
+  "cap.exported": "Exportado",
+  "fx.adjust.add": "Añadir capa de ajuste",
+  "fx.adjust.hint": "Un clip sin material propio: sus efectos y su color se aplican a todo lo que hay debajo mientras dura",
+  "fx.adjust.label": "Ajuste"
 }
