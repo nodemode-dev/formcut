@@ -50,7 +50,7 @@ input, select { font: inherit; color: inherit; }
 .menu-item:hover { background: var(--control); color: var(--ink); }
 .titlebar-center { display: flex; align-items: baseline; gap: var(--sp-2); }
 .project-title { font-weight: 500; }
-.save-state { color: var(--ink-faint); font-size: 12px; }
+.save-state { color: var(--ink-faint); font-size: 12px; min-width: 8em; }
 .titlebar-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-2); }
 .iconbtn {
   width: 28px; height: 28px;
@@ -1117,6 +1117,12 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* The project name sits in a chip of its own, a shade darker than the titlebar. */
 .titlebar-center .project-title {
   padding: 6px 16px;
+  min-width: 160px;
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
   border-radius: var(--radius-m);
   background: var(--inset);
   border: 1px solid var(--edge);
