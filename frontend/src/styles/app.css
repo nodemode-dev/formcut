@@ -1185,6 +1185,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .vo-meter > span[data-live="no"] { background: var(--ink-faint); }
 .vo-time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .vo-preview { width: 100%; margin: var(--sp-2) 0; }
+.vo-video { width: 100%; max-height: 180px; margin: var(--sp-2) 0; border-radius: var(--radius-s); background: var(--inset); }
 
 /* F3, F23: rail labels stay on one row and shorten rather than wrapping, at any
    rail width and in any language. */

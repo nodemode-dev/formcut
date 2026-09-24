@@ -20,12 +20,20 @@ export function buildVoiceover(engine: ProjectEngine, bin: MediaBin): HTMLElemen
     <div class="panel-section-head"><span>${t("voice.title")}</span><small>${t("voice.hint")}</small></div>
     <div class="panel-rows">
       <div class="stock-row">
+        <div class="seg" data-ref="vo-source">
+          <button class="is-active" data-val="mic">${t("voice.source.mic")}</button>
+          <button data-val="camera">${t("voice.source.camera")}</button>
+          <button data-val="screen">${t("voice.source.screen")}</button>
+        </div>
+      </div>
+      <div class="stock-row">
         <button class="tool-chip is-primary" data-ref="vo-record">${t("voice.record")}</button>
         <button class="tool-chip" data-ref="vo-stop" hidden>${t("voice.stop")}</button>
         <span class="vo-time" data-ref="vo-time">0.0s</span>
       </div>
       <div class="vo-meter" aria-hidden="true"><span data-ref="vo-level"></span></div>
       <audio class="vo-preview" data-ref="vo-preview" controls hidden></audio>
+      <video class="vo-video" data-ref="vo-video" controls playsinline hidden></video>
       <div class="stock-row">
         <button class="tool-chip" data-ref="vo-place" hidden>${t("voice.place")}</button>
         <button class="tool-chip" data-ref="vo-discard" hidden>${t("voice.discard")}</button>
@@ -41,7 +49,22 @@ export function buildVoiceover(engine: ProjectEngine, bin: MediaBin): HTMLElemen
   const level = pick<HTMLElement>("vo-level");
   const clock = pick<HTMLElement>("vo-time");
   const preview = pick<HTMLAudioElement>("vo-preview");
+  const video = pick<HTMLVideoElement>("vo-video");
   const note = pick<HTMLElement>("vo-note");
+  const sourceSeg = pick<HTMLElement>("vo-source");
+
+  // Phase 8: the recorder takes the screen and the camera through the same
+  // MediaRecorder path as the microphone. The chosen source decides which
+  // stream is asked for, which preview shows the take, and which engine route
+  // ingests it (audio is converted to wav, video is remuxed so it seeks).
+  let source: "mic" | "camera" | "screen" = "mic";
+  sourceSeg.addEventListener("click", (ev) => {
+    const hit = (ev.target as HTMLElement).closest("button");
+    if (!hit || !sourceSeg.contains(hit) || recorder) return;
+    sourceSeg.querySelector(".is-active")?.classList.remove("is-active");
+    hit.classList.add("is-active");
+    source = (hit.dataset.val as typeof source) ?? "mic";
+  });
 
   let recorder: MediaRecorder | null = null;
   let chunks: Blob[] = [];
@@ -51,6 +74,7 @@ export function buildVoiceover(engine: ProjectEngine, bin: MediaBin): HTMLElemen
   let clockTimer = 0;
   let startedAt = 0;
   let take: Blob | null = null;
+  let takeVideo = false;
   let peak = 0;
   let heard = false;
   let placed: { id: string; duration: number } | null = null;
@@ -103,49 +127,67 @@ export function buildVoiceover(engine: ProjectEngine, bin: MediaBin): HTMLElemen
 
   recordButton.addEventListener("click", () => void (async () => {
     note.textContent = "";
+    const wantVideo = source !== "mic";
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Screen capture asks for the desktop sound too; the person can decline
+      // it in the browser's own picker, and a silent take still records.
+      stream = source === "screen"
+        ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        : await navigator.mediaDevices.getUserMedia(source === "camera" ? { video: true, audio: true } : { audio: true });
     } catch (error) {
-      note.textContent = `${t("voice.nomic")}: ${error instanceof Error ? error.message : "?"}`;
+      note.textContent = `${t(wantVideo ? "voice.nosource" : "voice.nomic")}: ${error instanceof Error ? error.message : "?"}`;
       return;
     }
+    const hasAudio = stream.getAudioTracks().length > 0;
     chunks = [];
     recorder = new MediaRecorder(stream);
     recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     recorder.onstop = () => {
-      take = new Blob(chunks, { type: chunks[0]?.type || "audio/webm" });
-      preview.src = URL.createObjectURL(take);
-      preview.hidden = false;
+      takeVideo = wantVideo;
+      take = new Blob(chunks, { type: chunks[0]?.type || (wantVideo ? "video/webm" : "audio/webm") });
+      const shown = wantVideo ? video : preview;
+      shown.src = URL.createObjectURL(take);
+      shown.hidden = false;
       placeButton.hidden = false;
       discardButton.hidden = false;
-      note.textContent = heard
-        ? `${t("voice.took")} ${((performance.now() - startedAt) / 1000).toFixed(1)}s`
-        : `${t("voice.took")} ${((performance.now() - startedAt) / 1000).toFixed(1)}s — ${t("voice.silent")}`;
+      const took = `${t("voice.took")} ${((performance.now() - startedAt) / 1000).toFixed(1)}s`;
+      note.textContent = heard || (wantVideo && !hasAudio) ? took : `${took} — ${t("voice.silent")}`;
       stream?.getTracks().forEach((track) => track.stop());
+      recorder = null;
+      recordButton.hidden = false;
+      stopButton.hidden = true;
       stopMeter();
     };
+    // The browser's own "Stop sharing" control ends a screen take without this
+    // panel; the track's ending is the stop, wherever it came from.
+    if (source === "screen") stream.getVideoTracks()[0]?.addEventListener("ended", () => recorder?.stop());
     peak = 0;
     heard = false;
     startedAt = performance.now();
     recorder.start();
-    startMeter(stream);
+    // A stream with no audio track has nothing to meter, and building the
+    // graph from it throws; the clock still runs.
+    if (hasAudio) startMeter(stream);
+    else clockTimer = window.setInterval(() => {
+      clock.textContent = `${((performance.now() - startedAt) / 1000).toFixed(1)}s`;
+    }, 100);
     recordButton.hidden = true;
     stopButton.hidden = false;
     preview.hidden = true;
+    video.hidden = true;
     placeButton.hidden = true;
     discardButton.hidden = true;
   })());
 
   stopButton.addEventListener("click", () => {
     recorder?.stop();
-    recordButton.hidden = false;
-    stopButton.hidden = true;
   });
 
   discardButton.addEventListener("click", () => {
     take = null;
     placed = null;
     preview.hidden = true;
+    video.hidden = true;
     placeButton.hidden = true;
     discardButton.hidden = true;
     note.textContent = t("voice.discarded");
@@ -155,21 +197,23 @@ export function buildVoiceover(engine: ProjectEngine, bin: MediaBin): HTMLElemen
     if (!take) return;
     note.textContent = t("voice.saving");
     const body = new FormData();
-    body.append("file", take, "voiceover.webm");
+    body.append("file", take, takeVideo ? "capture.webm" : "voiceover.webm");
     try {
-      const item = await fetch("/api/media/voiceover", {
+      const item = await fetch(takeVideo ? "/api/media/capture" : "/api/media/voiceover", {
         method: "POST", body, headers: { "x-formcut-local": "1" },
       }).then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))));
       await bin.load();
       placed = { id: item.id, duration: item.duration ?? 0 };
       const state = engine.snapshot;
       const timeline = state.timelines[state.activeTimeline];
-      const audioTrack = timeline.tracks.findIndex((track) => /audio/i.test(track.name));
+      const wanted = takeVideo ? /video/i : /audio/i;
+      const trackIndex = timeline.tracks.findIndex((track) => wanted.test(track.name));
       engine.dispatch("clip.add", {
-        trackIndex: audioTrack >= 0 ? audioTrack : timeline.tracks.length - 1,
+        trackIndex: trackIndex >= 0 ? trackIndex : takeVideo ? 0 : timeline.tracks.length - 1,
         clip: {
-          id: crypto.randomUUID(), kind: "audio", label: item.name,
+          id: crypto.randomUUID(), kind: takeVideo ? "video" : "audio", label: item.name,
           mediaId: item.id, start: state.playhead, duration: item.duration || 1,
+          ...(takeVideo ? { filmstrip: true } : {}),
         },
       });
       note.textContent = `${t("voice.placed")} ${(item.duration ?? 0).toFixed(1)}s`;

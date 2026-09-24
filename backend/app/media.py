@@ -334,6 +334,47 @@ async def upload_voiceover(file: UploadFile, name: str = "Voiceover") -> dict:
         converted.unlink(missing_ok=True)
 
 
+@router.post("/capture", status_code=201)
+async def upload_capture(file: UploadFile, name: str = "Capture") -> dict:
+    """A screen or camera recording made in the browser, remuxed and ingested.
+
+    MediaRecorder streams its container as it goes, so the file it hands back
+    has no duration and no cues: ffprobe reports N/A and every seek is a scan.
+    The streams are copied unchanged into a fresh container of the same kind
+    (WebM from Chromium and Firefox, MP4 from Safari), which writes both; a
+    stream the named container refuses lands in Matroska instead.
+    """
+    raw = await file.read()
+    if len(raw) > 2_000_000_000:
+        raise HTTPException(status_code=413, detail="recording is too large")
+    if not raw:
+        raise HTTPException(status_code=422, detail="the recording is empty")
+    ext = Path(file.filename or "").suffix.lower() or ".webm"
+    if ext not in VIDEO_EXT:
+        ext = ".webm"
+    staging = MEDIA_DIR.parent / f"capture-{uuid.uuid4().hex}{ext}"
+    staging.parent.mkdir(parents=True, exist_ok=True)
+    staging.write_bytes(raw)
+    remuxed = staging.with_name(staging.stem + "-remux" + ext)
+    try:
+        for target in (remuxed, remuxed.with_suffix(".mkv")):
+            result = subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-i", str(staging), "-c", "copy", "-movflags", "+faststart", str(target)],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=600,
+            )
+            if result.returncode == 0 and target.is_file() and target.stat().st_size:
+                return ingest_path(target, name, extra={"source": "capture"})
+            target.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=f"could not read the recording: {result.stderr[-200:]}")
+    finally:
+        staging.unlink(missing_ok=True)
+        remuxed.unlink(missing_ok=True)
+        remuxed.with_suffix(".mkv").unlink(missing_ok=True)
+
+
 @router.post("/{media_id}/subject")
 def subject_outline(media_id: str, body: dict) -> dict:
     """An auto mask for the subject, returned as an editable path."""
