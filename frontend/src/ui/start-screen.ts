@@ -13,6 +13,7 @@ import { loadDemoProject } from "../engine/demo";
 import { listProjects, newProject, openProject, listJournals, restoreJournal, clearJournal } from "../engine/persistence";
 import { api } from "../engine/api";
 import { icon } from "./icons";
+import { reconcile } from "./keyed-list";
 import { activeProfile } from "./interface-mode";
 import { LOCALE_NAMES, locale, setLocale, t } from "../i18n";
 import { text } from "../i18n/text";
@@ -88,6 +89,42 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
   let view: string = "projects";
   let kind: string = "all";
   let media: MediaItem[] = [];
+  const panels = new Map<string, HTMLElement>();
+  const panel = (name: string) => {
+    let node = panels.get(name);
+    if (!node) {
+      node = document.createElement("div");
+      node.className = "home-view";
+      node.dataset.panel = name;
+      node.hidden = true;
+      panels.set(name, node);
+      body.append(node);
+    }
+    return node;
+  };
+  const emptyNote = (host: HTMLElement, message: string | null) => {
+    let note = host.querySelector<HTMLElement>(":scope > .panel-note");
+    if (!note) {
+      note = document.createElement("p");
+      note.className = "panel-note";
+      host.append(note);
+    }
+    if (message === null) {
+      if (!note.hidden) note.hidden = true;
+      return;
+    }
+    if (note.textContent !== message) note.textContent = message;
+    if (note.hidden) note.hidden = false;
+  };
+  const child = (host: HTMLElement, className: string, tag = "div") => {
+    let node = host.querySelector<HTMLElement>(`:scope > .${className.split(" ")[0]}`);
+    if (!node) {
+      node = document.createElement(tag);
+      node.className = className;
+      host.append(node);
+    }
+    return node;
+  };
 
   const dismiss = () => {
     if (!el.hidden) el.hidden = true;
@@ -166,10 +203,11 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     }
   };
 
+  const projectCards = new Map<string, HTMLElement>();
+  const projectRecords = new Map<string, Record<string, number | string | boolean>>();
   const renderProjects = async () => {
-    body.replaceChildren();
-    const grid = document.createElement("div");
-    grid.className = "home-grid";
+    const host = panel("projects");
+    const grid = child(host, "home-grid");
     const journalsPending = listJournals();
     let projects: Array<{ id: string; title: string }> = [];
     try {
@@ -178,31 +216,34 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       say(t("home.offline"));
     }
     const journals = await journalsPending;
-    if (journals.length) {
-      const bar = document.createElement("div");
-      bar.className = "restore-bar";
-      bar.dataset.ref = "restore";
-      const newest = journals.sort((a, b) => b.written - a.written)[0];
-      bar.innerHTML = `<span>${t("save.recover")}: ${newest.title || t("start.new")}</span><button class="tool-chip is-primary" data-restore="${newest.key}">${t("save.restore")}</button><button class="tool-chip" data-discard="${newest.key}">${t("save.discard")}</button>`;
-      bar.querySelector("[data-restore]")!.addEventListener("click", () => void (async () => {
+    const newest = journals.length ? journals.sort((a, b) => b.written - a.written)[0] : null;
+    const bar = host.querySelector<HTMLElement>(":scope > .restore-bar");
+    if (!newest && bar) bar.remove();
+    if (newest && bar?.dataset.key !== newest.key) {
+      bar?.remove();
+      const fresh = document.createElement("div");
+      fresh.className = "restore-bar";
+      fresh.dataset.ref = "restore";
+      fresh.dataset.key = newest.key;
+      fresh.innerHTML = `<span>${t("save.recover")}: ${newest.title || t("start.new")}</span><button class="tool-chip is-primary" data-restore="${newest.key}">${t("save.restore")}</button><button class="tool-chip" data-discard="${newest.key}">${t("save.discard")}</button>`;
+      fresh.querySelector("[data-restore]")!.addEventListener("click", () => void (async () => {
         if (await restoreJournal(engine, newest.key)) {
           void clearJournal(newest.key);
           dismiss();
         }
       })());
-      bar.querySelector("[data-discard]")!.addEventListener("click", () => void (async () => {
+      fresh.querySelector("[data-discard]")!.addEventListener("click", () => void (async () => {
         await clearJournal(newest.key);
-        bar.remove();
+        fresh.remove();
       })());
-      body.append(bar);
+      host.prepend(fresh);
     }
-    body.append(grid);
     count(projects.length, t("home.projects").toLowerCase());
+    emptyNote(host, projects.length ? null : t("home.noprojects"));
     if (!projects.length) {
-      const note = document.createElement("p");
-      note.className = "panel-note";
-      note.textContent = t("home.noprojects");
-      grid.append(note);
+      reconcile(grid, []);
+      projectCards.clear();
+      projectRecords.clear();
       return;
     }
     // F14: a card a person can recognise. The cover is a frame from the project
@@ -219,108 +260,168 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       const whole = Math.round(seconds);
       return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
     };
+    const ordered: HTMLElement[] = [];
     for (const project of projects as Array<Record<string, number | string | boolean>>) {
       const id = String(project.id);
-      const card = document.createElement("div");
-      card.className = "home-card is-project";
-      card.dataset.open = id;
+      projectRecords.set(id, project);
+      const facts =
+        `<span>${when(Number(project.updated) || 0)}</span>` +
+        `<span>${runtime(Number(project.duration) || 0)}</span>` +
+        `<span>${Number(project.clips) || 0} ${t("home.clips")}</span>`;
+      const format = `${project.width ?? ""}${project.width ? "x" : ""}${project.height ?? ""}`;
       const art = project.cover
         ? `<img src="/api/projects/${id}/cover" alt="" loading="lazy">`
         : icon("film");
+      const known = projectCards.get(id);
+      if (known) {
+        const label = known.querySelector<HTMLElement>("[data-name]")!;
+        const title = String(project.title || t("start.new"));
+        if (!label.querySelector("input") && label.textContent !== title) label.textContent = title;
+        const factsNode = known.querySelector<HTMLElement>(".home-card-facts")!;
+        if (factsNode.innerHTML !== facts) factsNode.innerHTML = facts;
+        const formatNode = known.querySelector<HTMLElement>(".home-card-format")!;
+        if (formatNode.textContent !== format) formatNode.textContent = format;
+        const artNode = known.querySelector<HTMLElement>(".home-card-art")!;
+        if ((artNode.dataset.cover === "1") !== Boolean(project.cover)) {
+          artNode.innerHTML = art;
+          artNode.dataset.cover = project.cover ? "1" : "0";
+        }
+        ordered.push(known);
+        continue;
+      }
+      const card = document.createElement("div");
+      card.className = "home-card is-project";
+      card.dataset.open = id;
       card.innerHTML =
-        `<button class="home-card-open" data-open-project="${id}">` +
-        `<span class="home-card-art">${art}</span>` +
+        `<div class="home-card-open" role="button" tabindex="0" data-open-project="${id}">` +
+        `<span class="home-card-art" data-cover="${project.cover ? "1" : "0"}">${art}</span>` +
         `<span class="home-card-name" data-name>${escapeHtml(String(project.title || t("start.new")))}</span>` +
         `<span class="home-card-facts">` +
-        `<span>${when(Number(project.updated) || 0)}</span>` +
-        `<span>${runtime(Number(project.duration) || 0)}</span>` +
-        `<span>${Number(project.clips) || 0} ${t("home.clips")}</span>` +
+        facts +
         `</span>` +
-        `<span class="home-card-format">${project.width ?? ""}${project.width ? "x" : ""}${project.height ?? ""}</span>` +
-        `</button>` +
+        `<span class="home-card-format">${format}</span>` +
+        `</div>` +
         `<span class="home-card-tools">` +
         `<button class="iconbtn" data-rename="${id}" title="${t("home.rename")}">${icon("text")}</button>` +
         `</span>`;
-      card.querySelector("[data-open-project]")!.addEventListener("click", () => void (async () => {
+      const opener = card.querySelector<HTMLElement>("[data-open-project]")!;
+      const open = () => void (async () => {
         await openProject(engine, id);
         dismiss();
-      })());
+      })();
+      opener.addEventListener("click", (event) => {
+        if ((event.target as HTMLElement).closest(".home-rename")) return;
+        open();
+      });
+      opener.addEventListener("keydown", (event) => {
+        if (event.target !== opener || (event.key !== "Enter" && event.key !== " ")) return;
+        event.preventDefault();
+        open();
+      });
       card.querySelector("[data-rename]")!.addEventListener("click", (event) => {
         event.stopPropagation();
+        const record = projectRecords.get(id) ?? project;
         const label = card.querySelector<HTMLElement>("[data-name]")!;
         const field = document.createElement("input");
         field.className = "home-rename";
-        field.value = String(project.title || "");
+        field.value = String(record.title || "");
         field.maxLength = 120;
         label.replaceChildren(field);
         field.focus();
         field.select();
+        let finished = false;
         const finish = async (commit: boolean) => {
+          if (finished) return;
+          finished = true;
           const next = field.value.trim();
-          label.textContent = commit && next ? next : String(project.title || "");
-          if (!commit || !next || next === project.title) return;
+          label.textContent = commit && next ? next : String(record.title || "");
+          if (!commit || !next || next === record.title) return;
           await fetch(`/api/projects/${id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "x-formcut-local": "1" },
             body: JSON.stringify({ title: next }),
           });
-          project.title = next;
+          record.title = next;
         };
         field.addEventListener("keydown", (key) => {
           key.stopPropagation();
-          if (key.key === "Enter") void finish(true);
+          if (key.key === "Enter") { key.preventDefault(); void finish(true); }
           if (key.key === "Escape") void finish(false);
         });
+        field.addEventListener("click", (press) => press.stopPropagation());
         field.addEventListener("blur", () => void finish(true));
       });
-      grid.append(card);
+      projectCards.set(id, card);
+      ordered.push(card);
     }
+    const wantedIds = new Set(projects.map((project) => String(project.id)));
+    for (const id of projectCards.keys()) {
+      if (!wantedIds.has(id)) {
+        projectCards.delete(id);
+        projectRecords.delete(id);
+      }
+    }
+    reconcile(grid, ordered);
   };
 
   // --- media ----------------------------------------------------------------
 
+  const mediaCards = new Map<string, HTMLElement>();
+  const mediaRecords = new Map<string, MediaItem>();
   const renderMedia = () => {
-    body.replaceChildren();
-    const filters = document.createElement("div");
-    filters.className = "home-filters seg";
-    for (const name of KINDS) {
-      const button = document.createElement("button");
-      button.textContent = t(`home.kind.${name}`);
-      button.dataset.kind = name;
-      button.className = name === kind ? "is-active" : "";
-      button.addEventListener("click", () => {
-        kind = name;
-        renderMedia();
-      });
-      filters.append(button);
+    const host = panel("media");
+    const filters = child(host, "home-filters seg");
+    if (!filters.children.length) {
+      for (const name of KINDS) {
+        const button = document.createElement("button");
+        button.textContent = t(`home.kind.${name}`);
+        button.dataset.kind = name;
+        button.addEventListener("click", () => {
+          kind = name;
+          renderMedia();
+        });
+        filters.append(button);
+      }
     }
-    const grid = document.createElement("div");
-    grid.className = "home-grid";
-    body.append(filters, grid);
+    for (const button of filters.children) {
+      button.classList.toggle("is-active", (button as HTMLElement).dataset.kind === kind);
+    }
+    const grid = child(host, "home-grid");
 
     const term = search.value.trim().toLowerCase();
     const shown = media.filter((item) => (kind === "all" || item.kind === kind) && (!term || item.name.toLowerCase().includes(term)));
     count(shown.length, t("home.items"));
+    emptyNote(host, shown.length ? null : media.length ? t("home.nomatch") : t("home.nomedia"));
     if (!shown.length) {
-      const note = document.createElement("p");
-      note.className = "panel-note";
-      note.textContent = media.length ? t("home.nomatch") : t("home.nomedia");
-      grid.append(note);
+      reconcile(grid, []);
       return;
     }
+    const ordered: HTMLElement[] = [];
     for (const item of shown) {
+      mediaRecords.set(item.id, item);
+      const meta = `${item.kind}${item.duration ? ` · ${clock(item.duration)}` : ""}${item.width ? ` · ${item.width}x${item.height}` : ""}`;
+      const known = mediaCards.get(item.id);
+      if (known) {
+        const name = known.querySelector<HTMLElement>(".home-card-name")!;
+        if (name.textContent !== item.name) name.textContent = item.name;
+        const metaNode = known.querySelector<HTMLElement>(".home-card-meta")!;
+        if (metaNode.textContent !== meta) metaNode.textContent = meta;
+        ordered.push(known);
+        continue;
+      }
+      const current = () => mediaRecords.get(item.id) ?? item;
       const card = document.createElement("div");
       card.className = "home-card";
       card.dataset.media = item.id;
       card.innerHTML = `
         <span class="home-card-art">${item.thumb ? `<img src="/api/media/${item.id}/thumb" alt="" loading="lazy" />` : icon(item.kind === "audio" ? "wave" : item.kind === "image" ? "picture" : "film")}</span>
-        <span class="home-card-name">${item.name}</span>
-        <span class="home-card-meta">${item.kind}${item.duration ? ` · ${clock(item.duration)}` : ""}${item.width ? ` · ${item.width}x${item.height}` : ""}</span>
+        <span class="home-card-name">${escapeHtml(item.name)}</span>
+        <span class="home-card-meta">${meta}</span>
         <span class="home-card-tools"></span>`;
       const tools = card.querySelector<HTMLElement>(".home-card-tools")!;
       const rename = chip(t("home.rename"), () => void (async () => {
-        const next = window.prompt(t("home.rename"), item.name);
-        if (!next || !next.trim() || next.trim() === item.name) return;
+        const next = window.prompt(t("home.rename"), current().name);
+        if (!next || !next.trim() || next.trim() === current().name) return;
         try {
           await api(`/api/media/${item.id}`, { name: next.trim() }, "PATCH");
           await refreshMedia();
@@ -340,7 +441,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       })());
       reveal.dataset.act = "reveal";
       const remove = chip(t("home.delete"), () => void (async () => {
-        if (!window.confirm(`${t("home.delete")}: ${item.name}`)) return;
+        if (!window.confirm(`${t("home.delete")}: ${current().name}`)) return;
         try {
           await api(`/api/media/${item.id}`, undefined, "DELETE");
           await refreshMedia();
@@ -351,8 +452,17 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       })());
       remove.dataset.act = "delete";
       tools.append(rename, reveal, remove);
-      grid.append(card);
+      mediaCards.set(item.id, card);
+      ordered.push(card);
     }
+    const present = new Set(media.map((item) => item.id));
+    for (const id of mediaCards.keys()) {
+      if (!present.has(id)) {
+        mediaCards.delete(id);
+        mediaRecords.delete(id);
+      }
+    }
+    reconcile(grid, ordered);
   };
 
   const refreshMedia = async () => {
@@ -386,52 +496,43 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
 
   // --- templates, models, storage -------------------------------------------
 
+  const rowsOf = (host: HTMLElement, lines: string[]) => {
+    const rows = child(host, "panel-rows home-rows");
+    const existing = Array.from(rows.children) as HTMLElement[];
+    lines.forEach((html, index) => {
+      let row = existing[index];
+      if (!row) {
+        row = document.createElement("div");
+        row.className = "panel-row";
+        rows.append(row);
+      }
+      if (row.innerHTML !== html) row.innerHTML = html;
+    });
+    for (const extra of existing.slice(lines.length)) extra.remove();
+    if (rows.hidden !== !lines.length) rows.hidden = !lines.length;
+  };
+
   const renderList = async (endpoint: string, line: (entry: Record<string, unknown>) => string, emptyKey: string) => {
-    body.replaceChildren();
-    const rows = document.createElement("div");
-    rows.className = "panel-rows home-rows";
-    body.append(rows);
+    const host = panel(view);
     let entries: Array<Record<string, unknown>> = [];
     try {
       entries = await api(endpoint, undefined, "GET") as Array<Record<string, unknown>>;
     } catch {
       say(t("home.offline"));
     }
-    if (!entries.length) {
-      const note = document.createElement("p");
-      note.className = "panel-note";
-      note.textContent = t(emptyKey);
-      rows.append(note);
-      return;
-    }
-    for (const entry of entries) {
-      const row = document.createElement("div");
-      row.className = "panel-row";
-      row.innerHTML = `<span>${line(entry)}</span>`;
-      rows.append(row);
-    }
+    rowsOf(host, entries.map((entry) => `<span>${line(entry)}</span>`));
+    emptyNote(host, entries.length ? null : t(emptyKey));
   };
 
   const renderStorage = async () => {
-    body.replaceChildren();
-    const rows = document.createElement("div");
-    rows.className = "panel-rows home-rows";
-    body.append(rows);
+    const host = panel("storage");
     try {
       const usage = await api("/api/storage", undefined, "GET") as {
         root: string; total: number; reclaimable: number; free: number;
         areas: Array<{ label: string; bytes: number; files: number; derived: boolean }>;
       };
-      const head = document.createElement("p");
-      head.className = "panel-note";
-      head.textContent = `${usage.root} · ${size(usage.total)} ${t("home.used")} · ${size(usage.reclaimable)} ${t("home.reclaimable")} · ${size(usage.free)} ${t("home.free")}`;
-      rows.append(head);
-      for (const area of usage.areas) {
-        const row = document.createElement("div");
-        row.className = "panel-row";
-        row.innerHTML = `<span>${text(area.label)}${area.derived ? ` · ${t("home.derived")}` : ""}</span><span>${size(area.bytes)} · ${area.files}</span>`;
-        rows.append(row);
-      }
+      emptyNote(host, `${usage.root} · ${size(usage.total)} ${t("home.used")} · ${size(usage.reclaimable)} ${t("home.reclaimable")} · ${size(usage.free)} ${t("home.free")}`);
+      rowsOf(host, usage.areas.map((area) => `<span>${text(area.label)}${area.derived ? ` · ${t("home.derived")}` : ""}</span><span>${size(area.bytes)} · ${area.files}</span>`));
     } catch {
       say(t("home.offline"));
     }
@@ -446,9 +547,13 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     const entry = VIEWS.find(([id]) => id === view)!;
     q("title").textContent = t(entry[1]);
     search.hidden = view !== "media";
+    panel(view);
+    for (const [name, node] of panels) {
+      if (node.hidden !== (name !== view)) node.hidden = name !== view;
+    }
     actions.replaceChildren();
     say("");
-    count(0, "");
+    if (view !== "projects" && view !== "media") count(0, "");
     if (view === "projects") {
       const fresh = chip(t("start.new"), () => {
         openFormatSheet();
