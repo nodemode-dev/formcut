@@ -2,11 +2,15 @@
 
 ## JSON-RPC methods
 
-capabilities
+- capabilities
 - catalogue
 - session.hello
 - media.list
 - media.import
+- media.proxy
+- media.scenes
+- media.beats
+- media.ducking
 - project.list
 - project.create
 - project.get

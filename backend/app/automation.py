@@ -421,6 +421,8 @@ def dispatch(method: str, params: dict):
                 "media.import",
                 "media.proxy",
                 "media.scenes",
+                "media.beats",
+                "media.ducking",
                 "project.list",
                 "project.create",
                 "project.get",
