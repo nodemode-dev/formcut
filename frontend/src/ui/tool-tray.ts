@@ -70,8 +70,8 @@ export function buildToolTray(engine: ProjectEngine): HTMLElement {
       { id: "add", label: "tray.addmedia", run: () => { press('.pane-tab[data-tab="Media"]'); press('[data-ref="file"]'); }, ready: anchored('[data-ref="file"]') },
       { id: "text", label: "tray.text", run: () => press('.pane-tab[data-tab="Text"]'), ready: anchored('.pane-tab[data-tab="Text"]') },
       { id: "captions", label: "tray.captions", run: () => press('[data-feature="chip.captions"]'), ready: anchored('[data-feature="chip.captions"]') },
-      { id: "voice", label: "tray.voice", run: () => press('[data-feature="chip.speak"]', '[data-act="studio"]'), ready: anchored('[data-feature="chip.speak"]', '[data-act="studio"]') },
-      { id: "stock", label: "tray.stock", run: () => press('[data-act="studio"]'), ready: anchored('[data-act="studio"]') },
+      { id: "voice", label: "tray.voice", run: () => press('[data-feature="chip.speak"]', '[data-feature="titlebar.studio"]'), ready: anchored('[data-feature="chip.speak"]', '[data-feature="titlebar.studio"]') },
+      { id: "stock", label: "tray.stock", run: () => press('.pane-media [data-ref="stock"]', '[data-feature="titlebar.studio"]'), ready: anchored('.pane-media [data-ref="stock"]', '[data-feature="titlebar.studio"]') },
     ],
     visual: [
       { id: "split", label: "tray.split", run: () => editorVerbs.split(), ready: () => unlocked() ?? insidePlayhead() },
@@ -105,27 +105,34 @@ export function buildToolTray(engine: ProjectEngine): HTMLElement {
   };
 
   let painted = "";
+  let paintedKind = "";
   const paint = () => {
     const kind = selectionKind();
     const tools = TOOLS[kind];
-    const stamp = kind + ":" + tools.map((tool) => {
-      const reason = tool.ready ? tool.ready() : null;
-      return `${tool.id}=${reason ?? ""}`;
-    }).join("|");
+    const reasons = tools.map((tool) => (tool.ready ? tool.ready() : null));
+    const stamp = kind + ":" + tools.map((tool, index) => `${tool.id}=${reasons[index] ?? ""}`).join("|");
     if (stamp === painted) return;
     painted = stamp;
-    tray.replaceChildren(...tools.map((tool) => {
-      const reason = tool.ready ? tool.ready() : null;
+    const state = (button: HTMLButtonElement, tool: Tool, reason: Ready) => {
+      const title = reason ?? t(tool.label);
+      if (button.title !== title) button.title = title;
+      if (reason) {
+        if (button.getAttribute("aria-disabled") !== "true") button.setAttribute("aria-disabled", "true");
+      } else if (button.hasAttribute("aria-disabled")) {
+        button.removeAttribute("aria-disabled");
+      }
+    };
+    if (kind === paintedKind && tray.children.length === tools.length) {
+      tools.forEach((tool, index) => state(tray.children[index] as HTMLButtonElement, tool, reasons[index]));
+      return;
+    }
+    paintedKind = kind;
+    tray.replaceChildren(...tools.map((tool, index) => {
       const button = document.createElement("button");
       button.className = "tray-tool";
       button.dataset.tool = tool.id;
       button.textContent = t(tool.label);
-      if (reason) {
-        button.setAttribute("aria-disabled", "true");
-        button.title = reason;
-      } else {
-        button.title = t(tool.label);
-      }
+      state(button, tool, reasons[index]);
       button.addEventListener("click", () => { if (!button.getAttribute("aria-disabled")) tool.run(); });
       return button;
     }));
