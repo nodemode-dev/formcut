@@ -10,7 +10,7 @@ def resource_dir() -> str:
 
 def selfcheck() -> int:
     info = {"python": sys.version.split()[0]}
-    for name in ("fastapi", "uvicorn", "multipart", "PIL", "cv2", "wgpu", "onnxruntime", "grpc", "mcp"):
+    for name in ("fastapi", "uvicorn", "python_multipart", "PIL", "cv2", "wgpu", "onnxruntime", "grpc", "mcp"):
         try:
             mod = __import__(name)
             info[name] = getattr(mod, "__version__", "ok")
