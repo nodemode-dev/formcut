@@ -34,4 +34,4 @@ The reasoning behind a change belongs in its commit message; releases and their 
 
 ## Naming
 
-Two words never appear anywhere in this repository or its history: the name of the commercial editor this project is an alternative to, and the word used for comparing against it. Provenance comments describing where code came from were removed for the same reason. If a grep would find either, the change is not finished.
+The README, the contributor guide and the feature request template name the commercial editor formcut aims to go past, and two engine modules note the breadth that came from studying it; that much is deliberate. What stays out of the tree is comparison language (a feature described as matching or trailing that editor) and provenance comments describing where a piece of code came from, which were removed and stay removed. Comparisons live in the sidecar, not the repository.

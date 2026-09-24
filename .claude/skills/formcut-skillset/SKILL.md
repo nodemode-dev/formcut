@@ -9,7 +9,7 @@ metadata:
 
 # formcut skillset
 
-Working knowledge of formcut as it stands at v0.98.7: what each part is, why it is shaped that way, and the rules a change has to satisfy. It exists so that local development, and later an orchestrator driving formcut from outside, can act on the codebase without rediscovering it.
+Working knowledge of formcut as it stands at v1.50.1: what each part is, why it is shaped that way, and the rules a change has to satisfy. It exists so that local development, and later an orchestrator driving formcut from outside, can act on the codebase without rediscovering it.
 
 The premise: formcut is small enough to read and structured enough that most mistakes come from not knowing an invariant rather than from writing bad code. One renderer serves preview and export, one engine owns document state, every colour is a token, every string is a key, and every automated caller goes through one JSON-RPC surface. Break one of those and the symptom appears somewhere else entirely, which is what this pack is written to prevent.
 
@@ -17,13 +17,13 @@ The premise: formcut is small enough to read and structured enough that most mis
 
 ```
 formcut/
-  backend/app/        Python FastAPI engine, 44 modules, ~80 routes
+  backend/app/        Python FastAPI engine, 78 modules, 172 routes, the MCP server (agent_mcp.py) among them
   frontend/src/       vanilla TypeScript interface: engine, ui, workers, i18n, styles
   src-tauri/          Tauri 2 desktop shell, spawns the engine as a sidecar
-  mcp/                MCP server over the engine, stdio transport, own virtualenv
+  mcp/                launcher that runs the engine's MCP server from a checkout (the app runs formcut-engine --mcp)
   setup/              install, boot, banner and build scripts
   .docs/wiki/         published subsystem documentation
-  examples/demo/      demo media, ignored by git
+  examples/demo/      the four demo files the demo project loads, tracked with their credits; anything else here stays local
 ```
 
 ## Routing: which sub-skill to load
@@ -46,7 +46,7 @@ These are the load-bearing rules. Each one has a symptom that shows up far from 
 - **One renderer serves preview and export.** `backend/app/renderer.py` composites for both. A preview that differs from the exported file means a path bypassed it, not that the preview is approximate.
 - **The interface engine owns the document.** `frontend/src/engine/project.ts` holds state, applies commands, pushes history and emits. UI modules subscribe and dispatch; nothing else mutates a project. It emits exactly five names: clips, playhead, transport, timeline, project, plus clip-selection. Listening for an invented name fails silently, which has happened twice in this codebase.
 - **Every colour, radius, spacing and z value is a token.** `frontend/src/styles/tokens.css` defines them; 28 appearance profiles override them in `themes.css`. A hardcoded colour looks correct in the default profile and wrong in the other 27.
-- **Every string is a locale key.** 281 keys in each of en, es and de, plus a generated pack carrying nine more locales. An English literal in the interface is a defect, not a shortcut.
+- **Every string is a locale key.** 962 keys in each of en, es and de, a generated pack of 1119 phrase rows carrying nine more locales, and four complete locale files (ar, fa, he, hr) under `frontend/public/locales`, loaded at start: sixteen languages, three of them right to left. An English literal in the interface is a defect, not a shortcut.
 - **One automation surface.** `POST /api/rpc` is how anything outside the interface builds, edits, renders and collects. Adding a second path to change a project means two clamping rules and two history behaviours.
 - **Jobs are handles, not waits.** Renders return a job id immediately; progress arrives by polling or on the orchestration event stream. A synchronous render is a request that times out.
 - **Media files are named by id.** A library rename changes the entry, never the file, so a project's media references cannot break.

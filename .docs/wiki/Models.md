@@ -27,7 +27,7 @@ removal. Registered in `backend/app/model_manager.py` as `object-cutout` and
 - `https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx`
 - `https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx`
 
-Upstream research: U²-Net, Qin et al., Apache-2.0 —
+Upstream research: U²-Net, Qin et al., Apache-2.0:
 `https://github.com/xuebinqin/U-2-Net`. The ONNX exports above are redistributed
 by the rembg project (`https://github.com/danielgatis/rembg`, MIT), which is the
 practical source most tools use.
