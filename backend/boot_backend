@@ -2,4 +2,4 @@
 set -e
 cd "$(dirname "$0")"
 . venv/bin/activate
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8040
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8040 --timeout-graceful-shutdown 3

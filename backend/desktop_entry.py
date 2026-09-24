@@ -81,7 +81,7 @@ def main() -> int:
             withdraw()
 
     publish(url, APP_VERSION)
-    Server(uvicorn.Config(fastapi_app, host="127.0.0.1", port=port, log_level="info")).run(sockets=[listener])
+    Server(uvicorn.Config(fastapi_app, host="127.0.0.1", port=port, log_level="info", timeout_graceful_shutdown=3)).run(sockets=[listener])
     return 0
 
 
