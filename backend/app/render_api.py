@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import fast_export, fast_layers, gpu, jobs, openh264, webhooks
+from . import fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import CONTAINERS, addon_binary_for, estimate_bitrate, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -65,7 +65,7 @@ def capabilities():
     return {
         "compositor": gpu.status(),
         "shared_preview_export": True,
-        "formats": ["mp4", "webm"],
+        "formats": ["mp4", "webm", "gif"],
         "frame_format": "png",
         "encoders": encoders,
         "tenBit": {codec: supports_ten_bit(codec) for codec in ("h264", "hevc", "av1", "vp9")},
@@ -251,13 +251,17 @@ def export_media(
         render_audio(project, audio, cancelled)
         report(0.1)
         fps = project["fps"]
+        # Phase 10: a GIF has no encoder to choose. Whichever path renders
+        # writes the lossless intermediate, and finish() encodes it as a
+        # two-pass palette GIF (gif_export.py), the tier deciding the palette.
+        gif = format == "gif"
         # X2: choose the codec the caller asked for when this build can encode
         # it, else the container's default; hardware is preferred inside choose.
-        wanted = codec_name or ("h264" if format == "mp4" else "vp9")
-        encoder = choose_encoder(wanted)
+        wanted = "gif" if gif else codec_name or ("h264" if format == "mp4" else "vp9")
+        encoder = None if gif else choose_encoder(wanted)
         # H.264 with no encoder on this computer: Cisco's OpenH264, fetched the
         # first time an export needs it, unless it is turned off (openh264.py).
-        cisco = openh264.library(download=True) if not encoder and wanted == "h264" else None
+        cisco = openh264.library(download=True) if not gif and not encoder and wanted == "h264" else None
         if cisco:
             encoder = "libopenh264"
         # Else the container's other codecs, best first. MPEG-4 Part 2 is used
@@ -273,25 +277,26 @@ def export_media(
             # every computer. The result says so, and the file is .webm.
             format, wanted, encoder, fell_back = "webm", "vp9", choose_encoder("vp9"), "webm"
             path = final = OUTPUTS / (job_id + ".webm")
-        if not encoder:
+        if not encoder and not gif:
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
-        pix = pixel_format(encoder, ten_bit)
+        pix = pixel_format(encoder or "", ten_bit)
         # VA-API takes frames in video memory: its device before the inputs and an
         # upload ending the filter chain, which the frame path's one chain can
         # take, so such exports go through the frame path.
-        device, upload = hardware_io(encoder)
+        device, upload = hardware_io(encoder or "")
         out_w, out_h = resize_for(project, size)
         num, den = RATE_PRESETS.get(rate or "", (0, 0))
         out_rate = f"{num}/{den}" if num else str(fps)
         # `audio` is already the temporary wav path in this scope, so the audio
         # codec flags need their own name.
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
-        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags]
+        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags] if encoder else []
         count = math.ceil(project["duration"] * fps)
-        if cisco:
+        if cisco or gif:
             # Whichever path renders writes a lossless intermediate, and finish()
-            # encodes it through OpenH264: the same pixels any encoder would get.
+            # encodes it through OpenH264 or the GIF palette: the same pixels any
+            # encoder would get.
             path = OUTPUTS / (job_id + ".intermediate.mkv")
             codec, pix = ["-c:v", "ffv1", "-level", "3", "-c:a", "pcm_s16le"], "yuv420p"
             outer_report = report
@@ -302,6 +307,10 @@ def export_media(
         def finish(result: dict) -> dict:
             if fell_back:
                 result["fellBackTo"] = fell_back
+            if gif:
+                gif_export.encode(path, final, quality, lambda done: outer_report(0.6 + 0.4 * done), cancelled)
+                path.unlink(missing_ok=True)
+                return {**result, "file": str(final), "media_type": "image/gif", "codec": "gif", "encoder": "gif", "pixelFormat": "pal8"}
             if not cisco:
                 return result
             bits = round(estimate_bitrate("h264", out_w, out_h, float(Fraction(out_rate)), quality) * 1000 * 1.3)
@@ -467,7 +476,7 @@ def export_media(
 @router.post("/export", status_code=202)
 def export(body: RenderInput):
     project = checked(body)
-    if body.format not in ("mp4", "webm") or body.quality not in ("high", "medium", "low"):
+    if body.format not in ("mp4", "webm", "gif") or body.quality not in ("high", "medium", "low"):
         raise HTTPException(422, "Unknown export format or quality")
     if body.size is not None and body.size not in SIZE_PRESETS:
         raise HTTPException(422, "Unknown export size")
@@ -698,7 +707,9 @@ def estimate(body: EstimateInput):
         for track in timeline["tracks"]
         for clip in track["clips"]
     )
-    codec = body.codec or ("h264" if body.format == "mp4" else "vp9")
+    codec = body.codec or ("h264" if body.format == "mp4" else "gif" if body.format == "gif" else "vp9")
+    if body.format == "gif":
+        audible = False
     return {
         "tiers": {tier: estimate_size(codec, width, height, fps, tier, project["duration"], audible) for tier in ("high", "medium", "low")},
         "width": width,

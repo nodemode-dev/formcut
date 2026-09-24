@@ -442,17 +442,17 @@ def formcut_set_frame(
     description=(
         "Start rendering a project to a file and return a job id. Rendering takes minutes, so this returns "
         "immediately: poll formcut_render_status with the job id until it reports done, which carries the output "
-        "path. Format is mp4 or webm; quality is low, medium or high."
+        "path. Format is mp4, webm or gif; quality is low, medium or high."
     ),
     annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
 )
 def formcut_render(
     project_id: Annotated[str, Field(description="Project id to render")],
-    file_format: Annotated[str, Field(description="Output container: mp4 or webm")] = "mp4",
+    file_format: Annotated[str, Field(description="Output container: mp4, webm or gif")] = "mp4",
     quality: Annotated[str, Field(description="Encoder ladder: low, medium or high")] = "high",
 ) -> str:
-    if file_format not in ("mp4", "webm"):
-        return "format must be mp4 or webm"
+    if file_format not in ("mp4", "webm", "gif"):
+        return "format must be mp4, webm or gif"
     if quality not in ("low", "medium", "high"):
         return "quality must be low, medium or high"
     ok, job = _rpc("project.export", {"id": project_id, "format": file_format, "quality": quality})

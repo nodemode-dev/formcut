@@ -254,7 +254,7 @@ def supports_ten_bit(codec: str) -> bool:
 # this model's own error, so the estimate is a guide, not a promise.
 BITRATE_K = 0.00095  # kbit/s at one unit of (pixels per second) ** EXPONENT
 EXPONENT = 0.85
-CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921, "mpeg4": 1.6}
+CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921, "mpeg4": 1.6, "gif": 31.6}
 # Quality factors are per codec, not shared: each encoder's tiers sit at
 # different crf values, so AV1's high tier is 1.58x its medium where H.264's is
 # 2.19x. Fitting one shared curve put an HEVC low-tier estimate 130 percent out.
@@ -263,6 +263,11 @@ QUALITY_FACTOR = {
     "hevc": {"high": 2.17, "medium": 1.0, "low": 0.46},
     "av1": {"high": 1.58, "medium": 1.0, "low": 0.59},
     "vp9": {"high": 2.07, "medium": 1.0, "low": 0.56},
+    # Fitted from the demo clip at 720p. GIF's LZW leans on flat regions far
+    # more than any codec above, so content moves its sizes by orders of
+    # magnitude (a flat title card measured 2 percent of this fit): the GIF
+    # estimate is the roughest of the guides here.
+    "gif": {"high": 1.19, "medium": 1.0, "low": 0.79},
 }
 AUDIO_KBPS = 128.0
 

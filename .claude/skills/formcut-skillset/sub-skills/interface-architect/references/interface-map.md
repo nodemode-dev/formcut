@@ -73,7 +73,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/timeline-pane.ts` (697L)
 - `ui/timeline-structure.ts` (50L)
 - `ui/title-speech.ts` (53L)
-- `ui/titlebar.ts` (429L)
+- `ui/titlebar.ts` (438L)
 - `ui/tool-tray.ts` (146L)
 - `ui/track-controls.ts` (39L)
 - `ui/track-height.ts` (80L)

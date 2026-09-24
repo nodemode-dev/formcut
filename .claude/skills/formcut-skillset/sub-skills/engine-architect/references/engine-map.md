@@ -48,7 +48,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 708 | /api/render | 13 |
+| render_api.py | 719 | /api/render | 13 |
 | render_stream.py | 71 | /api/render | 1 |
 | stock.py | 287 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
@@ -73,13 +73,14 @@ the automation transports.
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
 - `effect_packages.py` (394L)
-- `encoders.py` (292L)
+- `encoders.py` (297L)
 - `expressions.py` (51L)
 - `fast_export.py` (294L)
 - `fast_layers.py` (395L)
 - `features.py` (43L)
 - `ffmpeg_fetch.py` (165L)
 - `frame_cache.py` (146L)
+- `gif_export.py` (78L)
 - `gpu.py` (92L)
 - `matte_cache.py` (126L)
 - `openh264.py` (410L)

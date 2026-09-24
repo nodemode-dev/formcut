@@ -221,6 +221,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
         <div class="seg" data-ref="fmt">
           <button class="is-active" data-val="mp4">MP4</button>
           <button data-val="webm">WebM</button>
+          <button data-val="gif">GIF</button>
         </div>
       </div>
       <div class="modal-row">
@@ -297,6 +298,11 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   };
   const paintCodecs = () => {
     const format = segValue("fmt");
+    // A GIF has no codec or bit depth to choose: its rows hide rather than
+    // offering an empty choice, and the encoder note stays quiet.
+    const isGif = format === "gif";
+    modal.querySelector<HTMLElement>('[data-ref="codec-row"]')!.hidden = isGif;
+    modal.querySelector<HTMLElement>('[data-ref="tenbit"]')!.closest<HTMLElement>(".modal-row")!.hidden = isGif;
     const list = available[format] ?? [];
     codecSeg.innerHTML = `<button class="is-active" data-val="">${t("export.codec.auto")}</button>` +
       list.map((codec) => `<button data-val="${codec}">${CODEC_NAMES[codec] ?? codec.toUpperCase()}</button>`).join("");
@@ -414,9 +420,12 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       });
       showToast(done.result?.fellBackTo === "webm" ? t("export.webmFallback") : "Export complete");
       lastExport = { jobId: done.jobId, name: done.result?.name ?? `formcut-export.${format}` };
-      if (postLast.hidden) postLast.hidden = false;
-      if (postLastIg.hidden) postLastIg.hidden = false;
-      if (saveLast.hidden) saveLast.hidden = false;
+      // TikTok and Instagram post the last export as a video, which a GIF is
+      // not; the cloud takes any file, so its button stays.
+      const isGif = format === "gif";
+      postLast.hidden = isGif;
+      postLastIg.hidden = isGif;
+      saveLast.hidden = false;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Export failed");
     } finally {
