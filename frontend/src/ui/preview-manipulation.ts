@@ -1,6 +1,7 @@
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { sampledTransform } from "../engine/keyframes";
+import { reconcile } from "./keyed-list";
 
 export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, bin: MediaBin): void {
   const overlay = document.createElement("div"); overlay.className = "preview-selection"; overlay.hidden = true;
@@ -309,6 +310,25 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     }
     return d + " Z";
   };
+  const penNodes = new Map<string, HTMLElement>();
+  const penNode = (key: string, className: string, index: number, side?: "in" | "out") => {
+    let node = penNodes.get(key);
+    if (!node) {
+      node = document.createElement("button");
+      node.className = className;
+      node.dataset.index = String(index);
+      if (side) node.dataset.side = side;
+      penNodes.set(key, node);
+    }
+    return node;
+  };
+  const placeAt = (node: HTMLElement, x: number, y: number) => {
+    const at = `${x},${y}`;
+    if (node.dataset.at === at) return;
+    node.dataset.at = at;
+    node.style.left = `${x * 100}%`;
+    node.style.top = `${y * 100}%`;
+  };
   const drawPen = () => {
     const current = maskOf();
     const on = penActive() && !!current;
@@ -316,31 +336,25 @@ export function previewManipulation(stage: HTMLElement, engine: ProjectEngine, b
     if (!on || !current) return;
     const points = current.mask.points ?? [];
     const d = curveFor(points);
-    pen.querySelector<SVGPathElement>(".pen-fill")!.setAttribute("d", d);
-    pen.querySelector<SVGPathElement>(".pen-line")!.setAttribute("d", d);
+    for (const path of pen.querySelectorAll<SVGPathElement>(".pen-fill, .pen-line")) {
+      if (path.getAttribute("d") !== d) path.setAttribute("d", d);
+    }
     const anchors = pen.querySelector<HTMLElement>(".pen-anchors")!;
-    anchors.replaceChildren(...points.map((p) => ({ ...p, ...penToFrame(p) })).flatMap((point, index) => {
-      const nodes: HTMLElement[] = [];
-      const anchor = document.createElement("button");
-      anchor.className = "pen-anchor";
-      anchor.dataset.index = String(index);
-      anchor.style.left = `${point.x * 100}%`;
-      anchor.style.top = `${point.y * 100}%`;
-      nodes.push(anchor);
+    const ordered: HTMLElement[] = [];
+    points.map((p) => ({ ...p, ...penToFrame(p) })).forEach((point, index) => {
+      const anchor = penNode(`a:${index}`, "pen-anchor", index);
+      placeAt(anchor, point.x, point.y);
+      ordered.push(anchor);
       for (const side of ["in", "out"] as const) {
         const dx = side === "in" ? point.inX ?? 0 : point.outX ?? 0;
         const dy = side === "in" ? point.inY ?? 0 : point.outY ?? 0;
         if (!dx && !dy) continue;
-        const handle = document.createElement("button");
-        handle.className = "pen-handle";
-        handle.dataset.index = String(index);
-        handle.dataset.side = side;
-        handle.style.left = `${(point.x + dx) * 100}%`;
-        handle.style.top = `${(point.y + dy) * 100}%`;
-        nodes.push(handle);
+        const handle = penNode(`h:${index}:${side}`, "pen-handle", index, side);
+        placeAt(handle, point.x + dx, point.y + dy);
+        ordered.push(handle);
       }
-      return nodes;
-    }));
+    });
+    reconcile(anchors, ordered);
   };
   const penPoint = (event: PointerEvent) => {
     const box = pen.getBoundingClientRect();
