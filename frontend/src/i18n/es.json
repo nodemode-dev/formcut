@@ -970,5 +970,11 @@
   "cap.exported": "Exportado",
   "fx.adjust.add": "Añadir capa de ajuste",
   "fx.adjust.hint": "Un clip sin material propio: sus efectos y su color se aplican a todo lo que hay debajo mientras dura",
-  "fx.adjust.label": "Ajuste"
+  "fx.adjust.label": "Ajuste",
+  "cap.wordStyle": "Estilo de subtítulo",
+  "cap.wordStyle.plain": "Sencillo",
+  "cap.wordStyle.highlight": "Resaltar la palabra",
+  "cap.wordStyle.pop": "Agrandar la palabra",
+  "cap.wordStyle.box": "Enmarcar la palabra",
+  "cap.wordColour": "Color"
 }

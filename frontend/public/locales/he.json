@@ -1356,5 +1356,11 @@
  "cap.exported": "יוצא",
  "fx.adjust.add": "הוספת שכבת התאמה",
  "fx.adjust.hint": "קליפ בלי חומר משלו: האפקטים והצבע שלו חלים על כל מה שמתחתיו כל עוד הוא נמשך",
- "fx.adjust.label": "התאמה"
+ "fx.adjust.label": "התאמה",
+ "cap.wordStyle": "סגנון כתוביות",
+ "cap.wordStyle.plain": "רגיל",
+ "cap.wordStyle.highlight": "צביעת המילה",
+ "cap.wordStyle.pop": "הגדלת המילה",
+ "cap.wordStyle.box": "מסגרת למילה",
+ "cap.wordColour": "צבע"
 }

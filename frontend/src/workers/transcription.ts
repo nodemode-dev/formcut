@@ -68,7 +68,32 @@ function isRepetitiveText(text: string): boolean {
   return false;
 }
 
-self.onmessage = async (ev: MessageEvent<{ audio: Float32Array; language?: string; size?: string }>) => {
+type Phrase = { text: string; start: number; end: number; words?: { t: number; d: number; text: string }[] };
+
+function phrasesFromWords(chunks: Chunk[], limit?: number): Phrase[] {
+  const cap = limit && limit > 0 ? limit : 6;
+  const out: Phrase[] = [];
+  let phrase: Phrase | null = null;
+  for (const chunk of chunks) {
+    const text = chunk.text.trim();
+    const start = chunk.timestamp[0] ?? 0;
+    const end = chunk.timestamp[1] ?? start + 0.3;
+    if (!text) continue;
+    const words = phrase?.words ?? [];
+    const gap = phrase ? start - phrase.end : 0;
+    const closes = phrase && (words.length >= cap || gap > 0.7 || end - phrase.start > 3.5 || /[.!?]$/.test(words[words.length - 1]?.text ?? ""));
+    if (!phrase || closes) {
+      phrase = { text: "", start, end, words: [] };
+      out.push(phrase);
+    }
+    phrase.words!.push({ t: Math.round((start - phrase.start) * 1000) / 1000, d: Math.round(Math.max(0.05, end - start) * 1000) / 1000, text });
+    phrase.end = Math.max(phrase.end, end);
+    phrase.text = phrase.words!.map((w) => w.text).join(" ");
+  }
+  return out;
+}
+
+self.onmessage = async (ev: MessageEvent<{ audio: Float32Array; language?: string; size?: string; wordsPerCaption?: number }>) => {
   try {
     const model = modelFor(ev.data.language ?? "en", ev.data.size ?? "tiny");
     const device = await bestDevice();
@@ -90,18 +115,23 @@ self.onmessage = async (ev: MessageEvent<{ audio: Float32Array; language?: strin
       })) as unknown as Transcriber;
     }
     self.postMessage({ type: "progress", message: "Transcribing" });
-    const result = await transcriber(ev.data.audio, {
-      chunk_length_s: 30,
-      return_timestamps: true,
-    });
-    const chunks = (result.chunks ?? [])
-      .map((c) => ({
-        text: c.text.trim(),
-        start: c.timestamp[0] ?? 0,
-        end: c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 2,
-      }))
-      .filter((c) => c.text.length > 0 && !isRepetitiveText(c.text));
-    self.postMessage({ type: "result", chunks });
+    let result: { text?: string; chunks?: Chunk[] } = {};
+    let byWord = true;
+    try {
+      result = await transcriber(ev.data.audio, { chunk_length_s: 30, return_timestamps: "word" });
+      if (!(result.chunks ?? []).length || (result.chunks ?? []).some((c) => c.text.trim().split(/\s+/).length > 3)) byWord = false;
+    } catch {
+      byWord = false;
+    }
+    if (!byWord) result = await transcriber(ev.data.audio, { chunk_length_s: 30, return_timestamps: true });
+    const chunks = byWord
+      ? phrasesFromWords(result.chunks ?? [], ev.data.wordsPerCaption)
+      : (result.chunks ?? []).map((c) => ({
+          text: c.text.trim(),
+          start: c.timestamp[0] ?? 0,
+          end: c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 2,
+        }));
+    self.postMessage({ type: "result", chunks: chunks.filter((c) => c.text.length > 0 && !isRepetitiveText(c.text)), byWord });
   } catch (err) {
     self.postMessage({ type: "error", message: err instanceof Error ? err.message : String(err) });
   }

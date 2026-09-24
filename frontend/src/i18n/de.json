@@ -970,5 +970,11 @@
   "cap.exported": "Exportiert",
   "fx.adjust.add": "Einstellungsebene hinzufügen",
   "fx.adjust.hint": "Ein Clip ohne eigenes Material: seine Effekte und Farbe wirken auf alles darunter, solange er dauert",
-  "fx.adjust.label": "Einstellung"
+  "fx.adjust.label": "Einstellung",
+  "cap.wordStyle": "Untertitelstil",
+  "cap.wordStyle.plain": "Schlicht",
+  "cap.wordStyle.highlight": "Wort hervorheben",
+  "cap.wordStyle.pop": "Wort vergrößern",
+  "cap.wordStyle.box": "Wort hinterlegen",
+  "cap.wordColour": "Farbe"
 }

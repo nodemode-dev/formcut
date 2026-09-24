@@ -11,6 +11,14 @@ export interface CaptionChunk {
   text: string;
   start: number;
   end: number;
+  words?: CaptionWord[];
+}
+
+/** One word of a caption: its start and length in seconds, relative to the caption's start. */
+export interface CaptionWord {
+  t: number;
+  d: number;
+  text: string;
 }
 
 function resampleTo16k(buffer: AudioBuffer): Float32Array {
@@ -38,6 +46,21 @@ export interface CaptionOptions {
   signal?: AbortSignal;
 }
 
+/** A chunk's words with times relative to its start: the model's where it gave them, otherwise its span shared by character count. */
+export function wordTimes(chunk: CaptionChunk): CaptionWord[] {
+  if (chunk.words?.length) return chunk.words;
+  const parts = chunk.text.trim().split(/\s+/).filter(Boolean);
+  const total = parts.reduce((sum, word) => sum + word.length + 1, 0) || 1;
+  const span = Math.max(0.05, chunk.end - chunk.start);
+  let at = 0;
+  return parts.map((text) => {
+    const d = (span * (text.length + 1)) / total;
+    const word = { text, t: Math.round(at * 1000) / 1000, d: Math.round(d * 1000) / 1000 };
+    at += d;
+    return word;
+  });
+}
+
 /** Placement and size turn into the transform and text size the captions use. */
 export function captionLook(options: CaptionOptions): { posY: number; size: number } {
   const posY = options.placement === "top" ? -35 : options.placement === "centre" ? 0 : 35;
@@ -50,6 +73,20 @@ export function limitWords(chunks: CaptionChunk[], words?: number): CaptionChunk
   if (!words || words < 1) return chunks;
   const out: CaptionChunk[] = [];
   for (const chunk of chunks) {
+    if (chunk.words && chunk.words.length > words) {
+      for (let i = 0; i < chunk.words.length; i += words) {
+        const group = chunk.words.slice(i, i + words);
+        const first = group[0].t;
+        const last = group[group.length - 1];
+        out.push({
+          text: group.map((w) => w.text).join(" "),
+          start: chunk.start + first,
+          end: chunk.start + last.t + last.d,
+          words: group.map((w) => ({ ...w, t: Math.round((w.t - first) * 1000) / 1000 })),
+        });
+      }
+      continue;
+    }
     const parts = chunk.text.trim().split(/\s+/).filter(Boolean);
     if (parts.length <= words) { out.push(chunk); continue; }
     const groups = Math.ceil(parts.length / words);
@@ -121,7 +158,7 @@ export async function transcribeClip(
       }
     };
     options.signal?.addEventListener("abort", () => { worker.terminate(); reject(new Error("cancelled")); }, { once: true });
-    worker.postMessage({ audio, language, size: options.size ?? "tiny" }, [audio.buffer]);
+    worker.postMessage({ audio, language, size: options.size ?? "tiny", wordsPerCaption: options.wordsPerCaption }, [audio.buffer]);
   });
 
   if (chunks.length === 0) {
@@ -132,12 +169,15 @@ export async function transcribeClip(
   const captions: Clip[] = limitWords(chunks, options.wordsPerCaption).map((chunk, n) => {
     const start = clip.start + timelineTime(clip, sourceTime(clip, 0) + chunk.start);
     const end = clip.start + timelineTime(clip, sourceTime(clip, 0) + chunk.end);
+    const at = (offset: number) => clip.start + timelineTime(clip, sourceTime(clip, 0) + chunk.start + offset) - start;
+    const words = wordTimes(chunk).map((w) => ({ text: w.text, t: Math.round(at(w.t) * 1000) / 1000, d: Math.round((at(w.t + w.d) - at(w.t)) * 1000) / 1000 }));
     return {
       id: `cap${Date.now()}${n}`,
       kind: "text",
       label: chunk.text,
       start: Math.round(start * 100) / 100,
       duration: Math.max(1 / engine.snapshot.fps, end - start),
+      words,
       textStyle: { ...defaultTextStyle(chunk.text), size: look.size, ...(options.style ?? {}), content: chunk.text },
       transform: { ...defaultTransform(), posY: look.posY },
     };
@@ -176,6 +216,7 @@ export function typedCaptions(
     label: line,
     start: Math.round((start + span * index) * 100) / 100,
     duration: Math.round(span * 100) / 100,
+    words: wordTimes({ text: line, start: 0, end: span }),
     textStyle: { ...defaultTextStyle(line), size: look.size, ...(options.style ?? {}), content: line },
     transform: { ...defaultTransform(), posY: look.posY },
   }));

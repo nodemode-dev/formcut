@@ -1356,5 +1356,11 @@
  "cap.exported": "Izvezeno",
  "fx.adjust.add": "Dodaj sloj za podešavanje",
  "fx.adjust.hint": "Isječak bez vlastite snimke: njegovi efekti i boja primjenjuju se na sve ispod njega dok traje",
- "fx.adjust.label": "Podešavanje"
+ "fx.adjust.label": "Podešavanje",
+ "cap.wordStyle": "Stil titlova",
+ "cap.wordStyle.plain": "Obično",
+ "cap.wordStyle.highlight": "Istakni riječ",
+ "cap.wordStyle.pop": "Povećaj riječ",
+ "cap.wordStyle.box": "Uokviri riječ",
+ "cap.wordColour": "Boja"
 }

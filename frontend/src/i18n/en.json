@@ -970,5 +970,11 @@
   "cap.exported": "Exported",
   "fx.adjust.add": "Add adjustment layer",
   "fx.adjust.hint": "A clip with no footage of its own: its effects and colour apply to everything beneath it for as long as it lasts",
-  "fx.adjust.label": "Adjustment"
+  "fx.adjust.label": "Adjustment",
+  "cap.wordStyle": "Caption style",
+  "cap.wordStyle.plain": "Plain",
+  "cap.wordStyle.highlight": "Highlight the word",
+  "cap.wordStyle.pop": "Pop the word",
+  "cap.wordStyle.box": "Box the word",
+  "cap.wordColour": "Colour"
 }

@@ -57,6 +57,7 @@ ABSENT = (
     "fadeOut",
     "rampIn",
     "rampOut",
+    "words",
 )
 LIMIT = 64
 

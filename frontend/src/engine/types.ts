@@ -23,6 +23,8 @@ export interface TextStyle {
   letterSpacing?: number;
   wrapWidth?: number;
   textOpacity?: number;
+  /** How the word being spoken is drawn when the clip carries words: coloured, popped larger, or on a box. */
+  wordStyle?: { mode: "highlight" | "pop" | "box"; colour: string };
 }
 
 export function defaultTextStyle(content = "Title"): TextStyle {
@@ -114,6 +116,8 @@ export interface Clip {
   fadeIn?: number;
   fadeOut?: number;
   textStyle?: TextStyle;
+  /** The caption's words, each with its start and length in seconds from the clip's start (from transcription). */
+  words?: Array<{ t: number; d: number; text: string }>;
   transitionIn?: ClipTransition;
   keyframes?: Keyframe[];
   key?: ClipKey;

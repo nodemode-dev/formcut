@@ -125,6 +125,82 @@ def paint_text(draw, origin, content: str, font, fill, align: str, spacing: floa
             cursor += font.getlength(char) + tracking
 
 
+def paint_words(
+    draw,
+    origin,
+    content: str,
+    font,
+    style: dict,
+    words: list[dict],
+    local: float,
+    align: str,
+    spacing: float,
+    tracking: float,
+    stroke: int,
+    stroke_fill,
+    big_font,
+) -> None:
+    """Draw the block word by word, the word being spoken at `local` in the word style.
+
+    Lines and their placement follow paint_text; the word whose start is the
+    latest at or before `local` is the active one, so a gap between words keeps
+    the last word lit rather than none. A word count that differs from the
+    text's tokens (an edited caption) highlights by position.
+    """
+    x, y = origin
+    word_style = style.get("wordStyle") or {}
+    mode = word_style.get("mode", "highlight")
+    accent = word_style.get("colour") or "#ffd633"
+    base = style.get("color", "#ffffff")
+    active = -1
+    for index, word in enumerate(words):
+        if float(word.get("t", 0)) <= local:
+            active = index
+    lines = content.split("\n")
+    widest = max((line_width(font, line, tracking) for line in lines), default=0.0)
+    step = draw.textbbox((0, 0), "A", font=font, stroke_width=stroke)[3] + stroke + spacing
+    space = font.getlength(" ")
+    index = 0
+    for line_no, line in enumerate(lines):
+        tokens = line.split()
+        widths = [font.getlength(token) + tracking * len(token) for token in tokens]
+        width = sum(widths) + space * max(0, len(tokens) - 1)
+        cursor = x if align == "left" else x + widest - width if align == "right" else x + (widest - width) / 2
+        top = y + line_no * step
+        for token, token_width in zip(tokens, widths, strict=True):
+            lit = index == active
+            if lit and mode == "box":
+                pad = font.size * 0.12
+                draw.rounded_rectangle(
+                    [cursor - pad, top - pad * 0.5, cursor + token_width + pad, top + step - spacing + pad * 0.5],
+                    radius=font.size * 0.18,
+                    fill=ImageColor.getrgb(accent),
+                )
+            if lit and mode == "pop":
+                big_width = big_font.getlength(token) + tracking * len(token)
+                draw.text(
+                    (cursor + (token_width - big_width) / 2, top - (big_font.size - font.size) * 0.6),
+                    token,
+                    font=big_font,
+                    fill=accent,
+                    stroke_width=stroke,
+                    stroke_fill=stroke_fill,
+                    anchor="la",
+                )
+            else:
+                draw.text(
+                    (cursor, top),
+                    token,
+                    font=font,
+                    fill=accent if lit and mode == "highlight" else base,
+                    stroke_width=stroke,
+                    stroke_fill=stroke_fill,
+                    anchor="la",
+                )
+            cursor += token_width + space
+            index += 1
+
+
 # Mask shapes (13 plus a drawn path). Each returns points in a unit square, so
 # one routine can scale, rotate and fill any of them; a drawn path carries its
 # own anchors and bezier handles instead.
@@ -554,7 +630,7 @@ class FrameRenderer:
             out.append(copy)
         return out
 
-    def text_frame(self, clip: dict) -> np.ndarray:
+    def text_frame(self, clip: dict, local: float = 0.0) -> np.ndarray:
         text = clip.get("textStyle") or {"content": clip.get("label", "Title")}
         image = Image.new("RGBA", (self.width, self.height))
         size = max(1, round(float(text.get("size", 8)) / 100 * self.height))
@@ -597,7 +673,12 @@ class FrameRenderer:
                 layer = layer.filter(ImageFilter.GaussianBlur(blur))
             image.alpha_composite(layer)
             draw = ImageDraw.Draw(image)
-        paint_text(draw, (x, y), content, font, text.get("color", "#ffffff"), align, spacing, tracking, stroke, stroke_fill)
+        words = clip.get("words") or []
+        if words and (text.get("wordStyle") or {}).get("mode") in ("highlight", "pop", "box"):
+            big = title_font(text, round(size * 1.18)) if text["wordStyle"].get("mode") == "pop" else font
+            paint_words(draw, (x, y), content, font, text, words, local, align, spacing, tracking, stroke, stroke_fill, big)
+        else:
+            paint_text(draw, (x, y), content, font, text.get("color", "#ffffff"), align, spacing, tracking, stroke, stroke_fill)
         opacity = float(text.get("textOpacity", 1))
         if opacity < 1:
             faded = np.array(image)
@@ -902,7 +983,7 @@ class FrameRenderer:
                     self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
             else:
-                image = self.text_frame(clip) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
+                image = self.text_frame(clip, local) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
                 image = apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
                 # Stabilisation needs the clip's place in time, which an effect
                 # never sees, so it is applied here from the measured path.

@@ -56,7 +56,7 @@ def validate_document(project: dict) -> dict:
                     raise ValueError(f"Invalid clip {key}")
             if clip["duration"] <= 0 or clip.get("kind") not in ("video", "image", "audio", "text", "filter"):
                 raise ValueError("Invalid clip duration or kind")
-            if len(clip.get("effects") or []) > 32 or len(clip.get("speedCurve") or []) > 256:
+            if len(clip.get("effects") or []) > 32 or len(clip.get("speedCurve") or []) > 256 or len(clip.get("words") or []) > 512:
                 raise ValueError("Clip processing limit exceeded")
     if len(ids) > 10000:
         raise ValueError("Timeline exceeds the clip limit")

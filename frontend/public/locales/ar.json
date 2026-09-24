@@ -1356,5 +1356,11 @@
  "cap.exported": "تم التصدير",
  "fx.adjust.add": "إضافة طبقة ضبط",
  "fx.adjust.hint": "مقطع بلا لقطات خاصة به: تُطبَّق تأثيراته وألوانه على كل ما تحته طوال مدته",
- "fx.adjust.label": "ضبط"
+ "fx.adjust.label": "ضبط",
+ "cap.wordStyle": "نمط الترجمة",
+ "cap.wordStyle.plain": "عادي",
+ "cap.wordStyle.highlight": "تلوين الكلمة",
+ "cap.wordStyle.pop": "تكبير الكلمة",
+ "cap.wordStyle.box": "إطار حول الكلمة",
+ "cap.wordColour": "اللون"
 }

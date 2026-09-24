@@ -5,7 +5,7 @@ import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
 import { MASK_SHAPES, defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
-import { captionLook, transcribeClip, typedCaptions } from "../engine/captions";
+import { captionLook, transcribeClip, typedCaptions, wordTimes } from "../engine/captions";
 import { locale, t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
@@ -114,6 +114,17 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
               <option value="medium" selected>${t("cap.size.medium")}</option>
               <option value="large">${t("cap.size.large")}</option>
             </select>
+          </div>
+          <div class="prop-row">
+            <span>${t("cap.wordStyle")}</span>
+            <select class="mini-select" data-ref="cap-word-style">
+              <option value="plain" selected>${t("cap.wordStyle.plain")}</option>
+              <option value="highlight">${t("cap.wordStyle.highlight")}</option>
+              <option value="pop">${t("cap.wordStyle.pop")}</option>
+              <option value="box">${t("cap.wordStyle.box")}</option>
+            </select>
+            <span>${t("cap.wordColour")}</span>
+            <input type="color" class="mini-select" data-ref="cap-word-colour" value="#ffd633" aria-label="${t("cap.wordColour")}" />
           </div>
           <button class="tool-chip" data-ref="transcribe">${icon("search")}${t("cap.transcribe")}</button>
           <button class="tool-chip" data-ref="cap-cancel" hidden>${t("cap.cancel")}</button>
@@ -656,6 +667,11 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   let captionAbort: AbortController | null = null;
   const cancelChip = el.querySelector<HTMLElement>('[data-ref="cap-cancel"]')!;
   let captionStyle: Partial<TextStyle> = {};
+  const styled = (): Partial<TextStyle> => {
+    const mode = el.querySelector<HTMLSelectElement>('[data-ref="cap-word-style"]')!.value as "plain" | "highlight" | "pop" | "box";
+    const colour = el.querySelector<HTMLInputElement>('[data-ref="cap-word-colour"]')!.value;
+    return mode === "plain" ? captionStyle : { ...captionStyle, wordStyle: { mode, colour } };
+  };
   let titleStyles: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
   el.querySelector('[data-ref="transcribe"]')!.addEventListener("click", async () => {
     if (transcribing) return;
@@ -680,7 +696,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         size: pick("cap-size") as "tiny" | "base" | "small",
         placement: pick("cap-place") as "top" | "centre" | "bottom",
         scale: pick("cap-scale") as "small" | "medium" | "large",
-        style: captionStyle,
+        style: styled(),
         wordsPerCaption: words,
         signal: captionAbort.signal,
       });
@@ -703,7 +719,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     const made = typedCaptions(engine, box.value.split("\n"), {
       placement: pick("cap-place") as "top" | "centre" | "bottom",
       scale: pick("cap-scale") as "small" | "medium" | "large",
-      style: captionStyle,
+      style: styled(),
       spreadOverClipId: over,
     });
     if (!made.length) { capStatus.hidden = false; capStatus.textContent = t("cap.typed.empty"); return; }
@@ -735,7 +751,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       label: cue.text.split("\n")[0],
       start: cue.start,
       duration: Math.max(0.1, Math.round((cue.end - cue.start) * 1000) / 1000),
-      textStyle: { ...defaultTextStyle(cue.text), size: look.size, ...captionStyle, content: cue.text },
+      words: wordTimes({ text: cue.text, start: cue.start, end: cue.end }),
+      textStyle: { ...defaultTextStyle(cue.text), size: look.size, ...styled(), content: cue.text },
       transform: { ...defaultTransform(), posY: look.posY },
     }));
     engine.dispatch("captions.add", { trackIndex: Number(capPick("cap-track")) || 0, clips });

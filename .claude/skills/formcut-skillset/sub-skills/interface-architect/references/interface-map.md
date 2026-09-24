@@ -17,7 +17,7 @@ The module list and the engine commands are generated from `frontend/src` by
 
 - `engine/api.ts` (29L)
 - `engine/audio-playback.ts` (164L)
-- `engine/captions.ts` (183L)
+- `engine/captions.ts` (224L)
 - `engine/coordinates.ts` (11L)
 - `engine/creator-commands.ts` (198L)
 - `engine/demo.ts` (58L)
@@ -31,9 +31,9 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/project.ts` (1031L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
-- `engine/types.ts` (260L)
+- `engine/types.ts` (264L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1139L)
+- `i18n/language-pack.ts` (1145L)
 - `i18n/text.ts` (29L)
 - `main.ts` (96L)
 - `types/assets.d.ts` (6L)
@@ -57,7 +57,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
 - `ui/library-view.ts` (145L)
-- `ui/media-pane.ts` (1111L)
+- `ui/media-pane.ts` (1128L)
 - `ui/mode-popout.ts` (157L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
@@ -84,7 +84,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/webhooks-settings.ts` (124L)
 - `ui/work-area.ts` (139L)
 - `ui/workspace-layout.ts` (305L)
-- `workers/transcription.ts` (108L)
+- `workers/transcription.ts` (138L)
 
 ## Engine commands
 
