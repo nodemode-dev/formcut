@@ -54,7 +54,7 @@ def validate_document(project: dict) -> dict:
                 value = clip.get(key)
                 if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0 or value > 86400:
                     raise ValueError(f"Invalid clip {key}")
-            if clip["duration"] <= 0 or clip.get("kind") not in ("video", "image", "audio", "text", "filter"):
+            if clip["duration"] <= 0 or clip.get("kind") not in ("video", "image", "audio", "text", "filter", "timeline"):
                 raise ValueError("Invalid clip duration or kind")
             if len(clip.get("effects") or []) > 32 or len(clip.get("speedCurve") or []) > 256 or len(clip.get("words") or []) > 512:
                 raise ValueError("Clip processing limit exceeded")
@@ -62,6 +62,27 @@ def validate_document(project: dict) -> dict:
         raise ValueError("Timeline exceeds the clip limit")
     result["duration"] = max([c["start"] + c["duration"] for t in tracks for c in t["clips"]] or [0.1])
     return result
+
+
+def nested_project(project: dict, timeline_id: str, chain: tuple[str, ...] = ()) -> dict | None:
+    """The project with `timeline_id` as its active timeline, for a compound clip.
+
+    `chain` holds the ids of the timelines being rendered above this one; a
+    timeline that is already in it, or that is the one being rendered, would
+    recurse forever, so it renders as nothing. The duration is the nested
+    timeline's own.
+    """
+    timelines = project.get("timelines") or []
+    active = timelines[project.get("activeTimeline", 0)] if timelines else None
+    above = chain + ((active["id"],) if active else ())
+    index = next((i for i, tl in enumerate(timelines) if tl.get("id") == timeline_id), None)
+    if index is None or timeline_id in above or len(above) > 8:
+        return None
+    nested = dict(project)
+    nested["activeTimeline"] = index
+    nested["duration"] = max([c["start"] + c["duration"] for t in timelines[index]["tracks"] for c in t["clips"]] or [0.1])
+    nested["_chain"] = above
+    return nested
 
 
 def flatten(project: dict) -> list[dict]:

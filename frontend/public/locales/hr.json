@@ -1363,5 +1363,6 @@
  "cap.wordStyle.pop": "Povećaj riječ",
  "cap.wordStyle.box": "Uokviri riječ",
  "cap.wordColour": "Boja",
- "export.openh264First": "Ovo računalo nema vlastiti H.264 koder, pa ovaj izvoz koristi Ciscov OpenH264, koji se prvi put preuzima od Cisca (oko 1 MB). Njegova licenca i prekidač su u Postavkama, Napredno."
+ "export.openh264First": "Ovo računalo nema vlastiti H.264 koder, pa ovaj izvoz koristi Ciscov OpenH264, koji se prvi put preuzima od Cisca (oko 1 MB). Njegova licenca i prekidač su u Postavkama, Napredno.",
+ "media.timelines": "Vremenske crte: postavite drugu vremensku crtu ovog projekta na ovu kao jedan isječak, na glavi reprodukcije"
 }

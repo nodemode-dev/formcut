@@ -1,4 +1,4 @@
-export type MediaKind = "video" | "audio" | "image" | "text" | "filter";
+export type MediaKind = "video" | "audio" | "image" | "text" | "filter" | "timeline";
 
 export interface TextStyle {
   fontId?: string;
@@ -116,6 +116,8 @@ export interface Clip {
   fadeIn?: number;
   fadeOut?: number;
   textStyle?: TextStyle;
+  /** For a timeline clip: the id of the timeline of this project it plays, as one clip. */
+  timelineId?: string;
   /** The caption's words, each with its start and length in seconds from the clip's start (from transcription). */
   words?: Array<{ t: number; d: number; text: string }>;
   transitionIn?: ClipTransition;

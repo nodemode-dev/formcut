@@ -20,7 +20,7 @@ from .video_source import acquire, recycle
 # covers both the preview path and the reverse builder.
 PROXIES_ENABLED = True
 from .pixel_effects import apply_colour_panel, apply_effects
-from .render_document import flatten, validate_document
+from .render_document import flatten, nested_project, validate_document
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
 
 LEGACY = {
@@ -384,6 +384,7 @@ class FrameRenderer:
         self.height = max(2, round(self.project["height"] * self.width / self.project["width"]))
         self.decode_limit = max(self.width, self.height) if width else None
         self.prepared = {}
+        self.nested: dict[str, FrameRenderer] = {}
         self.clips = flatten(self.project)
         self.sources = {}
         self.cursors: dict[str, list[tuple[str, int]]] = {}
@@ -529,6 +530,17 @@ class FrameRenderer:
         warped_second = cv2.remap(second, back_x, back_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         mixed = cv2.addWeighted(warped_first, 1 - blend, warped_second, blend, 0)
         return cv2.cvtColor(mixed, cv2.COLOR_BGR2RGBA)
+
+    def nested_frame(self, clip: dict, time: float) -> np.ndarray | None:
+        """A compound clip's frame: the referenced timeline at `time`, or None for a cycle."""
+        timeline_id = str(clip.get("timelineId") or "")
+        renderer = self.nested.get(timeline_id)
+        if renderer is None:
+            document = nested_project(self.project, timeline_id, self.project.get("_chain", ()))
+            if document is None:
+                return None
+            renderer = self.nested[timeline_id] = FrameRenderer(document, self.width)
+        return renderer.frame(max(0.0, min(time, renderer.project["duration"])))
 
     def media_frame(self, clip: dict, time: float) -> np.ndarray:
         media_id = clip.get("mediaId")
@@ -983,7 +995,13 @@ class FrameRenderer:
                     self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
             else:
-                image = self.text_frame(clip, local) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
+                if clip["kind"] == "timeline":
+                    nested_image = self.nested_frame(clip, source_time(clip, local))
+                    if nested_image is None:
+                        continue
+                    image = nested_image
+                else:
+                    image = self.text_frame(clip, local) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
                 image = apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
                 # Stabilisation needs the clip's place in time, which an effect
                 # never sees, so it is applied here from the measured path.

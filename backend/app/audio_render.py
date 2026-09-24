@@ -7,7 +7,7 @@ import numpy as np
 from .catalogue import AUDIO_CHAINS, audio_chain
 from .media import MEDIA_DIR, _ffprobe, reversed_path
 from .processes import communicate
-from .render_document import flatten
+from .render_document import flatten, nested_project
 from .timing import fade_at, source_delta, source_time, volume_at
 
 RATE = 48000
@@ -100,27 +100,36 @@ def filter_audio(samples: np.ndarray, chain: str, cancelled=lambda: False) -> np
     return np.frombuffer(output, "<f4").reshape(-1, 2).copy()
 
 
-def render_audio(project: dict, destination, cancelled=lambda: False):
+def mix_audio(project: dict, cancelled=lambda: False) -> np.ndarray:
+    """The project's stereo mix at RATE; a timeline clip contributes its own timeline's mix."""
     total = math.ceil(project["duration"] * RATE)
     mix = np.zeros((total, 2), np.float32)
     for clip in flatten(project):
         if cancelled():
             raise InterruptedError("Cancelled")
-        if clip["kind"] not in ("video", "audio") or clip.get("muted") or not clip.get("mediaId"):
-            continue
-        if clip.get("reversed"):
-            candidate = reversed_path(clip["mediaId"])
-            if not candidate.is_file():
-                raise ValueError("Reversed copy is not prepared yet")
-            paths = [candidate]
-        else:
-            paths = list(MEDIA_DIR.glob(f"{clip['mediaId']}.*"))
-        if not paths:
-            raise ValueError("Audio media is missing")
-        if not any(s.get("codec_type") == "audio" for s in _ffprobe(paths[0]).get("streams", [])):
+        if clip.get("muted"):
             continue
         duration = clip["duration"] + clip.get("extendOut", 0)
-        samples = processed_clip_audio(clip, paths[0], cancelled)
+        if clip["kind"] == "timeline":
+            nested = nested_project(project, str(clip.get("timelineId") or ""), project.get("_chain", ()))
+            if nested is None:
+                continue
+            samples = mix_audio(nested, cancelled)[round(float(clip.get("sourceIn", 0)) * RATE) :]
+        else:
+            if clip["kind"] not in ("video", "audio") or not clip.get("mediaId"):
+                continue
+            if clip.get("reversed"):
+                candidate = reversed_path(clip["mediaId"])
+                if not candidate.is_file():
+                    raise ValueError("Reversed copy is not prepared yet")
+                paths = [candidate]
+            else:
+                paths = list(MEDIA_DIR.glob(f"{clip['mediaId']}.*"))
+            if not paths:
+                raise ValueError("Audio media is missing")
+            if not any(s.get("codec_type") == "audio" for s in _ffprobe(paths[0]).get("streams", [])):
+                continue
+            samples = processed_clip_audio(clip, paths[0], cancelled)
         count = min(len(samples), int(duration * RATE))
         envelope_times = np.linspace(0, duration, max(2, math.ceil(duration * 200)))
         envelope = np.array([fade_at(clip, t) for t in envelope_times])
@@ -133,6 +142,11 @@ def render_audio(project: dict, destination, cancelled=lambda: False):
         count = min(count, total - offset)
         if count > 0:
             mix[offset : offset + count] += samples[:count]
+    return mix
+
+
+def render_audio(project: dict, destination, cancelled=lambda: False):
+    mix = mix_audio(project, cancelled)
     with wave.open(str(destination), "wb") as out:
         out.setnchannels(2)
         out.setsampwidth(2)

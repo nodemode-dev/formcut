@@ -9,6 +9,7 @@ import { captionLook, transcribeClip, typedCaptions, wordTimes } from "../engine
 import { locale, t } from "../i18n";
 import { text } from "../i18n/text";
 import { icon } from "./icons";
+import { reconcile as orderNodes } from "./keyed-list";
 import { categoryIcon } from "./category-icons";
 import { api } from "../engine/api";
 import { buildLibraryView } from "./library-view";
@@ -202,6 +203,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
           <input type="file" data-ref="relink-file" multiple hidden
             accept="video/*,audio/*,image/*" />
         </div>
+        <div class="text-add-hint" data-ref="nest-hint" hidden>${t("media.timelines")}</div>
+        <div class="cap-files" data-ref="nest-list" hidden></div>
         <div class="card-grid bin-grid" data-ref="bingrid">
           <div class="bin-empty" data-ref="empty">Import media to start editing</div>
         </div>
@@ -563,6 +566,44 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
 
   const effectsView = el.querySelector<HTMLElement>('[data-view="effects"]')!;
   const mediaView = el.querySelector<HTMLElement>('[data-view="media"]')!;
+  const nestHint = el.querySelector<HTMLElement>('[data-ref="nest-hint"]')!;
+  const nestList = el.querySelector<HTMLElement>('[data-ref="nest-list"]')!;
+  const nestChips = new Map<string, HTMLButtonElement>();
+  const paintTimelines = () => {
+    const state = engine.snapshot;
+    const others = state.timelines.filter((_, index) => index !== state.activeTimeline);
+    const wanted = new Set(others.map((timeline) => timeline.id));
+    for (const id of nestChips.keys()) if (!wanted.has(id)) nestChips.delete(id);
+    const ordered = others.map((timeline) => {
+      let chip = nestChips.get(timeline.id);
+      if (!chip) {
+        chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "tool-chip";
+        chip.dataset.nest = timeline.id;
+        chip.innerHTML = icon("layers");
+        chip.append(document.createTextNode(""));
+        nestChips.set(timeline.id, chip);
+      }
+      const label = chip.lastChild as Text;
+      if (label.textContent !== timeline.name) label.textContent = timeline.name;
+      return chip;
+    });
+    orderNodes(nestList, ordered);
+    if (nestHint.hidden !== !others.length) nestHint.hidden = nestList.hidden = !others.length;
+  };
+  nestList.addEventListener("click", (ev) => {
+    const chip = (ev.target as HTMLElement).closest<HTMLElement>("[data-nest]");
+    const timeline = chip && engine.snapshot.timelines.find((entry) => entry.id === chip.dataset.nest);
+    if (!timeline) return;
+    const length = Math.max(...timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration)), 0);
+    const clip = { id: crypto.randomUUID(), kind: "timeline" as const, timelineId: timeline.id, label: timeline.name, start: engine.snapshot.playhead, duration: Math.round((length || 5) * 100) / 100 } as unknown as Clip;
+    engine.dispatch("track.insert", { index: 0, name: timeline.name });
+    engine.dispatch("clips.add", { entries: [{ trackIndex: 0, clip }] });
+    engine.dispatch("clip.select", clip.id);
+  });
+  paintTimelines();
+  engine.subscribe((_state, changed) => { if (changed === "timeline" || changed === "project") paintTimelines(); });
   const textView = el.querySelector<HTMLElement>('[data-view="text"]')!;
   const transView = el.querySelector<HTMLElement>('[data-view="transitions"]')!;
   const tmplView = el.querySelector<HTMLElement>('[data-view="templates"]')!;

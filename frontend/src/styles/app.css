@@ -539,6 +539,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .clip.k-text .bar { padding: 0 9px; }
 .clip.k-filter { background: var(--tag-filter); justify-content: center; }
 .clip.k-filter .bar { padding: 0 9px; }
+.clip.k-timeline { background: var(--tag-image); }
 .clip.k-video { background: var(--tag-video); }
 .clip.k-video .body {
   background:
