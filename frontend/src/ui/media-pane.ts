@@ -2,7 +2,7 @@ import { titleSpeech } from "./title-speech";
 import { escapeHtml } from "./safe-text";
 import { reconcilePresets } from "./preset-grid";
 import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
-import type { ProjectEngine } from "../engine/project";
+import { formatTimecode, type ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
 import { MASK_SHAPES, defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
 import { captionLook, transcribeClip, typedCaptions, wordTimes } from "../engine/captions";
@@ -139,6 +139,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
             <button class="tool-chip" data-ref="cap-export-vtt">${icon("export")}${t("cap.exportVtt")}</button>
           </div>
           <input type="file" data-ref="cap-file" accept=".srt,.vtt,text/vtt,application/x-subrip" hidden />
+          <div class="text-add-hint">${t("cap.transcript")}</div>
+          <div class="cap-transcript" data-ref="cap-transcript"></div>
           <div class="text-add-hint">${t("title.gallery")}</div>
           <div class="card-grid title-grid" data-ref="title-grid"></div>
           <div class="text-add-hint">${t("tt.section")}: ${t("tt.hint")}</div>
@@ -817,6 +819,68 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   };
   el.querySelector('[data-ref="cap-export-srt"]')!.addEventListener("click", () => void exportCaptions("srt"));
   el.querySelector('[data-ref="cap-export-vtt"]')!.addEventListener("click", () => void exportCaptions("vtt"));
+
+  // Phase 9: the caption track's text as an editable transcript. Rows are
+  // keyed by clip id and patched in place, and a focused input is never
+  // rewritten, so typing survives the engine's own clips emits; the time
+  // button seeks there and selects the caption. A commit goes through
+  // clip.text, which refits the caption's word times to the new text.
+  const transcript = el.querySelector<HTMLElement>('[data-ref="cap-transcript"]')!;
+  const transcriptRows = new Map<string, HTMLElement>();
+  const paintTranscript = () => {
+    const snapshot = engine.snapshot;
+    const track = snapshot.timelines[snapshot.activeTimeline]?.tracks[Number(capPick("cap-track")) || 0];
+    const clips = (track?.clips ?? [])
+      .filter((clip) => clip.kind === "text" && clip.textStyle?.content !== undefined)
+      .slice()
+      .sort((a, b) => a.start - b.start);
+    const ordered: HTMLElement[] = [];
+    const wanted = new Set<string>();
+    for (const clip of clips) {
+      wanted.add(clip.id);
+      let row = transcriptRows.get(clip.id);
+      if (!row) {
+        row = document.createElement("div");
+        row.className = "cap-line";
+        row.dataset.clip = clip.id;
+        row.innerHTML = `<button type="button" class="cap-tc"></button><input class="cap-text" type="text" />`;
+        const id = clip.id;
+        row.querySelector("button")!.addEventListener("click", () => {
+          const found = engine.findClip(id);
+          if (!found) return;
+          engine.dispatch("transport.seek", found.clip.start);
+          engine.dispatch("clip.select", id);
+        });
+        const field = row.querySelector<HTMLInputElement>("input")!;
+        field.addEventListener("change", () => {
+          const found = engine.findClip(id);
+          const current = found?.clip.textStyle?.content ?? "";
+          if (found && field.value !== current) engine.dispatch("clip.text", { clipId: id, patch: { content: field.value } });
+        });
+        field.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") field.blur();
+        });
+        transcriptRows.set(clip.id, row);
+      }
+      const stamp = formatTimecode(clip.start, snapshot.fps);
+      const button = row.querySelector<HTMLButtonElement>("button")!;
+      if (button.textContent !== stamp) button.textContent = stamp;
+      const field = row.querySelector<HTMLInputElement>("input")!;
+      const content = clip.textStyle!.content;
+      if (document.activeElement !== field && field.value !== content) field.value = content;
+      if (field.getAttribute("aria-label") !== stamp) field.setAttribute("aria-label", stamp);
+      ordered.push(row);
+    }
+    for (const [id] of transcriptRows) {
+      if (!wanted.has(id)) transcriptRows.delete(id);
+    }
+    orderNodes(transcript, ordered);
+  };
+  paintTranscript();
+  engine.subscribe((_state, changed) => {
+    if (changed === "clips" || changed === "timeline" || changed === "project") paintTranscript();
+  });
+  el.querySelector('[data-ref="cap-track"]')!.addEventListener("change", paintTranscript);
 
   // Animated titles (text_templates.py): finished designs added at the playhead on
   // a new track at the top, so they draw above the footage.

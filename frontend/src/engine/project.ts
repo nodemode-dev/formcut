@@ -694,7 +694,28 @@ export class ProjectEngine {
         if (!found || found.clip.kind !== "text") break;
         this.pushHistory();
         found.clip.textStyle = { ...defaultTextStyle(found.clip.label), ...found.clip.textStyle, ...p.patch };
-        if (p.patch.content !== undefined) found.clip.label = p.patch.content;
+        if (p.patch.content !== undefined) {
+          found.clip.label = p.patch.content;
+          // A caption's words follow its text (phase 9): the same token count
+          // keeps the model's times word for word; a different count shares
+          // the clip's span by character, the rule typed captions get.
+          const words = found.clip.words;
+          if (words?.length) {
+            const tokens = p.patch.content.trim().split(/\s+/).filter(Boolean);
+            if (tokens.length === words.length) {
+              found.clip.words = words.map((word, i) => ({ ...word, text: tokens[i] }));
+            } else {
+              const total = tokens.reduce((sum, word) => sum + word.length + 1, 0) || 1;
+              let at = 0;
+              found.clip.words = tokens.map((text) => {
+                const d = (found.clip.duration * (text.length + 1)) / total;
+                const word = { text, t: Math.round(at * 1000) / 1000, d: Math.round(d * 1000) / 1000 };
+                at += d;
+                return word;
+              });
+            }
+          }
+        }
         s.saved = false;
         this.emit("clips");
         break;

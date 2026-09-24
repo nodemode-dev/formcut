@@ -982,6 +982,11 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 .typed-captions { width: 100%; margin: 4px 0; padding: 6px; border: 1px solid var(--edge); border-radius: 6px; background: var(--inset); color: var(--ink); font: inherit; font-size: 12px; resize: vertical; }
 .cap-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.cap-transcript { display: flex; flex-direction: column; gap: var(--sp-1); margin: 4px 0; max-height: 220px; overflow-y: auto; }
+.cap-line { display: flex; align-items: center; gap: var(--sp-1); }
+.cap-tc { flex: none; border: 0; border-radius: var(--radius-s); background: var(--inset); color: var(--ink-soft); font: inherit; font-size: 11px; font-variant-numeric: tabular-nums; padding: 4px 6px; cursor: pointer; }
+.cap-tc:hover { color: var(--ink); }
+.cap-line .cap-text { flex: 1; min-width: 0; padding: 4px 6px; border: 1px solid var(--edge); border-radius: var(--radius-s); background: var(--inset); color: var(--ink); font: inherit; font-size: 12px; }
 .title-card.is-active .effect-thumb { outline: 2px solid var(--cue); outline-offset: -2px; }
 .title-card.is-active .effect-name { color: var(--ink); }
 
