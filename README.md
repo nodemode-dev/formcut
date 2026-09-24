@@ -15,7 +15,7 @@
 
 A complete video editor that runs entirely on your machine: multi-track timeline, one renderer shared by preview and export so what you see is what you get, a real effect catalogue, captions and speech and subject cutout from local models, a scripting API, and a desktop shell. In addition to ANA connected orchestration for video editing, which makes an edit something another system can drive.
 
-**Stack:** vanilla TypeScript + Vite interface, Python/FastAPI engine, Tauri 2 desktop shell · **Scale:** 5,367 lines of TypeScript across 49 modules, 972 lines of CSS on one token system, 4,148 lines of Python across 44 modules, 194 lines of Rust, 162 tracked files · no interface framework, no icon dependency, no telemetry
+**Stack:** vanilla TypeScript + Vite interface, Python/FastAPI engine, Tauri 2 desktop shell · one CSS token system · no interface framework, no icon dependency, no telemetry
 
 ## Highlights
 
@@ -47,7 +47,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 
 ### Download
 
-Each release carries a zip for macOS (Apple silicon), Windows and Linux that runs with nothing else installed, formcut's ffmpeg included; the release notes say how to open each. On an Intel Mac, build it with `setup/build_macos_app --intel`. To run from source instead, read on.
+Each release carries a zip for macOS (Apple silicon), Windows and Linux that runs with nothing else installed, formcut's ffmpeg included; the release notes say how to open each. On an Intel Mac, build it with `setup/build_macos_app --intel`. The Android and iOS apps in a release are companions, not editors: each is one screen that pairs with the formcut running on your computer and shows its interface over your own network, so the desktop must be running. To run from source instead, read on.
 
 **Tested so far:** the macOS (Apple silicon) and Linux builds have been tested on real machines and work. The Windows build, and the Android and iOS companion apps, are built and published with every release but have not been tested on real devices yet; reports are welcome in the issues.
 
