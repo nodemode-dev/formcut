@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 92 | /api/agents | 1 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 629 | /api/rpc | 2 |
+| automation.py | 656 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |

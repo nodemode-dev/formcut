@@ -2,7 +2,7 @@ import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
 import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings"]);
+export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings", "marker.add", "marker.remove", "marker.update"]);
 
 /** Whether the given clips form a rejoinable chain; the reason key names why not. */
 export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
@@ -159,6 +159,21 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     for (const key of ["locked", "hidden", "muted", "magnetic"] as const) if (key in patch) target[key] = Boolean(patch[key]);
   } else if (command === "track.add") {
     timeline.tracks.push({ id: crypto.randomUUID(), name: String(p.name || `Track ${timeline.tracks.length + 1}`), clips: [] });
+  } else if (command === "marker.add") {
+    const markers = (timeline.markers ??= []);
+    if (markers.length >= 512) throw new Error("Marker limit reached");
+    const t = Math.max(0, Math.round((Number(p.t) || 0) * 1000) / 1000);
+    markers.push({ id: crypto.randomUUID(), t, colour: typeof p.colour === "string" ? p.colour.slice(0, 16) : undefined, note: typeof p.note === "string" ? p.note.slice(0, 400) : undefined });
+    markers.sort((a, b) => a.t - b.t);
+  } else if (command === "marker.remove") {
+    timeline.markers = (timeline.markers ?? []).filter((marker) => marker.id !== p.id);
+  } else if (command === "marker.update") {
+    const marker = (timeline.markers ?? []).find((entry) => entry.id === p.id);
+    if (!marker) throw new Error("No such marker");
+    if (p.t !== undefined) marker.t = Math.max(0, Math.round((Number(p.t) || 0) * 1000) / 1000);
+    if (typeof p.colour === "string") marker.colour = p.colour.slice(0, 16);
+    if (typeof p.note === "string") marker.note = p.note.slice(0, 400);
+    timeline.markers!.sort((a, b) => a.t - b.t);
   } else if (command === "track.insert") {
     // A track at a given place. Track 0 draws on top, so a title or caption track
     // added with track.add (at the end) would sit beneath the footage.

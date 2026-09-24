@@ -159,6 +159,15 @@ export interface Timeline {
   height?: number;
   fps?: number;
   tracks: Track[];
+  /** Notes at times: shown on the ruler, snapped to, left by people and agents alike. */
+  markers?: TimelineMarker[];
+}
+
+export interface TimelineMarker {
+  id: string;
+  t: number;
+  colour?: string;
+  note?: string;
 }
 
 /** K3 and K4: a keyed value point, the same easing modes as transform keys. */

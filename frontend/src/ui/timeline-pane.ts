@@ -3,6 +3,7 @@ import { formatTimecode, type ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import type { Clip } from "../engine/types";
 import { icon } from "./icons";
+import { reconcile as orderNodes } from "./keyed-list";
 import { t } from "../i18n";
 import { reconcileTimelineStructure } from "./timeline-structure";
 import { paintClipBody } from "./clip-visuals";
@@ -39,6 +40,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     rulerEl.style.width = `${currentSpan * PX_PER_SEC}px`;
     for (const lane of lanes) lane.style.width = rulerEl.style.width;
     [...rulerEl.querySelectorAll<HTMLElement>(".tick")].forEach((tick, index) => { tick.style.left = `${index * 2 * PX_PER_SEC}px`; });
+    paintMarkers();
     el.dataset.scale = String(PX_PER_SEC);
   reconcile();
     scroller.scrollLeft = Math.max(0, engine.snapshot.playhead * PX_PER_SEC - scroller.clientWidth / 2);
@@ -82,7 +84,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       <span class="divider"></span>
       <button class="iconbtn is-accent" title="${t('tool.snap')}" data-ref="snap" data-feature="snap" data-label="${t('tool.snap')}">${icon("magnet")}</button>
         </div>
-        <div class="tl-ruler" data-ref="ruler" style="width:${laneW}px">${ruler}</div>
+        <div class="tl-ruler" data-ref="ruler" style="width:${laneW}px">${ruler}<div class="tl-markers" data-ref="markers"></div></div>
         ${tl.tracks
           .map(
             (t) => `
@@ -139,7 +141,45 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   const lanes = Array.from(el.querySelectorAll<HTMLElement>(".lane"));
   let currentSpan = spanSec;
 
+  const markerLayer = el.querySelector<HTMLElement>('[data-ref="markers"]')!;
+  const markerNodes = new Map<string, HTMLElement>();
+  const paintMarkers = () => {
+    const state = engine.snapshot;
+    const markers = state.timelines[state.activeTimeline].markers ?? [];
+    const wanted = new Set(markers.map((marker) => marker.id));
+    for (const [id, node] of markerNodes) if (!wanted.has(id)) markerNodes.delete(id);
+    const ordered = markers.map((marker) => {
+      let node = markerNodes.get(marker.id);
+      if (!node) {
+        const made = document.createElement("button");
+        made.className = "tl-marker";
+        made.type = "button";
+        made.dataset.marker = marker.id;
+        node = made;
+        markerNodes.set(marker.id, node);
+      }
+      const left = `${marker.t * PX_PER_SEC}px`;
+      if (node.style.left !== left) node.style.left = left;
+      const colour = marker.colour || "";
+      if (node.style.getPropertyValue("--marker") !== colour) node.style.setProperty("--marker", colour);
+      const title = marker.note ? `${formatTimecode(marker.t, state.fps)} ${marker.note}` : formatTimecode(marker.t, state.fps);
+      if (node.title !== title) node.title = title;
+      return node;
+    });
+    orderNodes(markerLayer, ordered);
+  };
+  markerLayer.addEventListener("click", (ev) => {
+    const node = (ev.target as HTMLElement).closest<HTMLElement>("[data-marker]");
+    if (!node) return;
+    ev.stopPropagation();
+    if (ev.altKey) { engine.dispatch("marker.remove", { id: node.dataset.marker }); return; }
+    const state = engine.snapshot;
+    const marker = (state.timelines[state.activeTimeline].markers ?? []).find((entry) => entry.id === node.dataset.marker);
+    if (marker) engine.dispatch("transport.seek", marker.t);
+  });
+  markerLayer.addEventListener("pointerdown", (ev) => { if ((ev.target as HTMLElement).closest("[data-marker]")) ev.stopPropagation(); });
   const reconcile = () => {
+    paintMarkers();
     const state = engine.snapshot;
     const timeline = state.timelines[state.activeTimeline];
     reconcileTimelineStructure(el, engine, bin, lanes, currentSpan * PX_PER_SEC, PX_PER_SEC);
@@ -278,7 +318,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   });
   const collectSnapPoints = (excludeId: string): number[] => {
     const state = engine.snapshot;
-    const points = [0, state.playhead];
+    const points = [0, state.playhead, ...(state.timelines[state.activeTimeline].markers ?? []).map((marker) => marker.t)];
     for (const track of state.timelines[state.activeTimeline].tracks) {
       for (const clip of track.clips) {
         if (clip.id === excludeId) continue;
@@ -496,6 +536,11 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     if (meta && ev.key.toLowerCase() === "a") {
       ev.preventDefault();
       engine.dispatch("clip.select-all", {});
+      return;
+    }
+    if (!meta && !ev.altKey && ev.key.toLowerCase() === "m") {
+      ev.preventDefault();
+      engine.dispatch("marker.add", { t: engine.snapshot.playhead });
       return;
     }
     if (ev.key === "Escape" && engine.snapshot.selection.length) {

@@ -467,6 +467,10 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   color: var(--ink-faint);
 }
 .tl-ruler .tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--edge); padding: 6px 0 0 5px; }
+.tl-markers { position: absolute; inset: 0; pointer-events: none; }
+.tl-marker { position: absolute; top: 0; width: 0; height: 100%; padding: 0; margin: 0; border: 0; background: none; pointer-events: auto; cursor: pointer; }
+.tl-marker::before { content: ""; position: absolute; top: 0; left: -6px; border: 6px solid transparent; border-top: 8px solid var(--marker, var(--cue)); }
+.tl-marker::after { content: ""; position: absolute; top: 8px; bottom: 0; left: 0; border-left: 1px solid var(--marker, var(--cue)); }
 /* The composition range reads as a bar on the ruler with grips at each end. */
 .work-area {
   border-radius: 3px;

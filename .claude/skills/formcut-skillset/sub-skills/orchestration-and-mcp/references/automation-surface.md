@@ -28,6 +28,7 @@
 
 `project.edit` takes a command list. Operations include project.settings,
 clip.add, clip.update, clip.remove, clip.split, clip.trim, track.add,
+marker.add, marker.update, marker.remove (notes at times on the active timeline),
 clips.move, clips.remove, clips.duplicate, clips.add, clips.mute (multi-clip,
 the interface's semantics: one call is one undo step, a group move is refused
 whole over a locked track) and

@@ -315,6 +315,30 @@ def apply_edit(project: dict, command: dict):
                     spot.pop("muted", None)
     elif operation == "track.add":
         timeline["tracks"].append({"id": uuid.uuid4().hex, "name": command.get("name", "Track"), "clips": []})
+    elif operation == "marker.add":
+        markers = timeline.setdefault("markers", [])
+        if len(markers) >= 512:
+            raise ValueError("Marker limit reached")
+        marker = {"id": uuid.uuid4().hex, "t": round(max(0.0, float(command.get("t") or 0)), 3)}
+        if isinstance(command.get("colour"), str):
+            marker["colour"] = command["colour"][:16]
+        if isinstance(command.get("note"), str):
+            marker["note"] = command["note"][:400]
+        markers.append(marker)
+        markers.sort(key=lambda entry: entry["t"])
+    elif operation == "marker.remove":
+        timeline["markers"] = [entry for entry in timeline.get("markers", []) if entry.get("id") != command.get("id")]
+    elif operation == "marker.update":
+        marker = next((entry for entry in timeline.get("markers", []) if entry.get("id") == command.get("id")), None)
+        if marker is None:
+            raise ValueError("No such marker")
+        if command.get("t") is not None:
+            marker["t"] = round(max(0.0, float(command["t"])), 3)
+        if isinstance(command.get("colour"), str):
+            marker["colour"] = command["colour"][:16]
+        if isinstance(command.get("note"), str):
+            marker["note"] = command["note"][:400]
+        timeline["markers"].sort(key=lambda entry: entry["t"])
     elif operation == "track.remove":
         if len(timeline["tracks"]) < 2:
             raise ValueError("Keep at least one track")
@@ -520,6 +544,9 @@ def dispatch(method: str, params: dict):
                 "timeline.add",
                 "project.settings",
                 "project.background",
+                "marker.add",
+                "marker.remove",
+                "marker.update",
             ],
         }
     if method == "catalogue":
