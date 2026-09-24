@@ -351,6 +351,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const seconds = Math.round(value % 60);
     return minutes ? `${minutes}:${String(seconds).padStart(2, "0")}` : `${seconds}s`;
   };
+  const localCards = new Map<string, HTMLButtonElement>();
+  const localItems = new Map<string, (typeof bin.all)[number]>();
   const paintLocal = () => {
     const grid = localRef<HTMLElement>("local-grid");
     if (!grid) return;
@@ -362,22 +364,39 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     else if (sort === "duration") items = [...items].sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
     const count = localRef<HTMLElement>("local-count");
     if (count) count.textContent = `${items.length} ${t("local.items")}`;
-    grid.replaceChildren(...items.map((item) => {
-      const card = document.createElement("button");
-      card.className = `local-card k-${item.kind}`;
-      card.dataset.media = item.id;
-      const art = item.kind === "audio"
-        ? `<span class="local-wave">${icon("speaker")}</span>`
-        : `<img src="/api/media/${item.id}/thumb" alt="" loading="lazy">`;
-      card.innerHTML =
-        `<span class="local-art">${art}` +
-        `<span class="local-kind">${t(`local.${item.kind}`)}</span>` +
-        (item.duration ? `<span class="local-dur">${secondsLabel(item.duration)}</span>` : "") +
-        `</span><span class="local-name">${escapeHtml(item.name)}</span>` +
-        `<span class="local-meta">${item.width ? `${item.width}x${item.height}` : ""}</span>`;
-      card.addEventListener("click", () => openPlace(item));
-      return card;
-    }));
+    const wanted = new Set(items.map((item) => item.id));
+    for (const [id, card] of localCards) {
+      if (wanted.has(id)) continue;
+      card.remove();
+      localCards.delete(id);
+      localItems.delete(id);
+    }
+    let cursor: Element | null = grid.firstElementChild;
+    for (const item of items) {
+      localItems.set(item.id, item);
+      let card = localCards.get(item.id);
+      if (!card) {
+        card = document.createElement("button");
+        card.className = `local-card k-${item.kind}`;
+        card.dataset.media = item.id;
+        const art = item.kind === "audio"
+          ? `<span class="local-wave">${icon("speaker")}</span>`
+          : `<img src="/api/media/${item.id}/thumb" alt="" loading="lazy">`;
+        card.innerHTML =
+          `<span class="local-art">${art}` +
+          `<span class="local-kind">${t(`local.${item.kind}`)}</span>` +
+          (item.duration ? `<span class="local-dur">${secondsLabel(item.duration)}</span>` : "") +
+          `</span><span class="local-name">${escapeHtml(item.name)}</span>` +
+          `<span class="local-meta">${item.width ? `${item.width}x${item.height}` : ""}</span>`;
+        card.addEventListener("click", () => { const current = localItems.get(item.id); if (current) openPlace(current); });
+        localCards.set(item.id, card);
+      } else {
+        const name = card.querySelector<HTMLElement>(".local-name");
+        if (name && name.textContent !== item.name) name.textContent = item.name;
+      }
+      if (card === cursor) cursor = cursor.nextElementSibling;
+      else grid.insertBefore(card, cursor);
+    }
   };
   const openPlace = (item: { id: string; name: string; kind: string; duration?: number }) => {
     pending = item;
