@@ -108,6 +108,17 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
   const viewBtn = document.querySelector<HTMLButtonElement>('.titlebar-left .menu-item[data-ref="view"]');
   if (editBtn) bindMenu(editBtn, actions);
   if (viewBtn) bindMenu(viewBtn, [["Fullscreen", () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()], ["Start", () => engine.dispatch("transport.home")], ["End", () => engine.dispatch("transport.end")]]);
+  // A card that is a button for the keyboard (the effect, look, template and
+  // media cards carry role="button" and a tabindex) fires its click on Enter
+  // or Space; native buttons already do, the timeline's clips have their own.
+  document.addEventListener("keydown", event => {
+    const target = event.target as HTMLElement;
+    if (!(target instanceof HTMLElement) || target.getAttribute("role") !== "button" || target.matches("button, a, input, select, textarea, .clip")) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    target.click();
+  }, true);
   document.addEventListener("keydown", event => {
     const target = event.target as HTMLElement;
     if (target.closest("input,textarea,select,[contenteditable=true]") || document.querySelector(".modal-scrim:not([hidden]),.start-overlay:not([hidden])")) return;

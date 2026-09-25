@@ -317,7 +317,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const favourites = new Set<string>(JSON.parse(localStorage.getItem("formcut.favourites") ?? "[]"));
   const favKey = (kind: string, id: string) => `${kind}:${id}`;
   const fxCard = (mode: string, kind: string, cat: string, id: string, label: string, visual: string) =>
-    `<div class="effect-card fx-card${favourites.has(favKey(kind, id)) ? " is-fav" : ""}" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" hidden><button class="fav-star" data-star aria-label="Favourite" aria-pressed="${favourites.has(favKey(kind, id))}">${"\u2605"}</button>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
+    `<div class="effect-card fx-card${favourites.has(favKey(kind, id)) ? " is-fav" : ""}" data-mode="${mode}" data-kind="${kind}" data-cat="${escapeHtml(cat)}" data-id="${escapeHtml(id)}" data-label="${escapeHtml(label)}" data-name="${escapeHtml(label.toLowerCase())}" role="button" tabindex="0" aria-label="${escapeHtml(label)}" hidden><button class="fav-star" data-star aria-label="Favourite" aria-pressed="${favourites.has(favKey(kind, id))}">${"\u2605"}</button>${visual}<div class="effect-name">${escapeHtml(label)}</div></div>`;
   const transitionName = (type: string) =>
     type === "crossfade" ? t("trans.crossfade") : type === "dip" ? t("trans.dip") : text(type.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
   type CatalogueEntry = { id: string; name: string; category?: string; group?: string; names?: Record<string, string> };
@@ -972,7 +972,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     .then((entries: typeof textTemplates) => {
       textTemplates = entries;
       textTemplateGrid.insertAdjacentHTML("beforeend", entries.map((entry) =>
-        `<div class="effect-card title-card" data-text-template="${escapeHtml(entry.id)}">` +
+        `<div class="effect-card title-card" data-text-template="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-label="${escapeHtml(entry.name)}">` +
         `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/texttemplate/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
         `<div class="effect-name">${escapeHtml(t(entry.nameKey))}</div></div>`).join(""));
     })
@@ -999,7 +999,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     .then((styles: Array<{ id: string; name: string; style: Record<string, unknown> }>) => {
       titleStyles = styles;
       titleGrid.insertAdjacentHTML("beforeend", styles.map((entry) =>
-        `<div class="effect-card title-card" data-title-style="${escapeHtml(entry.id)}">` +
+        `<div class="effect-card title-card" data-title-style="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-label="${escapeHtml(entry.name)}">` +
         `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/title/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
         `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
     })
@@ -1052,7 +1052,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     .then((looks: Array<{ id: string; name: string; style: Record<string, unknown> }>) => {
       captionLooks = looks;
       captionGrid.insertAdjacentHTML("beforeend", looks.map((entry) =>
-        `<div class="effect-card title-card" data-caption-look="${escapeHtml(entry.id)}">` +
+        `<div class="effect-card title-card" data-caption-look="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-label="${escapeHtml(entry.name)}">` +
         `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/caption/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
         `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
     })
@@ -1085,6 +1085,9 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const cardFor = (item: MediaItem): HTMLElement => {
     const card = document.createElement("div");
     card.className = `effect-card bin-card k-${item.kind}`;
+    card.setAttribute("role", "button");
+    card.tabIndex = 0;
+    card.setAttribute("aria-label", item.name);
     // P9: video cards carry their proxy's state, so a person can see what is
     // queued, building or ready without opening anything.
     if (item.kind === "video") {

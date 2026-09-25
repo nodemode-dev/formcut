@@ -1256,6 +1256,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 }
 .local-card:hover { border-color: var(--cue); }
 .local-card:focus-visible { outline: 2px solid var(--cue); outline-offset: 1px; }
+.effect-card:focus-visible, .clip:focus-visible, .home-card-open:focus-visible { outline: 2px solid var(--cue); outline-offset: 1px; }
 .local-art {
   position: relative; display: block; aspect-ratio: 16 / 9;
   background: var(--screen); overflow: hidden;

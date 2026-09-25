@@ -26,7 +26,7 @@ function clipHtml(c: Clip, selectedId: string | null): string {
     (c.transitionIn ? `<span class="clip-badge badge-trans" title="${c.transitionIn.type}">${icon("diamond")}</span>` : "") +
     (c.keyframes && c.keyframes.length ? `<span class="clip-badge badge-kf">${icon("diamond")}</span>` : "") +
     (c.muted ? `<span class="clip-badge badge-mute">M</span>` : "");
-  return `<div class="clip k-${escapeHtml(c.kind)}${sel}" data-clip="${escapeHtml(c.id)}" style="left:${left}px;width:${width}px">${inner}${badges}<span class="trim trim-l"></span><span class="trim trim-r"></span></div>`;
+  return `<div class="clip k-${escapeHtml(c.kind)}${sel}" data-clip="${escapeHtml(c.id)}" role="button" tabindex="0" aria-label="${label}" style="left:${left}px;width:${width}px">${inner}${badges}<span class="trim trim-l"></span><span class="trim trim-r"></span></div>`;
 }
 
 export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLElement {
@@ -523,6 +523,40 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     const state = engine.snapshot;
     if (state.selection.length > 1) engine.dispatch("clips.remove", state.selection);
     else if (state.selectedClipId) engine.dispatch("clip.remove", state.selectedClipId);
+  });
+  // A clip is a button for the keyboard: Enter or Space selects it (the
+  // global keys below then cut, delete or nudge the selection), Left and
+  // Right move focus along the track, Up and Down to the clip nearest in time
+  // on the neighbouring track. Focus survives a selection because the
+  // timeline patches is-selected in place rather than repainting.
+  el.addEventListener("keydown", (ev) => {
+    const clipNode = (ev.target as HTMLElement).closest<HTMLElement>(".clip[data-clip]");
+    if (!clipNode || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      ev.stopPropagation();
+      engine.dispatch("clip.select", clipNode.dataset.clip!);
+      return;
+    }
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(ev.key)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const lane = clipNode.closest<HTMLElement>(".lane");
+    const inLane = (host: HTMLElement | null) => Array.from(host?.querySelectorAll<HTMLElement>(".clip[data-clip]") ?? []).sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+    if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+      const siblings = inLane(lane);
+      const at = siblings.indexOf(clipNode);
+      const next = siblings[at + (ev.key === "ArrowRight" ? 1 : -1)];
+      next?.focus();
+      return;
+    }
+    const allLanes = Array.from(el.querySelectorAll<HTMLElement>(".lane"));
+    const laneAt = allLanes.indexOf(lane!);
+    const target = allLanes[laneAt + (ev.key === "ArrowDown" ? 1 : -1)];
+    if (!target) return;
+    const here = parseFloat(clipNode.style.left);
+    const nearest = inLane(target).sort((a, b) => Math.abs(parseFloat(a.style.left) - here) - Math.abs(parseFloat(b.style.left) - here))[0];
+    nearest?.focus();
   });
   window.addEventListener("keydown", (ev) => {
     const target = ev.target as HTMLElement;
