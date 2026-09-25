@@ -845,13 +845,20 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         row = document.createElement("div");
         row.className = "cap-line";
         row.dataset.clip = clip.id;
-        row.innerHTML = `<button type="button" class="cap-tc"></button><input class="cap-text" type="text" />`;
+        row.innerHTML = `<button type="button" class="cap-tc"></button><input class="cap-text" type="text" /><button type="button" class="iconbtn cap-cut" title="${t("cap.cutFootage")}" aria-label="${t("cap.cutFootage")}">${icon("blade")}</button>`;
         const id = clip.id;
         row.querySelector("button")!.addEventListener("click", () => {
           const found = engine.findClip(id);
           if (!found) return;
           engine.dispatch("transport.seek", found.clip.start);
           engine.dispatch("clip.select", id);
+        });
+        // Text-based editing: the sentence goes and so does the footage under
+        // it, on every track, with everything after moved back.
+        row.querySelector<HTMLButtonElement>(".cap-cut")!.addEventListener("click", () => {
+          const found = engine.findClip(id);
+          if (!found) return;
+          engine.dispatch("timeline.cut-range", { start: found.clip.start, end: found.clip.start + found.clip.duration });
         });
         const field = row.querySelector<HTMLInputElement>("input")!;
         field.addEventListener("change", () => {

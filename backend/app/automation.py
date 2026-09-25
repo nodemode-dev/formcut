@@ -268,6 +268,45 @@ def apply_edit(project: dict, command: dict):
         for other in track["clips"]:
             if other["start"] >= at:
                 other["start"] = round(max(0.0, other["start"] - span) * 100) / 100
+    elif operation == "timeline.cut-range":
+        # Text-based editing over RPC: a span leaves every track, clips inside
+        # it go, clips straddling it are cut into a head and a tail, and what
+        # follows moves back by the length, the interface's own command.
+        start = min(float(command["start"]), float(command["end"]))
+        length = abs(float(command["end"]) - float(command["start"]))
+        if length <= 0.01:
+            raise ValueError("A cut range needs a length")
+        end = start + length
+        for track in timeline["tracks"]:
+            kept = []
+            for clip in track["clips"]:
+                clip_end = clip["start"] + clip["duration"]
+                if clip_end <= start + 1e-6:
+                    kept.append(clip)
+                elif clip["start"] >= end - 1e-6:
+                    clip["start"] = round((clip["start"] - length) * 1000) / 1000
+                    kept.append(clip)
+                elif clip["start"] >= start - 1e-6 and clip_end <= end + 1e-6:
+                    continue
+                elif clip["start"] < start and clip_end > end:
+                    tail = {
+                        **clip,
+                        "id": uuid.uuid4().hex,
+                        "start": start,
+                        "duration": max(0.05, clip_end - end),
+                        "sourceIn": clip.get("sourceIn", 0) + (end - clip["start"]),
+                    }
+                    clip["duration"] = max(0.05, start - clip["start"])
+                    kept += [clip, tail]
+                elif clip["start"] < start:
+                    clip["duration"] = max(0.05, start - clip["start"])
+                    kept.append(clip)
+                else:
+                    clip["sourceIn"] = clip.get("sourceIn", 0) + (end - clip["start"])
+                    clip["duration"] = max(0.05, clip_end - end)
+                    clip["start"] = start
+                    kept.append(clip)
+            track["clips"] = kept
     elif operation == "clip.speed-curve":
         if not located:
             raise ValueError("Clip not found")
@@ -537,6 +576,7 @@ def dispatch(method: str, params: dict):
                 "clip.reattach",
                 "clip.detach",
                 "clip.ripple-delete",
+                "timeline.cut-range",
                 "clip.speed-curve",
                 "clip.animations",
                 "clip.scenes",

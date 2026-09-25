@@ -309,6 +309,58 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "timeline.cut-range": {
+        // Text-based editing: a span of the timeline goes, on every track.
+        // A clip inside the span is removed, one straddling it is cut into a
+        // head and a tail, and everything after it moves back by the length,
+        // so the footage under a deleted sentence leaves with the sentence.
+        const p = payload as { start: number; end: number };
+        const start = Math.max(0, Math.min(p.start, p.end));
+        const length = Math.max(0, Math.max(p.start, p.end) - start);
+        if (length <= 0.01) break;
+        const end = start + length;
+        this.pushHistory();
+        for (const track of s.timelines[s.activeTimeline].tracks) {
+          const kept: Clip[] = [];
+          for (const clip of track.clips) {
+            const clipEnd = clip.start + clip.duration;
+            if (clipEnd <= start + 1e-6) { kept.push(clip); continue; }
+            if (clip.start >= end - 1e-6) { clip.start = Math.round((clip.start - length) * 1000) / 1000; kept.push(clip); continue; }
+            if (clip.start >= start - 1e-6 && clipEnd <= end + 1e-6) {
+              if (s.selectedClipId === clip.id) s.selectedClipId = null;
+              const inSet = s.selection.indexOf(clip.id);
+              if (inSet >= 0) s.selection.splice(inSet, 1);
+              continue;
+            }
+            if (clip.start < start && clipEnd > end) {
+              const tail = {
+                ...structuredClone(clip),
+                id: crypto.randomUUID(),
+                start,
+                duration: Math.max(0.05, clipEnd - end),
+                sourceIn: (clip.sourceIn ?? 0) + (end - clip.start),
+              };
+              clip.duration = Math.max(0.05, start - clip.start);
+              kept.push(clip, tail);
+              continue;
+            }
+            if (clip.start < start) {
+              clip.duration = Math.max(0.05, start - clip.start);
+              kept.push(clip);
+              continue;
+            }
+            clip.sourceIn = (clip.sourceIn ?? 0) + (end - clip.start);
+            clip.duration = Math.max(0.05, clipEnd - end);
+            clip.start = start;
+            kept.push(clip);
+          }
+          track.clips = kept;
+        }
+        if (s.playhead > start) s.playhead = Math.max(start, s.playhead - length);
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.smooth-slow": {
         const p = payload as { clipId: string; on: boolean };
         const found = this.findClip(p.clipId);

@@ -1146,7 +1146,8 @@ left|gauche|sinistra|左|왼쪽|esquerda|слева|sol|左侧|左側
 right|droite|destra|右|오른쪽|direita|справа|sağ|右侧|右側
 bottom|bas|in basso|下|아래|abaixo|снизу|alt|底部|底部
 Style removed|Style retiré|Stile rimosso|スタイルを解除しました|스타일을 제거했습니다|Estilo removido|Стиль снят|Stil kaldırıldı|已移除样式|已移除樣式
-Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用`;
+Not available in this layout|Indisponible dans cette disposition|Non disponibile in questo layout|このレイアウトでは利用できません|이 레이아웃에서는 사용할 수 없습니다|Indisponível neste layout|Недоступно в этом макете|Bu düzende kullanılamaz|此布局中不可用|此配置中不可用
+Cut this sentence and the footage under it|Couper cette phrase et les images en dessous|Taglia questa frase e il girato sotto di essa|この文とその下の映像をカット|이 문장과 그 아래 영상을 잘라내기|Cortar esta frase e a filmagem sob ela|Вырезать это предложение и кадры под ним|Bu cümleyi ve altındaki görüntüyü kes|剪掉这句话及其下方的素材|剪掉這句話及其下方的素材`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");
