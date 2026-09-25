@@ -40,7 +40,7 @@ The rest is written by hand.
 | local_speech.py | 374 | /api/speech | 4 |
 | main.py | 376 | /api/health | 11 |
 | media.py | 840 | /api/media | 25 |
-| model_manager.py | 426 | /api/models | 7 |
+| model_manager.py | 461 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 308 | /api/presets | 7 |
 | project_tracking.py | 89 | /api/track | 1 |

@@ -19,6 +19,7 @@ arguments = [
     '--add-data', str(root.parent / 'frontend' / 'dist') + os.pathsep + 'frontend_dist',
     '--add-data', str(root.parent / 'src-tauri' / 'binaries' / 'ffmpeg-licence.json') + os.pathsep + '.',
     '--add-data', str(root / 'app' / 'effect_library') + os.pathsep + 'app/effect_library',
+    '--add-data', str(root / 'app' / 'bundled_models') + os.pathsep + 'app/bundled_models',
     '--collect-all', 'uvicorn',
     '--collect-binaries', 'wgpu', '--collect-data', 'wgpu',
     '--hidden-import', 'wgpu.backends.wgpu_native', '--hidden-import', 'wgpu.utils.compute',

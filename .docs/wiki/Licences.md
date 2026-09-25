@@ -180,30 +180,55 @@ Licence sources: [OpenCV packaging](https://github.com/opencv/opencv-python), [P
 
 The packaging audit found libavcodec/libavformat/libavutil/libswscale in the initial standard OpenCV diagnostic freeze. That output is not a distributable. VideoSource now decodes through external FFmpeg, and freeze.py rejects a codec-enabled OpenCV runtime. Native platform dependency audits remain required on their actual built bundles. No frozen binary or third-party wheel is included in this source release.
 
-## Background removal model candidates (BG1 gate, v0.60.0)
+## Background removal and local model registry (BG1 gate; completed at v1.58.0)
 
 The gate exists so no model reaches the build before its licence is recorded. A
-candidate may only be bundled or downloaded once its row carries a licence that
-permits redistribution and a SHA-256 taken from the file we actually ship.
+model may only be registered once its row carries a licence that permits the
+offering and a SHA-256 taken from the file we actually fetched. Every registry
+entry in `backend/app/model_manager.py` is pinned in its `PINNED` table to the
+hash below; a download that does not match its pin is deleted and named.
 
-| Role | Candidate | Licence | Source | Bundle or download | SHA-256 |
-| --- | --- | --- | --- | --- | --- |
-| Selfie segmentation, bundled (BG2) | MediaPipe Selfie Segmentation (tflite/onnx export, under 1 MB) | Apache-2.0 | https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite | bundle in the engine build | pending, recorded on first fetch |
-| Video matting, person (BG4) | MODNet | Apache-2.0 | https://github.com/ZHKKKe/MODNet | download on demand | pending, recorded on first fetch |
-| Object matting (BG4) | IS-Net (DIS), general use | Apache-2.0 | https://github.com/xuebinqin/DIS | download on demand | pending, recorded on first fetch |
-| Object matting, alternative (BG4) | BiRefNet | MIT | https://github.com/ZhengPeng7/BiRefNet | download on demand | pending, recorded on first fetch |
-| Prompted region segmentation, brush (BG5) | MobileSAM | Apache-2.0 | https://github.com/ChaoningZhang/MobileSAM | download on demand | pending, recorded on first fetch |
-| Prompted region segmentation, alternative (BG5) | SlimSAM | Apache-2.0 | https://github.com/czg1225/SlimSAM | download on demand | pending, recorded on first fetch |
+| Registry entry | Model | Licence | Offering | SHA-256 |
+| --- | --- | --- | --- | --- |
+| video-matting | Robust Video Matting (mobilenetv3 fp32) | GPL-3.0-only | download at the person's explicit request, never bundled; see the note below | 88d4531297118f595bf2fd60f6f566aec2e559393802d1f436c380f0cbbd2828 |
+| sharp-cutout | IS-Net general use (rembg release) | Apache-2.0 | download on demand | 60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a |
+| click-select | SAM 2 Hiera Tiny encoder / decoder (ONNX export) | Apache-2.0 | download on demand | 4cc015ee18520e93f8c7ddfeaca7436039daaaaf19721b4b96a8810a805e82f7 / f5a4bd656c143899fb7f52d64ed81e6f6aeb37d477a0b6da50146ac7cf2187bf |
+| click-track | SAM 2.1 Tiny video (vision encoder / mask decoder / memory encoder / memory attention / pointer tpos / constants) | Apache-2.0 | download on demand | aa7a8542942f042e235a993a1ab0ccf5f049918500577802a7f10ec1b39bb873 / 0461896de3db00936fe1643506f129d71cb6d5d2ae15754811756b7ea1b070c6 / 580d246c109de88838f600ba7c1c0d03d1fe267f7641b06f8c88c5f0dc5834cd / 791e648ce8f5ef91ad00ba06e83066ff261ae5a645f0b042b4f46a89fd054baf / 7e71df1d75dba09bc18dd4ae745c2a2cceebdd14d84eadea2fe65d0205f101fc / 172edc70e892aab0aef6caedf97b8e4091fbf6c5d26dac5fd9ea69d093d927d3 |
+| object-cutout | U2NetP (rembg release) | Apache-2.0 | download on demand, and bundled in the engine build as the out-of-the-box cutout (BG2, below) | 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8 |
+| person-cutout | U2Net human segmentation (rembg release) | Apache-2.0 | download on demand | 01eb6a29a5c4d8edb30b56adad9bb3a2a0535338e480724a213e0acfd2d1c73c |
+| ai-upscale | Real-ESRGAN x4plus (ONNX export) | BSD-3-Clause | download on demand | 4851ec156207d271f5328605d0582eeb851e656227da8aca093ced9e60789291 |
+| local-speech | Kokoro v1.0 model / voices | Apache-2.0 | download on demand | beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a / bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d |
+
+On Robust Video Matting: its GPL-3.0 licence is incompatible with shipping the
+weights inside formcut's builds, and they are never bundled or redistributed.
+What the registry offers is a download of the upstream project's own release
+file, fetched at the person's explicit request into their own model folder, with
+the licence named on the entry and stored beside the file. The earlier exclusion
+row said "excluded" without this distinction; the registry and this page now
+state the same rule.
+
+BG2 decision, recorded at v1.58.0: the bundled fallback is U2NetP rather than
+the MediaPipe selfie segmenter first recorded as the candidate, because the
+selfie model ships as tflite and the engine carries ONNX Runtime, not a tflite
+runtime, while U2NetP is 4.6 MB of already-vetted Apache-2.0 ONNX from the same
+release the download offers, and it is the model the cutout defaults to. The
+bundled copy lives at `backend/app/bundled_models/u2netp.onnx` and the model
+folder, when populated, takes precedence.
+
+Candidates recorded but not registered (kept so the reasoning is not lost):
+MediaPipe Selfie Segmentation (Apache-2.0, tflite; passed over for the runtime
+reason above), MODNet (Apache-2.0), BiRefNet (MIT), MobileSAM (Apache-2.0) and
+SlimSAM (Apache-2.0); their hashes stay unrecorded until any of them is
+registered, and the gate applies then.
 
 Excluded by policy, recorded so the decision is not revisited by accident:
 
 | Model | Licence | Why excluded |
 | --- | --- | --- |
-| RobustVideoMatting (RVM) | GPL-3.0 | copyleft, incompatible with shipping inside a proprietary bundle |
 | U2Net full weights from some mirrors | unclear or unstated | provenance not verifiable; the Apache-2.0 rembg release is used instead |
 | SAM (original, Meta) | Apache-2.0 code, weights under a separate research licence | weight licence does not permit redistribution here |
 
-Each SHA-256 stays "pending" until the file is fetched on a networked machine and
-hashed with `shasum -a 256`, and the value is written back into this table in the
-same change that adds the model to `backend/app/model_manager.py`. That ordering
-is the gate: no entry in the model manager without a hash in this row.
+The gate's ordering rule stands: no entry in the model manager without a hash
+in the registry table above, taken from a real fetch of the file and enforced
+at download time through the manager's `PINNED` table. A candidate's hash is
+recorded in the same change that registers it.

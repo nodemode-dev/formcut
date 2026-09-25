@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import threading
+from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException, UploadFile
@@ -15,6 +16,23 @@ from .paths import DATA_DIR, MODELS_DIR
 router = APIRouter(prefix="/api/models", tags=["models"])
 ROOT = MODELS_DIR
 LEGACY = DATA_DIR / "models"
+# BG2: models shipped inside the engine build, so the default cutout works on
+# a machine that has downloaded nothing. A file in the person's model folder
+# always takes precedence; the bundle only answers when the folder is empty.
+# Resolved the way effect_packages resolves its library: beside this module,
+# which under PyInstaller lands at _MEIPASS/app/bundled_models via freeze.py.
+BUNDLED = Path(__file__).resolve().parent / "bundled_models"
+
+
+def model_file(name: str) -> Path:
+    """Where a model file actually is: the model folder, else the bundle."""
+    path = ROOT / name
+    if path.is_file() and path.stat().st_size > 1024:
+        return path
+    bundled = BUNDLED / name
+    if bundled.is_file():
+        return bundled
+    return path
 MODELS = {
     # Heavier segmentation, offered rather than required: the cutout works
     # without them and is better with them.
@@ -90,7 +108,7 @@ _downloading: set[str] = set()
 
 
 def ready(model: str) -> bool:
-    return model in MODELS and all((ROOT / name).is_file() and (ROOT / name).stat().st_size > 1024 for name in MODELS[model]["files"])
+    return model in MODELS and all(model_file(name).is_file() and model_file(name).stat().st_size > 1024 for name in MODELS[model]["files"])
 
 
 @router.get("")
@@ -312,7 +330,24 @@ def import_model(model: str, file: UploadFile):
 # P8: pinned SHA-256 per file. A name absent here is unpinned and recorded on
 # first download instead, so a pin can be added from a verified machine later.
 PINNED: dict[str, str] = {
+    # BG1's gate, completed at v1.58.0: every registry file pinned to the
+    # SHA-256 of the file actually fetched and hashed, matching the table in
+    # .docs/wiki/Licences.md. A download that does not match never lands.
+    "rvm_mobilenetv3_fp32.onnx": "88d4531297118f595bf2fd60f6f566aec2e559393802d1f436c380f0cbbd2828",
+    "isnet-general-use.onnx": "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a",
+    "sam2_hiera_tiny.encoder.onnx": "4cc015ee18520e93f8c7ddfeaca7436039daaaaf19721b4b96a8810a805e82f7",
+    "sam2_hiera_tiny.decoder.onnx": "f5a4bd656c143899fb7f52d64ed81e6f6aeb37d477a0b6da50146ac7cf2187bf",
+    "sam21-video-vision_encoder.onnx": "aa7a8542942f042e235a993a1ab0ccf5f049918500577802a7f10ec1b39bb873",
+    "sam21-video-mask_decoder.onnx": "0461896de3db00936fe1643506f129d71cb6d5d2ae15754811756b7ea1b070c6",
+    "sam21-video-memory_encoder.onnx": "580d246c109de88838f600ba7c1c0d03d1fe267f7641b06f8c88c5f0dc5834cd",
+    "sam21-video-memory_attention.onnx": "791e648ce8f5ef91ad00ba06e83066ff261ae5a645f0b042b4f46a89fd054baf",
+    "sam21-video-pointer_tpos.onnx": "7e71df1d75dba09bc18dd4ae745c2a2cceebdd14d84eadea2fe65d0205f101fc",
+    "sam21-video-constants.json": "172edc70e892aab0aef6caedf97b8e4091fbf6c5d26dac5fd9ea69d093d927d3",
+    "u2netp.onnx": "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8",
+    "u2net_human_seg.onnx": "01eb6a29a5c4d8edb30b56adad9bb3a2a0535338e480724a213e0acfd2d1c73c",
     "realesrgan-x4plus.onnx": "4851ec156207d271f5328605d0582eeb851e656227da8aca093ced9e60789291",
+    "kokoro-v1.0.onnx": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a",
+    "voices-v1.0.bin": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
 }
 
 SOURCES_FILE = ROOT / "sources.json"
