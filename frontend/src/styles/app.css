@@ -338,6 +338,9 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   white-space: nowrap;
 }
 .seg > button.is-active { background: var(--cue); color: var(--on-cue); }
+.multicam-angles { flex-wrap: wrap; }
+.multicam-angles > button { min-width: 28px; font-variant-numeric: tabular-nums; }
+.multicam-hint { padding: 0 var(--sp-2) var(--sp-2); }
 .inspector-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
 .inspector-head .seg { flex: 1; }
 .inspector-subtabs { padding: 0 var(--sp-3) var(--sp-2); }

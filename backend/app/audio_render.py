@@ -111,7 +111,11 @@ def mix_audio(project: dict, cancelled=lambda: False) -> np.ndarray:
             continue
         duration = clip["duration"] + clip.get("extendOut", 0)
         if clip["kind"] == "timeline":
-            nested = nested_project(project, str(clip.get("timelineId") or ""), project.get("_chain", ()))
+            # Multicam: the sound follows the audio angle when one is set, the
+            # picture's angle otherwise; a plain compound mixes every track.
+            angle = clip.get("audioAngle", clip.get("angle"))
+            angle = int(angle) if isinstance(angle, (int, float)) and not isinstance(angle, bool) else None
+            nested = nested_project(project, str(clip.get("timelineId") or ""), project.get("_chain", ()), angle)
             if nested is None:
                 continue
             samples = mix_audio(nested, cancelled)[round(float(clip.get("sourceIn", 0)) * RATE) :]

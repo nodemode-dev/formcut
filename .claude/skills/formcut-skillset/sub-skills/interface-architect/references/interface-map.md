@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1124L)
+- `engine/project.ts` (1148L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
-- `engine/types.ts` (281L)
+- `engine/types.ts` (285L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1180L)
+- `i18n/language-pack.ts` (1185L)
 - `i18n/text.ts` (29L)
 - `main.ts` (96L)
 - `types/assets.d.ts` (6L)
@@ -52,7 +52,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
 - `ui/icons.ts` (54L)
-- `ui/inspector-pane.ts` (1603L)
+- `ui/inspector-pane.ts` (1681L)
 - `ui/instagram.ts` (185L)
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
@@ -94,6 +94,7 @@ and a UI module that mutates state directly is a defect.
 - `captions.add`
 - `captions.emphasise`
 - `clip.add`
+- `clip.angle`
 - `clip.audiofx`
 - `clip.colour`
 - `clip.cutout`

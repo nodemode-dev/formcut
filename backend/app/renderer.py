@@ -538,14 +538,17 @@ class FrameRenderer:
         return cv2.cvtColor(mixed, cv2.COLOR_BGR2RGBA)
 
     def nested_frame(self, clip: dict, time: float) -> np.ndarray | None:
-        """A compound clip's frame: the referenced timeline at `time`, or None for a cycle."""
+        """A compound clip's frame: the referenced timeline at `time`, or None for a cycle; a multicam clip's angle alone."""
         timeline_id = str(clip.get("timelineId") or "")
-        renderer = self.nested.get(timeline_id)
+        angle = clip.get("angle")
+        angle = int(angle) if isinstance(angle, (int, float)) and not isinstance(angle, bool) else None
+        key = timeline_id if angle is None else f"{timeline_id}@{angle}"
+        renderer = self.nested.get(key)
         if renderer is None:
-            document = nested_project(self.project, timeline_id, self.project.get("_chain", ()))
+            document = nested_project(self.project, timeline_id, self.project.get("_chain", ()), angle)
             if document is None:
                 return None
-            renderer = self.nested[timeline_id] = FrameRenderer(document, self.width)
+            renderer = self.nested[key] = FrameRenderer(document, self.width)
         return renderer.frame(max(0.0, min(time, renderer.project["duration"])))
 
     def media_frame(self, clip: dict, time: float) -> np.ndarray:

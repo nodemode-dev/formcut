@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 92 | /api/agents | 1 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 697 | /api/rpc | 2 |
+| automation.py | 699 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
@@ -70,7 +70,7 @@ the automation transports.
 
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
-- `audio_render.py` (227L)
+- `audio_render.py` (231L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
@@ -93,8 +93,8 @@ the automation transports.
 - `processes.py` (22L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
-- `render_document.py` (125L)
-- `renderer.py` (1102L)
+- `render_document.py` (130L)
+- `renderer.py` (1105L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)

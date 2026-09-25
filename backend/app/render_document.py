@@ -64,13 +64,14 @@ def validate_document(project: dict) -> dict:
     return result
 
 
-def nested_project(project: dict, timeline_id: str, chain: tuple[str, ...] = ()) -> dict | None:
+def nested_project(project: dict, timeline_id: str, chain: tuple[str, ...] = (), angle: int | None = None) -> dict | None:
     """The project with `timeline_id` as its active timeline, for a compound clip.
 
     `chain` holds the ids of the timelines being rendered above this one; a
     timeline that is already in it, or that is the one being rendered, would
     recurse forever, so it renders as nothing. The duration is the nested
-    timeline's own.
+    timeline's own. `angle` is multicam: the index of the one track of the
+    referenced timeline to keep, every other angle left out of the copy.
     """
     timelines = project.get("timelines") or []
     active = timelines[project.get("activeTimeline", 0)] if timelines else None
@@ -82,6 +83,10 @@ def nested_project(project: dict, timeline_id: str, chain: tuple[str, ...] = ())
     nested["activeTimeline"] = index
     nested["duration"] = max([c["start"] + c["duration"] for t in timelines[index]["tracks"] for c in t["clips"]] or [0.1])
     nested["_chain"] = above
+    if angle is not None:
+        tracks = timelines[index].get("tracks") or []
+        chosen = tracks[angle] if 0 <= angle < len(tracks) else None
+        nested["timelines"] = [{**tl, "tracks": [chosen] if chosen else []} if i == index else tl for i, tl in enumerate(timelines)]
     return nested
 
 

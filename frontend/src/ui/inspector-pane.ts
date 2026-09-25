@@ -71,6 +71,15 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     </div>
     <div class="inspector-body">
       <div class="inspector-empty" role="status">${t("insp.empty")}</div>
+      <div class="section" data-section="multicam" data-feature="section.multicam" hidden data-ref="multicam">
+        <div class="section-head">${t("mc.title")} ${icon("chevD")}</div>
+        <div class="prop-row multicam-row">
+          <span>${t("mc.angle")}</span>
+          <span class="seg multicam-angles" data-ref="mc-angles" role="group" aria-label="${t("mc.angle")}"></span>
+          <span class="prop-aux"><select class="mini-select" data-ref="mc-audio" aria-label="${t("mc.audio")}"></select></span>
+        </div>
+        <div class="text-add-hint multicam-hint" data-ref="mc-hint">${t("mc.hint")}</div>
+      </div>
       <div class="section" data-section="transform" data-feature="section.transform">
         <div class="section-head">${t("sec.transform")} ${icon("chevD")}<span class="spacer"></span><button class="iconbtn" data-ref="reset-transform" title="${t("insp.reset")}">${icon("reset")}</button></div>
         ${propRow(t("row.scale"), "scale", sel.scale, "%")}
@@ -423,7 +432,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     </div>`;
 
   const TAB_VIEWS: Record<string, { sections: string[]; pages: string[] }> = {
-    "video:basic": { sections: ["transform", "text", "blend", "canvas"], pages: [] },
+    "video:basic": { sections: ["multicam", "transform", "text", "blend", "canvas"], pages: [] },
     "video:speed": { sections: ["timing"], pages: ["speed"] },
     "video:animation": { sections: ["track"], pages: ["motion"] },
     // Repair is a subtab of its own: stabilisation, flicker, noise, colour match
@@ -444,7 +453,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   let activeSubtab = "basic";
   let showAll = false;
   const everything = {
-    sections: ["transform", "text", "blend", "color", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas", "rhythm"],
+    sections: ["multicam", "transform", "text", "blend", "color", "timing", "track", "mask", "key", "audio", "repair", "scenes", "removebg", "canvas", "rhythm"],
     pages: ["speed", "motion", "effects", "audio", "transition", "cutout", "advanced"],
   };
   const showAllChip = el.querySelector<HTMLButtonElement>('[data-ref="show-all"]')!;
@@ -509,6 +518,74 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   };
 
   const textSection = el.querySelector<HTMLElement>('[data-ref="text-section"]')!;
+  // Multicam: a compound clip whose timeline has more than one track shows a
+  // chip per angle. A chip cuts at the playhead and switches the tail when
+  // the playhead is inside the clip, and switches the whole clip at its edges.
+  const multicamRow = el.querySelector<HTMLElement>('[data-ref="multicam"]')!;
+  const angleHost = el.querySelector<HTMLElement>('[data-ref="mc-angles"]')!;
+  const audioSelect = el.querySelector<HTMLSelectElement>('[data-ref="mc-audio"]')!;
+  const anglesOf = (clip: Clip | null) => {
+    if (!clip || clip.kind !== "timeline") return [] as Array<{ id: string; name: string }>;
+    const timeline = engine.snapshot.timelines.find((tl) => tl.id === clip.timelineId);
+    return (timeline?.tracks ?? []).map((track, index) => ({ id: track.id, name: track.name || `${index + 1}` }));
+  };
+  const switchAngle = (angle: number) => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    if (!found || found.clip.kind !== "timeline") return;
+    engine.dispatch("clip.angle", { clipId: found.clip.id, angle, atPlayhead: true });
+  };
+  const syncMulticam = (clip: Clip | null) => {
+    const angles = anglesOf(clip);
+    const show = angles.length > 1;
+    if (multicamRow.hidden === show) multicamRow.hidden = !show;
+    if (!show || !clip) return;
+    while (angleHost.children.length > angles.length) angleHost.lastElementChild!.remove();
+    angles.forEach((angle, index) => {
+      let chip = angleHost.children[index] as HTMLButtonElement | undefined;
+      if (!chip) {
+        chip = document.createElement("button");
+        chip.type = "button";
+        chip.dataset.angle = String(index);
+        chip.addEventListener("click", () => switchAngle(index));
+        angleHost.append(chip);
+      }
+      const label = `${index + 1}`;
+      if (chip.textContent !== label) chip.textContent = label;
+      if (chip.title !== angle.name) { chip.title = angle.name; chip.setAttribute("aria-label", angle.name); }
+      const active = clip.angle === index;
+      if (chip.classList.contains("is-active") !== active) chip.classList.toggle("is-active", active);
+      if (chip.getAttribute("aria-pressed") !== String(active)) chip.setAttribute("aria-pressed", String(active));
+    });
+    const options = [{ value: "", label: t("mc.audio.follow") }, ...angles.map((angle, index) => ({ value: String(index), label: angle.name }))];
+    while (audioSelect.options.length > options.length) audioSelect.remove(audioSelect.options.length - 1);
+    options.forEach((option, index) => {
+      let node = audioSelect.options[index];
+      if (!node) { node = document.createElement("option"); audioSelect.append(node); }
+      if (node.value !== option.value) node.value = option.value;
+      if (node.textContent !== option.label) node.textContent = option.label;
+    });
+    const audioValue = clip.audioAngle === undefined ? "" : String(clip.audioAngle);
+    if (document.activeElement !== audioSelect && audioSelect.value !== audioValue) audioSelect.value = audioValue;
+  };
+  audioSelect.addEventListener("change", () => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    if (!found || found.clip.kind !== "timeline") return;
+    engine.dispatch("clip.angle", { clipId: found.clip.id, audioAngle: audioSelect.value === "" ? null : Number(audioSelect.value) });
+  });
+  window.addEventListener("keydown", (ev) => {
+    const target = ev.target as HTMLElement;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey || target.closest("input,textarea,select,[contenteditable=true]")) return;
+    if (!/^[1-9]$/.test(ev.key)) return;
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    if (!found || found.clip.kind !== "timeline" || anglesOf(found.clip).length < 2) return;
+    const angle = Number(ev.key) - 1;
+    if (angle >= anglesOf(found.clip).length) return;
+    ev.preventDefault();
+    switchAngle(angle);
+  });
   const boldBtn = el.querySelector<HTMLElement>('[data-ref="bold"]')!;
   const italicBtn = el.querySelector<HTMLElement>('[data-ref="italic"]')!;
   italicBtn.addEventListener("click", () => patchText({ italic: !italicBtn.classList.contains("is-on") }));
@@ -1454,6 +1531,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       const next = String(clip?.[key] ?? (key === "speed" ? 1 : 0));
       if (document.activeElement !== input && input.value !== next) input.value = next;
     }
+    syncMulticam(clip ?? null);
     const isText = clip?.kind === "text";
     if (textSection.hidden === isText) textSection.hidden = !isText;
     el.classList.toggle("kind-adjust", clip?.kind === "filter");

@@ -551,6 +551,8 @@ def dispatch(method: str, params: dict):
                 "lutIntensity",
                 "pitchFollowsSpeed",
                 "audioStream",
+                "angle",
+                "audioAngle",
                 "key",
                 "mask",
                 "fadeIn",

@@ -643,6 +643,30 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.angle": {
+        // Multicam: switch a compound clip to an angle. With the playhead
+        // inside the clip the cut happens there and the tail takes the angle,
+        // which is how an editor switches cameras while the take plays; at the
+        // clip's edges, or when asked not to cut, the whole clip switches.
+        const p = payload as { clipId: string; angle: number | null; audioAngle?: number | null; atPlayhead?: boolean };
+        const found = this.findClip(p.clipId);
+        if (!found || found.clip.kind !== "timeline") break;
+        this.pushHistory();
+        let target = found.clip;
+        const offset = Math.round((s.playhead - found.clip.start) * 100) / 100;
+        if (p.atPlayhead && offset >= 0.1 && offset <= found.clip.duration - 0.1) {
+          target = this.splitOne(found.clip, found.trackIndex, offset);
+          s.selectedClipId = target.id;
+          s.selection = [target.id];
+        }
+        if (p.angle === null) delete target.angle;
+        else if (p.angle !== undefined) target.angle = p.angle;
+        if (p.audioAngle === null) delete target.audioAngle;
+        else if (p.audioAngle !== undefined) target.audioAngle = p.audioAngle;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clips.split": {
         const p = payload as { clipIds: string[]; time: number };
         const tracks = s.timelines[s.activeTimeline].tracks;

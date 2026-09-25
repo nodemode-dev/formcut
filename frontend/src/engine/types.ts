@@ -122,6 +122,10 @@ export interface Clip {
   textStyle?: TextStyle;
   /** For a timeline clip: the id of the timeline of this project it plays, as one clip. */
   timelineId?: string;
+  /** Multicam: the index of the one track of that timeline this cut shows; absent, the compound shows every track. */
+  angle?: number;
+  /** Multicam: the track whose sound this cut carries; absent, the picture's angle sounds. */
+  audioAngle?: number;
   /** The caption's words, each with its start and length in seconds from the clip's start (from transcription); a word may carry its own colour (emphasis). */
   words?: Array<{ t: number; d: number; text: string; colour?: string }>;
   transitionIn?: ClipTransition;
