@@ -10,6 +10,8 @@ export interface MediaItem {
   width: number;
   height: number;
   fps: number;
+  /** X8: present when the file keeps more than one audio stream. */
+  audioStreams?: Array<{ index: number; channels: number; language: string; title: string }>;
 }
 
 type BinListener = (items: MediaItem[], added?: MediaItem) => void;

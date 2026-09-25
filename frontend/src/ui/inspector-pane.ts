@@ -155,6 +155,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="prop-aux"></span>
         </div>
         <div class="text-add-hint">${t("afx.note")}</div>
+        <div class="prop-row" data-ref="stream-row" hidden>
+          <span>${t("row.audiostream")}</span>
+          <select class="mini-select" data-ref="audiostream"></select>
+          <span class="prop-aux"></span>
+        </div>
         <div class="prop-row">
           <span>${t("row.mute")}</span>
           <span></span>
@@ -1312,6 +1317,17 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     engine.dispatch("clip.audiofx", { clipId, fx: audioFxSel.value || null });
   });
 
+  // X8: which of the media's audio streams the clip plays. The row shows only
+  // when the selected clip's media keeps more than one; options are patched in
+  // place, keyed by stream index, so a focused select is never rebuilt.
+  const streamRow = el.querySelector<HTMLElement>('[data-ref="stream-row"]')!;
+  const streamSel = el.querySelector<HTMLSelectElement>('[data-ref="audiostream"]')!;
+  streamSel.addEventListener("change", () => {
+    const clipId = engine.snapshot.selectedClipId;
+    if (!clipId) return;
+    engine.dispatch("clip.creator", { clipId, patch: { audioStream: Number(streamSel.value) || 0 } });
+  });
+
   const maskShape = el.querySelector<HTMLSelectElement>('[data-ref="mask-shape"]')!;
   const MASK_FIELDS = ["maskX", "maskY", "maskW", "maskH", "maskF", "maskA"] as const;
   const currentMaskPoints = () => {
@@ -1385,6 +1401,26 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const clip = id ? engine.findClip(id)?.clip : undefined;
     const wantFx = clip?.audioFx ?? "";
     if (document.activeElement !== audioFxSel && audioFxSel.value !== wantFx) audioFxSel.value = wantFx;
+    const streams = clip?.mediaId ? bin.find(clip.mediaId)?.audioStreams : undefined;
+    const soundKind = clip?.kind === "audio" || clip?.kind === "video";
+    const wantStreams = soundKind && streams && streams.length > 1 ? streams : null;
+    if (streamRow.hidden !== !wantStreams) streamRow.hidden = !wantStreams;
+    if (wantStreams) {
+      while (streamSel.options.length > wantStreams.length) streamSel.remove(streamSel.options.length - 1);
+      wantStreams.forEach((stream, n) => {
+        let option = streamSel.options[n];
+        if (!option) {
+          option = document.createElement("option");
+          streamSel.add(option);
+        }
+        const name = stream.title || stream.language || String(n + 1);
+        const label = stream.channels ? `${name} · ${stream.channels}ch` : name;
+        if (option.value !== String(stream.index)) option.value = String(stream.index);
+        if (option.textContent !== label) option.textContent = label;
+      });
+      const wantIndex = String(clip?.audioStream ?? 0);
+      if (document.activeElement !== streamSel && streamSel.value !== wantIndex) streamSel.value = wantIndex;
+    }
     const wantShape = clip?.mask?.shape ?? "";
     if (document.activeElement !== maskShape && maskShape.value !== wantShape) maskShape.value = wantShape;
     if (clip?.mask) {

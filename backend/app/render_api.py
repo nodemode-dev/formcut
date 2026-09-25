@@ -530,7 +530,7 @@ def clip_audio(body: ClipAudioInput):
         json.dumps(
             {
                 k: clip.get(k)
-                for k in ("mediaId", "sourceIn", "duration", "extendOut", "speed", "speedCurve", "reversed", "audioEffects", "audioFx")
+                for k in ("mediaId", "sourceIn", "duration", "extendOut", "speed", "speedCurve", "reversed", "audioEffects", "audioFx", "audioStream")
             },
             sort_keys=True,
             default=str,

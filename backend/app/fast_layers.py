@@ -27,7 +27,7 @@ import numpy as np
 from PIL import Image, ImageColor, ImageOps
 
 from . import fast_export
-from .media import MEDIA_DIR
+from .media import MEDIA_DIR, is_hdr
 from .render_document import flatten
 from .renderer import DEFAULTS
 from .timing import source_time
@@ -186,10 +186,18 @@ def plan(project: dict, count: int) -> Plan | None:
         lead = first / fps - float(clip["start"])
         still = clip["kind"] == "image"
         if still:
+            # The graph feeds this path to ffmpeg, which cannot decode HEIC;
+            # the frame path renders those through PIL instead.
+            if paths[0].suffix.lower() in (".heic", ".heif"):
+                return None
             with Image.open(paths[0]) as picture:
                 source_w, source_h = ImageOps.exif_transpose(picture).size
             rate, seek, shift, span = float(fps), 0.0, 0.0, frames / fps
         else:
+            # X7: as in fast_export, the graph would decode HDR untouched;
+            # the frame path's pipe carries the tone map.
+            if is_hdr(str(clip["mediaId"])):
+                return None
             source = VideoSource(paths[0])
             rate, source_w, source_h = source.fps, source.width, source.height
             start = source_time(clip, lead)

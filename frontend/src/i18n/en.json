@@ -343,6 +343,7 @@
   "row.feather": "Feather",
   "mask.note": "Preview and export use the same processing.",
   "row.audiofx": "Voice filter",
+  "row.audiostream": "Audio stream",
   "afx.none": "None",
   "afx.pitchup": "Pitch up",
   "afx.pitchdown": "Pitch down",

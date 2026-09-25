@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 92 | /api/agents | 1 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 656 | /api/rpc | 2 |
+| automation.py | 657 | /api/rpc | 2 |
 | brush.py | 55 | /api/render | 1 |
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
@@ -39,7 +39,7 @@ The rest is written by hand.
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
 | main.py | 376 | /api/health | 11 |
-| media.py | 764 | /api/media | 25 |
+| media.py | 840 | /api/media | 25 |
 | model_manager.py | 426 | /api/models | 7 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 308 | /api/presets | 7 |
@@ -68,15 +68,15 @@ the automation transports.
 
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (132L)
-- `audio_render.py` (221L)
+- `audio_render.py` (227L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
 - `effect_packages.py` (394L)
 - `encoders.py` (297L)
 - `expressions.py` (51L)
-- `fast_export.py` (294L)
-- `fast_layers.py` (395L)
+- `fast_export.py` (298L)
+- `fast_layers.py` (403L)
 - `features.py` (43L)
 - `ffmpeg_fetch.py` (165L)
 - `frame_cache.py` (146L)
@@ -105,7 +105,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (209L)
-- `video_source.py` (228L)
+- `video_source.py` (238L)
 - `windows_console.py` (43L)
 
 ## Reading order for a change

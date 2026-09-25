@@ -7,6 +7,9 @@ httpx==0.28.*
 yt-dlp==2026.*
 opencv-python-headless==4.12.0.88
 Pillow==11.*
+# X6: HEIC and HEIF decoding (decoders only; the full pillow-heif carries
+# encoders and is excluded). Licence rationale in .docs/wiki/Licences.md.
+pi-heif==1.*
 numpy>=2.0.2,<2.3
 wgpu==0.31.1
 onnxruntime==1.23.2

@@ -344,6 +344,7 @@
  "row.feather": "نرمی لبه",
  "mask.note": "پیش‌نمایش و خروجی از یک پردازش استفاده می‌کنند.",
  "row.audiofx": "فیلتر صدا",
+ "row.audiostream": "جریان صدا",
  "afx.none": "هیچ",
  "afx.pitchup": "زیرتر کردن صدا",
  "afx.pitchdown": "بم‌تر کردن صدا",

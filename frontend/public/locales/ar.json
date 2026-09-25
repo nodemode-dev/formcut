@@ -344,6 +344,7 @@
  "row.feather": "التنعيم",
  "mask.note": "المعاينة والتصدير يستخدمان المعالجة نفسها.",
  "row.audiofx": "مرشح الصوت",
+ "row.audiostream": "مسار الصوت",
  "afx.none": "لا شيء",
  "afx.pitchup": "رفع طبقة الصوت",
  "afx.pitchdown": "خفض طبقة الصوت",

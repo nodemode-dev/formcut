@@ -343,6 +343,7 @@
   "row.feather": "Difuminado",
   "mask.note": "La vista previa y la exportación usan el mismo procesamiento.",
   "row.audiofx": "Filtro de voz",
+  "row.audiostream": "Pista de audio",
   "afx.none": "Ninguno",
   "afx.pitchup": "Tono agudo",
   "afx.pitchdown": "Tono grave",

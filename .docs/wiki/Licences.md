@@ -167,6 +167,7 @@ All UI icons are hand-authored inline currentColor SVG in this repo, except the 
 | OpenCV 4.12.0.88 headless | Apache-2.0; upstream wheel codec libraries have additional licenses | Source-build core/imgproc/imgcodecs/features2d/python3 with FFmpeg, GStreamer and GUI backends disabled before freezing |
 | wgpu-py 0.31.1 / wgpu-native | BSD-2-Clause / MIT OR Apache-2.0 | GPU composition and custom shaders; preserve package notices |
 | ONNX Runtime 1.23.2 | MIT | Local segmentation inference; preserve package notices |
+| pi-heif 1.x | BSD-3-Clause package; wheel bundles libheif and libde265, both LGPL-3.0, as dynamically linked libraries, decoders only, no encoder | HEIC and HEIF decoding for import (X6); LGPL separability holds because the .so files are replaceable, the same ground the bundled ffmpeg stands on; the full pillow-heif is excluded because its wheels carry encoders |
 | grpcio | Apache-2.0 | Optional headless transport |
 | U2Net / U2NetP weights | Apache-2.0 upstream project | Explicit download into user data; never bundled |
 | Kokoro 82M model | Apache-2.0 upstream model card | Explicit download into user data; never bundled |

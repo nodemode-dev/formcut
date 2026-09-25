@@ -20,6 +20,16 @@ class VideoSource:
         if stream is None:
             raise ValueError("This media has no video stream")
         self.width, self.height = int(stream["width"]), int(stream["height"])
+        # X7: PQ and HLG decode washed out when read as if they were SDR. The
+        # chain linearises through zscale, tone-maps with hable, and lands on
+        # BT.709, the same recipe for preview and export because every decode
+        # comes through this pipe.
+        self.tonemap = (
+            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,"
+            "zscale=t=bt709:m=bt709:r=tv,format=yuv420p,"
+            if stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
+            else ""
+        )
         rotation = float(stream.get("tags", {}).get("rotate", 0))
         for item in stream.get("side_data_list", []):
             if "rotation" in item:
@@ -70,7 +80,7 @@ class VideoSource:
                 "-sn",
                 "-dn",
                 "-vf",
-                f"fps={self.fps},scale={self.width}:{self.height}",
+                f"{self.tonemap}fps={self.fps},scale={self.width}:{self.height}",
                 "-threads",
                 "1",
                 "-pix_fmt",

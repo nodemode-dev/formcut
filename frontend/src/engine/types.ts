@@ -128,6 +128,8 @@ export interface Clip {
   colour?: ColourPanel;
   colorGrade?: ColorGrade;
   pitchFollowsSpeed?: boolean;
+  /** Which of the media's audio streams this clip plays (X8); 0, the default stream, when absent. */
+  audioStream?: number;
   lutIntensity?: number;
   volumeKeys?: ValueKey[];
   animations?: ClipAnimations;

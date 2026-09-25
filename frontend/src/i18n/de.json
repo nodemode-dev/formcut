@@ -343,6 +343,7 @@
   "row.feather": "Weiche Kante",
   "mask.note": "Vorschau und Export verwenden dieselbe Verarbeitung.",
   "row.audiofx": "Stimmfilter",
+  "row.audiostream": "Audiospur",
   "afx.none": "Keiner",
   "afx.pitchup": "Höhere Stimme",
   "afx.pitchdown": "Tiefere Stimme",

@@ -24,7 +24,18 @@ router = APIRouter(prefix="/api/media", tags=["media"])
 
 VIDEO_EXT = {".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v"}
 AUDIO_EXT = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac", ".opus"}
-IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
+IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".heic", ".heif", ".avif", ".tif", ".tiff"}
+
+# X6: phones save HEIC by default. Pillow 11.3 decodes AVIF and TIFF itself;
+# HEIC and HEIF come through pi-heif (decoders only, recorded in Licences),
+# registered once here so every Image.open in the engine takes them. Absent
+# the plugin, those two refuse at import with the plain unsupported message.
+try:
+    from pi_heif import register_heif_opener
+
+    register_heif_opener()
+except ImportError:
+    IMAGE_EXT = IMAGE_EXT - {".heic", ".heif"}
 
 
 def _read() -> list[dict]:
@@ -73,6 +84,10 @@ def _probe(path: Path, kind: str) -> dict:
         if stream.get("codec_type") == "video":
             info["width"] = int(stream.get("width") or 0)
             info["height"] = int(stream.get("height") or 0)
+            # X7: PQ and HLG footage is tone-mapped to SDR in the decode pipe;
+            # the record carries the transfer so every path can ask cheaply.
+            if stream.get("color_transfer") in ("smpte2084", "arib-std-b67"):
+                info["transfer"] = stream["color_transfer"]
             rate = stream.get("avg_frame_rate") or "0/1"
             try:
                 num, den = rate.split("/")
@@ -80,8 +95,32 @@ def _probe(path: Path, kind: str) -> dict:
             except (ValueError, ZeroDivisionError):
                 pass
             break
+    # X8: screen recordings keep the microphone and the desktop sound as
+    # separate streams. More than one earns an inventory on the record, so the
+    # inspector can offer the choice without probing again.
+    sounds = [s for s in data.get("streams", []) if s.get("codec_type") == "audio"]
+    if len(sounds) > 1:
+        info["audioStreams"] = [
+            {
+                "index": n,
+                "channels": int(s.get("channels") or 0),
+                "language": (s.get("tags") or {}).get("language") or "",
+                "title": (s.get("tags") or {}).get("title") or "",
+            }
+            for n, s in enumerate(sounds)
+        ]
     if kind == "image":
         info["duration"] = 5.0
+        # ffprobe cannot read every image the engine can (HEIC among them);
+        # the size comes from the decoder that will actually draw it.
+        if not info["width"]:
+            try:
+                from PIL import Image, ImageOps
+
+                with Image.open(path) as picture:
+                    info["width"], info["height"] = ImageOps.exif_transpose(picture).size
+            except Exception:
+                pass
     return info
 
 
@@ -108,6 +147,18 @@ def _thumbnail(src: Path, dest: Path, kind: str, duration: float) -> bool:
         subprocess.run(cmd, capture_output=True, check=False, timeout=30)
     except (OSError, subprocess.SubprocessError):
         return False
+    if not dest.exists() and kind == "image":
+        # The same reach as _probe: ffmpeg cannot read every image the engine
+        # decodes, so the thumbnail falls back to the decoder that can.
+        try:
+            from PIL import Image, ImageOps
+
+            with Image.open(src) as picture:
+                small = ImageOps.exif_transpose(picture).convert("RGB")
+                small.thumbnail((320, 320 * 4))
+                small.save(dest, "JPEG", quality=85)
+        except Exception:
+            return False
     return dest.exists()
 
 
@@ -747,6 +798,31 @@ def delete_media(media_id: str):
 
 
 _audio_streams: dict[str, bool] = {}
+_hdr_media: dict[str, bool] = {}
+
+
+def is_hdr(media_id: str) -> bool:
+    """Whether a media file's video is PQ or HLG (X7): the record answers for
+    anything ingested since the transfer was recorded; older and SDR records
+    probe once and remember, as has_audio does."""
+    with _lock:
+        record = next((m for m in _read() if m["id"] == media_id), None)
+    if record is not None and "transfer" in record:
+        return True
+    if media_id in _hdr_media:
+        return _hdr_media[media_id]
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    found = False
+    if matches:
+        try:
+            found = any(
+                s.get("codec_type") == "video" and s.get("color_transfer") in ("smpte2084", "arib-std-b67")
+                for s in _ffprobe(matches[0]).get("streams", [])
+            )
+        except Exception:
+            found = False
+    _hdr_media[media_id] = found
+    return found
 
 
 def has_audio(media_id: str) -> bool:

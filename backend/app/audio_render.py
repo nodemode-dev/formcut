@@ -173,6 +173,12 @@ def processed_clip_audio(clip: dict, path, cancelled=lambda: False) -> np.ndarra
             str(clip.get("sourceIn") or 0),
             "-i",
             str(path),
+            # X8: a screen recording keeps the microphone and the desktop
+            # sound as separate streams; the clip names which one it plays.
+            # This one site feeds both the live-mix cache and the export, so
+            # the choice cannot drift between them.
+            "-map",
+            f"0:a:{int(clip.get('audioStream') or 0)}",
             "-t",
             str(span),
             "-vn",
