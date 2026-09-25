@@ -149,13 +149,17 @@ def paint_words(
     """
     x, y = origin
     word_style = style.get("wordStyle") or {}
-    mode = word_style.get("mode", "highlight")
+    mode = word_style.get("mode") or "none"
     accent = word_style.get("colour") or "#ffd633"
     base = style.get("color", "#ffffff")
     active = -1
     for index, word in enumerate(words):
         if float(word.get("t", 0)) <= local:
             active = index
+    if mode == "none":
+        active = -1
+    # Per-word emphasis: a word carrying its own colour keeps it, by position.
+    own = [word.get("colour") or None for word in words]
     lines = content.split("\n")
     widest = max((line_width(font, line, tracking) for line in lines), default=0.0)
     step = draw.textbbox((0, 0), "A", font=font, stroke_width=stroke)[3] + stroke + spacing
@@ -188,11 +192,12 @@ def paint_words(
                     anchor="la",
                 )
             else:
+                mine = own[index] if index < len(own) else None
                 draw.text(
                     (cursor, top),
                     token,
                     font=font,
-                    fill=accent if lit and mode == "highlight" else base,
+                    fill=accent if lit and mode == "highlight" else (mine or base),
                     stroke_width=stroke,
                     stroke_fill=stroke_fill,
                     anchor="la",
@@ -687,8 +692,11 @@ class FrameRenderer:
             image.alpha_composite(layer)
             draw = ImageDraw.Draw(image)
         words = clip.get("words") or []
-        if words and (text.get("wordStyle") or {}).get("mode") in ("highlight", "pop", "box"):
-            big = title_font(text, round(size * 1.18)) if text["wordStyle"].get("mode") == "pop" else font
+        word_mode = (text.get("wordStyle") or {}).get("mode")
+        # Per-word emphasis: a word with its own colour is drawn in it whether
+        # or not it is the one being spoken, so the block takes the word path.
+        if words and (word_mode in ("highlight", "pop", "box") or any(word.get("colour") for word in words)):
+            big = title_font(text, round(size * 1.18)) if word_mode == "pop" else font
             paint_words(draw, (x, y), content, font, text, words, local, align, spacing, tracking, stroke, stroke_fill, big)
         else:
             paint_text(draw, (x, y), content, font, text.get("color", "#ffffff"), align, spacing, tracking, stroke, stroke_fill)

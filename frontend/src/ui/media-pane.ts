@@ -129,6 +129,13 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
             <span>${t("cap.wordColour")}</span>
             <input type="color" class="mini-select" data-ref="cap-word-colour" value="#ffd633" aria-label="${t("cap.wordColour")}" />
           </div>
+          <div class="prop-row">
+            <span>${t("cap.emphasis")}</span>
+            <input type="text" class="mini-select" data-ref="cap-emphasis-words" placeholder="${t("cap.emphasis.placeholder")}" aria-label="${t("cap.emphasis")}" />
+            <input type="color" class="mini-select" data-ref="cap-emphasis-colour" value="#ff5a36" aria-label="${t("cap.emphasis.colour")}" />
+            <button class="tool-chip" data-ref="cap-emphasis-apply">${t("cap.emphasis.apply")}</button>
+            <button class="tool-chip" data-ref="cap-emphasis-clear">${t("cap.emphasis.clear")}</button>
+          </div>
           <button class="tool-chip" data-ref="transcribe">${icon("search")}${t("cap.transcribe")}</button>
           <button class="tool-chip" data-ref="cap-cancel" hidden>${t("cap.cancel")}</button>
           <div class="text-add-hint">${t("cap.typed.hint")}</div>
@@ -717,6 +724,24 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     const colour = el.querySelector<HTMLInputElement>('[data-ref="cap-word-colour"]')!.value;
     return mode === "plain" ? captionStyle : { ...captionStyle, wordStyle: { mode, colour } };
   };
+  // Per-word emphasis: the words listed take the colour on the selected
+  // caption, or on every caption of the chosen track when none is selected.
+  const emphasisTargets = (): string[] => {
+    const selected = engine.snapshot.selectedClipId;
+    const found = selected ? engine.findClip(selected) : null;
+    if (found?.clip.kind === "text") return [found.clip.id];
+    const snapshot = engine.snapshot;
+    const track = snapshot.timelines[snapshot.activeTimeline]?.tracks[Number(el.querySelector<HTMLSelectElement>('[data-ref="cap-track"]')!.value) || 0];
+    return (track?.clips ?? []).filter((clip) => clip.kind === "text" && clip.words?.length).map((clip) => clip.id);
+  };
+  el.querySelector('[data-ref="cap-emphasis-apply"]')!.addEventListener("click", () => {
+    const words = el.querySelector<HTMLInputElement>('[data-ref="cap-emphasis-words"]')!.value.split(/[,\s]+/).filter(Boolean);
+    const colour = el.querySelector<HTMLInputElement>('[data-ref="cap-emphasis-colour"]')!.value;
+    if (words.length) engine.dispatch("captions.emphasise", { clipIds: emphasisTargets(), words, colour });
+  });
+  el.querySelector('[data-ref="cap-emphasis-clear"]')!.addEventListener("click", () => {
+    engine.dispatch("captions.emphasise", { clipIds: emphasisTargets(), words: [], colour: null });
+  });
   let titleStyles: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
   el.querySelector('[data-ref="transcribe"]')!.addEventListener("click", async () => {
     if (transcribing) return;

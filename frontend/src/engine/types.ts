@@ -118,8 +118,8 @@ export interface Clip {
   textStyle?: TextStyle;
   /** For a timeline clip: the id of the timeline of this project it plays, as one clip. */
   timelineId?: string;
-  /** The caption's words, each with its start and length in seconds from the clip's start (from transcription). */
-  words?: Array<{ t: number; d: number; text: string }>;
+  /** The caption's words, each with its start and length in seconds from the clip's start (from transcription); a word may carry its own colour (emphasis). */
+  words?: Array<{ t: number; d: number; text: string; colour?: string }>;
   transitionIn?: ClipTransition;
   keyframes?: Keyframe[];
   key?: ClipKey;

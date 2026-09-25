@@ -772,6 +772,26 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "captions.emphasise": {
+        // Per-word emphasis: the listed words take a colour of their own on
+        // every caption named; with no colour, every word gives its own up.
+        const p = payload as { clipIds: string[]; words: string[]; colour: string | null };
+        const wanted = new Set(p.words.map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, "")).filter(Boolean));
+        const targets = p.clipIds.map((id) => this.findClip(id)?.clip).filter((clip): clip is Clip => !!clip && clip.kind === "text" && !!clip.words?.length);
+        if (!targets.length || (p.colour && !wanted.size)) break;
+        this.pushHistory();
+        for (const clip of targets) {
+          clip.words = clip.words!.map((word) => {
+            const key = word.text.toLowerCase().replace(/[^\p{L}\p{N}']+/gu, "");
+            if (p.colour && wanted.has(key)) return { ...word, colour: p.colour };
+            if (!p.colour && word.colour) { const { colour: _gone, ...rest } = word; return rest; }
+            return word;
+          });
+        }
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.transition": {
         const p = payload as { clipId: string; transition: ClipTransition | null };
         const found = this.findClip(p.clipId);
