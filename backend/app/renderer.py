@@ -400,6 +400,7 @@ class FrameRenderer:
         # original; playback and scrubbing set this and read the proxy.
         self.allow_proxy = False
         self.matte_time = 0.0
+        self.pending_layers: list = []
         self.closed = False
 
     def close(self):
@@ -948,6 +949,25 @@ class FrameRenderer:
             image = cv2.warpAffine(image, cv2.getRotationMatrix2D((w / 2, h / 2), progress * 180, max(0.001, 1 - progress)), (w, h))
         return image
 
+    def _blend(self, canvas: np.ndarray, layer: np.ndarray, mode: str) -> np.ndarray:
+        """One layer onto the canvas: batched for the device, or blended now.
+
+        R3: with the stack compositor active, consecutive layers gather into a
+        run and go up in one pass through gpu.composite_stack, the canvas
+        uploaded once and read back once. Anything that reads the canvas
+        mid-frame flushes first, so both paths see identical state.
+        """
+        if gpu.stack_active():
+            self.pending_layers.append((layer, mode))
+            return canvas
+        return gpu.composite(canvas, layer, mode)
+
+    def _flush(self, canvas: np.ndarray) -> np.ndarray:
+        if self.pending_layers:
+            canvas = gpu.composite_stack(canvas, self.pending_layers)
+            self.pending_layers = []
+        return canvas
+
     def frame(self, time: float) -> np.ndarray:
         canvas = np.zeros((self.height, self.width, 4), np.uint8)
         canvas[:, :, 3] = 255
@@ -970,6 +990,7 @@ class FrameRenderer:
             if clip.get("effectId"):
                 effects.insert(0, {"id": LEGACY.get(clip["effectId"], clip["effectId"]), "amount": 1})
             if clip["kind"] == "filter":
+                canvas = self._flush(canvas)
                 self.decode_scale.setdefault("canvas", self.width / self.project["width"])
                 canvas = apply_color_grade(apply_colour_panel(canvas, clip.get("colour")), clip.get("colorGrade"))
                 if effects:
@@ -1032,6 +1053,7 @@ class FrameRenderer:
             native = _native()
             if native is not None and _plainly_blended(clip, local, transform):
                 # Warp and blend in one Rust pass, identical to the Python path below.
+                canvas = self._flush(canvas)
                 canvas = np.ascontiguousarray(canvas)
                 native.composite_affine(canvas, np.ascontiguousarray(image), [float(v) for v in matrix.ravel()], float(alpha))
                 continue
@@ -1042,5 +1064,5 @@ class FrameRenderer:
             if clip.get("pushOut") and local >= clip["duration"]:
                 shift = self.height * min(1, (local - clip["duration"]) / clip["pushOut"])
                 layer = cv2.warpAffine(layer, np.float32([[1, 0, 0], [0, 1, -shift]]), (self.width, self.height))
-            canvas = gpu.composite(canvas, layer, str(transform["blendMode"]))
-        return canvas
+            canvas = self._blend(canvas, layer, str(transform["blendMode"]))
+        return self._flush(canvas)

@@ -45,7 +45,9 @@ def status() -> dict:
                 _status = {"available": True, "adapter": dict(device.adapter.info)}
             except Exception as exc:
                 _status = {"available": False, "reason": str(exc)}
-        return _status.copy()
+        out = _status.copy()
+        out["compositor"] = "stack" if _stack_wanted(out) else "per-layer"
+        return out
 
 
 def composite(base: np.ndarray, front: np.ndarray, mode: str) -> np.ndarray:
@@ -76,6 +78,112 @@ def composite(base: np.ndarray, front: np.ndarray, mode: str) -> np.ndarray:
     b[:, :, :3] = np.clip(rgb_b * (1 - alpha) + modes[index]() * alpha, 0, 1)
     b[:, :, 3] = 1
     return np.round(b * 255).astype(np.uint8)
+
+
+# R3: the layer stack composited on the device. The per-pair path above uploads
+# the whole canvas and reads it back for every layer; here the canvas goes up
+# once, each layer of a run is blended into it on the device through the same
+# BLEND_CODE (normal included), and one readback returns the frame. The CPU
+# path stays the reference: FORMCUT_COMPOSITE=cpu forces it, =gpu forces this,
+# and unset picks this only on a real accelerator, never on a software adapter.
+_compositors: dict = {}
+
+
+def _stack_wanted(state: dict) -> bool:
+    import os
+
+    wanted = os.environ.get("FORMCUT_COMPOSITE", "").lower()
+    if wanted == "cpu" or not state.get("available"):
+        return False
+    if wanted == "gpu":
+        return True
+    return state.get("adapter", {}).get("adapter_type", "CPU") not in ("CPU", "cpu")
+
+
+def stack_active() -> bool:
+    return _stack_wanted(status())
+
+
+class _StackCompositor:
+    """One frame size's device state: buffers, pipeline, both bind directions."""
+
+    def __init__(self, height: int, width: int):
+        import wgpu
+        from wgpu.utils import get_default_device
+
+        self.device = get_default_device()
+        self.count = height * width
+        size = self.count * 16  # vec4<f32>
+        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
+        self.a = self.device.create_buffer(size=size, usage=usage)
+        self.b = self.device.create_buffer(size=size, usage=usage)
+        self.front = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
+        self.opts = self.device.create_buffer(size=16, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
+        self.read = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
+        module = self.device.create_shader_module(code=BLEND_CODE)
+        self.pipeline = self.device.create_compute_pipeline(layout="auto", compute={"module": module, "entry_point": "main"})
+        layout = self.pipeline.get_bind_group_layout(0)
+
+        def group(back, out):
+            entries = [
+                {"binding": 0, "resource": {"buffer": back, "offset": 0, "size": size}},
+                {"binding": 1, "resource": {"buffer": self.front, "offset": 0, "size": size}},
+                {"binding": 2, "resource": {"buffer": self.opts, "offset": 0, "size": 16}},
+                {"binding": 3, "resource": {"buffer": out, "offset": 0, "size": size}},
+            ]
+            return self.device.create_bind_group(layout=layout, entries=entries)
+
+        self.ab = group(self.a, self.b)
+        self.ba = group(self.b, self.a)
+
+    def run(self, canvas: np.ndarray, layers: list) -> np.ndarray:
+        import wgpu
+
+        queue = self.device.queue
+        queue.write_buffer(self.a, 0, np.ascontiguousarray(canvas.astype(np.float32) / 255))
+        source_is_a = True
+        for layer, mode in layers:
+            index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
+            queue.write_buffer(self.front, 0, np.ascontiguousarray(layer.astype(np.float32) / 255))
+            queue.write_buffer(self.opts, 0, np.array([index, 0, 0, 0], np.float32))
+            encoder = self.device.create_command_encoder()
+            step = encoder.begin_compute_pass()
+            step.set_pipeline(self.pipeline)
+            step.set_bind_group(0, self.ab if source_is_a else self.ba)
+            step.dispatch_workgroups((self.count + 63) // 64)
+            step.end()
+            queue.submit([encoder.finish()])
+            source_is_a = not source_is_a
+        final = self.a if source_is_a else self.b
+        encoder = self.device.create_command_encoder()
+        encoder.copy_buffer_to_buffer(final, 0, self.read, 0, self.count * 16)
+        queue.submit([encoder.finish()])
+        self.read.map_sync(wgpu.MapMode.READ)
+        data = np.frombuffer(self.read.read_mapped(), np.float32).reshape(canvas.shape[0], canvas.shape[1], 4).copy()
+        self.read.unmap()
+        return np.round(data * 255).astype(np.uint8)
+
+
+def composite_stack(canvas: np.ndarray, layers: list) -> np.ndarray:
+    """Blend a run of (layer, mode) onto the canvas in one device pass.
+
+    Falls back layer by layer through composite() if the device path fails,
+    so a driver problem degrades to the reference rather than to an error.
+    """
+    if not layers:
+        return canvas
+    try:
+        with _lock:
+            key = canvas.shape[:2]
+            if key not in _compositors:
+                _compositors[key] = _StackCompositor(*key)
+                while len(_compositors) > 3:
+                    _compositors.pop(next(iter(_compositors)))
+            return _compositors[key].run(canvas, layers)
+    except Exception:
+        for layer, mode in layers:
+            canvas = composite(canvas, layer, mode)
+        return canvas
 
 
 def custom(image: np.ndarray, source: str, time: float) -> np.ndarray:
