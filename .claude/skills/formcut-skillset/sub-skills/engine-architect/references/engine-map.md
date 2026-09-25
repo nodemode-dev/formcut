@@ -33,7 +33,7 @@ The rest is written by hand.
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 269 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 233 | /api/generate | 2 |
+| generate.py | 308 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
@@ -77,7 +77,7 @@ the automation transports.
 - `effect_packages.py` (402L)
 - `encoders.py` (297L)
 - `expressions.py` (51L)
-- `fast_export.py` (299L)
+- `fast_export.py` (301L)
 - `fast_layers.py` (404L)
 - `features.py` (43L)
 - `ffmpeg_fetch.py` (165L)
@@ -85,6 +85,8 @@ the automation transports.
 - `gif_export.py` (78L)
 - `gpu.py` (222L)
 - `gpu_effects.py` (521L)
+- `local_diffusion.py` (241L)
+- `local_models.py` (193L)
 - `matte_cache.py` (126L)
 - `openh264.py` (410L)
 - `package_registry.py` (80L)

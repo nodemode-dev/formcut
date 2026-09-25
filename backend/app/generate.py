@@ -32,29 +32,36 @@ STAGING = DATA_DIR / "generated"
 # Each entry says what the interface should offer. Sizes and durations are the
 # provider's own, so the sheet cannot offer a shape the provider will refuse.
 GENERATORS: dict[str, dict] = {
-    "openai-image": {
-        "label": "OpenAI images",
-        "provider": "openai",
-        "kind": "image",
-        "sizes": ["1024x1024", "1536x1024", "1024x1536"],
-        "options": {"quality": ["standard", "hd"], "count": {"min": 1, "max": 4, "default": 1}},
-        "path": "/v1/images/generations",
-    },
-    "stability-image": {
-        "label": "Stability images",
-        "provider": "stability",
+    # fal.ai is the one cloud generator. Each entry is a fal model slot; the
+    # model id is an option, so another fal model is one line in this table or
+    # a different id typed into the request, not a new provider.
+    "fal-image": {
+        "label": "fal.ai image (FLUX schnell)",
+        "provider": "fal",
         "kind": "image",
         "sizes": ["1024x1024", "1344x768", "768x1344"],
-        "options": {"steps": {"min": 10, "max": 50, "default": 30}, "count": {"min": 1, "max": 4, "default": 1}},
-        "path": "/v2beta/stable-image/generate/core",
+        "options": {
+            "model": "fal-ai/flux/schnell",
+            "steps": {"min": 1, "max": 12, "default": 4},
+            "count": {"min": 1, "max": 4, "default": 1},
+        },
+        "path": "/fal-ai/flux/schnell",
     },
-    "replicate-video": {
-        "label": "Replicate video",
-        "provider": "replicate",
+    "fal-video": {
+        "label": "fal.ai video (LTX)",
+        "provider": "fal",
         "kind": "video",
-        "sizes": ["1280x720", "720x1280", "1024x576"],
-        "options": {"seconds": {"min": 2, "max": 10, "default": 5}, "fps": {"min": 8, "max": 30, "default": 24}},
-        "path": "/v1/predictions",
+        "sizes": ["1280x720", "720x1280"],
+        "options": {"model": "fal-ai/ltx-video", "seconds": {"min": 2, "max": 10, "default": 5}},
+        "path": "/fal-ai/ltx-video",
+    },
+    "fal-image-to-video": {
+        "label": "fal.ai image to video (LTX)",
+        "provider": "fal",
+        "kind": "video",
+        "sizes": ["1280x720", "720x1280"],
+        "options": {"model": "fal-ai/ltx-video/image-to-video", "seconds": {"min": 2, "max": 10, "default": 5}, "image_url": ""},
+        "path": "/fal-ai/ltx-video/image-to-video",
     },
     "elevenlabs-sound": {
         "label": "ElevenLabs sound effects",
@@ -68,25 +75,11 @@ GENERATORS: dict[str, dict] = {
 
 # Providers the generators need that the registry did not already carry.
 EXTRA_PROVIDERS = {
-    "openai": {
-        "label": "OpenAI",
-        "env": "OPENAI_API_KEY",
-        "base_env": "OPENAI_BASE",
-        "base": "https://api.openai.com",
-        "purpose": "generate",
-    },
-    "stability": {
-        "label": "Stability AI",
-        "env": "STABILITY_API_KEY",
-        "base_env": "STABILITY_BASE",
-        "base": "https://api.stability.ai",
-        "purpose": "generate",
-    },
-    "replicate": {
-        "label": "Replicate",
-        "env": "REPLICATE_API_TOKEN",
-        "base_env": "REPLICATE_BASE",
-        "base": "https://api.replicate.com",
+    "fal": {
+        "label": "fal.ai",
+        "env": "FAL_KEY",
+        "base_env": "FAL_BASE",
+        "base": "https://fal.run",
         "purpose": "generate",
     },
 }
@@ -121,6 +114,12 @@ def catalogue() -> list[dict]:
                 "ready": bool(key_for(provider)),
             }
         )
+    # Local models: the slots declared in models/local_models.json (image or
+    # video, over the ONNX diffusion runner or a command of the person's own)
+    # and any undeclared diffusion folder; run in the engine, no key.
+    from .local_models import catalogue_entries
+
+    out.extend(catalogue_entries())
     return out
 
 
@@ -133,41 +132,36 @@ def _payload(entry: dict, body: GenerateBody) -> tuple[dict, dict]:
     """The request body and headers for one provider, kept in one place."""
     key = key_for(entry["provider"])
     size = body.size or (entry["sizes"][0] if entry["sizes"] else None)
-    if entry["provider"] == "openai":
-        return (
-            {"model": "gpt-image-1", "prompt": body.prompt, "size": size, "n": max(1, min(4, body.count))},
-            {"Authorization": f"Bearer {key}"},
-        )
-    if entry["provider"] == "stability":
+    if entry["provider"] == "fal":
+        # fal.run/<model id>: one synchronous call, JSON in, JSON with URLs out.
         width, _, height = (size or "1024x1024").partition("x")
-        return (
-            {
-                "prompt": body.prompt,
-                "negative_prompt": body.negative,
-                "width": int(width),
-                "height": int(height),
-                "steps": int(body.options.get("steps", 30)),
-            },
-            {"Authorization": f"Bearer {key}", "Accept": "application/json"},
-        )
-    if entry["provider"] == "replicate":
-        width, _, height = (size or "1280x720").partition("x")
-        return (
-            {
-                "input": {
-                    "prompt": body.prompt,
-                    "negative_prompt": body.negative,
-                    "width": int(width),
-                    "height": int(height),
-                    "num_frames": int(float(body.seconds or 5) * int(body.options.get("fps", 24))),
-                }
-            },
-            {"Authorization": f"Bearer {key}"},
-        )
+        payload: dict = {"prompt": body.prompt}
+        if body.negative:
+            payload["negative_prompt"] = body.negative
+        if entry["kind"] == "image":
+            payload["image_size"] = {"width": int(width), "height": int(height)}
+            payload["num_images"] = max(1, min(4, body.count))
+            payload["num_inference_steps"] = int(body.options.get("steps", entry["options"].get("steps", {}).get("default", 4)))
+        else:
+            payload["aspect_ratio"] = "16:9" if int(width) >= int(height) else "9:16"
+            payload["duration"] = float(body.seconds or entry["options"].get("seconds", {}).get("default", 5))
+            if body.options.get("image_url"):
+                payload["image_url"] = str(body.options["image_url"])
+        if body.options.get("seed") is not None:
+            payload["seed"] = int(body.options["seed"])
+        return payload, {"Authorization": f"Key {key}", "Content-Type": "application/json"}
     return (
         {"text": body.prompt, "duration_seconds": float(body.seconds or 6), "prompt_influence": float(body.options.get("influence", 0.3))},
         {"xi-api-key": key},
     )
+
+
+def fal_path(entry: dict, body: GenerateBody) -> str:
+    """The model id the request names, or the slot's own; a path under fal.run, never a URL of its own."""
+    model = str(body.options.get("model") or entry["options"].get("model") or "").strip().strip("/")
+    if not model or ".." in model or "://" in model:
+        return entry["path"]
+    return "/" + model
 
 
 def _extract(entry: dict, response: httpx.Response) -> list[bytes]:
@@ -186,6 +180,9 @@ def _extract(entry: dict, response: httpx.Response) -> list[bytes]:
                 out.append(httpx.get(item["url"], timeout=120, follow_redirects=True).content)
     if not out and isinstance(data.get("output"), str):
         out.append(httpx.get(data["output"], timeout=300, follow_redirects=True).content)
+    video = data.get("video")
+    if not out and isinstance(video, dict) and video.get("url"):
+        out.append(httpx.get(video["url"], timeout=600, follow_redirects=True).content)
     if not out:
         raise ValueError("The provider returned nothing that could be read as media")
     return out
@@ -193,6 +190,8 @@ def _extract(entry: dict, response: httpx.Response) -> list[bytes]:
 
 @router.post("", status_code=202)
 def generate(body: GenerateBody):
+    if body.generator.startswith("local:"):
+        return _generate_local(body)
     entry = GENERATORS.get(body.generator)
     if not entry:
         raise HTTPException(404, "Unknown generator")
@@ -205,7 +204,8 @@ def generate(body: GenerateBody):
         payload, headers = _payload(entry, body)
         report(0.1)
         with httpx.Client(timeout=600, follow_redirects=True) as client:
-            response = client.post(base_for(entry["provider"]).rstrip("/") + entry["path"], json=payload, headers=headers)
+            path = fal_path(entry, body) if entry["provider"] == "fal" else entry["path"]
+            response = client.post(base_for(entry["provider"]).rstrip("/") + path, json=payload, headers=headers)
             if response.status_code >= 400:
                 raise ValueError(f"{entry['label']} refused the request ({response.status_code}): {response.text[:300]}")
             report(0.6)
@@ -229,5 +229,80 @@ def generate(body: GenerateBody):
                 staged.unlink(missing_ok=True)
             report(0.6 + 0.4 * (index + 1) / len(blobs))
         return {"media": made, "kind": entry["kind"]}
+
+    return jobs.submit("generate", operation)
+
+
+def _size_of(size: str | None) -> tuple[int, int]:
+    """A WxH string clamped to 64..1024, 512 square otherwise."""
+    if size and "x" in size:
+        parts = size.split("x", 1)
+        if all(part.strip().isdigit() for part in parts):
+            return max(64, min(1024, int(parts[0]))), max(64, min(1024, int(parts[1])))
+    return 512, 512
+
+
+def _generate_local(body: GenerateBody):
+    """A local slot: the same job shape as a provider, run in the engine, one result per count."""
+    from .local_diffusion import generate_to_file
+    from .local_models import resolve, run_command_slot
+
+    name = body.generator.split(":", 1)[1]
+    slot = resolve(name)
+    if slot is None:
+        raise HTTPException(404, "No local model by that name")
+    if not slot.get("ready", True):
+        raise HTTPException(409, f"{name} is not ready: {slot.get('reason') or 'see models/local_models.json'}")
+    width, height = _size_of(body.size)
+    steps = max(1, min(50, int(body.options.get("steps", slot.get("steps") if slot.get("steps") is not None else 4))))
+    guidance = max(0.0, min(15.0, float(body.options.get("guidance", slot.get("guidance") if slot.get("guidance") is not None else 0.0))))
+    seconds = float(body.seconds or slot.get("seconds") or 5)
+    seed = body.options.get("seed")
+    count = max(1, min(4, body.count))
+    kind = slot.get("kind", "image")
+    extension = slot.get("extension") or (".mp4" if kind == "video" else ".png")
+
+    def operation(job_id, report, cancelled):
+        STAGING.mkdir(parents=True, exist_ok=True)
+        made = []
+        timings = []
+        for index in range(count):
+            staged = STAGING / f"{uuid.uuid4().hex}{extension}"
+            each = lambda f, i=index: report((i + f) / count)  # noqa: E731
+            this_seed = (int(seed) + index) if seed is not None else None
+            if slot["runner"] == "command":
+                result = run_command_slot(slot, body.prompt, staged, width, height, seconds, this_seed, each, cancelled)
+            else:
+                result = generate_to_file(
+                    str(slot.get("folder") or name),
+                    body.prompt,
+                    staged,
+                    negative=body.negative,
+                    steps=steps,
+                    guidance=guidance,
+                    width=width,
+                    height=height,
+                    seed=this_seed,
+                    report=each,
+                    cancelled=cancelled,
+                )
+            timings.append(result["seconds"])
+            try:
+                made.append(
+                    ingest_path(
+                        staged,
+                        f"{body.prompt[:48]} ({name}, local)",
+                        extra={
+                            "source": "generated",
+                            "generator": body.generator,
+                            "prompt": body.prompt,
+                            "seconds": result["seconds"],
+                            "provider": result["provider"],
+                        },
+                    )
+                )
+            finally:
+                staged.unlink(missing_ok=True)
+        return {"media": made, "kind": kind, "seconds": timings, "model": name}
 
     return jobs.submit("generate", operation)
