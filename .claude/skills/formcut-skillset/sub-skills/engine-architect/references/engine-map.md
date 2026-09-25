@@ -39,7 +39,7 @@ The rest is written by hand.
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
 | main.py | 408 | /api/health | 13 |
-| media.py | 838 | /api/media | 25 |
+| media.py | 864 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 451 | /api/presets | 8 |
@@ -49,7 +49,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 730 | /api/render | 13 |
+| render_api.py | 734 | /api/render | 13 |
 | render_stream.py | 71 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -77,8 +77,8 @@ the automation transports.
 - `effect_packages.py` (402L)
 - `encoders.py` (297L)
 - `expressions.py` (51L)
-- `fast_export.py` (298L)
-- `fast_layers.py` (403L)
+- `fast_export.py` (299L)
+- `fast_layers.py` (404L)
 - `features.py` (43L)
 - `ffmpeg_fetch.py` (165L)
 - `frame_cache.py` (146L)
@@ -109,7 +109,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (218L)
-- `video_source.py` (238L)
+- `video_source.py` (275L)
 - `windows_console.py` (43L)
 
 ## Reading order for a change

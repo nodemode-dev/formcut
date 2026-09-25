@@ -25,7 +25,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/keyframes.ts` (115L)
 - `engine/live-mix.ts` (156L)
 - `engine/local-transport.ts` (11L)
-- `engine/media.ts` (79L)
+- `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
 - `engine/project.ts` (1124L)

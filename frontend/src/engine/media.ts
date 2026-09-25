@@ -12,6 +12,9 @@ export interface MediaItem {
   fps: number;
   /** X8: present when the file keeps more than one audio stream. */
   audioStreams?: Array<{ index: number; channels: number; language: string; title: string }>;
+  /** The colour-managed pipeline: the source's space (Rec.709, HLG, PQ (HDR10), BT.2020 SDR) and what the decode does with it. */
+  colour?: string;
+  colourHandling?: "as decoded" | "tone-mapped to Rec.709" | "converted to Rec.709";
 }
 
 type BinListener = (items: MediaItem[], added?: MediaItem) => void;

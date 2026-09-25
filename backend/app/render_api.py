@@ -291,7 +291,11 @@ def export_media(
         # `audio` is already the temporary wav path in this scope, so the audio
         # codec flags need their own name.
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
-        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *audio_flags] if encoder else []
+        # The colour-managed pipeline lands every source in BT.709 (tone-mapped
+        # or converted at decode), so the file says so; an untagged file is
+        # guessed at by players, and not always the same way.
+        colour_tags = ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]
+        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *colour_tags, *audio_flags] if encoder else []
         count = math.ceil(project["duration"] * fps)
         if cisco or gif:
             # Whichever path renders writes a lossless intermediate, and finish()

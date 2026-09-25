@@ -633,6 +633,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   display: grid; place-items: center;
   color: var(--ink-faint);
 }
+.bin-colour { font-size: 10px; line-height: 1.3; color: var(--ink-faint); padding: 0 var(--sp-1) 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dur-chip {
   position: absolute; right: 5px; bottom: 5px;
   background: var(--tag-plate);

@@ -11,6 +11,43 @@ import numpy as np
 
 from .media import _ffprobe
 
+# The working space is BT.709. PQ and HLG sources are tone-mapped (X7); an
+# SDR source tagged with other primaries (BT.2020 wide gamut, or a BT.601 SD
+# tag) is converted here so its colours land where the grade, the LUTs and
+# the encoder expect them: swscale applies a source's matrix when it makes
+# RGB but never converts primaries, which is where a wide-gamut file goes
+# wrong. An untagged source is left to swscale's rule, BT.601 for SD sizes.
+PRIMARIES = ("bt709", "bt2020", "smpte431", "smpte432", "bt470m", "bt470bg", "smpte170m", "smpte240m", "film")
+MATRICES = ("bt709", "bt2020nc", "bt2020c", "bt470bg", "smpte170m", "smpte240m", "fcc")
+TRANSFERS = ("bt709", "smpte170m", "bt470bg", "bt470m", "iec61966-2-1", "bt2020-10", "bt2020-12", "smpte240m", "linear")
+
+
+def conversion_for(stream: dict) -> str:
+    """The zscale step to BT.709 an SDR stream needs, or nothing when its primaries already are."""
+    primaries = str(stream.get("color_primaries") or "")
+    transfer = str(stream.get("color_transfer") or "")
+    if transfer in ("smpte2084", "arib-std-b67") or primaries in ("bt709", "") or primaries not in PRIMARIES:
+        return ""
+    matrix = str(stream.get("color_space") or "")
+    source_matrix = matrix if matrix in MATRICES else ("bt2020nc" if primaries == "bt2020" else "smpte170m")
+    source_transfer = transfer if transfer in TRANSFERS else "bt709"
+    return f"zscale=pin={primaries}:min={source_matrix}:tin={source_transfer}:p=bt709:m=bt709:t=bt709:r=tv,format=yuv420p,"
+
+
+def colour_of(stream: dict) -> dict:
+    """What the record says about a source's colour: its space, and what the engine does with it."""
+    transfer = str(stream.get("color_transfer") or "")
+    primaries = str(stream.get("color_primaries") or "")
+    if transfer == "smpte2084":
+        return {"colour": "PQ (HDR10)", "colourHandling": "tone-mapped to Rec.709"}
+    if transfer == "arib-std-b67":
+        return {"colour": "HLG", "colourHandling": "tone-mapped to Rec.709"}
+    if primaries == "bt2020":
+        return {"colour": "BT.2020 SDR", "colourHandling": "converted to Rec.709"}
+    if conversion_for(stream):
+        return {"colour": primaries or str(stream.get("color_space") or "BT.601"), "colourHandling": "converted to Rec.709"}
+    return {"colour": "Rec.709", "colourHandling": "as decoded"}
+
 
 class VideoSource:
     def __init__(self, path, limit=None):
@@ -28,7 +65,7 @@ class VideoSource:
             "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,"
             "zscale=t=bt709:m=bt709:r=tv,format=yuv420p,"
             if stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
-            else ""
+            else conversion_for(stream)
         )
         rotation = float(stream.get("tags", {}).get("rotate", 0))
         for item in stream.get("side_data_list", []):

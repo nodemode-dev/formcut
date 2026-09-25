@@ -88,6 +88,13 @@ def _probe(path: Path, kind: str) -> dict:
             # the record carries the transfer so every path can ask cheaply.
             if stream.get("color_transfer") in ("smpte2084", "arib-std-b67"):
                 info["transfer"] = stream["color_transfer"]
+            # The colour-managed pipeline: the record names the source's space
+            # and whether it is tone-mapped, converted or read as it is.
+            from .video_source import colour_of, conversion_for
+
+            info.update(colour_of(stream))
+            if conversion_for(stream):
+                info["primaries"] = stream.get("color_primaries")
             rate = stream.get("avg_frame_rate") or "0/1"
             try:
                 num, den = rate.split("/")
@@ -821,6 +828,25 @@ def is_hdr(media_id: str) -> bool:
             found = False
     _hdr_media[media_id] = found
     return found
+
+
+def needs_colour_work(media_id: str) -> bool:
+    """Whether the decode pipe tone-maps or converts this source's colour, so only the frame path may carry it."""
+    if is_hdr(media_id):
+        return True
+    with _lock:
+        record = next((m for m in _read() if m["id"] == media_id), None)
+    if record is not None and "colourHandling" in record:
+        return record["colourHandling"] != "as decoded"
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        return False
+    try:
+        from .video_source import conversion_for
+
+        return any(s.get("codec_type") == "video" and conversion_for(s) for s in _ffprobe(matches[0]).get("streams", []))
+    except Exception:
+        return False
 
 
 def has_audio(media_id: str) -> bool:

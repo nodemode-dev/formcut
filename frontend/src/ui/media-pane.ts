@@ -1129,7 +1129,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         ${item.kind === "video" ? `<button type="button" class="bin-post" title="${escapeHtml(t("tiktok.action"))}" aria-label="${escapeHtml(t("tiktok.action"))}">${icon("export")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-ig" title="${escapeHtml(t("instagram.action"))}" aria-label="${escapeHtml(t("instagram.action"))}">${icon("pip")}</button>` : ""}
       </div>
-      <div class="effect-name">${escapeHtml(item.name)}</div>`;
+      <div class="effect-name">${escapeHtml(item.name)}</div>${item.colourHandling && item.colourHandling !== "as decoded" ? `<div class="bin-colour" title="${escapeHtml(item.colourHandling)}">${escapeHtml(item.colour ?? "")} · ${escapeHtml(item.colourHandling)}</div>` : ""}`;
     card.querySelector(".bin-upscale")?.addEventListener("click", (ev) => {
       // The card's own click adds it to the timeline on touch layouts.
       ev.stopPropagation();

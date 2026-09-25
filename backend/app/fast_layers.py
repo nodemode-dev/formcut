@@ -27,7 +27,7 @@ import numpy as np
 from PIL import Image, ImageColor, ImageOps
 
 from . import fast_export
-from .media import MEDIA_DIR, is_hdr
+from .media import MEDIA_DIR, needs_colour_work
 from .render_document import flatten
 from .renderer import DEFAULTS
 from .timing import source_time
@@ -195,8 +195,9 @@ def plan(project: dict, count: int) -> Plan | None:
             rate, seek, shift, span = float(fps), 0.0, 0.0, frames / fps
         else:
             # X7: as in fast_export, the graph would decode HDR untouched;
-            # the frame path's pipe carries the tone map.
-            if is_hdr(str(clip["mediaId"])):
+            # the frame path's pipe carries the tone map, and the gamut
+            # conversion a wide or SD-tagged source needs.
+            if needs_colour_work(str(clip["mediaId"])):
                 return None
             source = VideoSource(paths[0])
             rate, source_w, source_h = source.fps, source.width, source.height

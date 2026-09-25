@@ -25,7 +25,7 @@ from pathlib import Path
 
 from PIL import ImageColor
 
-from .media import MEDIA_DIR, is_hdr
+from .media import MEDIA_DIR, needs_colour_work
 from .render_document import flatten
 from .renderer import DEFAULTS
 from .timing import source_time
@@ -95,9 +95,10 @@ def _plain(clip: dict) -> str | None:
     if not clip.get("mediaId"):
         return "a clip without media"
     # X7: the graph feeds the file to ffmpeg untouched, which would skip the
-    # tone map; PQ and HLG go to the frame path, whose decode pipe maps them.
-    if is_hdr(str(clip["mediaId"])):
-        return "hdr footage"
+    # tone map; PQ and HLG go to the frame path, whose decode pipe maps them,
+    # and so does a wide-gamut or SD-tagged source the pipe converts.
+    if needs_colour_work(str(clip["mediaId"])):
+        return "footage the colour pipe converts"
     for key in ABSENT:
         if clip.get(key):
             return key
