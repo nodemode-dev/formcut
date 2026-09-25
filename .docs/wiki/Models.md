@@ -9,8 +9,9 @@ anything has been downloaded (BG2; the decision is recorded in
 [Licences](Licences)). A file in the person's model folder always takes
 precedence over the bundled copy.
 
-All of these run through **ONNX Runtime** on the engine side, except Whisper,
-which runs in the browser through **transformers.js**. Both are already
+All of these run through **ONNX Runtime** on the engine side, Whisper included
+since v1.62.0 (`backend/app/transcribe.py`); a browser whose engine has no ONNX
+Runtime still runs Whisper in the page through **transformers.js**. Both are already
 dependencies; no additional runtime is needed for any model in this list. Every
 engine-side session takes one provider ordering from
 `model_manager.providers()`: the platform accelerator first where present
@@ -133,9 +134,14 @@ around 60 MB each, many languages, listed at
 
 ## 3. Transcription and captions
 
-Used by: **Captions**. These run **in the browser**, not the engine, through
-transformers.js, and are fetched from the Hugging Face hub on first use. The
-allowlist is `WHISPER_MODELS` in `backend/app/model_manager.py`.
+Used by: **Captions**. Since v1.62.0 these run **in the engine** through ONNX
+Runtime with the shared provider ordering (`backend/app/transcribe.py`, the job
+behind `POST /api/transcribe`), word times taken from the model's alignment
+heads; a browser whose engine answers 503 runs the first six in the page through
+transformers.js instead. All are fetched from the Hugging Face hub on first use.
+The allowlist is `WHISPER_MODELS` plus `ENGINE_WHISPER_MODELS` in
+`backend/app/model_manager.py`; the last three are the engine's alone and are
+never prefetched by `FORMCUT_MODELS_AUTO=all`.
 
 | Model | Licence | Size (quantised) |
 | --- | --- | --- |
@@ -145,6 +151,9 @@ allowlist is `WHISPER_MODELS` in `backend/app/model_manager.py`.
 | `onnx-community/whisper-tiny` | MIT | ~40 MB |
 | `onnx-community/whisper-base` | MIT | ~80 MB |
 | `onnx-community/whisper-small` | MIT | ~250 MB |
+| `Xenova/whisper-medium.en` (engine only) | MIT | ~776 MB |
+| `Xenova/whisper-medium` (engine only) | MIT | ~776 MB |
+| `onnx-community/whisper-large-v3-turbo` (engine only, multilingual) | MIT | ~1.08 GB |
 
 Weights are OpenAI Whisper (MIT, `https://github.com/openai/whisper`); the
 repositories above are ONNX conversions. The `.en` variants are English-only and
