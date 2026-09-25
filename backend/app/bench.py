@@ -86,8 +86,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"device path: {dev_fps:6.2f} fps   ({dev_fps / cpu_fps:.2f}x)   layers resident on the device: {resident}")
     if fault:
         print(f"stack fault: {fault}")
-    worst = max(int(np.abs(a[:, :, :3].astype(int) - b[:, :, :3].astype(int)).max()) for a, b in zip(cpu_frames, dev_frames, strict=True))
-    print(f"largest pixel difference between the paths: {worst}/255")
+    diffs = [np.abs(a[:, :, :3].astype(int) - b[:, :, :3].astype(int)) for a, b in zip(cpu_frames, dev_frames, strict=True)]
+    mad = float(np.mean([d.mean() for d in diffs]))
+    over = float(np.mean([(d > 1).mean() for d in diffs]) * 100)
+    worst = max(int(d.max()) for d in diffs)
+    print(f"difference between the paths: mean {mad:.4f} counts, {over:.3f}% of pixels over 1/255, largest {worst}/255")
     if adapter.get("adapter_type", "CPU").lower() == "cpu":
         print("this adapter is a software rasteriser; the device path shares the CPU with NumPy here,")
         print("and the reading that matters is on a real GPU")
