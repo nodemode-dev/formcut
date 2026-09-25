@@ -1044,6 +1044,11 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 .stock-credit a { color: var(--ink-soft); text-decoration: none; }
 .stock-credit a:hover { color: var(--cue); text-decoration: underline; }
+.ov-card .stock-credit { display: flex; flex-direction: column; gap: 2px; }
+.ov-card .effect-thumb { position: relative; }
+.ov-licence { font-size: 10px; color: var(--ink-soft); letter-spacing: 0.02em; }
+.ov-title { position: absolute; inset: var(--sp-2); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; line-height: 1.3; color: var(--ink); pointer-events: none; }
+.ov-title:empty { display: none; }
 
 
 /* Local model rows: name, state and file list all read from the left. They were

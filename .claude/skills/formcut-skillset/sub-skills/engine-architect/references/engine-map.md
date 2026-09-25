@@ -51,7 +51,7 @@ The rest is written by hand.
 | remote.py | 264 | /api/remote | 6 |
 | render_api.py | 730 | /api/render | 13 |
 | render_stream.py | 71 | /api/render | 1 |
-| stock.py | 287 | /api/stock | 5 |
+| stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
 | subtitles.py | 109 | /api/subtitles | 2 |
 | templates.py | 214 | /api/templates | 7 |

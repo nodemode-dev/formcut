@@ -120,6 +120,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       </div></div>
 
       <div class="panel-section stock-results"><div class="panel-section-head"><span>Results</span><small data-stock-page></small></div><div class="card-grid stock-grid" data-stock-grid></div><div class="stock-row stock-pager"><button class="tool-chip" data-stock-prev disabled>${icon("chevL")}${t("stock.prev")}</button><button class="tool-chip" data-stock-next disabled>${t("stock.next")}${icon("chevR")}</button></div></div>
+      <div class="panel-section"><div class="panel-section-head"><span>Openverse</span><small><a class="stock-attrib" href="https://openverse.org" target="_blank" rel="noreferrer">${text("Openly licensed sounds, music and images; each carries its own licence and creator")}</a></small></div><div class="panel-rows">
+        <div class="stock-row"><div class="seg" data-ov-kind><button class="is-active" data-val="audio">${icon("speaker")}${text("Sounds and music")}</button><button data-val="image">${icon("image")}${t("stock.photos")}</button></div><input data-ov-q type="search" placeholder="${text("Search Openverse")}" aria-label="${text("Search Openverse")}"><button class="tool-chip is-primary" data-ov-go>${icon("search")}${t("stock.search")}</button></div>
+        <p class="stock-note" data-ov-note></p>
+      </div></div>
+      <div class="panel-section stock-results"><div class="panel-section-head"><span>${text("Openverse results")}</span><small data-ov-page></small></div><div class="card-grid stock-grid" data-ov-grid></div><div class="stock-row stock-pager"><button class="tool-chip" data-ov-prev disabled>${icon("chevL")}${t("stock.prev")}</button><button class="tool-chip" data-ov-next disabled>${t("stock.next")}${icon("chevR")}</button></div></div>
     </section>
     <section data-view="templates" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Reusable timeline templates</span></div><div class="panel-rows"><label>Name <input data-template-name placeholder="Template name"></label><label>Import template <input type="file" accept=".fctemplate,.json" data-template-import></label><div class="studio-actions"><button class="tool-chip is-primary" data-template-save>${icon("download")}Save current project as template</button></div><div data-template-list></div></div></div>
@@ -333,6 +338,91 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         engine.dispatch("clip.add", { trackIndex, clip: { id: crypto.randomUUID(), kind: media.kind, label: media.name, mediaId: media.id, start: engine.snapshot.playhead, duration: Math.max(0.5, media.duration || 5), filmstrip: media.kind === "video" } });
         stockNote(`${text("Placed on the timeline")}: ${media.name}`);
       }
+    });
+  });
+  // Openverse: openly licensed sounds, music and images without a key. The
+  // card shows the licence beside the creator, because the licence is what a
+  // person must carry into the credits; import goes by the record's id and
+  // the engine reads the file URL back from Openverse itself.
+  interface OpenverseItem { id: string; type: string; preview: string | null; full: string | null; title: string; width?: number | null; height?: number | null; duration?: number | null; page_url: string | null; credit: string | null; credit_url?: string | null; license: string; license_url?: string | null; source?: string | null }
+  const ovGrid = q<HTMLElement>("ov-grid");
+  const ovNote = (message: string) => { const node = q<HTMLElement>("ov-note"); if (node.textContent !== message) node.textContent = message; };
+  const ovCards = new Map<string, HTMLElement>();
+  const ov = {
+    page: 1,
+    kind: "audio",
+    items: new Map<string, OpenverseItem>(),
+    async search(page: number) {
+      ov.page = page;
+      ovNote(t("stock.searching"));
+      try {
+        const data = await api<{ items: OpenverseItem[]; page: number; total: number }>("/api/stock/openverse/search", { query: q("ov-q").value, kind: ov.kind, page, per_page: 20 });
+        const items = data.items ?? [];
+        const wanted = new Set<string>();
+        let cursor: HTMLElement | null = null;
+        for (const item of items) {
+          const key = `${item.type}-${item.id}`;
+          wanted.add(key);
+          ov.items.set(key, item);
+          let card = ovCards.get(key);
+          if (!card) {
+            card = document.createElement("div"); card.className = "effect-card stock-card ov-card"; card.dataset.ov = key;
+            card.innerHTML = `<div class="effect-thumb stock-thumb"><img alt="" loading="lazy" draggable="false" hidden><span class="ov-title"></span><span class="stock-badge"></span></div><div class="effect-name stock-credit"><a target="_blank" rel="noreferrer noopener"></a><span class="ov-licence"></span></div><div class="stock-actions"><button class="iconbtn" data-ov-act="media" title="${text("Add to media")}">${icon("plus")}</button><a class="iconbtn" data-ov-act="open" target="_blank" rel="noreferrer" title="${text("Open the source page")}">${icon("open")}</a></div>`;
+            ovCards.set(key, card);
+          }
+          const img = card.querySelector<HTMLImageElement>("img")!;
+          if (item.preview) { if (img.getAttribute("src") !== item.preview) img.src = item.preview; if (img.hidden) img.hidden = false; }
+          else if (!img.hidden) img.hidden = true;
+          const thumb = card.querySelector<HTMLElement>(".effect-thumb")!;
+          if (thumb.classList.contains("has-image") !== Boolean(item.preview)) thumb.classList.toggle("has-image", Boolean(item.preview));
+          const titleNode = card.querySelector<HTMLElement>(".ov-title")!;
+          const titleText = item.preview ? "" : item.title;
+          if (titleNode.textContent !== titleText) titleNode.textContent = titleText;
+          const badge = card.querySelector<HTMLElement>(".stock-badge")!;
+          const badgeText = item.type === "audio" ? `${Math.round(item.duration ?? 0)}s${item.source ? ` · ${item.source}` : ""}` : `${item.width ?? "?"}x${item.height ?? "?"}`;
+          if (badge.textContent !== badgeText) badge.textContent = badgeText;
+          const credit = card.querySelector<HTMLAnchorElement>(".stock-credit a")!;
+          const who = item.credit || item.title || "Openverse";
+          if (credit.textContent !== who) credit.textContent = who;
+          const whoUrl = item.credit_url ?? item.page_url ?? "https://openverse.org";
+          if (credit.getAttribute("href") !== whoUrl) credit.href = whoUrl;
+          const licence = card.querySelector<HTMLElement>(".ov-licence")!;
+          if (licence.textContent !== item.license) licence.textContent = item.license;
+          const open = card.querySelector<HTMLAnchorElement>("[data-ov-act=open]")!;
+          if (open.getAttribute("href") !== (item.page_url ?? "")) open.href = item.page_url ?? "";
+          if (cursor ? card.previousElementSibling !== cursor : ovGrid.firstElementChild !== card) ovGrid.insertBefore(card, cursor ? cursor.nextElementSibling : ovGrid.firstElementChild);
+          cursor = card;
+        }
+        for (const [key, card] of ovCards) if (!wanted.has(key)) { card.remove(); ovCards.delete(key); ov.items.delete(key); }
+        q<HTMLButtonElement>("ov-prev").disabled = page <= 1;
+        q<HTMLButtonElement>("ov-next").disabled = page * 20 >= data.total;
+        const pageLabel = `${text("Page")} ${page} · ${data.total}`; if (q<HTMLElement>("ov-page").textContent !== pageLabel) q<HTMLElement>("ov-page").textContent = pageLabel;
+        ovNote(items.length ? "" : t("stock.noresults"));
+      } catch (error) {
+        ovNote(error instanceof Error ? error.message : String(error));
+      }
+    },
+  };
+  q<HTMLElement>("ov-kind").addEventListener("click", event => {
+    const hit = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-val]"); if (!hit) return;
+    for (const other of q<HTMLElement>("ov-kind").querySelectorAll("button")) other.classList.toggle("is-active", other === hit);
+    ov.kind = hit.dataset.val!;
+    void ov.search(1);
+  });
+  q("ov-go").addEventListener("click", () => void ov.search(1));
+  q("ov-q").addEventListener("keydown", event => { if (event.key === "Enter") void ov.search(1); });
+  q("ov-prev").addEventListener("click", () => { if (ov.page > 1) void ov.search(ov.page - 1); });
+  q("ov-next").addEventListener("click", () => void ov.search(ov.page + 1));
+  ovGrid.addEventListener("click", event => {
+    const button = (event.target as HTMLElement).closest<HTMLElement>("[data-ov-act]");
+    const card = (event.target as HTMLElement).closest<HTMLElement>("[data-ov]");
+    if (!button || !card || button.dataset.ovAct === "open") return;
+    const item = ov.items.get(card.dataset.ov!); if (!item) return;
+    void run(async () => {
+      ovNote(t("stock.importing"));
+      const media = await api<{ id: string; name: string }>("/api/stock/openverse/import", { id: item.id, kind: item.type });
+      await bin.load();
+      ovNote(`${t("stock.imported")}: ${media.name} (${item.license})`);
     });
   });
   const showPage = async () => {

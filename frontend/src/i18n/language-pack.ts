@@ -1163,7 +1163,12 @@ Community packages|Paquets de la communauté|Pacchetti della community|コミュ
 Reading the package registry|Lecture du registre des paquets|Lettura del registro dei pacchetti|パッケージレジストリを読み込み中|패키지 레지스트리 읽는 중|A ler o registo de pacotes|Чтение реестра пакетов|Paket kaydı okunuyor|正在读取包注册表|正在讀取套件註冊表
 Could not read the registry: {reason}|Impossible de lire le registre : {reason}|Impossibile leggere il registro: {reason}|レジストリを読み込めませんでした：{reason}|레지스트리를 읽을 수 없습니다: {reason}|Não foi possível ler o registo: {reason}|Не удалось прочитать реестр: {reason}|Kayıt okunamadı: {reason}|无法读取注册表：{reason}|無法讀取註冊表：{reason}
 Install|Installer|Installa|インストール|설치|Instalar|Установить|Yükle|安装|安裝
-Downloading and checking {name}|Téléchargement et vérification de {name}|Download e verifica di {name}|{name} をダウンロードして確認中|{name} 다운로드 및 확인 중|A transferir e verificar {name}|Загрузка и проверка {name}|{name} indiriliyor ve denetleniyor|正在下载并检查 {name}|正在下載並檢查 {name}`;
+Downloading and checking {name}|Téléchargement et vérification de {name}|Download e verifica di {name}|{name} をダウンロードして確認中|{name} 다운로드 및 확인 중|A transferir e verificar {name}|Загрузка и проверка {name}|{name} indiriliyor ve denetleniyor|正在下载并检查 {name}|正在下載並檢查 {name}
+Sounds and music|Sons et musique|Suoni e musica|効果音と音楽|효과음과 음악|Sons e música|Звуки и музыка|Sesler ve müzik|音效与音乐|音效與音樂
+Search Openverse|Rechercher sur Openverse|Cerca su Openverse|Openverse を検索|Openverse 검색|Pesquisar no Openverse|Поиск в Openverse|Openverse'te ara|搜索 Openverse|搜尋 Openverse
+Openverse results|Résultats Openverse|Risultati Openverse|Openverse の結果|Openverse 결과|Resultados do Openverse|Результаты Openverse|Openverse sonuçları|Openverse 结果|Openverse 結果
+Open the source page|Ouvrir la page source|Apri la pagina di origine|元のページを開く|원본 페이지 열기|Abrir a página de origem|Открыть страницу источника|Kaynak sayfayı aç|打开来源页面|開啟來源頁面
+Openly licensed sounds, music and images; each carries its own licence and creator|Sons, musiques et images sous licence libre ; chacun porte sa licence et son auteur|Suoni, musica e immagini con licenza aperta; ognuno porta la propria licenza e il proprio autore|オープンライセンスの効果音・音楽・画像。それぞれにライセンスと作者が付いています|공개 라이선스 효과음, 음악, 이미지. 각 항목에 라이선스와 제작자가 함께합니다|Sons, música e imagens com licença aberta; cada um traz a sua licença e o seu autor|Звуки, музыка и изображения с открытой лицензией; у каждого своя лицензия и автор|Açık lisanslı sesler, müzik ve görseller; her biri kendi lisansını ve yaratıcısını taşır|开放许可的音效、音乐和图片；每一项都附带各自的许可和作者|開放授權的音效、音樂和圖片；每一項都附帶各自的授權和作者`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

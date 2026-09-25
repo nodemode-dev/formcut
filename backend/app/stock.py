@@ -153,9 +153,144 @@ def pexels_search(body: SearchBody) -> dict[str, Any]:
 def stock_status() -> dict[str, Any]:
     return {
         "pexels": bool(providers.key_for("pexels")),
+        "openverse": True,
         "rate": dict(_last_rate),
         "ytdlp": _ytdlp_cmd() is not None,
     }
+
+
+# Openverse: openly licensed audio (Freesound, Jamendo, Wikimedia and more)
+# and images, searched without a key; every record carries its licence and
+# creator, which travel into the media record as Pexels' credit does. The
+# import takes the record's id and reads the file URL back from Openverse
+# itself, so the engine never fetches a URL a caller typed.
+OPENVERSE = "https://api.openverse.org/v1"
+_OPENVERSE_KINDS = {"audio": "audio", "image": "images"}
+
+
+def _licence_label(item: dict[str, Any]) -> str:
+    licence = str(item.get("license") or "").upper()
+    if licence == "PDM":
+        return "Public domain"
+    if licence == "CC0":
+        return "CC0"
+    version = str(item.get("license_version") or "")
+    return f"CC {licence} {version}".strip() if licence else ""
+
+
+def normalize_openverse(item: dict[str, Any], kind: str) -> dict[str, Any]:
+    return {
+        "id": item.get("id"),
+        "type": kind,
+        "preview": item.get("thumbnail") if kind == "image" else None,
+        "full": item.get("url"),
+        "title": item.get("title") or "",
+        "width": item.get("width"),
+        "height": item.get("height"),
+        "duration": (float(item["duration"]) / 1000) if kind == "audio" and item.get("duration") else None,
+        "page_url": item.get("foreign_landing_url"),
+        "credit": item.get("creator"),
+        "credit_url": item.get("creator_url"),
+        "license": _licence_label(item),
+        "license_url": item.get("license_url"),
+        "source": item.get("source"),
+    }
+
+
+class OpenverseSearchBody(BaseModel):
+    query: str = ""
+    kind: str = "audio"
+    page: int = 1
+    per_page: int = 20
+
+
+# Openverse allows anonymous callers 20 results a page; a key would raise it.
+_OPENVERSE_PAGE = 20
+
+
+@router.post("/openverse/search")
+def openverse_search(body: OpenverseSearchBody) -> dict[str, Any]:
+    kind = body.kind if body.kind in _OPENVERSE_KINDS else "audio"
+    if not body.query.strip():
+        return {"items": [], "page": 1, "total": 0, "kind": kind}
+    params = {"q": body.query.strip()[:200], "page": max(1, body.page), "page_size": max(1, min(_OPENVERSE_PAGE, body.per_page))}
+    try:
+        resp = httpx.get(f"{OPENVERSE}/{_OPENVERSE_KINDS[kind]}/", params=params, timeout=30.0, headers={"User-Agent": "formcut"})
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Openverse could not be reached: {e.__class__.__name__}") from e
+    if resp.status_code == 429:
+        raise HTTPException(status_code=429, detail="Openverse is rate-limiting anonymous searches; try again in a minute")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Openverse answered {resp.status_code}")
+    data = resp.json()
+    return {
+        "items": [normalize_openverse(item, kind) for item in data.get("results") or [] if item.get("url")],
+        "page": body.page,
+        "total": int(data.get("result_count") or 0),
+        "kind": kind,
+        "attribution": "Openverse; each item carries its own licence and creator",
+    }
+
+
+class OpenverseImportBody(BaseModel):
+    id: str
+    kind: str = "audio"
+
+
+@router.post("/openverse/import", status_code=201)
+def openverse_import(body: OpenverseImportBody) -> dict[str, Any]:
+    kind = body.kind if body.kind in _OPENVERSE_KINDS else "audio"
+    if not body.id.replace("-", "").isalnum():
+        raise HTTPException(status_code=400, detail="id must be an Openverse record id")
+    try:
+        detail = httpx.get(f"{OPENVERSE}/{_OPENVERSE_KINDS[kind]}/{body.id}/", timeout=30.0, headers={"User-Agent": "formcut"})
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Openverse could not be reached: {e.__class__.__name__}") from e
+    if detail.status_code != 200:
+        raise HTTPException(status_code=404, detail="Openverse has no record by that id")
+    item = normalize_openverse(detail.json(), kind)
+    url = str(item.get("full") or "")
+    if not url.startswith("https://"):
+        raise HTTPException(status_code=502, detail="the record has no https file URL")
+    try:
+        resp = httpx.get(url, timeout=180.0, follow_redirects=True, headers={"User-Agent": "formcut"})
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"fetch failed: {e.__class__.__name__}") from e
+    if resp.status_code != 200:
+        raise HTTPException(status_code=resp.status_code, detail="failed to fetch media")
+    content_type = resp.headers.get("content-type", "").split(";")[0].strip()
+    ext = {
+        "audio/mpeg": ".mp3",
+        "audio/mp3": ".mp3",
+        "audio/ogg": ".ogg",
+        "audio/wav": ".wav",
+        "audio/x-wav": ".wav",
+        "audio/flac": ".flac",
+        "audio/mp4": ".m4a",
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+        "image/gif": ".gif",
+    }.get(content_type) or (".mp3" if kind == "audio" else ".jpg")
+    tmp = Path(tempfile.gettempdir()) / f"formcut_openverse_{uuid.uuid4().hex}{ext}"
+    tmp.write_bytes(resp.content)
+    safe = "".join(ch for ch in str(item.get("title") or "openverse") if ch.isalnum() or ch in " -_")[:60].strip() or "openverse"
+    try:
+        return ingest_path(
+            tmp,
+            f"{safe}{ext}",
+            extra={
+                "source": "openverse",
+                "credit": item.get("credit"),
+                "credit_url": item.get("credit_url"),
+                "page_url": item.get("page_url"),
+                "license": item.get("license"),
+                "license_url": item.get("license_url"),
+                "attribution": f"{item.get('title') or 'Untitled'} by {item.get('credit') or 'unknown'}, {item.get('license') or 'licence unknown'}, via Openverse",
+            },
+        )
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 _PEXELS_HOSTS = (
