@@ -38,12 +38,67 @@ function resampleTo16k(buffer: AudioBuffer): Float32Array {
 
 export interface CaptionOptions {
   language?: "en" | "auto";
-  size?: "tiny" | "base" | "small";
+  size?: "tiny" | "base" | "small" | "medium" | "large";
   placement?: "top" | "centre" | "bottom";
   scale?: "small" | "medium" | "large";
   style?: Partial<TextStyle>;
   wordsPerCaption?: number;
   signal?: AbortSignal;
+}
+
+/**
+ * Transcription in the engine's own ONNX Runtime (POST /api/transcribe, a job):
+ * the audio never leaves the engine, medium and large run, and the interface
+ * thread stays free. Returns null when the engine has no transcriber, and the
+ * browser worker takes over exactly as before.
+ */
+async function engineChunks(
+  clip: Clip,
+  mediaId: string,
+  language: "en" | "auto",
+  options: CaptionOptions,
+  onStatus: (message: string) => void,
+): Promise<CaptionChunk[] | null> {
+  const body = {
+    mediaId,
+    sourceIn: sourceTime(clip, 0),
+    duration: Math.max(0.1, sourceTime(clip, clip.duration) - sourceTime(clip, 0)),
+    language,
+    size: options.size ?? "tiny",
+    wordsPerCaption: options.wordsPerCaption,
+    audioStream: clip.audioStream,
+  };
+  let started: Response;
+  try {
+    started = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" }, body: JSON.stringify(body), signal: options.signal });
+  } catch {
+    if (options.signal?.aborted) throw new Error("cancelled");
+    return null;
+  }
+  if (started.status === 503) return null;
+  if (!started.ok) throw new Error((await started.json().catch(() => ({}))).detail ?? `${started.status}`);
+  const { job_id: jobId } = (await started.json()) as { job_id: string };
+  const stop = () => { void fetch(`/api/jobs/${jobId}`, { method: "DELETE", headers: { "x-formcut-local": "1" } }); };
+  options.signal?.addEventListener("abort", stop, { once: true });
+  try {
+    for (;;) {
+      if (options.signal?.aborted) throw new Error("cancelled");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const state = (await fetch(`/api/jobs/${jobId}`).then((r) => r.json())) as {
+        status: string;
+        progress?: number;
+        error?: string;
+        result?: { chunks?: CaptionChunk[]; model?: string };
+      };
+      if (state.status === "done") return state.result?.chunks ?? [];
+      if (state.status === "error") throw new Error(state.error ?? "Transcription failed");
+      if (state.status === "cancelled") throw new Error("cancelled");
+      const model = (state.result?.model ?? options.size ?? "tiny").replace(/^.*\//, "");
+      onStatus(t("cap.engine").replace("{model}", model).replace("{percent}", String(Math.round((state.progress ?? 0) * 100))));
+    }
+  } finally {
+    options.signal?.removeEventListener("abort", stop);
+  }
 }
 
 /** A chunk's words with times relative to its start: the model's where it gave them, otherwise its span shared by character count. */
@@ -119,47 +174,50 @@ export async function transcribeClip(
   }
   const clip = structuredClone(found.clip);
   const timelineId = engine.snapshot.timelines[engine.snapshot.activeTimeline].id;
-  onStatus(t("cap.decoding"));
-  const bytes = await (await fetch(fileUrl(media.id))).arrayBuffer();
-  const ctx = new AudioContext();
-  let decoded: AudioBuffer;
-  try {
-    decoded = await ctx.decodeAudioData(bytes);
-  } catch {
-    onStatus(t("cap.nodecode"));
+  let chunks: CaptionChunk[] | null = await engineChunks(clip, media.id, language, options, onStatus);
+  if (chunks === null) {
+    onStatus(t("cap.decoding"));
+    const bytes = await (await fetch(fileUrl(media.id))).arrayBuffer();
+    const ctx = new AudioContext();
+    let decoded: AudioBuffer;
+    try {
+      decoded = await ctx.decodeAudioData(bytes);
+    } catch {
+      onStatus(t("cap.nodecode"));
+      void ctx.close();
+      return 0;
+    }
     void ctx.close();
-    return 0;
-  }
-  void ctx.close();
-  const sr = decoded.sampleRate;
-  const startSample = Math.floor(sourceTime(clip, 0) * sr);
-  const endSample = Math.min(decoded.length, Math.ceil(sourceTime(clip, clip.duration) * sr));
-  if (endSample <= startSample) { onStatus("No audio in the selected range"); return 0; }
-  const channel = decoded.getChannelData(0).subarray(startSample, endSample);
-  const mono = new AudioBuffer({ length: channel.length, sampleRate: sr, numberOfChannels: 1 });
-  mono.copyToChannel(Float32Array.from(channel), 0);
-  const audio = resampleTo16k(mono);
+    const sr = decoded.sampleRate;
+    const startSample = Math.floor(sourceTime(clip, 0) * sr);
+    const endSample = Math.min(decoded.length, Math.ceil(sourceTime(clip, clip.duration) * sr));
+    if (endSample <= startSample) { onStatus("No audio in the selected range"); return 0; }
+    const channel = decoded.getChannelData(0).subarray(startSample, endSample);
+    const mono = new AudioBuffer({ length: channel.length, sampleRate: sr, numberOfChannels: 1 });
+    mono.copyToChannel(Float32Array.from(channel), 0);
+    const audio = resampleTo16k(mono);
 
-  const chunks: CaptionChunk[] = await new Promise<CaptionChunk[]>((resolve, reject) => {
-    const worker = new Worker(new URL("../workers/transcription.ts", import.meta.url), {
-      type: "module",
+    chunks = await new Promise<CaptionChunk[]>((resolve, reject) => {
+      const worker = new Worker(new URL("../workers/transcription.ts", import.meta.url), {
+        type: "module",
+      });
+      worker.onerror = event => { worker.terminate(); reject(new Error(event.message || "Transcription worker failed")); };
+      worker.onmessage = (ev: MessageEvent<{ type: string; message?: string; chunks?: CaptionChunk[]; device?: string; model?: string }>) => {
+        if (ev.data.type === "progress") onStatus(ev.data.message ?? "Working");
+        if (ev.data.type === "device") onStatus(`${ev.data.device === "webgpu" ? "WebGPU" : "WASM"}: ${ev.data.model ?? ""}`);
+        if (ev.data.type === "result") {
+          worker.terminate();
+          resolve(ev.data.chunks ?? []);
+        }
+        if (ev.data.type === "error") {
+          worker.terminate();
+          reject(new Error(ev.data.message));
+        }
+      };
+      options.signal?.addEventListener("abort", () => { worker.terminate(); reject(new Error("cancelled")); }, { once: true });
+      worker.postMessage({ audio, language, size: options.size ?? "tiny", wordsPerCaption: options.wordsPerCaption }, [audio.buffer]);
     });
-    worker.onerror = event => { worker.terminate(); reject(new Error(event.message || "Transcription worker failed")); };
-    worker.onmessage = (ev: MessageEvent<{ type: string; message?: string; chunks?: CaptionChunk[]; device?: string; model?: string }>) => {
-      if (ev.data.type === "progress") onStatus(ev.data.message ?? "Working");
-      if (ev.data.type === "device") onStatus(`${ev.data.device === "webgpu" ? "WebGPU" : "WASM"}: ${ev.data.model ?? ""}`);
-      if (ev.data.type === "result") {
-        worker.terminate();
-        resolve(ev.data.chunks ?? []);
-      }
-      if (ev.data.type === "error") {
-        worker.terminate();
-        reject(new Error(ev.data.message));
-      }
-    };
-    options.signal?.addEventListener("abort", () => { worker.terminate(); reject(new Error("cancelled")); }, { once: true });
-    worker.postMessage({ audio, language, size: options.size ?? "tiny", wordsPerCaption: options.wordsPerCaption }, [audio.buffer]);
-  });
+  }
 
   if (chunks.length === 0) {
     onStatus(t("cap.nospeech"));

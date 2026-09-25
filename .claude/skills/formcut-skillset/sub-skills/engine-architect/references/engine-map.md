@@ -38,9 +38,9 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 376 | /api/health | 11 |
-| media.py | 840 | /api/media | 25 |
-| model_manager.py | 486 | /api/models | 8 |
+| main.py | 378 | /api/health | 11 |
+| media.py | 838 | /api/media | 25 |
+| model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 308 | /api/presets | 7 |
 | project_tracking.py | 89 | /api/track | 1 |
@@ -48,7 +48,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 719 | /api/render | 13 |
+| render_api.py | 730 | /api/render | 13 |
 | render_stream.py | 71 | /api/render | 1 |
 | stock.py | 287 | /api/stock | 5 |
 | storage.py | 66 | /api/storage | 1 |
@@ -56,6 +56,7 @@ The rest is written by hand.
 | templates.py | 214 | /api/templates | 7 |
 | tiktok.py | 340 | /api/connect/tiktok/app | 7 |
 | track.py | 178 | /api/track | 1 |
+| transcribe.py | 525 | /api/transcribe | 2 |
 | tts.py | 91 | /api/tts | 3 |
 | upscale.py | 313 | /api/media | 2 |
 | webhooks.py | 252 | /api/webhooks | 5 |
@@ -95,7 +96,7 @@ the automation transports.
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
 - `security.py` (68L)
-- `segmentation.py` (321L)
+- `segmentation.py` (323L)
 - `stabilise.py` (209L)
 - `store.py` (57L)
 - `subject.py` (220L)

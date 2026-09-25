@@ -1115,7 +1115,9 @@ Title styles|Styles de titre|Stili di titolo|タイトルスタイル|제목 스
 Style saved for new titles and captions|Style enregistré pour les nouveaux titres et sous-titres|Stile salvato per nuovi titoli e sottotitoli|新しいタイトルと字幕にスタイルを保存しました|새 제목과 자막에 스타일을 저장했습니다|Estilo salvo para novos títulos e legendas|Стиль сохранён для новых заголовков и субтитров|Yeni başlıklar ve altyazılar için stil kaydedildi|已为新标题和字幕保存样式|已為新標題和字幕儲存樣式
 Model|Modèle|Modello|モデル|모델|Modelo|Модель|Model|模型|模型
 Tiny (fastest)|Tiny (le plus rapide)|Tiny (il più veloce)|Tiny（最速）|Tiny(가장 빠름)|Tiny (mais rápido)|Tiny (самая быстрая)|Tiny (en hızlı)|Tiny（最快）|Tiny（最快）
-Small (most accurate)|Small (le plus précis)|Small (il più preciso)|Small（最も正確）|Small(가장 정확)|Small (mais preciso)|Small (самая точная)|Small (en doğru)|Small（最准确）|Small（最準確）
+Medium (in the engine)|Medium (dans le moteur)|Medium (nel motore)|Medium（エンジン内）|Medium(엔진에서)|Medium (no motor)|Medium (в движке)|Medium (motorda)|Medium（在引擎中）|Medium（在引擎中）
+Large (in the engine, most accurate)|Large (dans le moteur, le plus précis)|Large (nel motore, il più preciso)|Large（エンジン内、最も正確）|Large(엔진에서, 가장 정확)|Large (no motor, mais preciso)|Large (в движке, самая точная)|Large (motorda, en doğru)|Large（在引擎中，最准确）|Large（在引擎中，最準確）
+Engine, {model}: {percent}%|Moteur, {model} : {percent}%|Motore, {model}: {percent}%|エンジン、{model}：{percent}%|엔진, {model}: {percent}%|Motor, {model}: {percent}%|Движок, {model}: {percent}%|Motor, {model}: {percent}%|引擎，{model}：{percent}%|引擎，{model}：{percent}%
 Words|Mots|Parole|単語数|단어 수|Palavras|Слова|Kelime|字数|字數
 Placement|Position|Posizione|配置|배치|Posição|Расположение|Yerleşim|位置|位置
 Centre|Centre|Centro|中央|가운데|Centro|По центру|Orta|居中|置中

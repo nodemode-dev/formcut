@@ -72,10 +72,12 @@ app.add_middleware(LocalOnly)
 from .agent_connect import router as agents_router
 from .codecs_api import router as codecs_router
 from .subtitles import router as subtitles_router
+from .transcribe import router as transcribe_router
 
 app.include_router(agents_router)
 app.include_router(codecs_router)
 app.include_router(subtitles_router)
+app.include_router(transcribe_router)
 app.include_router(projects_router)
 app.include_router(media_router)
 app.include_router(stock_router)

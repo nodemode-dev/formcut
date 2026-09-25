@@ -280,6 +280,10 @@ WHISPER_MODELS = (
     "onnx-community/whisper-small",
 )
 HUB_MODELS = set(WHISPER_MODELS)
+# The engine's own transcriber (transcribe.py) also runs medium and large,
+# which no webview holds; allowed through the hub, never prefetched (1.8 GB).
+ENGINE_WHISPER_MODELS = ("Xenova/whisper-medium.en", "Xenova/whisper-medium", "onnx-community/whisper-large-v3-turbo")
+HUB_MODELS.update(ENGINE_WHISPER_MODELS)
 HUB_PREFETCH = {
     model: (
         "config.json",

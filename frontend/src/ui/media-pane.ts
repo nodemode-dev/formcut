@@ -95,6 +95,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
               <option value="tiny" selected>${t("cap.model.tiny")}</option>
               <option value="base">${t("cap.model.base")}</option>
               <option value="small">${t("cap.model.small")}</option>
+              <option value="medium">${t("cap.model.medium")}</option>
+              <option value="large">${t("cap.model.large")}</option>
             </select>
             <span>${t("cap.words")}</span>
             <select class="mini-select" data-ref="cap-words">
@@ -736,7 +738,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       captionAbort = new AbortController();
       cancelChip.hidden = false;
       await transcribeClip(engine, bin, clipId, show, lang, track, {
-        size: pick("cap-size") as "tiny" | "base" | "small",
+        size: pick("cap-size") as "tiny" | "base" | "small" | "medium" | "large",
         placement: pick("cap-place") as "top" | "centre" | "bottom",
         scale: pick("cap-scale") as "small" | "medium" | "large",
         style: styled(),
