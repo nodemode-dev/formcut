@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 
-from . import gpu
+from . import gpu, gpu_effects
 from .assets import apply_lut, asset_path
 from .catalogue import GRADES, scale_pixel_params
 from .color_grade import apply as apply_color_grade
@@ -994,7 +994,9 @@ class FrameRenderer:
                 self.decode_scale.setdefault("canvas", self.width / self.project["width"])
                 canvas = apply_color_grade(apply_colour_panel(canvas, clip.get("colour")), clip.get("colorGrade"))
                 if effects:
-                    canvas = apply_effects(canvas, self.scaled_effects(effects, {"mediaId": "canvas"}), local)
+                    scaled = self.scaled_effects(effects, {"mediaId": "canvas"})
+                    on_device = gpu_effects.apply_effects(canvas, scaled, local)
+                    canvas = on_device if on_device is not None else apply_effects(canvas, scaled, local)
                 if clip.get("lutId"):
                     canvas = apply_lut(canvas, clip["lutId"], float(clip.get("lutIntensity", 1)))
                 continue
@@ -1030,7 +1032,10 @@ class FrameRenderer:
                 if steady and clip.get("mediaId"):
                     image = stabilise_frame(image, str(clip["mediaId"]), int(source_time(clip, local) * self.project["fps"]), steady)
                 scaled = self.scaled_effects(effects, clip)
-                image = apply_effects(image, scaled, local) if scaled else image
+                if scaled:
+                    # R3: the chain as device passes when every effect has one; the CPU stays the reference.
+                    on_device = gpu_effects.apply_effects(image, scaled, local)
+                    image = on_device if on_device is not None else apply_effects(image, scaled, local)
                 if clip.get("lutId"):
                     image = apply_lut(image, clip["lutId"], float(clip.get("lutIntensity", 1)))
             if clip.get("shaderId"):
@@ -1051,14 +1056,17 @@ class FrameRenderer:
             visual_fade = {**clip, "extendOut": 0}
             alpha = max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
             native = _native()
-            if native is not None and _plainly_blended(clip, local, transform):
+            if native is not None and not gpu_effects.active() and _plainly_blended(clip, local, transform):
                 # Warp and blend in one Rust pass, identical to the Python path below.
                 canvas = self._flush(canvas)
                 canvas = np.ascontiguousarray(canvas)
                 native.composite_affine(canvas, np.ascontiguousarray(image), [float(v) for v in matrix.ravel()], float(alpha))
                 continue
-            image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(np.uint8)
-            layer = cv2.warpAffine(image, matrix, (self.width, self.height), flags=cv2.INTER_LINEAR)
+            # R3: the transform as a device pass, the alpha scaled inside it; cv2 stays the reference.
+            layer = gpu_effects.warp(image, matrix, alpha, (self.width, self.height))
+            if layer is None:
+                image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(np.uint8)
+                layer = cv2.warpAffine(image, matrix, (self.width, self.height), flags=cv2.INTER_LINEAR)
             layer = self.transition(layer, clip, local)
             layer = self.transition_out(layer, clip, local)
             if clip.get("pushOut") and local >= clip["duration"]:

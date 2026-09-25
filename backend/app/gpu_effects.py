@@ -1,0 +1,521 @@
+"""R3: a clip's effect chain and transform warp as device passes.
+
+The layer goes up once, every supported effect runs as a WGSL compute pass
+between two resident buffers, the affine warp samples it into a frame-sized
+buffer, and one readback returns the warped layer for the blend. The CPU
+functions in pixel_effects.py and cv2.warpAffine stay the reference: a chain
+with an effect this module does not carry returns None and the caller takes
+the reference path, and any device failure does the same, frame by frame.
+FORMCUT_EFFECTS=cpu forces the reference; =gpu forces this; unset follows the
+compositor (gpu.stack_active), so a software adapter never carries it.
+"""
+
+import os
+import threading
+
+import cv2
+import numpy as np
+
+from . import gpu
+from .catalogue import EFFECT_DEFAULTS, GRADES, clamp_params
+
+SUPPORTED = frozenset(
+    {
+        "gaussian",
+        "box",
+        "directional-blur",
+        "sharpen",
+        "vignette",
+        "grain",
+        "glow",
+        "chromatic",
+        "pixelate",
+        "mirror",
+        "invert",
+        "posterize",
+        "threshold",
+        "scanlines",
+    }
+)
+POINT_MODES = {"invert": 1, "posterize": 2, "threshold": 3, "vignette": 4, "scanlines": 5, "grain": 6, "chromatic": 7, "mirror": 8}
+PARAM_FLOATS = 32
+
+HEADER = """
+@group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> dst: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<f32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+
+fn reflect101(i: i32, n: i32) -> i32 {
+    var k = i;
+    if (n == 1) { return 0; }
+    loop {
+        if (k < 0) { k = -k; } else if (k >= n) { k = 2 * n - 2 - k; } else { break; }
+    }
+    return k;
+}
+"""
+
+# One pointwise pass: p[2] picks the effect, p[3..] its settings.
+POINT_CODE = """
+fn at(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)];
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let pixel = src[i];
+    var rgb = pixel.rgb;
+    let mode = i32(p[2]);
+    if (mode == 1) { rgb = vec3<f32>(1.0) - rgb; }
+    if (mode == 2) {
+        let steps = p[3] - 1.0;
+        rgb = round(rgb * steps) / steps;
+    }
+    if (mode == 3) {
+        let mean = (rgb.r + rgb.g + rgb.b) / 3.0;
+        rgb = select(vec3<f32>(0.0), vec3<f32>(1.0), mean > p[3]);
+    }
+    if (mode == 4) {
+        let u = (f32(x) + 0.5) / p[0] - 0.5;
+        let v = (f32(y) + 0.5) / p[1] - 0.5;
+        let falloff = clamp(1.0 - (u * u + v * v) * 2.2, 0.0, 1.0);
+        rgb = rgb * (1.0 - p[3] * (1.0 - falloff));
+    }
+    if (mode == 5) {
+        let depth = 0.25 * p[3];
+        rgb = rgb * (1.0 - depth + depth * cos(f32(y) * 6.283185307179586 / max(2.0, p[4])));
+    }
+    if (mode == 6) { rgb = rgb + vec3<f32>(aux[i]); }
+    if (mode == 7) {
+        let s = i32(p[3]);
+        var left = x - s;
+        var right = x + s;
+        loop { if (left < 0) { left = left + w; } else { break; } }
+        loop { if (right >= w) { right = right - w; } else { break; } }
+        rgb = vec3<f32>(src[y * w + left].r, rgb.g, src[y * w + right].b);
+    }
+    if (mode == 8) {
+        let u = (f32(x) + 0.5) / p[0];
+        let sx = abs(u - 0.5) * 2.0 * (p[0] - 1.0);
+        let x0 = i32(floor(sx));
+        let fx = sx - f32(x0);
+        rgb = mix(at(x0, y).rgb, at(x0 + 1, y).rgb, fx);
+    }
+    dst[i] = vec4<f32>(rgb, pixel.a);
+}
+"""
+
+# The shared grade (pixel_effects.grade), one pass.
+GRADE_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let pixel = src[i];
+    var out = pixel.rgb * exp2(p[2]);
+    out = (out - 0.5) * p[3] + 0.5 + p[4];
+    out = pow(max(out, vec3<f32>(0.0)), vec3<f32>(p[5]));
+    let luminance = dot(out, vec3<f32>(0.2126, 0.7152, 0.0722));
+    let clipped = clamp(out, vec3<f32>(0.0), vec3<f32>(1.0));
+    let spread = max(max(clipped.r, clipped.g), clipped.b) - min(min(clipped.r, clipped.g), clipped.b);
+    out = luminance + (out - luminance) * (p[6] + p[7] * (1.0 - spread));
+    out = out + vec3<f32>(p[8], -p[9], -p[8]) * 0.35;
+    let dark = (1.0 - luminance) * (1.0 - luminance);
+    let bright = luminance * luminance;
+    out = out + vec3<f32>(p[10], p[11], p[12]) * dark + vec3<f32>(p[13], p[14], p[15]) * bright;
+    if (p[16] > 0.0) {
+        let sepia = vec3<f32>(
+            out.r * 0.393 + out.g * 0.769 + out.b * 0.189,
+            out.r * 0.349 + out.g * 0.686 + out.b * 0.168,
+            out.r * 0.272 + out.g * 0.534 + out.b * 0.131);
+        out = out * (1.0 - p[16]) + sepia * p[16];
+    }
+    dst[i] = vec4<f32>(out, pixel.a);
+}
+"""
+
+# One separable convolution pass along (p[2], p[3]) with p[4] taps in aux and
+# the anchor at p[5], borders reflected the way OpenCV's default does.
+CONV_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let dx = i32(p[2]);
+    let dy = i32(p[3]);
+    let taps = i32(p[4]);
+    let anchor = i32(p[5]);
+    var sum = vec3<f32>(0.0);
+    for (var k = 0; k < taps; k = k + 1) {
+        let o = k - anchor;
+        let sx = reflect101(x + o * dx, w);
+        let sy = reflect101(y + o * dy, h);
+        sum = sum + src[sy * w + sx].rgb * aux[k];
+    }
+    dst[y * w + x] = vec4<f32>(sum, src[y * w + x].a);
+}
+"""
+
+# Two-input arithmetic between the current picture and the held one: p[2] picks it.
+COMBINE_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let a = src[i];
+    let b = held[i].rgb;
+    let mode = i32(p[2]);
+    var rgb = a.rgb;
+    if (mode == 1) { rgb = b * 2.0 - a.rgb; }
+    if (mode == 2) { rgb = b + a.rgb; }
+    if (mode == 3) { rgb = max(a.rgb - 0.45, vec3<f32>(0.0)); }
+    if (mode == 4) { rgb = clamp(mix(b, a.rgb, p[3]), vec3<f32>(0.0), vec3<f32>(1.0)); }
+    if (mode == 5) { rgb = clamp(a.rgb, vec3<f32>(0.0), vec3<f32>(1.0)); }
+    dst[i] = vec4<f32>(rgb, a.a);
+}
+"""
+
+# Pixelate: OpenCV's INTER_AREA shrink to (p[2], p[3]) cells, fractional edge
+# weights included, then INTER_NEAREST back to the frame, in one pass.
+PIXELATE_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let cols = p[2];
+    let rows = p[3];
+    let cx = i32(floor(f32(x) * cols / p[0]));
+    let cy = i32(floor(f32(y) * rows / p[1]));
+    let x0 = f32(cx) * p[0] / cols;
+    let x1 = f32(cx + 1) * p[0] / cols;
+    let y0 = f32(cy) * p[1] / rows;
+    let y1 = f32(cy + 1) * p[1] / rows;
+    var sum = vec3<f32>(0.0);
+    var total = 0.0;
+    for (var sy = i32(floor(y0)); sy < min(h, i32(ceil(y1))); sy = sy + 1) {
+        let wy = min(f32(sy) + 1.0, y1) - max(f32(sy), y0);
+        if (wy <= 0.0) { continue; }
+        for (var sx = i32(floor(x0)); sx < min(w, i32(ceil(x1))); sx = sx + 1) {
+            let wx = min(f32(sx) + 1.0, x1) - max(f32(sx), x0);
+            if (wx <= 0.0) { continue; }
+            sum = sum + src[sy * w + sx].rgb * (wx * wy);
+            total = total + wx * wy;
+        }
+    }
+    dst[y * w + x] = vec4<f32>(sum / max(total, 1e-9), src[y * w + x].a);
+}
+"""
+
+# The transform: dst pixel to source through the inverse affine in p[4..9],
+# bilinear with a transparent border, as cv2.warpAffine(INTER_LINEAR) does,
+# after the alpha channel is scaled by p[10] on the byte grid.
+WARP_CODE = """
+fn tap(x: i32, y: i32) -> vec4<f32> {
+    let sw = i32(p[2]);
+    let sh = i32(p[3]);
+    if (x < 0 || y < 0 || x >= sw || y >= sh) { return vec4<f32>(0.0); }
+    let s = src[y * sw + x];
+    return vec4<f32>(s.rgb, round(s.a * 255.0 * p[10]) / 255.0);
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let sx = p[4] * f32(x) + p[5] * f32(y) + p[6];
+    let sy = p[7] * f32(x) + p[8] * f32(y) + p[9];
+    let x0 = i32(floor(sx));
+    let y0 = i32(floor(sy));
+    let fx = sx - f32(x0);
+    let fy = sy - f32(y0);
+    let top = mix(tap(x0, y0), tap(x0 + 1, y0), fx);
+    let bottom = mix(tap(x0, y0 + 1), tap(x0 + 1, y0 + 1), fx);
+    dst[y * w + x] = mix(top, bottom, fy);
+}
+"""
+
+_lock = threading.RLock()
+_contexts: dict = {}
+
+
+def active() -> bool:
+    wanted = os.environ.get("FORMCUT_EFFECTS", "").lower()
+    if wanted == "cpu":
+        return False
+    if wanted == "gpu":
+        return gpu.status()["available"]
+    return gpu.stack_active()
+
+
+def supported(effects: list[dict]) -> bool:
+    """True when every effect of the chain has a device pass."""
+    return all(entry["id"] in SUPPORTED or entry["id"] in GRADES for entry in effects)
+
+
+class _Context:
+    """One frame size's device state: three resident layer buffers, params, aux and the pipelines."""
+
+    def __init__(self, height: int, width: int):
+        import wgpu
+        from wgpu.utils import get_default_device
+
+        self.device = get_default_device()
+        self.height, self.width = height, width
+        self.count = height * width
+        size = self.count * 16
+        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
+        self.buffers = [self.device.create_buffer(size=size, usage=usage) for _ in range(3)]
+        self.params = self.device.create_buffer(size=PARAM_FLOATS * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
+        self.aux_size = max(size, 4096)
+        self.aux = self.device.create_buffer(size=self.aux_size, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
+        self.read = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
+        storage = {"type": wgpu.BufferBindingType.read_only_storage}
+        self.layout = self.device.create_bind_group_layout(
+            entries=[
+                {"binding": 0, "visibility": wgpu.ShaderStage.COMPUTE, "buffer": storage},
+                {"binding": 1, "visibility": wgpu.ShaderStage.COMPUTE, "buffer": {"type": wgpu.BufferBindingType.storage}},
+                {"binding": 2, "visibility": wgpu.ShaderStage.COMPUTE, "buffer": storage},
+                {"binding": 3, "visibility": wgpu.ShaderStage.COMPUTE, "buffer": storage},
+                {"binding": 4, "visibility": wgpu.ShaderStage.COMPUTE, "buffer": storage},
+            ]
+        )
+        self.pipeline_layout = self.device.create_pipeline_layout(bind_group_layouts=[self.layout])
+        self.pipelines = {}
+        self.groups = {}
+
+    def pipeline(self, code: str):
+        if code not in self.pipelines:
+            module = self.device.create_shader_module(code=HEADER + code)
+            self.pipelines[code] = self.device.create_compute_pipeline(
+                layout=self.pipeline_layout, compute={"module": module, "entry_point": "main"}
+            )
+        return self.pipelines[code]
+
+    def group(self, src, dst):
+        key = (id(src), id(dst))
+        if key not in self.groups:
+            entries = [
+                {"binding": 0, "resource": {"buffer": src, "offset": 0, "size": src.size}},
+                {"binding": 1, "resource": {"buffer": dst, "offset": 0, "size": dst.size}},
+                {"binding": 2, "resource": {"buffer": self.params, "offset": 0, "size": self.params.size}},
+                {"binding": 3, "resource": {"buffer": self.aux, "offset": 0, "size": self.aux.size}},
+                {"binding": 4, "resource": {"buffer": self.buffers[2], "offset": 0, "size": self.buffers[2].size}},
+            ]
+            self.groups[key] = self.device.create_bind_group(layout=self.layout, entries=entries)
+        return self.groups[key]
+
+    def run(self, code: str, src, dst, params: list, aux: np.ndarray | None = None, width: int | None = None, height: int | None = None):
+        values = np.zeros(PARAM_FLOATS, np.float32)
+        values[: len(params)] = params
+        self.device.queue.write_buffer(self.params, 0, values)
+        if aux is not None:
+            self.device.queue.write_buffer(self.aux, 0, np.ascontiguousarray(aux.astype(np.float32)))
+        encoder = self.device.create_command_encoder()
+        step = encoder.begin_compute_pass()
+        step.set_pipeline(self.pipeline(code))
+        step.set_bind_group(0, self.group(src, dst))
+        step.dispatch_workgroups(((width or self.width) + 15) // 16, ((height or self.height) + 15) // 16)
+        step.end()
+        self.device.queue.submit([encoder.finish()])
+
+    def upload(self, buffer, image: np.ndarray):
+        self.device.queue.write_buffer(buffer, 0, np.ascontiguousarray(image.astype(np.float32) / 255))
+
+    def download(self, buffer, height: int, width: int) -> np.ndarray:
+        import wgpu
+
+        encoder = self.device.create_command_encoder()
+        encoder.copy_buffer_to_buffer(buffer, 0, self.read, 0, height * width * 16)
+        self.device.queue.submit([encoder.finish()])
+        self.read.map_sync(wgpu.MapMode.READ)
+        data = np.frombuffer(self.read.read_mapped(), np.float32)[: height * width * 4].reshape(height, width, 4).copy()
+        self.read.unmap()
+        return data
+
+    def copy(self, source, target, height: int, width: int):
+        encoder = self.device.create_command_encoder()
+        encoder.copy_buffer_to_buffer(source, 0, target, 0, height * width * 16)
+        self.device.queue.submit([encoder.finish()])
+
+
+def _context(height: int, width: int) -> _Context:
+    key = (height, width)
+    if key not in _contexts:
+        _contexts[key] = _Context(height, width)
+        while len(_contexts) > 3:
+            _contexts.pop(next(iter(_contexts)))
+    return _contexts[key]
+
+
+def _grade_params(params: dict) -> list:
+    return [
+        float(params.get("exposure", 0)),
+        float(params.get("contrast", 1)),
+        float(params.get("lift", 0)),
+        float(params.get("gamma", 1)),
+        float(params.get("saturation", 1)),
+        float(params.get("vibrance", 0)),
+        float(params.get("temperature", 0)),
+        float(params.get("tint", 0)),
+        *[float(params.get("shadows_" + c, 0)) for c in "rgb"],
+        *[float(params.get("highlights_" + c, 0)) for c in "rgb"],
+        float(params.get("sepia", 0) or 0),
+    ]
+
+
+def _gaussian_taps(sigma: float) -> np.ndarray:
+    size = round(sigma * 4 * 2 + 1) | 1
+    return cv2.getGaussianKernel(size, sigma, cv2.CV_32F)[:, 0]
+
+
+class _Chain:
+    """Applies one effect chain to a resident layer; tracks which buffer holds the current picture."""
+
+    def __init__(self, context: _Context, height: int, width: int):
+        self.c = context
+        self.h, self.w = height, width
+        self.current = 0
+
+    def _pass(self, code: str, params: list, aux=None, source: int | None = None, target: int | None = None):
+        src = self.c.buffers[self.current if source is None else source]
+        dst_index = (self.current + 1) % 2 if target is None else target
+        self.c.run(code, src, self.c.buffers[dst_index], [self.w, self.h, *params], aux, self.w, self.h)
+        if target is None:
+            self.current = dst_index
+
+    def _blur(self, taps: np.ndarray, anchor: int | None = None):
+        anchor = len(taps) // 2 if anchor is None else anchor
+        self._pass(CONV_CODE, [1, 0, len(taps), anchor], taps)
+        self._pass(CONV_CODE, [0, 1, len(taps), anchor], taps)
+
+    def _hold(self):
+        """Keep the current picture in the third buffer, which every pass sees as held."""
+        self.c.copy(self.c.buffers[self.current], self.c.buffers[2], self.h, self.w)
+
+    def apply(self, effect: str, local: float, params: dict):
+        if effect in GRADES:
+            self._pass(GRADE_CODE, _grade_params({**GRADES[effect], **params}))
+            return
+        radius = max(0.1, min(100, float(params.get("radius", 3))))
+        size = max(1, int(params.get("size", 12)))
+        if effect == "gaussian":
+            self._blur(_gaussian_taps(radius))
+        elif effect == "box":
+            self._blur(np.full(size, 1 / size, np.float32), size // 2)
+        elif effect == "directional-blur":
+            taps = size | 1
+            self._pass(CONV_CODE, [1, 0, taps, taps // 2], np.full(taps, 1 / taps, np.float32))
+        elif effect == "sharpen":
+            self._hold()
+            self._blur(_gaussian_taps(radius))
+            self._pass(COMBINE_CODE, [1])
+        elif effect == "glow":
+            self._hold()
+            self._pass(COMBINE_CODE, [3])
+            self._blur(_gaussian_taps(radius * 3))
+            self._pass(COMBINE_CODE, [2])
+        elif effect == "pixelate":
+            self._pass(PIXELATE_CODE, [max(1, self.w // size), max(1, self.h // size)])
+        elif effect == "grain":
+            rng = np.random.default_rng(int(local * 1000) % (2**32))
+            self._pass(POINT_CODE, [POINT_MODES[effect]], rng.normal(0, params.get("strength", 0.07), (self.h, self.w)).astype(np.float32))
+        elif effect == "posterize":
+            self._pass(POINT_CODE, [POINT_MODES[effect], max(2, min(32, int(params.get("levels", 5))))])
+        elif effect == "threshold":
+            self._pass(POINT_CODE, [POINT_MODES[effect], float(params.get("threshold", 0.5))])
+        elif effect in ("vignette", "scanlines"):
+            self._pass(POINT_CODE, [POINT_MODES[effect], float(params.get("intensity", 1)), float(params.get("spacing", 2))])
+        elif effect == "chromatic":
+            self._pass(POINT_CODE, [POINT_MODES[effect], size])
+        else:
+            self._pass(POINT_CODE, [POINT_MODES[effect]])
+
+
+def _run_chain(chain: _Chain, effects: list[dict], local: float) -> None:
+    for entry in effects:
+        amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
+        if amount <= 0:
+            continue
+        settings = clamp_params({**EFFECT_DEFAULTS.get(entry["id"], {}), **(entry.get("params") or {})})
+        if amount < 1:
+            chain._hold()
+        chain.apply(entry["id"], local, settings)
+        chain._pass(COMBINE_CODE, [4, amount] if amount < 1 else [5])
+
+
+def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.ndarray | None:
+    """The chain on the device, bytes back; None when the chain or the device cannot take it."""
+    if not effects or not supported(effects) or not active():
+        return None
+    try:
+        with _lock:
+            h, w = image.shape[:2]
+            context = _context(h, w)
+            chain = _Chain(context, h, w)
+            context.upload(context.buffers[0], image)
+            _run_chain(chain, effects, local)
+            data = context.download(context.buffers[chain.current], h, w)
+        return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+    except Exception:
+        return None
+
+
+def warp(image: np.ndarray, matrix: np.ndarray, alpha: float, size: tuple[int, int]) -> np.ndarray | None:
+    """The transform alone as a device pass; None when the device path is off or fails."""
+    return effects_and_warp(image, [], 0.0, matrix, alpha, size)
+
+
+def effects_and_warp(
+    image: np.ndarray, effects: list[dict], local: float, matrix: np.ndarray, alpha: float, size: tuple[int, int]
+) -> np.ndarray | None:
+    """The chain and the transform on one resident layer: one upload, one readback of the frame-sized layer."""
+    if not active() or (effects and not supported(effects)):
+        return None
+    try:
+        with _lock:
+            h, w = image.shape[:2]
+            frame_w, frame_h = size
+            context = _context(max(h, frame_h), max(w, frame_w))
+            chain = _Chain(context, h, w)
+            context.upload(context.buffers[0], image)
+            if effects:
+                _run_chain(chain, effects, local)
+            inverse = cv2.invertAffineTransform(np.float32(matrix))
+            context.run(
+                WARP_CODE,
+                context.buffers[chain.current],
+                context.buffers[(chain.current + 1) % 2],
+                [frame_w, frame_h, w, h, *[float(v) for v in inverse.ravel()], float(alpha)],
+                None,
+                frame_w,
+                frame_h,
+            )
+            data = context.download(context.buffers[(chain.current + 1) % 2], frame_h, frame_w)
+        return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+    except Exception:
+        return None

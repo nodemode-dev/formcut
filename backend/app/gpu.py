@@ -1,3 +1,4 @@
+import os
 import threading
 
 import numpy as np
@@ -47,6 +48,8 @@ def status() -> dict:
                 _status = {"available": False, "reason": str(exc)}
         out = _status.copy()
         out["compositor"] = "stack" if _stack_wanted(out) else "per-layer"
+        wanted = os.environ.get("FORMCUT_EFFECTS", "").lower()
+        out["passes"] = "device" if (wanted == "gpu" and out.get("available")) or (wanted != "cpu" and _stack_wanted(out)) else "cpu"
         return out
 
 
@@ -90,8 +93,6 @@ _compositors: dict = {}
 
 
 def _stack_wanted(state: dict) -> bool:
-    import os
-
     wanted = os.environ.get("FORMCUT_COMPOSITE", "").lower()
     if wanted == "cpu" or not state.get("available"):
         return False

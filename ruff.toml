@@ -67,5 +67,6 @@ ignore = [
 "backend/app/templates.py" = ["BLE001"]
 "backend/app/encoders.py" = ["BLE001"]
 "backend/app/gpu.py" = ["BLE001"]
+"backend/app/gpu_effects.py" = ["BLE001"]
 "backend/app/media.py" = ["BLE001", "ASYNC221"]
 "backend/app/video_source.py" = ["BLE001", "SIM115"]
