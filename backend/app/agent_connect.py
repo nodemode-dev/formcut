@@ -13,11 +13,13 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 ROOT = Path(__file__).resolve().parents[2]
@@ -90,3 +92,54 @@ def clients() -> list[dict]:
 def connect() -> dict:
     command, args = server_command()
     return {"command": command, "args": args, "installed": bool(getattr(sys, "frozen", False)), "clients": clients(), "sep": os.sep}
+
+
+class InstallBody(BaseModel):
+    client: str
+
+
+@router.post("/install")
+def install(body: InstallBody) -> dict:
+    """Register formcut's MCP server with a client in one click, so the embedded terminal's agent finds it."""
+    command, args = server_command()
+    if body.client == "claude-code":
+        claude = shutil.which("claude")
+        if not claude:
+            raise HTTPException(409, "claude is not on this machine's PATH; install Claude Code first")
+        run = subprocess.run(
+            [claude, "mcp", "add", "formcut", "--scope", "user", "--", command, *args],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        text = (run.stdout + run.stderr).strip()
+        if run.returncode and "already exists" not in text:
+            raise HTTPException(502, f"claude mcp add failed: {text[-400:]}")
+        return {
+            "client": "claude-code",
+            "written": "claude mcp add formcut --scope user",
+            "present": "already exists" in text,
+            "detail": text[-400:],
+        }
+    if body.client == "codex":
+        path = Path.home() / ".codex" / "config.toml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        existing = path.read_text(encoding="utf-8") if path.is_file() else ""
+        block = "[mcp_servers.formcut]\ncommand = " + json.dumps(command) + "\nargs = " + json.dumps(args) + "\n"
+        if "[mcp_servers.formcut]" in existing:
+            head, _, rest = existing.partition("[mcp_servers.formcut]")
+            tail = rest.split("\n[", 1)
+            rebuilt = head + block + ("\n[" + tail[1] if len(tail) > 1 else "")
+        else:
+            rebuilt = existing + ("\n" if existing and not existing.endswith("\n") else "") + ("\n" if existing else "") + block
+        if existing:
+            path.with_suffix(".toml.bak").write_text(existing, encoding="utf-8")
+        path.write_text(rebuilt, encoding="utf-8")
+        return {
+            "client": "codex",
+            "written": str(path),
+            "present": "[mcp_servers.formcut]" in existing,
+            "backup": str(path.with_suffix(".toml.bak")) if existing else None,
+        }
+    raise HTTPException(400, "client must be claude-code or codex")

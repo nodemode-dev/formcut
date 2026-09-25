@@ -43,6 +43,7 @@ export const icons: Record<string, string> = {
   reset: `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.6 8.5a4.5 4.5 0 1 0 1.2-3.6"/><path d="M3.2 2.6v2.9h2.9"/></svg>`,
   help: wrap('<circle cx="8" cy="8" r="6"/><path d="M6.3 6.2A1.8 1.8 0 1 1 8 9v1"/><circle cx="8" cy="11.6" r="0.5" fill="currentColor" stroke="none"/>'),
   text: wrap('<path d="M3.5 4.5V3h9v1.5M8 3v10M6.3 13h3.4"/>'),
+  terminal: wrap('<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M4.8 6.3 7 8.2l-2.2 1.9M8.2 10.4h3"/>'),
   tone: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2"/></svg>`,
   close: wrap('<path d="M4 4l8 8M12 4l-8 8"/>'),
 };

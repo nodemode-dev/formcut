@@ -22,7 +22,7 @@ The rest is written by hand.
 | Module | Lines | Prefix | Routes |
 | --- | --- | --- | --- |
 | addons.py | 194 | /api/addons | 3 |
-| agent_connect.py | 92 | /api/agents | 1 |
+| agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 699 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
@@ -38,7 +38,7 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 408 | /api/health | 13 |
+| main.py | 410 | /api/health | 13 |
 | media.py | 864 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -55,6 +55,7 @@ The rest is written by hand.
 | storage.py | 66 | /api/storage | 1 |
 | subtitles.py | 109 | /api/subtitles | 2 |
 | templates.py | 214 | /api/templates | 7 |
+| terminal.py | 181 | /api/terminal | 2 |
 | tiktok.py | 340 | /api/connect/tiktok/app | 7 |
 | track.py | 178 | /api/track | 1 |
 | transcribe.py | 525 | /api/transcribe | 2 |

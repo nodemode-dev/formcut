@@ -14,6 +14,7 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 | httpx | BSD-3-Clause | Pexels API and media fetch | ship |
 | yt-dlp | Unlicense (public domain) | URL media import, invoked as a module subprocess | ship |
 | @huggingface/transformers | Apache-2.0 | in-browser Whisper transcription | ship |
+| @xterm/xterm, @xterm/addon-fit | MIT | the agent terminal pane in Studio | ship |
 | tauri, tauri-build | MIT OR Apache-2.0 | shell | ship |
 | tauri-plugin-shell | MIT OR Apache-2.0 | sidecar spawn | ship |
 | tauri-plugin-dialog | MIT OR Apache-2.0 | failure dialog | ship |

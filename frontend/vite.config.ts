@@ -14,7 +14,7 @@ export default defineConfig({
     port: 3040,
     strictPort: true,
     proxy: {
-      "/api": "http://127.0.0.1:8040",
+      "/api": { target: "http://127.0.0.1:8040", ws: true },
     },
   },
   preview: {
@@ -22,7 +22,7 @@ export default defineConfig({
     port: 3041,
     strictPort: true,
     proxy: {
-      "/api": "http://127.0.0.1:8040",
+      "/api": { target: "http://127.0.0.1:8040", ws: true },
     },
   },
 });

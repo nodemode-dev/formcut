@@ -823,6 +823,9 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   color: var(--ink);
 }
 .stock-note { color: var(--ink-soft); margin-bottom: var(--sp-2); }
+.term-host { padding: 0; overflow: hidden; }
+.term-pane { height: min(60vh, 480px); background: var(--ground); padding: var(--sp-2); }
+.term-pane .xterm { height: 100%; }
 .stock-grid {
   max-height: 300px;
   overflow-y: auto;

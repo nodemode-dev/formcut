@@ -24,7 +24,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   modal.innerHTML = `<div class="set-pair studio-pair">
     <nav class="set-rail studio-rail" aria-label="Studio" data-collapsed="false">
       <div class="set-rail-head"><strong>Studio</strong></div>
-      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "tone", t("gen.audio"))}${tab("voiceover", "mic", t("voice.title"))}${tab("templates", "template", "Timeline templates")}${tab("localmedia", "image", t("local.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}</div>
+      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "tone", t("gen.audio"))}${tab("voiceover", "mic", t("voice.title"))}${tab("templates", "template", "Timeline templates")}${tab("localmedia", "image", t("local.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}${tab("terminal", "terminal", text("Agent terminal"))}</div>
       <button class="set-collapse" data-rail-toggle title="${t("set.collapse")}">${icon("chevL")}</button>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
@@ -135,6 +135,14 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     </section>
     <section data-view="models" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Local models</span><small>Download once, then process media locally. You can also import model files acquired separately.</small></div><div class="panel-rows"><small data-model-runtime hidden></small><div data-model-list></div></div></div>
+    </section>
+    <section data-view="terminal" class="set-view" hidden>
+      <div class="panel-section"><div class="panel-section-head"><span>${text("Agent terminal")}</span><small data-term-status></small></div><div class="panel-rows">
+        <p class="stock-note">${text("A real shell inside formcut, started with this engine's MCP server in its environment. Connect a client once, then run claude or codex here and it drives the editor through the formcut tools while you watch.")}</p>
+        <div class="stock-row"><button class="tool-chip" data-term-connect="claude-code">${icon("plus")}${text("Connect Claude Code")}</button><button class="tool-chip" data-term-connect="codex">${icon("plus")}${text("Connect Codex")}</button><button class="tool-chip" data-term-open>${icon("terminal")}${text("Open shell")}</button><button class="tool-chip" data-term-close hidden>${icon("close")}${text("Close shell")}</button></div>
+        <p class="stock-note" data-term-note></p>
+      </div></div>
+      <div class="panel-section term-host" data-term-host hidden><div class="term-pane" data-term-pane></div></div>
     </section>
     </div><footer class="set-foot studio-footer"><span role="status" data-status></span><button class="tool-chip" data-cancel hidden>Cancel job</button></footer></section></div>`;
   localizeElement(modal);
@@ -425,6 +433,72 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       ovNote(`${t("stock.imported")}: ${media.name} (${item.license})`);
     });
   });
+  // The agent terminal: xterm.js over the engine's PTY socket. One terminal
+  // is built the first time the shell opens and reused after; a socket per
+  // shell; the fit addon sizes the PTY to the pane. The connect chips write
+  // the client's MCP config through the engine, so the agent started here
+  // finds formcut's tools.
+  const termNote = (message: string) => { const node = q<HTMLElement>("term-note"); if (node.textContent !== message) node.textContent = message; };
+  const termHost = q<HTMLElement>("term-host");
+  let term: import("@xterm/xterm").Terminal | null = null;
+  let fit: import("@xterm/addon-fit").FitAddon | null = null;
+  let termSocket: WebSocket | null = null;
+  const termStatus = async () => {
+    try {
+      const status = await api<{ pty: boolean; shell: string; claude: boolean; codex: boolean; mcp: string }>("/api/terminal/status", undefined, "GET");
+      const line = `${status.shell}${status.pty ? "" : ` (${text("no pseudo-terminal on this platform")})`} · claude ${status.claude ? text("found") : text("not found")} · codex ${status.codex ? text("found") : text("not found")}`;
+      if (q<HTMLElement>("term-status").textContent !== line) q<HTMLElement>("term-status").textContent = line;
+    } catch { /* the status is a convenience */ }
+  };
+  const closeShell = () => {
+    termSocket?.close();
+    termSocket = null;
+    q<HTMLButtonElement>("term-close").hidden = true;
+    q<HTMLButtonElement>("term-open").hidden = false;
+  };
+  q("term-open").addEventListener("click", () => void run(async () => {
+    if (termSocket) return;
+    const [{ Terminal }, { FitAddon }] = await Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit")]);
+    await import("@xterm/xterm/css/xterm.css");
+    termHost.hidden = false;
+    if (!term) {
+      const styles = getComputedStyle(document.documentElement);
+      term = new Terminal({
+        cursorBlink: true,
+        fontFamily: styles.getPropertyValue("--font-mono").trim() || "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontSize: 13,
+        theme: { background: styles.getPropertyValue("--ground").trim() || "#121617", foreground: styles.getPropertyValue("--ink").trim() || "#f4f5f6", cursor: styles.getPropertyValue("--cue").trim() || "#ffae2b" },
+      });
+      fit = new FitAddon();
+      term.loadAddon(fit);
+      term.open(q<HTMLElement>("term-pane"));
+      term.onData((data) => { termSocket?.send(data); });
+      term.onResize(({ cols, rows }) => { termSocket?.send(JSON.stringify({ resize: [cols, rows] })); });
+      new ResizeObserver(() => fit?.fit()).observe(q<HTMLElement>("term-pane"));
+    }
+    fit?.fit();
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${location.host}/api/terminal/ws?cols=${term.cols}&rows=${term.rows}`);
+    termSocket = socket;
+    socket.onopen = () => { termNote(""); q<HTMLButtonElement>("term-close").hidden = false; q<HTMLButtonElement>("term-open").hidden = true; term?.focus(); };
+    socket.onmessage = (event) => { term?.write(String(event.data)); };
+    socket.onclose = () => { if (termSocket === socket) closeShell(); term?.write("\r\n[" + text("shell closed") + "]\r\n"); };
+    socket.onerror = () => { termNote(text("The shell could not be opened")); };
+  }));
+  q("term-close").addEventListener("click", closeShell);
+  for (const chip of modal.querySelectorAll<HTMLButtonElement>("[data-term-connect]")) {
+    chip.addEventListener("click", () => void (async () => {
+      termNote(text("Connecting"));
+      try {
+        const made = await api<{ client: string; written: string; present: boolean; backup?: string | null }>("/api/agents/install", { client: chip.dataset.termConnect });
+        termNote(`${made.present ? text("Already connected") : text("Connected")}: ${made.written}${made.backup ? ` (${text("previous config kept at")} ${made.backup})` : ""}`);
+      } catch (error) {
+        termNote(error instanceof Error ? error.message : String(error));
+      }
+      await termStatus();
+    })());
+  }
+  void termStatus();
   const showPage = async () => {
     for (const section of modal.querySelectorAll<HTMLElement>("[data-view]")) section.hidden = section.dataset.view !== activePage;
     for (const button of modal.querySelectorAll<HTMLElement>("[data-page]")) {

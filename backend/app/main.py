@@ -74,12 +74,14 @@ from .agent_connect import router as agents_router
 from .codecs_api import router as codecs_router
 from .project_packages import router as project_packages_router
 from .subtitles import router as subtitles_router
+from .terminal import router as terminal_router
 from .transcribe import router as transcribe_router
 
 app.include_router(agents_router)
 app.include_router(codecs_router)
 app.include_router(project_packages_router)
 app.include_router(subtitles_router)
+app.include_router(terminal_router)
 app.include_router(transcribe_router)
 app.include_router(projects_router)
 app.include_router(media_router)
