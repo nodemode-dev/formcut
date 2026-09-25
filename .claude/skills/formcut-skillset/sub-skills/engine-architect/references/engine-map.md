@@ -38,7 +38,7 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 380 | /api/health | 11 |
+| main.py | 408 | /api/health | 13 |
 | media.py | 838 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -87,6 +87,7 @@ the automation transports.
 - `gpu_effects.py` (521L)
 - `matte_cache.py` (126L)
 - `openh264.py` (410L)
+- `package_registry.py` (80L)
 - `paths.py` (32L)
 - `pixel_effects.py` (874L)
 - `processes.py` (22L)

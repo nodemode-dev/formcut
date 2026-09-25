@@ -1,0 +1,17 @@
+{
+  "format": "formcut-effects-registry",
+  "formatVersion": 1,
+  "name": "formcut community packages",
+  "description": "Effect packages anyone can install from the effects browser. Each entry names a zip of a package folder (manifest.json plus its shader.wgsl or audio template) hosted anywhere; the engine downloads it, checks it the way the loader checks every package, and installs it. To list a package here, open a pull request adding an entry.",
+  "packages": [
+    {
+      "id": "warm-dust",
+      "name": "Warm dust",
+      "kind": "video",
+      "author": "formcut",
+      "description": "A warm grade with a little dust and a soft vignette, the example stack package from the wiki.",
+      "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/warm-dust.zip",
+      "sha256": "158f34ac584b4a1584d58e55397c91ae5df2b28a52a53b0f303f3c46dbf3b3ab"
+    }
+  ]
+}

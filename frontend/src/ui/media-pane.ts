@@ -66,7 +66,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         <div class="search-field">${icon("search")}<input data-ref="fx-search" placeholder="${t("fx.search")}" /></div>
         <div class="cap-files"><button type="button" class="tool-chip" data-ref="fx-adjust" title="${t("fx.adjust.hint")}">${icon("sliders")}${t("fx.adjust.add")}</button></div>
         <div class="fx-status" data-ref="fx-status" role="status"></div>
-        <div class="fx-package-bar" data-ref="fx-package-bar" hidden><button type="button" class="tool-chip" data-ref="fx-import">${t("fx.importPackage")}</button><input type="file" accept=".zip,.json,application/zip,application/json" data-ref="fx-import-file" hidden /></div>
+        <div class="fx-package-bar" data-ref="fx-package-bar" hidden><button type="button" class="tool-chip" data-ref="fx-import">${t("fx.importPackage")}</button><input type="file" accept=".zip,.json,application/zip,application/json" data-ref="fx-import-file" hidden /><button type="button" class="tool-chip" data-ref="fx-registry">${t("fx.registry")}</button><div class="fx-registry" data-ref="fx-registry-list" hidden></div></div>
         <div class="card-grid" data-ref="fx-grid"></div>
         <p class="fx-empty" data-ref="fx-empty" hidden></p>
       </div>
@@ -424,6 +424,51 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     }
     say(t("fx.imported").replace("{name}", body.name));
     await refreshPackages();
+  });
+  // The community registry: an index of package zips hosted anywhere. The
+  // engine fetches the index and the package and runs every check the
+  // loader runs on a dropped package before anything is installed.
+  const registryList = el.querySelector<HTMLElement>('[data-ref="fx-registry-list"]')!;
+  const registryRows = new Map<string, HTMLElement>();
+  el.querySelector<HTMLButtonElement>('[data-ref="fx-registry"]')!.addEventListener("click", async () => {
+    if (!registryList.hidden) { registryList.hidden = true; return; }
+    registryList.hidden = false;
+    say(t("fx.registry.loading"));
+    const res = await fetch("/api/packages/registry");
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      say(t("fx.registry.failed").replace("{reason}", String(body.detail ?? res.status)));
+      return;
+    }
+    const index = body as { name: string; url: string; packages: Array<{ id: string; name: string; kind: string; author?: string; description?: string; url: string; sha256?: string }> };
+    const ordered: HTMLElement[] = [];
+    for (const entry of index.packages) {
+      let row = registryRows.get(entry.id);
+      if (!row) {
+        row = document.createElement("div");
+        row.className = "fx-registry-row";
+        row.dataset.registryId = entry.id;
+        row.innerHTML = `<span class="fx-registry-name"></span><span class="fx-registry-desc"></span><button type="button" class="tool-chip fx-registry-install">${t("fx.registry.install")}</button>`;
+        row.querySelector("button")!.addEventListener("click", async () => {
+          say(t("fx.registry.installing").replace("{name}", entry.name));
+          const answer = await fetch("/api/packages/install-from-url", { method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" }, body: JSON.stringify({ url: entry.url, sha256: entry.sha256 ?? null }) });
+          const made = await answer.json().catch(() => ({}));
+          if (!answer.ok) { say(t("fx.importFailed").replace("{reason}", String(made.detail ?? answer.status))); return; }
+          say(t("fx.imported").replace("{name}", made.name));
+          await refreshPackages();
+        });
+        registryRows.set(entry.id, row);
+      }
+      const name = `${entry.name}${entry.author ? ` (${entry.author})` : ""}`;
+      const nameNode = row.querySelector<HTMLElement>(".fx-registry-name")!;
+      if (nameNode.textContent !== name) nameNode.textContent = name;
+      const descNode = row.querySelector<HTMLElement>(".fx-registry-desc")!;
+      if (descNode.textContent !== (entry.description ?? "")) descNode.textContent = entry.description ?? "";
+      ordered.push(row);
+    }
+    for (const id of registryRows.keys()) if (!index.packages.some((entry) => entry.id === id)) registryRows.delete(id);
+    orderNodes(registryList, ordered);
+    say(`${index.name}: ${index.packages.length}`);
   });
   fxGrid.addEventListener(
     "click",

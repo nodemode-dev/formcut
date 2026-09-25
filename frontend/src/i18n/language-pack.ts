@@ -1158,7 +1158,12 @@ Caption look applied|Style de sous-titres appliqué|Stile dei sottotitoli applic
 Export as .fc (the project with its media)|Exporter en .fc (le projet avec ses médias)|Esporta come .fc (il progetto con i suoi media)|.fc として書き出す（メディアを含むプロジェクト）|.fc로 내보내기(미디어를 포함한 프로젝트)|Exportar como .fc (o projeto com a sua mídia)|Экспортировать как .fc (проект с его медиа)|.fc olarak dışa aktar (medyasıyla birlikte proje)|导出为 .fc（含媒体的项目）|匯出為 .fc（含媒體的專案）
 Writing the .fc package|Écriture du paquet .fc|Scrittura del pacchetto .fc|.fc パッケージを書き込み中|.fc 패키지 작성 중|A escrever o pacote .fc|Запись пакета .fc|.fc paketi yazılıyor|正在写入 .fc 包|正在寫入 .fc 套件
 Importing the project package|Importation du paquet de projet|Importazione del pacchetto del progetto|プロジェクトパッケージを読み込み中|프로젝트 패키지 가져오는 중|A importar o pacote do projeto|Импорт пакета проекта|Proje paketi içe aktarılıyor|正在导入项目包|正在匯入專案套件
-Projects imported|Projets importés|Progetti importati|プロジェクトを読み込みました|프로젝트를 가져왔습니다|Projetos importados|Проекты импортированы|Projeler içe aktarıldı|已导入项目|已匯入專案`;
+Projects imported|Projets importés|Progetti importati|プロジェクトを読み込みました|프로젝트를 가져왔습니다|Projetos importados|Проекты импортированы|Projeler içe aktarıldı|已导入项目|已匯入專案
+Community packages|Paquets de la communauté|Pacchetti della community|コミュニティパッケージ|커뮤니티 패키지|Pacotes da comunidade|Пакеты сообщества|Topluluk paketleri|社区包|社群套件
+Reading the package registry|Lecture du registre des paquets|Lettura del registro dei pacchetti|パッケージレジストリを読み込み中|패키지 레지스트리 읽는 중|A ler o registo de pacotes|Чтение реестра пакетов|Paket kaydı okunuyor|正在读取包注册表|正在讀取套件註冊表
+Could not read the registry: {reason}|Impossible de lire le registre : {reason}|Impossibile leggere il registro: {reason}|レジストリを読み込めませんでした：{reason}|레지스트리를 읽을 수 없습니다: {reason}|Não foi possível ler o registo: {reason}|Не удалось прочитать реестр: {reason}|Kayıt okunamadı: {reason}|无法读取注册表：{reason}|無法讀取註冊表：{reason}
+Install|Installer|Installa|インストール|설치|Instalar|Установить|Yükle|安装|安裝
+Downloading and checking {name}|Téléchargement et vérification de {name}|Download e verifica di {name}|{name} をダウンロードして確認中|{name} 다운로드 및 확인 중|A transferir e verificar {name}|Загрузка и проверка {name}|{name} indiriliyor ve denetleniyor|正在下载并检查 {name}|正在下載並檢查 {name}`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

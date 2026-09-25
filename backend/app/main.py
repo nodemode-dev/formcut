@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from .brush import router as brush_router
 from .cloud import router as cloud_router
@@ -312,6 +313,33 @@ def packages_import(file: UploadFile) -> dict:
     data = file.file.read(MAX_UPLOAD + 1)
     try:
         return install(data, file.filename or "")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/api/packages/registry")
+def packages_registry(url: str | None = None) -> dict:
+    """The community registry's index: formcut's own by default, any fork's by URL."""
+    from .package_registry import fetch_index
+
+    try:
+        return fetch_index(url)
+    except ValueError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+class RegistryInstall(BaseModel):
+    url: str
+    sha256: str | None = None
+
+
+@app.post("/api/packages/install-from-url", status_code=201)
+def packages_install_from_url(body: RegistryInstall) -> dict:
+    """Download a package zip named by the registry (or any URL) and install it after the loader's checks."""
+    from .package_registry import install_from_url
+
+    try:
+        return install_from_url(body.url, body.sha256)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
