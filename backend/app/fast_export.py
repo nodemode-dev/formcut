@@ -59,6 +59,8 @@ ABSENT = (
     "rampOut",
     "words",
     "timelineId",
+    "angle",
+    "audioAngle",
 )
 LIMIT = 64
 
