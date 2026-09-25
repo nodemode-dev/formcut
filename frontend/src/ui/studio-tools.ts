@@ -5,7 +5,7 @@ import type { MediaBin } from "../engine/media";
 import { api, waitJob } from "../engine/api";
 import { escapeHtml } from "./safe-text";
 import { buildCreatorPanel } from "./creator-panel";
-import { buildVoiceover } from "./voiceover";
+import { buildRecording } from "./recorder";
 import { icon } from "./icons";
 import { reconcile } from "./keyed-list";
 
@@ -24,7 +24,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   modal.innerHTML = `<div class="set-pair studio-pair">
     <nav class="set-rail studio-rail" aria-label="Studio" data-collapsed="false">
       <div class="set-rail-head"><strong>Studio</strong></div>
-      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "tone", t("gen.audio"))}${tab("voiceover", "mic", t("voice.title"))}${tab("templates", "template", "Timeline templates")}${tab("localmedia", "image", t("local.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}${tab("terminal", "terminal", text("Agent terminal"))}</div>
+      <div class="set-tabs">${tab("project", "clapperboard", "Project", true)}${tab("stock", "image", t("stock.title"))}${tab("urldl", "download", t("urldl.title"))}${tab("genimage", "image", t("gen.image"))}${tab("genvideo", "video", t("gen.video"))}${tab("genaudio", "tone", t("gen.audio"))}${tab("recording", "mic", text("Recording"))}${tab("templates", "template", "Timeline templates")}${tab("localmedia", "image", t("local.title"))}${tab("speech", "mic", "Local speech")}${tab("models", "box", "Local models")}${tab("terminal", "terminal", text("Agent terminal"))}</div>
       <button class="set-collapse" data-rail-toggle title="${t("set.collapse")}">${icon("chevL")}</button>
     </nav>
     <section class="set-window studio-panel" role="dialog" aria-modal="true" aria-label="Studio tools">
@@ -57,7 +57,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       <div class="panel-section"><div class="panel-section-head"><span>${t("gen.results")}</span><small>${t("gen.results.hint")}</small></div>
         <div class="card-grid stock-grid" data-gen-grid="${kind}"></div></div>
     </section>`).join("")}
-    <section data-view="voiceover" class="set-view" hidden></section>
+    <section data-view="recording" class="set-view" hidden></section>
     <section data-view="urldl" class="set-view" hidden>
       <div class="panel-section">
         <div class="panel-section-head"><span>${t("urldl.title")}</span><small>${t("urldl.hint")}</small></div>
@@ -641,7 +641,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   modal.querySelector('[data-ref="local-sort"]')?.addEventListener("change", paintLocal);
   bin.subscribe(() => paintLocal());
 
-  modal.querySelector('[data-view="voiceover"]')!.append(buildVoiceover(engine, bin));
+  modal.querySelector('[data-view="recording"]')!.append(buildRecording(engine, bin));
 
   // The rail collapses to icons, like the settings popout, and remembers it.
   const rail = modal.querySelector<HTMLElement>(".studio-rail")!;

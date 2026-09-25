@@ -1203,6 +1203,11 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .vo-time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .vo-preview { width: 100%; margin: var(--sp-2) 0; }
 .vo-video { width: 100%; max-height: 180px; margin: var(--sp-2) 0; border-radius: var(--radius-s); background: var(--inset); }
+.recording-tabs { margin-bottom: var(--sp-2); }
+.recorder-devices { flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.recorder-devices label { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: 12px; color: var(--ink-soft); }
+.recorder-toggle input { accent-color: var(--cue); }
+.recorder-live { max-height: 240px; object-fit: contain; }
 
 /* F3, F23: rail labels stay on one row and shorten rather than wrapping, at any
    rail width and in any language. */
