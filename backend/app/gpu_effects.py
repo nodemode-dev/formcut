@@ -260,6 +260,73 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 """
 
 _lock = threading.RLock()
+
+# R5: the CPU path rounds a layer to uint8 after its effects and again after
+# a mask or a LUT, before the warp interpolates it; this pass rounds the
+# same way so the device path lands on the same counts.
+QUANTISE_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    dst[i] = round(src[i] * 255.0) / 255.0;
+}
+"""
+
+# The mask as an alpha field in aux, one float a pixel, multiplied into the
+# layer's alpha and rounded as the CPU rounds it.
+MASK_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    dst[i] = vec4<f32>(s.rgb, round(s.a * 255.0 * aux[i]) / 255.0);
+}
+"""
+
+# A .cube LUT in aux as flat rgb triplets indexed [b][g][r] on an n-lattice,
+# sampled trilinearly, mixed by intensity and rounded, as apply_lut does it.
+# p[2] n, p[3..5] the domain's low rgb, p[6..8] its high rgb, p[9] intensity.
+LUT_CODE = """
+fn lut(r: i32, g: i32, b: i32) -> vec3<f32> {
+    let n = i32(p[2]);
+    let base = ((b * n + g) * n + r) * 3;
+    return vec3<f32>(aux[base], aux[base + 1], aux[base + 2]);
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let n = i32(p[2]);
+    let low = vec3<f32>(p[3], p[4], p[5]);
+    let high = vec3<f32>(p[6], p[7], p[8]);
+    let c = clamp((s.rgb - low) / (high - low), vec3<f32>(0.0), vec3<f32>(1.0)) * f32(n - 1);
+    let lo = vec3<i32>(floor(c));
+    let hi = min(vec3<i32>(n - 1), lo + vec3<i32>(1));
+    let f = c - vec3<f32>(lo);
+    let c00 = mix(lut(lo.x, lo.y, lo.z), lut(hi.x, lo.y, lo.z), f.x);
+    let c10 = mix(lut(lo.x, hi.y, lo.z), lut(hi.x, hi.y, lo.z), f.x);
+    let c01 = mix(lut(lo.x, lo.y, hi.z), lut(hi.x, lo.y, hi.z), f.x);
+    let c11 = mix(lut(lo.x, hi.y, hi.z), lut(hi.x, hi.y, hi.z), f.x);
+    let graded = clamp(mix(mix(c00, c10, f.y), mix(c01, c11, f.y), f.z), vec3<f32>(0.0), vec3<f32>(1.0));
+    let mixed = mix(s.rgb, graded, p[9]);
+    dst[i] = vec4<f32>(round(mixed * 255.0) / 255.0, s.a);
+}
+"""
 _contexts: dict = {}
 
 
@@ -498,8 +565,10 @@ def effects_and_warp(
     alpha: float,
     size: tuple[int, int],
     resident: bool = False,
+    lut: tuple[np.ndarray, float, float, float] | None = None,
+    mask: np.ndarray | None = None,
 ):
-    """The chain and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
+    """The chain, a LUT, a mask and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
     if not active() or (effects and not supported(effects)):
         return None
     try:
@@ -511,6 +580,19 @@ def effects_and_warp(
             context.upload(context.buffers[0], image)
             if effects:
                 _run_chain(chain, effects, local)
+                # The CPU rounds to uint8 here; so does the device.
+                chain._pass(QUANTISE_CODE, [])
+            if lut is not None:
+                table, low, high, intensity = lut
+                n = len(table)
+                if n * n * n * 3 * 4 > context.aux_size:
+                    return None
+                amount = float(max(0.0, min(1.0, intensity)))
+                lows = [float(v) for v in np.broadcast_to(np.asarray(low, np.float32), (3,))]
+                highs = [float(v) for v in np.broadcast_to(np.asarray(high, np.float32), (3,))]
+                chain._pass(LUT_CODE, [n, *lows, *highs, amount], np.ascontiguousarray(table.reshape(-1)))
+            if mask is not None:
+                chain._pass(MASK_CODE, [], np.ascontiguousarray(mask.reshape(-1)))
             inverse = cv2.invertAffineTransform(np.float32(matrix))
             context.run(
                 WARP_CODE,

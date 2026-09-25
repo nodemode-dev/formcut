@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 
 from . import gpu, gpu_effects
-from .assets import apply_lut, asset_path
+from .assets import apply_lut, asset_path, load_cube
 from .catalogue import GRADES, scale_pixel_params
 from .color_grade import apply as apply_color_grade
 from .expressions import evaluate
@@ -34,8 +34,10 @@ LEGACY = {
     "fc.vignette-pop": "vignette",
 }
 # R4: a clip carrying any of these takes a CPU step between its effects and
-# its blend, so its layer cannot stay on the device.
-CPU_STEPS = ("lutId", "shaderId", "mask", "cutout", "key", "transitionIn", "transitionOut", "pushOut")
+# its blend for every frame, so its layer cannot stay on the device. R5 took
+# the LUT and the mask out of the list and made the transitions and the push
+# a matter of time, so only the frames they touch come back.
+CPU_STEPS = ("shaderId", "cutout", "key")
 
 DEFAULTS = {
     "scale": 100,
@@ -716,6 +718,60 @@ class FrameRenderer:
             return faded
         return np.array(image)
 
+    def mask_alpha(self, mask: dict, w: int, h: int) -> np.ndarray:
+        """The mask as an alpha field for a layer of this size, cached by its settings.
+
+        A mask that does not change does not need rebuilding each frame.
+        Filling the polygon is cheap; feathering it is not, because the
+        sigma is a percentage of the frame, so a soft edge at 720p means a
+        blur sigma in the tens of pixels. The key covers everything that
+        alters the result, so an animated mask still recomputes. The CPU
+        path multiplies it in; the device path uploads it as a pass (R5).
+        """
+        signature = (json.dumps(mask, sort_keys=True, default=str), w, h)
+        alpha = self.mask_cache.get(signature)
+        if alpha is None:
+            alpha = np.zeros((h, w), np.float32)
+            x0, y0 = int(mask["x"] / 100 * w), int(mask["y"] / 100 * h)
+            x1, y1 = int((mask["x"] + mask["w"]) / 100 * w), int((mask["y"] + mask["h"]) / 100 * h)
+            if mask["shape"] == "linear":
+                # K5: a linear mask is a half-plane through the mask's centre at
+                # the given angle; feather softens the edge like any other shape.
+                angle = math.radians(float(mask.get("angle", 0)))
+                cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+                yy, xx = np.mgrid[:h, :w]
+                side = (xx - cx) * math.sin(angle) - (yy - cy) * math.cos(angle)
+                alpha = (side >= 0).astype(np.float32)
+            else:
+                # Every other shape, drawn path included, is a polygon in a unit
+                # square scaled into the mask's box and turned by its angle, so
+                # one routine covers all of them.
+                unit = mask_polygon(mask)
+                if unit:
+                    box_w, box_h = max(1, x1 - x0), max(1, y1 - y0)
+                    if mask["shape"] == "path":
+                        points = [(px * w, py * h) for px, py in unit]
+                        cx, cy = w / 2, h / 2
+                    else:
+                        points = [(x0 + px * box_w, y0 + py * box_h) for px, py in unit]
+                        cx, cy = x0 + box_w / 2, y0 + box_h / 2
+                    turn = math.radians(float(mask.get("angle", 0)))
+                    if turn:
+                        cos_a, sin_a = math.cos(turn), math.sin(turn)
+                        points = [
+                            (cx + (px - cx) * cos_a - (py - cy) * sin_a, cy + (px - cx) * sin_a + (py - cy) * cos_a) for px, py in points
+                        ]
+                    cv2.fillPoly(alpha, [np.array(points, np.int32)], 1)
+            feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
+            if feather > 0:
+                alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
+            if mask.get("invert"):
+                alpha = 1.0 - alpha
+            if len(self.mask_cache) > 6:
+                self.mask_cache.clear()
+            self.mask_cache[signature] = alpha
+        return alpha
+
     def mask_frame(self, image: np.ndarray, clip: dict) -> np.ndarray:
         # Only a key, a mask or a cutout changes the picture below; without them
         # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
@@ -759,54 +815,7 @@ class FrameRenderer:
             out[:, :, 3] = np.round(out[:, :, 3] * np.clip((distance - similarity) / blend, 0, 1)).astype(np.uint8)
         mask = clip.get("mask")
         if mask:
-            # A mask that does not change does not need rebuilding each frame.
-            # Filling the polygon is cheap; feathering it is not, because the
-            # sigma is a percentage of the frame, so a soft edge at 720p means a
-            # blur sigma in the tens of pixels. The key covers everything that
-            # alters the result, so an animated mask still recomputes.
-            signature = (json.dumps(mask, sort_keys=True, default=str), w, h)
-            alpha = self.mask_cache.get(signature)
-            if alpha is None:
-                alpha = np.zeros((h, w), np.float32)
-                x0, y0 = int(mask["x"] / 100 * w), int(mask["y"] / 100 * h)
-                x1, y1 = int((mask["x"] + mask["w"]) / 100 * w), int((mask["y"] + mask["h"]) / 100 * h)
-                if mask["shape"] == "linear":
-                    # K5: a linear mask is a half-plane through the mask's centre at
-                    # the given angle; feather softens the edge like any other shape.
-                    angle = math.radians(float(mask.get("angle", 0)))
-                    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-                    yy, xx = np.mgrid[:h, :w]
-                    side = (xx - cx) * math.sin(angle) - (yy - cy) * math.cos(angle)
-                    alpha = (side >= 0).astype(np.float32)
-                else:
-                    # Every other shape, drawn path included, is a polygon in a unit
-                    # square scaled into the mask's box and turned by its angle, so
-                    # one routine covers all of them.
-                    unit = mask_polygon(mask)
-                    if unit:
-                        box_w, box_h = max(1, x1 - x0), max(1, y1 - y0)
-                        if mask["shape"] == "path":
-                            points = [(px * w, py * h) for px, py in unit]
-                            cx, cy = w / 2, h / 2
-                        else:
-                            points = [(x0 + px * box_w, y0 + py * box_h) for px, py in unit]
-                            cx, cy = x0 + box_w / 2, y0 + box_h / 2
-                        turn = math.radians(float(mask.get("angle", 0)))
-                        if turn:
-                            cos_a, sin_a = math.cos(turn), math.sin(turn)
-                            points = [
-                                (cx + (px - cx) * cos_a - (py - cy) * sin_a, cy + (px - cx) * sin_a + (py - cy) * cos_a)
-                                for px, py in points
-                            ]
-                        cv2.fillPoly(alpha, [np.array(points, np.int32)], 1)
-                feather = max(0, float(mask.get("feather", 0))) / 100 * min(w, h)
-                if feather > 0:
-                    alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
-                if mask.get("invert"):
-                    alpha = 1.0 - alpha
-                if len(self.mask_cache) > 6:
-                    self.mask_cache.clear()
-                self.mask_cache[signature] = alpha
+            alpha = self.mask_alpha(mask, w, h)
             out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
         if clip.get("cutout"):
             # BG3: read the cached matte; rendering never runs inference. A clip
@@ -984,11 +993,21 @@ class FrameRenderer:
         return max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
 
     @staticmethod
-    def _device_resident(clip: dict, scaled: list) -> bool:
-        """Whether nothing between a layer's effects and its blend needs the bytes on this side."""
+    def _device_resident(clip: dict, scaled: list, local: float = 0.0) -> bool:
+        """Whether nothing between a layer's effects and its blend needs the bytes on this side at this local time."""
         if scaled and not gpu_effects.supported(scaled):
             return False
-        return all(not clip.get(key) for key in CPU_STEPS)
+        if any(clip.get(key) for key in ("shaderId", "cutout", "key")):
+            return False
+        # A transition and a push change the layer only while they run; the
+        # rest of the clip's frames stay on the device.
+        entering = clip.get("transitionIn") or {}
+        if entering and local < float(entering.get("duration", entering.get("length", 0)) or 0):
+            return False
+        leaving = clip.get("transitionOut") or {}
+        if leaving and local > float(clip["duration"]) - float(leaving.get("length", leaving.get("duration", 0)) or 0):
+            return False
+        return not (clip.get("pushOut") and local >= float(clip["duration"]))
 
     def _blend(self, canvas: np.ndarray, layer: np.ndarray, mode: str) -> np.ndarray:
         """One layer onto the canvas: batched for the device, or blended now.
@@ -1076,6 +1095,24 @@ class FrameRenderer:
                     still = apply_effects(still, scaled, 0) if scaled else still
                     self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
                 image = self.prepared[key].copy()
+                if gpu.stack_active() and self._device_resident(clip, [], local):
+                    transform = transform_at(clip, local)
+                    h0, w0 = image.shape[:2]
+                    mask = self.mask_alpha(clip["mask"], w0, h0) if clip.get("mask") else None
+                    staged = gpu_effects.effects_and_warp(
+                        image,
+                        [],
+                        local,
+                        self._matrix(image, transform),
+                        self._alpha(clip, local, transform),
+                        (self.width, self.height),
+                        resident=True,
+                        mask=mask,
+                    )
+                    if isinstance(staged, int):
+                        self.pending_layers.append((staged, str(transform["blendMode"])))
+                        self.resident_layers += 1
+                        continue
             else:
                 if clip["kind"] == "timeline":
                     nested_image = self.nested_frame(clip, source_time(clip, local))
@@ -1095,8 +1132,14 @@ class FrameRenderer:
                 # that needs bytes on this side (no LUT, shader, mask, key,
                 # cutout, transition or push) stays on the device from its one
                 # upload to the frame's single readback after the blend.
-                if gpu.stack_active() and self._device_resident(clip, scaled):
+                if gpu.stack_active() and self._device_resident(clip, scaled, local):
                     transform = transform_at(clip, local)
+                    lut = None
+                    if clip.get("lutId"):
+                        table, low, high = load_cube(clip["lutId"])
+                        lut = (table, low, high, float(clip.get("lutIntensity", 1)))
+                    h0, w0 = image.shape[:2]
+                    mask = self.mask_alpha(clip["mask"], w0, h0) if clip.get("mask") else None
                     staged = gpu_effects.effects_and_warp(
                         image,
                         scaled,
@@ -1105,6 +1148,8 @@ class FrameRenderer:
                         self._alpha(clip, local, transform),
                         (self.width, self.height),
                         resident=True,
+                        lut=lut,
+                        mask=mask,
                     )
                     if isinstance(staged, int):
                         self.pending_layers.append((staged, str(transform["blendMode"])))
