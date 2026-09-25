@@ -12,7 +12,7 @@ Upload a .cube LUT or .wgsl shader under Advanced. Examples are provided in `exa
 
 Expressions support t, duration, value, pi, arithmetic and sin/cos/tan/abs/min/max/sqrt/floor/ceil. They do not execute Python or JavaScript. Blank expression removes the override. Preview selection handles currently reflect keyframes rather than expression-driven geometry.
 
-Open Studio > Local models to download or import the object/person segmentation models and Kokoro speech files. Downloads are explicit and cancellable. Object cutout uses U2NetP; person cutout uses U2Net human segmentation. In Creator > Cutout choose the model, set threshold and softness, then Enable cutout. Choose Restore or Erase and paint on preview. Strokes are saved in source coordinates. Remove last stroke or remove cutout to reverse edits.
+Open Studio > Local models to download or import segmentation models and Kokoro speech files; the panel also names the Processor the model sessions run on. Downloads are explicit and cancellable. The default object cutout (U2NetP) ships inside the engine, so Remove background works before anything is downloaded; A person (U2Net human segmentation), Fine edges (IS-Net), Video matting (people, an explicit download of upstream's GPL release), and Point to select (SAM 2, with SAM 2.1 tracking fetched beside it for video) are downloads, and Subject (Auto) picks person when the person model finds someone, else object, once both are present. In Creator > Cutout choose the model, set threshold and softness, then Enable cutout. Choose Restore or Erase and paint on preview, or Smart restore and Smart erase, which turn the stroke into a prompt on the frame it was painted on and keep the whole region the segmenter finds there rather than a brush mark. Strokes are saved in source coordinates, a smart stroke with its region and source time; one stroke is one undo step. Remove last stroke or remove cutout to reverse edits.
 
 The launcher (`./formcut`, `formcut.bat`) installs the speech runtime after the main install, idempotently, into an external Python environment in the data directory; `setup/setup_local_ai` or `setup/setup_local_ai.bat` re-runs that step alone. Install the Kokoro model and voices through Studio. Studio > Local speech generates audio into the bin and timeline. Text > Speak uses the same local engine for the selected title. The historical ElevenLabs API remains for compatibility, but those controls use Kokoro.
 
@@ -27,7 +27,7 @@ Text can use an uploaded TTF/OTF font from the inspector. Use a font containing 
 Effects, Filters and Transitions are driven by the engine catalogue rather than a
 hardcoded list: 27 visual effects grouped as Blur, Stylize, Distort and Texture,
 39 colour grades grouped as Adjust, Film, Warm, Cool and Split, 20 audio chains
-as Voice, Tone, Space and Clean, two shape masks, two cutout models and all 12
+as Voice, Tone, Space and Clean, two shape masks, the cutout models and all 12
 transitions. Every card's thumbnail is a real render of the example image
 through the same effect, mask or transition code the renderer uses, cached on
 disk, so a card shows what the effect does. Clicking a card toggles that entry on

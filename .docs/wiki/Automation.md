@@ -59,3 +59,7 @@ WebSocket `/api/rpc/ws` sends the same JSON objects over a loopback connection. 
 
 ### v0.57.0
 Title styles ride `clip.text` patches like any other style field, so the full property set is scriptable; `/api/presets/titles` lists the built-ins.
+
+
+### v1.56.0 to v1.60.0 (the repository's own numbering, which diverged from the plan's)
+`project.export` and `POST /api/render/export` accept `"gif"` beside mp4 and webm, rendered through a two-pass palette. `POST /api/media/capture` remuxes a browser screen or camera recording into the bin. A clip's `cutout.model` accepts `"auto"` (person when the person model finds someone, else object; needs both models); a cutout stroke may carry `region` (a normalized outline the matte shaper fills instead of the painted disc) and `t` (the source time it was resolved on), which is what `POST /api/render/smart-brush` returns for a stroke's points: `{project, clipId, time, points}` in, `{region, t}` out, 409 until `click-select` is downloaded. `clip.text` on a caption clip refits its words in place. `GET /api/models/runtime` names the active ONNX Runtime execution provider and the available list.

@@ -87,3 +87,7 @@ Mattes are computed once into a cache and only read at render time; encoders are
 
 ### v0.61.0
 Effects can be added as data packages with a filter allowlist; templates carry their own fonts, LUTs, shaders, fixed media and a poster; model downloads are pinned; the RPC surface covers every interface edit.
+
+
+### v1.56.0 to v1.60.0 (the repository's own numbering, which diverged from the plan's)
+Capture remuxes browser recordings in `media.py`; GIF exports go through an ffv1 intermediate into `gif_export.py`'s two-pass palette; HEIC, AVIF and TIFF stills import through Pillow and pi-heif with the fast paths refusing what their ffmpeg cannot decode; HDR sources are tone-mapped in `video_source.py`'s one decode chain so preview and export agree, and the fast paths refuse HDR; a clip's `audioStream` is mapped at the one decode site in `audio_render.py` and keyed into the clip-audio cache. Every registry file is pinned in `model_manager.PINNED`; `model_file()` resolves the model folder first, then `app/bundled_models`, where the build ships U2NetP; `segmentation.cutout_ready` admits the `auto` arbitration; `brush.py` maps strokes to source space for the plain brush and resolves smart strokes through SAM 2 into region outlines that `feathered()` fills; every ONNX Runtime session takes `model_manager.providers()`, platform accelerator first, CPU floor.
