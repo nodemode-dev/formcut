@@ -31,7 +31,7 @@ The rest is written by hand.
 | cloud.py | 447 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 59 | /api/demo | 2 |
-| effect_previews.py | 216 | /api/catalogue/preview | 1 |
+| effect_previews.py | 269 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 233 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
@@ -42,7 +42,7 @@ The rest is written by hand.
 | media.py | 838 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| presets.py | 308 | /api/presets | 7 |
+| presets.py | 451 | /api/presets | 8 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 172 | /api/projects | 9 |
 | providers.py | 161 | /api/providers | 4 |

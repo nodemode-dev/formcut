@@ -990,6 +990,8 @@
   "cap.emphasis.colour": "Hervorhebungsfarbe",
   "cap.emphasis.apply": "Diese Wörter einfärben",
   "cap.emphasis.clear": "Hervorhebung entfernen",
+  "cap.looks": "Untertitel-Looks: ein Tippen gestaltet die Untertitel der Spur und die nächste Transkription",
+  "cap.looks.applied": "Untertitel-Look angewendet",
   "cap.transcript": "Transkript: der Text der Untertitelspur, bearbeitbar; eine Zeittaste springt zu ihrem Untertitel",
   "cap.cutFootage": "Diesen Satz und das Material darunter herausschneiden",
   "export.openh264First": "Dieser Computer hat keinen eigenen H.264-Encoder, daher verwendet dieser Export Ciscos OpenH264, das beim ersten Mal von Cisco heruntergeladen wird (etwa 1 MB). Lizenz und Schalter stehen unter Einstellungen, Erweitert.",

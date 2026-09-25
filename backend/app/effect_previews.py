@@ -45,6 +45,10 @@ def known(kind: str, item: str) -> bool:
         from .presets import TITLE_STYLE_IDS
 
         return item in TITLE_STYLE_IDS
+    if kind == "caption":
+        from .presets import CAPTION_STYLE_IDS
+
+        return item in CAPTION_STYLE_IDS
     if kind == "texttemplate":
         from .text_templates import IDS
 
@@ -152,6 +156,53 @@ def title_style_preview(item: str) -> np.ndarray:
     return FrameRenderer(project).frame(0.5)
 
 
+def caption_style_preview(item: str) -> np.ndarray:
+    """Draw a caption look through the renderer's word path, the second word lit."""
+    from .presets import CAPTION_STYLES
+    from .renderer import FrameRenderer
+
+    entry = next((e for e in CAPTION_STYLES if e["id"] == item), None)
+    if entry is None:
+        raise HTTPException(404, "Unknown preview")
+    words = ["the", "word", "being", "spoken"]
+    # The card is 192 px wide, so the look is drawn at twice its real size to
+    # read there; the style the panel applies keeps the real one.
+    style = {**entry["style"], "content": " ".join(words), "size": min(9.0, float(entry["style"].get("size", 6)) * 1.6)}
+    timing = [{"t": i * 0.25, "d": 0.25, "text": word} for i, word in enumerate(words)]
+    project = {
+        "title": "p",
+        "width": WIDTH,
+        "height": HEIGHT,
+        "fps": 30,
+        "duration": 1,
+        "activeTimeline": 0,
+        "timelines": [
+            {
+                "id": "p",
+                "name": "p",
+                "tracks": [
+                    {
+                        "id": "t",
+                        "name": "V",
+                        "clips": [
+                            {
+                                "id": "p1",
+                                "kind": "text",
+                                "label": style["content"],
+                                "start": 0,
+                                "duration": 1,
+                                "textStyle": style,
+                                "words": timing,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    return FrameRenderer(project).frame(0.3)
+
+
 def render(kind: str, item: str) -> np.ndarray:
     if kind == "look":
         from .assets import apply_lut
@@ -161,6 +212,8 @@ def render(kind: str, item: str) -> np.ndarray:
         return over(apply_lut(base_image(), item), dark)
     if kind == "title":
         return title_style_preview(item)
+    if kind == "caption":
+        return caption_style_preview(item)
     if kind == "texttemplate":
         # An animated title, drawn through the renderer at the moment that shows it best.
         from .text_templates import hero, project

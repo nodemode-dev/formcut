@@ -1152,7 +1152,9 @@ Emphasis|Accent|Enfasi|強調|강조|Ênfase|Акцент|Vurgu|强调|強調
 Words to colour, separated by commas|Mots à colorer, séparés par des virgules|Parole da colorare, separate da virgole|色を付ける単語（カンマ区切り）|색을 입힐 단어(쉼표로 구분)|Palavras a colorir, separadas por vírgulas|Слова для окраски, через запятую|Renklendirilecek kelimeler, virgülle ayrılmış|要上色的词，用逗号分隔|要上色的詞，用逗號分隔
 Emphasis colour|Couleur de l'accent|Colore dell'enfasi|強調の色|강조 색|Cor da ênfase|Цвет акцента|Vurgu rengi|强调颜色|強調顏色
 Colour these words|Colorer ces mots|Colora queste parole|これらの単語に色を付ける|이 단어에 색 입히기|Colorir estas palavras|Окрасить эти слова|Bu kelimeleri renklendir|为这些词上色|為這些詞上色
-Clear emphasis|Retirer l'accent|Rimuovi l'enfasi|強調を解除|강조 지우기|Remover a ênfase|Убрать акцент|Vurguyu kaldır|清除强调|清除強調`;
+Clear emphasis|Retirer l'accent|Rimuovi l'enfasi|強調を解除|강조 지우기|Remover a ênfase|Убрать акцент|Vurguyu kaldır|清除强调|清除強調
+Caption looks: one tap styles the track's captions and the next transcription|Styles de sous-titres : un appui habille les sous-titres de la piste et la prochaine transcription|Stili dei sottotitoli: un tocco veste i sottotitoli della traccia e la prossima trascrizione|字幕のルック：1 回のタップでトラックの字幕と次の文字起こしにスタイルを適用|자막 스타일: 한 번의 탭으로 트랙의 자막과 다음 전사에 스타일 적용|Estilos de legenda: um toque estiliza as legendas da faixa e a próxima transcrição|Стили субтитров: одно нажатие оформляет субтитры дорожки и следующую расшифровку|Altyazı görünümleri: bir dokunuş, parçanın altyazılarını ve sonraki dökümü biçimlendirir|字幕样式：轻点一次即可为轨道字幕和下一次转录设置样式|字幕樣式：輕點一次即可為軌道字幕和下一次轉錄設定樣式
+Caption look applied|Style de sous-titres appliqué|Stile dei sottotitoli applicato|字幕のルックを適用しました|자막 스타일을 적용했습니다|Estilo de legenda aplicado|Стиль субтитров применён|Altyazı görünümü uygulandı|已应用字幕样式|已套用字幕樣式`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

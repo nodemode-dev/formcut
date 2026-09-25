@@ -990,6 +990,8 @@
   "cap.emphasis.colour": "Color del énfasis",
   "cap.emphasis.apply": "Colorear estas palabras",
   "cap.emphasis.clear": "Quitar el énfasis",
+  "cap.looks": "Estilos de subtítulos: un toque da estilo a los subtítulos de la pista y a la próxima transcripción",
+  "cap.looks.applied": "Estilo de subtítulos aplicado",
   "cap.transcript": "Transcripción: el texto de la pista de subtítulos, editable; un botón de tiempo lleva a su subtítulo",
   "cap.cutFootage": "Cortar esta frase y el metraje que hay debajo",
   "export.openh264First": "Este equipo no tiene codificador H.264 propio, así que esta exportación usa OpenH264 de Cisco, descargado de Cisco (alrededor de 1 MB) la primera vez. Su licencia y el interruptor están en Ajustes, Avanzado.",

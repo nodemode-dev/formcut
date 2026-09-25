@@ -152,6 +152,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
           <div class="cap-transcript" data-ref="cap-transcript"></div>
           <div class="text-add-hint">${t("title.gallery")}</div>
           <div class="card-grid title-grid" data-ref="title-grid"></div>
+          <div class="text-add-hint">${t("cap.looks")}</div>
+          <div class="card-grid title-grid" data-ref="caption-grid"></div>
           <div class="text-add-hint">${t("tt.section")}: ${t("tt.hint")}</div>
           <div class="card-grid title-grid" data-ref="text-template-grid"></div>
           <div class="prop-row">
@@ -726,13 +728,13 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   };
   // Per-word emphasis: the words listed take the colour on the selected
   // caption, or on every caption of the chosen track when none is selected.
-  const emphasisTargets = (): string[] => {
+  const emphasisTargets = (needWords = true): string[] => {
     const selected = engine.snapshot.selectedClipId;
     const found = selected ? engine.findClip(selected) : null;
     if (found?.clip.kind === "text") return [found.clip.id];
     const snapshot = engine.snapshot;
     const track = snapshot.timelines[snapshot.activeTimeline]?.tracks[Number(el.querySelector<HTMLSelectElement>('[data-ref="cap-track"]')!.value) || 0];
-    return (track?.clips ?? []).filter((clip) => clip.kind === "text" && clip.words?.length).map((clip) => clip.id);
+    return (track?.clips ?? []).filter((clip) => clip.kind === "text" && (!needWords || clip.words?.length)).map((clip) => clip.id);
   };
   el.querySelector('[data-ref="cap-emphasis-apply"]')!.addEventListener("click", () => {
     const words = el.querySelector<HTMLInputElement>('[data-ref="cap-emphasis-words"]')!.value.split(/[,\s]+/).filter(Boolean);
@@ -992,6 +994,41 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     if (isText) engine.dispatch("clip.text", { clipId: found!.clip.id, patch: entry.style });
     else { capStatus.hidden = false; capStatus.textContent = t("title.gallery.stored"); }
     for (const other of titleGrid.querySelectorAll(".title-card")) other.classList.toggle("is-active", other === card);
+  });
+
+  // Caption looks: finished caption styles over the word styles, engine-rendered
+  // with the second word lit. A click applies the look to the selected caption,
+  // or to every caption of the chosen track, and keeps it for the next
+  // transcription (the word style and colour controls follow it).
+  const captionGrid = el.querySelector<HTMLElement>('[data-ref="caption-grid"]')!;
+  let captionLooks: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
+  void fetch("/api/presets/captions")
+    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+    .then((looks: Array<{ id: string; name: string; style: Record<string, unknown> }>) => {
+      captionLooks = looks;
+      captionGrid.insertAdjacentHTML("beforeend", looks.map((entry) =>
+        `<div class="effect-card title-card" data-caption-look="${escapeHtml(entry.id)}">` +
+        `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/caption/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
+        `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
+    })
+    .catch(() => { /* the gallery is optional if the engine is offline */ });
+  captionGrid.addEventListener("click", (ev) => {
+    const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-caption-look]");
+    if (!card) return;
+    const entry = captionLooks.find((e) => e.id === card.dataset.captionLook);
+    if (!entry) return;
+    const style = entry.style as Partial<TextStyle>;
+    captionStyle = { ...style };
+    const wordStyle = style.wordStyle as { mode?: string; colour?: string } | undefined;
+    const modeSelect = el.querySelector<HTMLSelectElement>('[data-ref="cap-word-style"]')!;
+    const colourInput = el.querySelector<HTMLInputElement>('[data-ref="cap-word-colour"]')!;
+    const mode = wordStyle?.mode ?? "plain";
+    if (modeSelect.value !== mode) modeSelect.value = mode;
+    if (wordStyle?.colour && colourInput.value !== wordStyle.colour) colourInput.value = wordStyle.colour;
+    for (const id of emphasisTargets(false)) engine.dispatch("clip.text", { clipId: id, patch: style });
+    for (const other of captionGrid.querySelectorAll(".title-card")) other.classList.toggle("is-active", other === card);
+    capStatus.hidden = false;
+    capStatus.textContent = `${t("cap.looks.applied")}: ${entry.name}`;
   });
 
   const grid = el.querySelector<HTMLElement>('[data-ref="bingrid"]')!;

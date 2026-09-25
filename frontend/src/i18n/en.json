@@ -990,6 +990,8 @@
   "cap.emphasis.colour": "Emphasis colour",
   "cap.emphasis.apply": "Colour these words",
   "cap.emphasis.clear": "Clear emphasis",
+  "cap.looks": "Caption looks: one tap styles the track's captions and the next transcription",
+  "cap.looks.applied": "Caption look applied",
   "cap.transcript": "Transcript: the caption track's text, editable; a time button seeks to its caption",
   "cap.cutFootage": "Cut this sentence and the footage under it",
   "export.openh264First": "This computer has no H.264 encoder of its own, so this export uses Cisco's OpenH264, downloaded from Cisco (about 1 MB) the first time. Its licence and the switch are in Settings, Advanced.",

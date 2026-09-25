@@ -294,10 +294,153 @@ TITLE_STYLES: list[dict] = [
 
 TITLE_STYLE_IDS = {entry["id"] for entry in TITLE_STYLES}
 
+# Caption looks: finished caption styles built on the word styles (highlight,
+# pop, box), the one-tap templates a CapCut user reaches for. Each is a
+# TextStyle patch the Captions panel applies to a track and keeps for the
+# next transcription; the thumbnail is drawn by the renderer with the second
+# word lit, so the card shows the look in motion, not a still.
+CAPTION_STYLES: list[dict] = [
+    {
+        "id": "karaoke",
+        "name": "Karaoke",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 800,
+            "align": "center",
+            "outlineColor": "#000000",
+            "outlineWidth": 4,
+            "lineHeight": 1.15,
+            "wordStyle": {"mode": "highlight", "colour": "#ffd633"},
+        },
+    },
+    {
+        "id": "pop-word",
+        "name": "Pop word",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 800,
+            "align": "center",
+            "outlineColor": "#000000",
+            "outlineWidth": 3,
+            "shadowColor": "#000000",
+            "shadowBlur": 6,
+            "shadowY": 3,
+            "wordStyle": {"mode": "pop", "colour": "#ff5a36"},
+        },
+    },
+    {
+        "id": "boxed",
+        "name": "Boxed",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 700,
+            "align": "center",
+            "outlineWidth": 0,
+            "wordStyle": {"mode": "box", "colour": "#2f6fff"},
+        },
+    },
+    {
+        "id": "clean-plate",
+        "name": "Clean plate",
+        "style": {
+            "size": 5,
+            "color": "#f2f4f5",
+            "bold": False,
+            "weight": 500,
+            "align": "center",
+            "outlineWidth": 0,
+            "plateColor": "#101416",
+            "plateOpacity": 0.78,
+            "platePadding": 14,
+            "plateRadius": 6,
+            "wordStyle": {"mode": "highlight", "colour": "#ffd633"},
+        },
+    },
+    {
+        "id": "neon",
+        "name": "Neon",
+        "style": {
+            "size": 6,
+            "color": "#e8fff9",
+            "bold": True,
+            "weight": 800,
+            "align": "center",
+            "outlineColor": "#00c2a8",
+            "outlineWidth": 2,
+            "shadowColor": "#00ffd0",
+            "shadowBlur": 14,
+            "shadowY": 0,
+            "letterSpacing": 1,
+            "wordStyle": {"mode": "highlight", "colour": "#ff3cac"},
+        },
+    },
+    {
+        "id": "bold-yellow",
+        "name": "Bold yellow",
+        "style": {
+            "size": 7,
+            "color": "#ffd633",
+            "bold": True,
+            "weight": 900,
+            "align": "center",
+            "outlineColor": "#000000",
+            "outlineWidth": 5,
+            "letterSpacing": -1,
+            "wordStyle": {"mode": "pop", "colour": "#ffffff"},
+        },
+    },
+    {
+        "id": "quiet",
+        "name": "Quiet",
+        "style": {
+            "size": 5,
+            "color": "#f2f4f5",
+            "bold": False,
+            "weight": 400,
+            "align": "center",
+            "outlineWidth": 0,
+            "shadowColor": "#000000",
+            "shadowBlur": 8,
+            "shadowY": 3,
+            "lineHeight": 1.3,
+            "wordStyle": {"mode": "highlight", "colour": "#ffffff"},
+        },
+    },
+    {
+        "id": "lower-plate",
+        "name": "Lower plate",
+        "style": {
+            "size": 5,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 700,
+            "align": "left",
+            "outlineWidth": 0,
+            "plateColor": "#ff5a36",
+            "plateOpacity": 0.92,
+            "platePadding": 12,
+            "plateRadius": 3,
+            "wordStyle": {"mode": "box", "colour": "#101416"},
+        },
+    },
+]
+CAPTION_STYLE_IDS = {entry["id"] for entry in CAPTION_STYLES}
+
 
 @router.get("/titles")
 def list_title_styles() -> list[dict]:
     return TITLE_STYLES
+
+
+@router.get("/captions")
+def list_caption_styles() -> list[dict]:
+    return CAPTION_STYLES
 
 
 @router.get("/texttemplates")
