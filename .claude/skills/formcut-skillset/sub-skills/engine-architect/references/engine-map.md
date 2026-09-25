@@ -38,11 +38,12 @@ The rest is written by hand.
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
 | local_speech.py | 374 | /api/speech | 4 |
-| main.py | 378 | /api/health | 11 |
+| main.py | 380 | /api/health | 11 |
 | media.py | 838 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 451 | /api/presets | 8 |
+| project_packages.py | 239 | /api/projects | 2 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 172 | /api/projects | 9 |
 | providers.py | 161 | /api/providers | 4 |

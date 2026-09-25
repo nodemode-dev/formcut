@@ -1154,7 +1154,11 @@ Emphasis colour|Couleur de l'accent|Colore dell'enfasi|強調の色|강조 색|C
 Colour these words|Colorer ces mots|Colora queste parole|これらの単語に色を付ける|이 단어에 색 입히기|Colorir estas palavras|Окрасить эти слова|Bu kelimeleri renklendir|为这些词上色|為這些詞上色
 Clear emphasis|Retirer l'accent|Rimuovi l'enfasi|強調を解除|강조 지우기|Remover a ênfase|Убрать акцент|Vurguyu kaldır|清除强调|清除強調
 Caption looks: one tap styles the track's captions and the next transcription|Styles de sous-titres : un appui habille les sous-titres de la piste et la prochaine transcription|Stili dei sottotitoli: un tocco veste i sottotitoli della traccia e la prossima trascrizione|字幕のルック：1 回のタップでトラックの字幕と次の文字起こしにスタイルを適用|자막 스타일: 한 번의 탭으로 트랙의 자막과 다음 전사에 스타일 적용|Estilos de legenda: um toque estiliza as legendas da faixa e a próxima transcrição|Стили субтитров: одно нажатие оформляет субтитры дорожки и следующую расшифровку|Altyazı görünümleri: bir dokunuş, parçanın altyazılarını ve sonraki dökümü biçimlendirir|字幕样式：轻点一次即可为轨道字幕和下一次转录设置样式|字幕樣式：輕點一次即可為軌道字幕和下一次轉錄設定樣式
-Caption look applied|Style de sous-titres appliqué|Stile dei sottotitoli applicato|字幕のルックを適用しました|자막 스타일을 적용했습니다|Estilo de legenda aplicado|Стиль субтитров применён|Altyazı görünümü uygulandı|已应用字幕样式|已套用字幕樣式`;
+Caption look applied|Style de sous-titres appliqué|Stile dei sottotitoli applicato|字幕のルックを適用しました|자막 스타일을 적용했습니다|Estilo de legenda aplicado|Стиль субтитров применён|Altyazı görünümü uygulandı|已应用字幕样式|已套用字幕樣式
+Export as .fc (the project with its media)|Exporter en .fc (le projet avec ses médias)|Esporta come .fc (il progetto con i suoi media)|.fc として書き出す（メディアを含むプロジェクト）|.fc로 내보내기(미디어를 포함한 프로젝트)|Exportar como .fc (o projeto com a sua mídia)|Экспортировать как .fc (проект с его медиа)|.fc olarak dışa aktar (medyasıyla birlikte proje)|导出为 .fc（含媒体的项目）|匯出為 .fc（含媒體的專案）
+Writing the .fc package|Écriture du paquet .fc|Scrittura del pacchetto .fc|.fc パッケージを書き込み中|.fc 패키지 작성 중|A escrever o pacote .fc|Запись пакета .fc|.fc paketi yazılıyor|正在写入 .fc 包|正在寫入 .fc 套件
+Importing the project package|Importation du paquet de projet|Importazione del pacchetto del progetto|プロジェクトパッケージを読み込み中|프로젝트 패키지 가져오는 중|A importar o pacote do projeto|Импорт пакета проекта|Proje paketi içe aktarılıyor|正在导入项目包|正在匯入專案套件
+Projects imported|Projets importés|Progetti importati|プロジェクトを読み込みました|프로젝트를 가져왔습니다|Projetos importados|Проекты импортированы|Projeler içe aktarıldı|已导入项目|已匯入專案`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

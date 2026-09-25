@@ -303,12 +303,39 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
         `</div>` +
         `<span class="home-card-tools">` +
         `<button class="iconbtn" data-rename="${id}" title="${t("home.rename")}">${icon("text")}</button>` +
+        `<button class="iconbtn" data-export="${id}" title="${t("home.exportProject")}" aria-label="${t("home.exportProject")}">${icon("export")}</button>` +
+        `<button class="iconbtn" data-delete="${id}" title="${t("home.delete")}" aria-label="${t("home.delete")}">${icon("trash")}</button>` +
         `</span>`;
       const opener = card.querySelector<HTMLElement>("[data-open-project]")!;
       const open = () => void (async () => {
         await openProject(engine, id);
         dismiss();
       })();
+      // A project travels as one .fc file: the document, its media, fonts,
+      // LUTs and shaders. The download comes from the engine, which streams it.
+      card.querySelector("[data-export]")!.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const link = document.createElement("a");
+        link.href = `/api/projects/${id}/package`;
+        link.download = `${String((projectRecords.get(id) ?? project).title || "project")}.fc`;
+        link.click();
+        say(t("home.exporting"));
+      });
+      card.querySelector("[data-delete]")!.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const title = String((projectRecords.get(id) ?? project).title || t("start.new"));
+        if (!window.confirm(`${t("home.delete")}: ${title}`)) return;
+        void (async () => {
+          try {
+            const response = await fetch(`/api/projects/${id}`, { method: "DELETE", headers: { "x-formcut-local": "1" } });
+            if (!response.ok) throw new Error(String(response.status));
+            say(t("home.deleted"));
+            await renderProjects();
+          } catch (error) {
+            say(error instanceof Error ? error.message : t("home.failed"));
+          }
+        })();
+      });
       opener.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).closest(".home-rename")) return;
         open();
@@ -571,7 +598,13 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       picker.multiple = true;
       picker.hidden = true;
       picker.dataset.ref = "picker";
-      picker.addEventListener("change", () => void importFiles(picker.files ?? []));
+      picker.addEventListener("change", () => {
+        const chosen = Array.from(picker.files ?? []);
+        const packages = chosen.filter((file) => file.name.toLowerCase().endsWith(".fc"));
+        if (packages.length) void importPackages(packages);
+        const others = chosen.filter((file) => !file.name.toLowerCase().endsWith(".fc"));
+        if (others.length) void importFiles(others);
+      });
       const importChip = chip(t("home.import"), () => picker.click(), "plus");
       importChip.dataset.act = "import";
       actions.append(importChip, picker);
@@ -615,8 +648,29 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     }));
   });
 
+  const importPackages = async (files: File[]) => {
+    say(t("home.importingProject"));
+    let added = 0;
+    for (const file of files) {
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const response = await fetch("/api/projects/import", { method: "POST", body: form, headers: { "x-formcut-local": "1" } });
+        if (response.ok) added += 1;
+        else say((await response.json().catch(() => ({}))).detail ?? t("home.failed"));
+      } catch {
+        // Keep going: one bad package should not abandon the rest of a drop.
+      }
+    }
+    view = "projects";
+    show();
+    await renderProjects();
+    say(`${t("home.importedProject")}: ${added}/${files.length}`);
+  };
+
   // Dropping files anywhere on the home surface imports them, which is what a
-  // person tries first; the media view is shown so the result is visible.
+  // person tries first; the media view is shown so the result is visible. A
+  // dropped .fc is a project package and lands in the projects view instead.
   el.addEventListener("dragover", (event) => {
     event.preventDefault();
     el.classList.add("is-dropping");
@@ -627,9 +681,14 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
     el.classList.remove("is-dropping");
     const files = event.dataTransfer?.files;
     if (!files?.length) return;
-    view = "media";
-    show();
-    void importFiles(files);
+    const packages = Array.from(files).filter((file) => file.name.toLowerCase().endsWith(".fc"));
+    const others = Array.from(files).filter((file) => !file.name.toLowerCase().endsWith(".fc"));
+    if (packages.length) void importPackages(packages);
+    if (others.length) {
+      view = "media";
+      show();
+      void importFiles(others);
+    }
   });
 
   show();
