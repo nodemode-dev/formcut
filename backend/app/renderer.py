@@ -808,7 +808,7 @@ class FrameRenderer:
                 # is a speed-up, not a precondition, and treating it as one is
                 # why cutout appeared to be broken while the model sat ready.
                 try:
-                    from .model_manager import ready as model_ready
+                    from .segmentation import cutout_ready as model_ready
                     from .segmentation import prompts, raw_alpha
 
                     model = options.get("model", "object-cutout")

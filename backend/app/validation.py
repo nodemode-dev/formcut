@@ -169,7 +169,7 @@ def clip_values(clip):
         number(transition.get("duration", 0.5), "transition duration", 0.01, 86400)
     cutout = clip.get("cutout")
     if cutout:
-        if cutout.get("model") not in ("object-cutout", "person-cutout", "sharp-cutout", "video-matting", "click-select"):
+        if cutout.get("model") not in ("auto", "object-cutout", "person-cutout", "sharp-cutout", "video-matting", "click-select"):
             raise ValueError("Unknown cutout model")
         number(cutout.get("threshold", 0.5), "cutout threshold", 0, 1)
         number(cutout.get("feather", 0.1), "cutout feather", 0.005, 0.5)

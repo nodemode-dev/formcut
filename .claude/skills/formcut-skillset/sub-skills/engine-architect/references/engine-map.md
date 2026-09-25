@@ -25,7 +25,7 @@ The rest is written by hand.
 | agent_connect.py | 92 | /api/agents | 1 |
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 657 | /api/rpc | 2 |
-| brush.py | 55 | /api/render | 1 |
+| brush.py | 106 | /api/render | 2 |
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
@@ -95,7 +95,7 @@ the automation transports.
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
 - `security.py` (68L)
-- `segmentation.py` (289L)
+- `segmentation.py` (321L)
 - `stabilise.py` (209L)
 - `store.py` (57L)
 - `subject.py` (220L)

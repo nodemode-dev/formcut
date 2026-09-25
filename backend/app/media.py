@@ -561,9 +561,9 @@ def cutout_preview(media_id: str, body: dict) -> dict:
     """
     import time as _time
 
-    from .model_manager import ready as model_ready
     from .render_document import validate_document
     from .renderer import FrameRenderer
+    from .segmentation import cutout_ready as model_ready
     from .segmentation import pick_region, raw_alpha, region_count
 
     _find(media_id)

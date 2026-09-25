@@ -50,7 +50,9 @@ class Session:
 
 
 def test_every_cutout_model_is_a_registered_model():
-    assert set(CUTOUT_MODELS) <= set(model_manager.MODELS)
+    # Auto is an arbitration between two registered models, not a registry
+    # entry of its own; every real model choice must be registered.
+    assert set(CUTOUT_MODELS) - {"auto"} <= set(model_manager.MODELS)
 
 
 def test_an_unknown_model_is_refused(installed):

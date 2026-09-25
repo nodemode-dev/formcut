@@ -161,6 +161,9 @@ Drag a box around what to keep|Tracez un cadre autour de ce qu'il faut garder|Tr
 Kept what is in the box|Gardé ce qui est dans le cadre|Tenuto ciò che è nel riquadro|枠内のものを残しました|상자 안의 대상을 남겼습니다|Mantido o que está na caixa|Оставлено то, что в рамке|Kutunun içindeki tutuldu|已保留框内的内容|已保留框內的內容
 A person|Une personne|Una persona|人物|사람|Uma pessoa|Человек|Bir kişi|人物|人物
 Anything (object)|N'importe quoi (objet)|Qualsiasi cosa (oggetto)|何でも (物体)|무엇이든 (물체)|Qualquer coisa (objeto)|Что угодно (объект)|Herhangi bir şey (nesne)|任意事物 (物体)|任意事物 (物體)
+Subject (Auto)|Sujet (auto)|Soggetto (auto)|被写体 (自動)|피사체 (자동)|Assunto (automático)|Объект съёмки (авто)|Konu (otomatik)|主体 (自动)|主體 (自動)
+Smart restore|Restauration intelligente|Ripristino intelligente|スマート復元|스마트 복원|Restauração inteligente|Умное восстановление|Akıllı geri getirme|智能恢复|智慧復原
+Smart erase|Effacement intelligent|Cancellazione intelligente|スマート消去|스마트 지우기|Apagar inteligente|Умное стирание|Akıllı silme|智能擦除|智慧擦除
 Fine edges (IS-Net)|Contours fins (IS-Net)|Bordi precisi (IS-Net)|精細なエッジ (IS-Net)|정밀한 가장자리 (IS-Net)|Bordas finas (IS-Net)|Точные края (IS-Net)|İnce kenarlar (IS-Net)|精细边缘 (IS-Net)|精細邊緣 (IS-Net)
 Video matting (people)|Détourage vidéo (personnes)|Scontorno video (persone)|動画マッティング (人物)|동영상 매팅 (인물)|Recorte de vídeo (pessoas)|Видеоматтинг (люди)|Video maskeleme (kişiler)|视频抠像 (人物)|影片摳像 (人物)
 Point to select (SAM 2)|Pointer pour sélectionner (SAM 2)|Punta per selezionare (SAM 2)|ポイントして選択 (SAM 2)|가리켜서 선택 (SAM 2)|Apontar para selecionar (SAM 2)|Выбор указанием (SAM 2)|İşaretleyerek seç (SAM 2)|点选对象 (SAM 2)|點選物件 (SAM 2)

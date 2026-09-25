@@ -643,7 +643,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const canvas = (event.target as HTMLElement).closest<HTMLCanvasElement>(".render-canvas");
     const mode = inspector.dataset.brush;
     const clip = engine.snapshot.selectedClipId ? engine.findClip(engine.snapshot.selectedClipId)?.clip : undefined;
-    if (!canvas || (mode !== "keep" && mode !== "erase") || !clip?.cutout) return;
+    if (!canvas || (mode !== "keep" && mode !== "erase" && mode !== "smart-keep" && mode !== "smart-erase") || !clip?.cutout) return;
     engine.pause();
     const project = structuredClone(engine.snapshot), timelineId = project.timelines[project.activeTimeline].id;
     const radius = Number(inspector.querySelector<HTMLInputElement>("[data-brush-radius]")!.value);
@@ -654,10 +654,17 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const end = () => {
       cleanup();
       void run(async () => {
-        const result = await api("/api/render/brush", { project, clipId: clip.id, time: project.playhead, points });
+        // A smart stroke is resolved once, here, into the region the
+        // segmenter found under it; a painted stroke stays geometry. Either
+        // way the result is one stroke, so one undo step.
+        const smart = mode === "smart-keep" || mode === "smart-erase";
+        const result = await api<{ points?: number[][]; region?: number[][]; t?: number }>(smart ? "/api/render/smart-brush" : "/api/render/brush", { project, clipId: clip.id, time: project.playhead, points });
         const current = engine.findClip(clip.id)?.clip;
         if (!current?.cutout || current.mediaId !== clip.mediaId || engine.snapshot.timelines[engine.snapshot.activeTimeline].id !== timelineId) throw new Error("The brush target changed.");
-        engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: { ...current.cutout, strokes: [...current.cutout.strokes, { mode, radius, points: result.points }] } } });
+        const stroke = smart
+          ? { mode: mode === "smart-keep" ? "keep" as const : "erase" as const, radius, points: [], region: result.region, t: result.t }
+          : { mode, radius, points: result.points ?? [] };
+        engine.dispatch("clip.creator", { clipId: clip.id, patch: { cutout: { ...current.cutout, strokes: [...current.cutout.strokes, stroke] } } });
       });
     };
     move(event);

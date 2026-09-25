@@ -33,7 +33,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
           <span class="cut-note" data-cut-model-state>checking for the model</span>
           <button class="tool-chip" data-action="cutout-models" hidden>Download models</button>
         </div>
-        <label>Model <select data-cutout-model><option value="object-cutout">Anything (object)</option><option value="person-cutout">A person</option><option value="sharp-cutout">Fine edges (IS-Net)</option><option value="video-matting">Video matting (people)</option><option value="click-select">Point to select (SAM 2)</option></select></label>
+        <label>Model <select data-cutout-model><option value="object-cutout">Anything (object)</option><option value="auto">Subject (Auto)</option><option value="person-cutout">A person</option><option value="sharp-cutout">Fine edges (IS-Net)</option><option value="video-matting">Video matting (people)</option><option value="click-select">Point to select (SAM 2)</option></select></label>
         <div class="cut-line">
           <button class="tool-chip is-primary" data-action="cutout">Remove background</button>
           <button class="tool-chip" data-action="cutout-pick" aria-pressed="false">Point at what to keep</button>
@@ -44,7 +44,7 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       </div>
       <label>Edge tightness <input data-cutout-threshold type="range" min="0" max="1" step="0.01" value="0.5"></label>
       <label>Edge softness <input data-cutout-feather type="range" min="0.005" max="0.5" step="0.005" value="0.1"></label>
-      <label>Brush <select data-brush><option value="off">Off</option><option value="keep">Restore</option><option value="erase">Erase</option></select></label>
+      <label>Brush <select data-brush><option value="off">Off</option><option value="keep">Restore</option><option value="erase">Erase</option><option value="smart-keep">Smart restore</option><option value="smart-erase">Smart erase</option></select></label>
       <label>Brush radius <input data-brush-radius type="range" min="0.005" max="0.15" step="0.005" value="0.02"></label>
       <button class="tool-chip" data-action="brush-undo">Remove last stroke</button>
       <p>Paint on the preview to correct the edges. Brush edits are saved with the clip.</p>
@@ -170,7 +170,9 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
         if (state) state.textContent = "downloading";
         const chosen = query<HTMLSelectElement>("cutout-model").value;
         // SAM 2 follows a subject through video with its tracker, fetched with it.
-        for (const id of new Set(["object-cutout", "person-cutout", chosen, ...(chosen === "click-select" ? ["click-track"] : [])])) {
+        // Auto is an arbitration between person and object, both already in the
+        // set, so it adds no registry id of its own.
+        for (const id of new Set(["object-cutout", "person-cutout", ...(chosen === "auto" ? [] : [chosen]), ...(chosen === "click-select" ? ["click-track"] : [])])) {
           try {
             const started = await api<{ job_id?: string }>(`/api/models/${id}/download`, {});
             if (started.job_id) {

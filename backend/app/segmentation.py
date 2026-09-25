@@ -12,7 +12,19 @@ _sessions = {}
 _cache = OrderedDict()
 _embeddings = OrderedDict()
 _lock = threading.RLock()
-CUTOUT_MODELS = ("object-cutout", "person-cutout", "sharp-cutout", "video-matting", "click-select")
+CUTOUT_MODELS = ("auto", "object-cutout", "person-cutout", "sharp-cutout", "video-matting", "click-select")
+
+
+def cutout_ready(model: str) -> bool:
+    """Whether a cutout choice can run.
+
+    Auto is an arbitration, not a model: it needs both models it chooses
+    between, so it stays refusable with the same download message until the
+    person model is fetched (the object side ships in the engine).
+    """
+    if model == "auto":
+        return ready("person-cutout") and ready("object-cutout")
+    return model in MODELS and ready(model)
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
 SAM_ENCODER = "sam2_hiera_tiny.encoder.onnx"
@@ -136,6 +148,14 @@ def _sam(image: np.ndarray, points: list[dict], box: dict | None = None) -> np.n
 
 
 def _infer(model: str, image: np.ndarray, options: dict) -> np.ndarray:
+    if model == "auto":
+        # BG4: person when found, else object. Found means the person model
+        # kept at least one percent of the frame at its own half threshold;
+        # below that it saw nobody, and the object model answers instead.
+        person = _u2net("person-cutout", image)
+        if float((person > 0.5).mean()) >= 0.01:
+            return person
+        return _u2net("object-cutout", image)
     if model in ("object-cutout", "person-cutout"):
         return _u2net(model, image)
     if model == "sharp-cutout":
@@ -150,7 +170,7 @@ def _infer(model: str, image: np.ndarray, options: dict) -> np.ndarray:
 
 def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
     model = options.get("model", "object-cutout")
-    if model not in CUTOUT_MODELS or not ready(model):
+    if model not in CUTOUT_MODELS or not cutout_ready(model):
         raise ValueError("Download the selected cutout model in Local models first")
     h, w = image.shape[:2]
     small = cv2.resize(image[:, :, :3], (320, 320), interpolation=cv2.INTER_AREA)
@@ -195,6 +215,18 @@ def feathered(alpha: np.ndarray, options: dict) -> np.ndarray:
     if strokes:
         height, width = shaped.shape[:2]
         for stroke in strokes:
+            # BG5: a smart stroke was resolved, when painted, into the region
+            # the segmenter found under it; that outline is filled here, so
+            # read time stays cheap and the job, the renderer and the preview
+            # all shape the same matte the same way.
+            region = stroke.get("region") or []
+            if len(region) >= 3:
+                layer = np.zeros((height, width), np.uint8)
+                corners = np.array([(int(px * width), int(py * height)) for px, py in region], np.int32)
+                cv2.fillPoly(layer, [corners], 255)
+                soft = cv2.GaussianBlur(layer.astype(np.float32) / 255, (0, 0), max(1.0, min(width, height) * 0.004))
+                shaped = np.clip(shaped - soft, 0, 1) if stroke.get("mode") == "erase" else np.clip(shaped + soft, 0, 1)
+                continue
             points = [(int(px * width), int(py * height)) for px, py in stroke.get("points", [])]
             if not points:
                 continue
