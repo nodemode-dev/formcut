@@ -33,6 +33,10 @@ LEGACY = {
     "fc.cool": "cooling",
     "fc.vignette-pop": "vignette",
 }
+# R4: a clip carrying any of these takes a CPU step between its effects and
+# its blend, so its layer cannot stay on the device.
+CPU_STEPS = ("lutId", "shaderId", "mask", "cutout", "key", "transitionIn", "transitionOut", "pushOut")
+
 DEFAULTS = {
     "scale": 100,
     "posX": 0,
@@ -406,6 +410,8 @@ class FrameRenderer:
         self.allow_proxy = False
         self.matte_time = 0.0
         self.pending_layers: list = []
+        # R4: how many layers stayed on the device between their passes and the blend, for the reading.
+        self.resident_layers = 0
         self.closed = False
 
     def close(self):
@@ -960,6 +966,30 @@ class FrameRenderer:
             image = cv2.warpAffine(image, cv2.getRotationMatrix2D((w / 2, h / 2), progress * 180, max(0.001, 1 - progress)), (w, h))
         return image
 
+    def _matrix(self, image: np.ndarray, transform: dict) -> np.ndarray:
+        """The affine that places a layer on the canvas; one definition for the device and the CPU paths."""
+        h, w = image.shape[:2]
+        fit = min(self.width / w, self.height / h)
+        sx = fit * transform["scale"] / 100 * transform["width"] / 100 * (-1 if transform["flipH"] else 1)
+        sy = fit * transform["scale"] / 100 * transform["height"] / 100 * (-1 if transform.get("flipV") else 1)
+        angle = math.radians(transform["rotation"])
+        c, s = math.cos(angle), math.sin(angle)
+        a, b, d, e = c * sx, -s * sy, s * sx, c * sy
+        cx = self.width * (0.5 + transform["posX"] / 100)
+        cy = self.height * (0.5 + transform["posY"] / 100)
+        return np.float32([[a, b, cx - a * w / 2 - b * h / 2], [d, e, cy - d * w / 2 - e * h / 2]])
+
+    def _alpha(self, clip: dict, local: float, transform: dict) -> float:
+        visual_fade = {**clip, "extendOut": 0}
+        return max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
+
+    @staticmethod
+    def _device_resident(clip: dict, scaled: list) -> bool:
+        """Whether nothing between a layer's effects and its blend needs the bytes on this side."""
+        if scaled and not gpu_effects.supported(scaled):
+            return False
+        return all(not clip.get(key) for key in CPU_STEPS)
+
     def _blend(self, canvas: np.ndarray, layer: np.ndarray, mode: str) -> np.ndarray:
         """One layer onto the canvas: batched for the device, or blended now.
 
@@ -1061,6 +1091,30 @@ class FrameRenderer:
                 if steady and clip.get("mediaId"):
                     image = stabilise_frame(image, str(clip["mediaId"]), int(source_time(clip, local) * self.project["fps"]), steady)
                 scaled = self.scaled_effects(effects, clip)
+                # R4: a layer with nothing between its effects and the blend
+                # that needs bytes on this side (no LUT, shader, mask, key,
+                # cutout, transition or push) stays on the device from its one
+                # upload to the frame's single readback after the blend.
+                if gpu.stack_active() and self._device_resident(clip, scaled):
+                    transform = transform_at(clip, local)
+                    staged = gpu_effects.effects_and_warp(
+                        image,
+                        scaled,
+                        local,
+                        self._matrix(image, transform),
+                        self._alpha(clip, local, transform),
+                        (self.width, self.height),
+                        resident=True,
+                    )
+                    if isinstance(staged, int):
+                        self.pending_layers.append((staged, str(transform["blendMode"])))
+                        self.resident_layers += 1
+                        continue
+                    if staged is not None:
+                        image = staged  # the compositor could not take it; the bytes came back placed, blend as a layer
+                        layer = self.transition(image, clip, local)
+                        canvas = self._blend(canvas, layer, str(transform["blendMode"]))
+                        continue
                 if scaled:
                     # R3: the chain as device passes when every effect has one; the CPU stays the reference.
                     on_device = gpu_effects.apply_effects(image, scaled, local)

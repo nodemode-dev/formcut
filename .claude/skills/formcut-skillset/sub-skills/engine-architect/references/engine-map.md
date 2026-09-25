@@ -50,7 +50,7 @@ The rest is written by hand.
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
 | render_api.py | 734 | /api/render | 13 |
-| render_stream.py | 71 | /api/render | 1 |
+| render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
 | subtitles.py | 109 | /api/subtitles | 2 |
@@ -72,6 +72,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
+- `bench.py` (98L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
@@ -84,8 +85,8 @@ the automation transports.
 - `ffmpeg_fetch.py` (165L)
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
-- `gpu.py` (222L)
-- `gpu_effects.py` (521L)
+- `gpu.py` (295L)
+- `gpu_effects.py` (539L)
 - `local_diffusion.py` (241L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
@@ -97,7 +98,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1105L)
+- `renderer.py` (1159L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)

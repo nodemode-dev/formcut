@@ -91,10 +91,14 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     try {
       const id = await ensureSession(snapshot, current);
       if (!id) return;                       // nothing to play yet
-      const response = await fetch(`/api/render/sessions/${id}/stream?start=${from}&fps=${snapshot.fps}`, { signal: controller.signal });
+      const response = await fetch(`/api/render/sessions/${id}/stream?start=${from}&fps=${snapshot.fps}&format=raw`, { signal: controller.signal });
       if (!response.ok || !response.body) throw new Error("Playback stream failed");
       const reader = response.body.getReader();
       let pending = new Uint8Array(0);
+      // R4: sixteen bytes of header (size, time, width, height), then the
+      // frame as the renderer's own RGBA bytes: no JPEG in the path, so the
+      // pixels on screen are the pixels the engine made.
+      const HEAD = 16;
       for (;;) {
         const { done, value } = await reader.read();
         if (done || controller.signal.aborted) break;
@@ -102,24 +106,24 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
         joined.set(pending);
         joined.set(value, pending.length);
         pending = joined;
-        while (pending.length >= 12) {
-          const head = new DataView(pending.buffer, pending.byteOffset, 12);
+        while (pending.length >= HEAD) {
+          const head = new DataView(pending.buffer, pending.byteOffset, HEAD);
           const size = head.getUint32(0);
-          if (pending.length < 12 + size) break;
+          if (pending.length < HEAD + size) break;
           const at = head.getFloat64(4);
-          const blob = new Blob([pending.slice(12, 12 + size)], { type: "image/jpeg" });
-          pending = pending.slice(12 + size);
-          const bitmap = await createImageBitmap(blob);
-          if (!controller.signal.aborted && current === revision) {
-            if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) { canvas.width = bitmap.width; canvas.height = bitmap.height; }
-            context.drawImage(bitmap, 0, 0);
+          const width = head.getUint16(12);
+          const height = head.getUint16(14);
+          const bytes = pending.slice(HEAD, HEAD + size);
+          pending = pending.slice(HEAD + size);
+          if (!controller.signal.aborted && current === revision && size === width * height * 4) {
+            if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+            context.putImageData(new ImageData(new Uint8ClampedArray(bytes.buffer, bytes.byteOffset, size), width, height), 0, 0);
             canvas.dispatchEvent(new Event("frame")); // the Color section's scopes read each new frame
             canvas.dataset.revision = String(current);
             canvas.dataset.streamTime = at.toFixed(3);
             lastFrame = -1;
             status("");
           }
-          bitmap.close();
         }
       }
     } catch (error) {

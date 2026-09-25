@@ -63,7 +63,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/preview-manipulation.ts` (559L)
 - `ui/recorder.ts` (344L)
 - `ui/remote-settings.ts` (93L)
-- `ui/render-preview.ts` (235L)
+- `ui/render-preview.ts` (239L)
 - `ui/safe-text.ts` (3L)
 - `ui/settings-link.ts` (8L)
 - `ui/settings-popout.ts` (609L)

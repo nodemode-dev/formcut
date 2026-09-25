@@ -5,6 +5,7 @@ import threading
 import time
 
 import anyio
+import numpy as np
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from PIL import Image
@@ -14,10 +15,12 @@ from .renderer import FrameRenderer
 
 router = APIRouter(prefix="/api/render", tags=["render"])
 HEADER = struct.Struct(">Id")
+# size, time, width, height: sixteen bytes before each raw frame
+RAW_HEADER = struct.Struct(">IdHH")
 
 
 @router.get("/sessions/{session_id}/stream")
-async def stream(request: Request, session_id: str, start: float = 0, fps: float = 30):
+async def stream(request: Request, session_id: str, start: float = 0, fps: float = 30, format: str = "raw"):
     with _lock:
         item = _sessions.get(session_id)
         if not item:
@@ -47,10 +50,16 @@ async def stream(request: Request, session_id: str, start: float = 0, fps: float
             if wait > 0:
                 time.sleep(wait)
             state["index"] = index
-            output = io.BytesIO()
-            Image.fromarray(state["renderer"].frame(at)).convert("RGB").save(output, format="JPEG", quality=82)
-            data = output.getvalue()
-            return HEADER.pack(len(data), at) + data
+            pixels = state["renderer"].frame(at)
+            if format == "jpeg":
+                output = io.BytesIO()
+                Image.fromarray(pixels).convert("RGB").save(output, format="JPEG", quality=82)
+                data = output.getvalue()
+                return HEADER.pack(len(data), at) + data
+            # R4: the frame reaches the webview as the bytes the renderer made,
+            # no encode here and no decode there; the header carries its size.
+            data = np.ascontiguousarray(pixels[:, :, :4]).tobytes()
+            return RAW_HEADER.pack(len(data), at, pixels.shape[1], pixels.shape[0]) + data
 
     def close():
         with guard:

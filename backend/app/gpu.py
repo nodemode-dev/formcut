@@ -102,11 +102,26 @@ def _stack_wanted(state: dict) -> bool:
 
 
 def stack_active() -> bool:
-    return _stack_wanted(status())
+    return _stack_fuse is None and _stack_wanted(status())
+
+
+class DeviceLayer:
+    """A frame-sized layer that already lives on the device: the buffer that holds it and its shape."""
+
+    __slots__ = ("buffer", "height", "width")
+
+    def __init__(self, buffer, height: int, width: int):
+        self.buffer, self.height, self.width = buffer, height, width
 
 
 class _StackCompositor:
-    """One frame size's device state: buffers, pipeline, both bind directions."""
+    """One frame size's device state: buffers, pipeline, both bind directions.
+
+    R4: a layer may arrive as a DeviceLayer, a buffer the effect passes left on
+    the device; it is copied device-side into a pooled front buffer and never
+    read back, so the frame stays on the device from the layer's upload to the
+    one readback after the blend.
+    """
 
     def __init__(self, height: int, width: int):
         import wgpu
@@ -115,6 +130,7 @@ class _StackCompositor:
         self.device = get_default_device()
         self.count = height * width
         size = self.count * 16  # vec4<f32>
+        self.size = size
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
         self.a = self.device.create_buffer(size=size, usage=usage)
         self.b = self.device.create_buffer(size=size, usage=usage)
@@ -123,19 +139,40 @@ class _StackCompositor:
         self.read = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
         module = self.device.create_shader_module(code=BLEND_CODE)
         self.pipeline = self.device.create_compute_pipeline(layout="auto", compute={"module": module, "entry_point": "main"})
-        layout = self.pipeline.get_bind_group_layout(0)
+        self.layout = self.pipeline.get_bind_group_layout(0)
+        self.ab = self._group(self.a, self.front, self.b)
+        self.ba = self._group(self.b, self.front, self.a)
+        # Staged device layers: pooled buffers a layer is copied into on the
+        # device, with the two bind directions built once per pooled buffer.
+        self.pool: list = []
+        self.pool_groups: dict = {}
+        self.staged = 0
 
-        def group(back, out):
-            entries = [
-                {"binding": 0, "resource": {"buffer": back, "offset": 0, "size": size}},
-                {"binding": 1, "resource": {"buffer": self.front, "offset": 0, "size": size}},
-                {"binding": 2, "resource": {"buffer": self.opts, "offset": 0, "size": 16}},
-                {"binding": 3, "resource": {"buffer": out, "offset": 0, "size": size}},
-            ]
-            return self.device.create_bind_group(layout=layout, entries=entries)
+    def _group(self, back, front, out):
+        size = self.size
+        entries = [
+            {"binding": 0, "resource": {"buffer": back, "offset": 0, "size": size}},
+            {"binding": 1, "resource": {"buffer": front, "offset": 0, "size": size}},
+            {"binding": 2, "resource": {"buffer": self.opts, "offset": 0, "size": 16}},
+            {"binding": 3, "resource": {"buffer": out, "offset": 0, "size": size}},
+        ]
+        return self.device.create_bind_group(layout=self.layout, entries=entries)
 
-        self.ab = group(self.a, self.b)
-        self.ba = group(self.b, self.a)
+    def stage(self, layer: DeviceLayer) -> int:
+        """Copy a device layer into the next pooled buffer, on the device; the index names it in the blend."""
+        import wgpu
+
+        index = self.staged
+        if index >= len(self.pool):
+            usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST
+            pooled = self.device.create_buffer(size=self.size, usage=usage)
+            self.pool.append(pooled)
+            self.pool_groups[index] = (self._group(self.a, pooled, self.b), self._group(self.b, pooled, self.a))
+        encoder = self.device.create_command_encoder()
+        encoder.copy_buffer_to_buffer(layer.buffer, 0, self.pool[index], 0, min(self.size, layer.height * layer.width * 16))
+        self.device.queue.submit([encoder.finish()])
+        self.staged += 1
+        return index
 
     def run(self, canvas: np.ndarray, layers: list) -> np.ndarray:
         import wgpu
@@ -145,16 +182,22 @@ class _StackCompositor:
         source_is_a = True
         for layer, mode in layers:
             index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
-            queue.write_buffer(self.front, 0, np.ascontiguousarray(layer.astype(np.float32) / 255))
+            if isinstance(layer, int):
+                groups = self.pool_groups[layer]
+                group = groups[0] if source_is_a else groups[1]
+            else:
+                queue.write_buffer(self.front, 0, np.ascontiguousarray(layer.astype(np.float32) / 255))
+                group = self.ab if source_is_a else self.ba
             queue.write_buffer(self.opts, 0, np.array([index, 0, 0, 0], np.float32))
             encoder = self.device.create_command_encoder()
             step = encoder.begin_compute_pass()
             step.set_pipeline(self.pipeline)
-            step.set_bind_group(0, self.ab if source_is_a else self.ba)
+            step.set_bind_group(0, group)
             step.dispatch_workgroups((self.count + 63) // 64)
             step.end()
             queue.submit([encoder.finish()])
             source_is_a = not source_is_a
+        self.staged = 0
         final = self.a if source_is_a else self.b
         encoder = self.device.create_command_encoder()
         encoder.copy_buffer_to_buffer(final, 0, self.read, 0, self.count * 16)
@@ -165,12 +208,30 @@ class _StackCompositor:
         return np.round(data * 255).astype(np.uint8)
 
 
+def stage_layer(layer: DeviceLayer, height: int, width: int) -> int | None:
+    """Hand a device layer to the frame's compositor without a readback; None when the stack is not active."""
+    try:
+        with _lock:
+            key = (height, width)
+            if key not in _compositors:
+                _compositors[key] = _StackCompositor(*key)
+                while len(_compositors) > 3:
+                    _compositors.pop(next(iter(_compositors)))
+            return _compositors[key].stage(layer)
+    except Exception:
+        return None
+
+
 def composite_stack(canvas: np.ndarray, layers: list) -> np.ndarray:
     """Blend a run of (layer, mode) onto the canvas in one device pass.
 
     Falls back layer by layer through composite() if the device path fails,
-    so a driver problem degrades to the reference rather than to an error.
+    so a driver problem degrades to the reference rather than to an error. A
+    staged device layer has no bytes on this side to fall back with, so a
+    failure with one in the run blows the stack's fuse: this frame keeps the
+    layers it can, and every later frame takes the reference path.
     """
+    global _stack_fuse
     if not layers:
         return canvas
     try:
@@ -181,10 +242,22 @@ def composite_stack(canvas: np.ndarray, layers: list) -> np.ndarray:
                 while len(_compositors) > 3:
                     _compositors.pop(next(iter(_compositors)))
             return _compositors[key].run(canvas, layers)
-    except Exception:
+    except Exception as exc:
+        if any(isinstance(layer, int) for layer, _ in layers):
+            _stack_fuse = f"{type(exc).__name__}: {exc}"[:200]
         for layer, mode in layers:
+            if isinstance(layer, int):
+                continue
             canvas = composite(canvas, layer, mode)
         return canvas
+
+
+_stack_fuse: str | None = None
+
+
+def stack_fault() -> str | None:
+    """Why the stack compositor switched itself off, when it did."""
+    return _stack_fuse
 
 
 def custom_values(values: np.ndarray, source: str, time: float, params: list | None = None) -> np.ndarray:

@@ -491,9 +491,15 @@ def warp(image: np.ndarray, matrix: np.ndarray, alpha: float, size: tuple[int, i
 
 
 def effects_and_warp(
-    image: np.ndarray, effects: list[dict], local: float, matrix: np.ndarray, alpha: float, size: tuple[int, int]
-) -> np.ndarray | None:
-    """The chain and the transform on one resident layer: one upload, one readback of the frame-sized layer."""
+    image: np.ndarray,
+    effects: list[dict],
+    local: float,
+    matrix: np.ndarray,
+    alpha: float,
+    size: tuple[int, int],
+    resident: bool = False,
+):
+    """The chain and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
     if not active() or (effects and not supported(effects)):
         return None
     try:
@@ -515,7 +521,19 @@ def effects_and_warp(
                 frame_w,
                 frame_h,
             )
-            data = context.download(context.buffers[(chain.current + 1) % 2], frame_h, frame_w)
+            result = context.buffers[(chain.current + 1) % 2]
+            if resident:
+                # R4: the layer never comes back. The compositor copies it on
+                # the device into a pooled buffer of its own before this
+                # context's buffers are reused by the next layer.
+                from .gpu import DeviceLayer, stage_layer
+
+                staged = stage_layer(DeviceLayer(result, frame_h, frame_w), frame_h, frame_w)
+                if staged is None:
+                    data = context.download(result, frame_h, frame_w)
+                    return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+                return staged
+            data = context.download(result, frame_h, frame_w)
         return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
     except Exception:
         return None

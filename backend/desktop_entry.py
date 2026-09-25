@@ -42,6 +42,11 @@ def main() -> int:
         return 0
     if "--selfcheck" in sys.argv:
         return selfcheck()
+    if "--bench" in sys.argv:
+        # The frame-rate reading, TEST_PLAN 24: both paths on this machine's adapter.
+        from app.bench import main as bench
+
+        return bench(sys.argv[sys.argv.index("--bench") + 1 :])
     if "--mcp" in sys.argv:
         # An MCP client launched this process: stdout is the protocol from here on.
         from app.agent_mcp import main as agent_server
