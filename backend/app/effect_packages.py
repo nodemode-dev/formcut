@@ -218,7 +218,15 @@ def load_package(folder) -> dict:
             raise ValueError("the shader is too long")
         if manifest["kind"] != "video":
             raise ValueError("a shader package must be kind video")
-        backend = {"type": "shader", "source": source}
+        # A kernel is enabled only after a trial: compiled and run on a tiny
+        # frame, so a shader that will not build, or a machine with no adapter,
+        # is a listed failure rather than a broken render later.
+        from . import gpu
+
+        reason = gpu.trial(source, [spec["default"] for spec in declarations.values()])
+        if reason:
+            raise ValueError("the shader failed its trial: " + reason)
+        backend = {"type": "shader", "source": source, "order": list(declarations)}
     else:
         raise ValueError("no stack in the manifest, chain.txt or shader.wgsl")
     return {

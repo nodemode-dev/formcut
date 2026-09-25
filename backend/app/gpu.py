@@ -187,15 +187,36 @@ def composite_stack(canvas: np.ndarray, layers: list) -> np.ndarray:
         return canvas
 
 
-def custom(image: np.ndarray, source: str, time: float) -> np.ndarray:
+def custom_values(values: np.ndarray, source: str, time: float, params: list | None = None) -> np.ndarray:
+    """A user shader over float RGBA in 0..1; binding 1 carries [w, h, time, 0] and then up to twelve package parameters."""
     if not status()["available"]:
         raise ValueError("Custom WGSL needs a working WebGPU adapter: " + status().get("reason", ""))
     from wgpu.utils.compute import compute_with_buffers
 
-    h, w = image.shape[:2]
-    values = image.astype(np.float32) / 255
+    h, w = values.shape[:2]
+    values = np.ascontiguousarray(values, np.float32)
+    uniform = np.zeros(16, np.float32)
+    uniform[:4] = [w, h, time, 0]
+    for n, value in enumerate((params or [])[:12]):
+        uniform[4 + n] = float(value)
     with _lock:
-        out = compute_with_buffers(
-            {0: values, 1: np.array([w, h, time, 0], np.float32)}, {2: (values.size, "f")}, source, n=(w * h + 63) // 64
-        )[2]
-    return np.round(np.clip(np.frombuffer(out, np.float32).reshape(image.shape), 0, 1) * 255).astype(np.uint8)
+        out = compute_with_buffers({0: values, 1: uniform}, {2: (values.size, "f")}, source, n=(w * h + 63) // 64)[2]
+    return np.clip(np.frombuffer(out, np.float32).reshape(values.shape), 0, 1)
+
+
+def custom(image: np.ndarray, source: str, time: float) -> np.ndarray:
+    return np.round(custom_values(image.astype(np.float32) / 255, source, time) * 255).astype(np.uint8)
+
+
+def trial(source: str, params: list | None = None) -> str | None:
+    """Compile and run a shader on a 4x4 frame; the reason it cannot be enabled, or None."""
+    state = status()
+    if not state["available"]:
+        return "needs a WebGPU adapter: " + state.get("reason", "")
+    try:
+        out = custom_values(np.full((4, 4, 4), 0.5, np.float32), source, 0.0, params)
+    except Exception as exc:
+        return str(exc).strip().splitlines()[0][:300] if str(exc).strip() else exc.__class__.__name__
+    if out.shape != (4, 4, 4) or not np.isfinite(out).all():
+        return "the shader wrote a frame of the wrong shape or with non-finite values"
+    return None

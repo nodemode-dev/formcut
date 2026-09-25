@@ -541,6 +541,16 @@ def _stack_steps(effect_id: str) -> list | None:
     return None
 
 
+def _shader_backend(effect_id: str) -> dict | None:
+    """A shader package's source, parameter order and defaults, or None when the id is not one."""
+    from .effect_packages import find
+
+    entry = find(effect_id)
+    if entry and entry["kind"] == "video" and entry["backend"]["type"] == "shader":
+        return {"source": entry["backend"]["source"], "order": entry["backend"].get("order", []), "defaults": entry["parameters"]}
+    return None
+
+
 def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.ndarray:
     to_float, to_bytes = _native_kernel("unit_float"), _native_kernel("to_bytes")
     if to_float is not None and image.dtype == np.uint8 and image.ndim == 3 and image.flags.c_contiguous:
@@ -553,10 +563,21 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
         if entry["id"] not in GRADES and entry["id"] not in VIDEO_EFFECTS:
             # A stack package is formcut's own steps: each runs as it would on
-            # its own, blended by its strength times the clip's.
+            # its own, blended by its strength times the clip's. A shader
+            # package is a user kernel, run on the device with its parameters.
             steps = _stack_steps(entry["id"])
             if steps is None:
-                raise ValueError("Unknown visual effect: " + entry["id"])
+                shader = _shader_backend(entry["id"])
+                if shader is None:
+                    raise ValueError("Unknown visual effect: " + entry["id"])
+                if amount > 0:
+                    from . import gpu
+
+                    given = entry.get("params") or {}
+                    values = [given.get(name, shader["defaults"][name]) for name in shader["order"]]
+                    changed = gpu.custom_values(result, shader["source"], local, values)[:, :, :3]
+                    result[:, :, :3] = np.clip(changed * amount + result[:, :, :3] * (1 - amount), 0, 1)
+                continue
             if amount > 0:
                 for step in steps:
                     share = amount * max(0.0, min(1.0, float(step.get("amount", 1))))
