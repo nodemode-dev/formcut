@@ -6,6 +6,7 @@ import type { Clip, KeyframeProp } from "../engine/types";
 import { SPEED_PRESETS } from "../engine/timing";
 import { MOTION_PRESETS } from "../engine/motion";
 import { api } from "../engine/api";
+import { propPoints, propValue } from "../engine/keyframes";
 
 const TRANSITIONS = ["crossfade", "dip", "wipe-left", "wipe-right", "wipe-up", "wipe-down", "slide-left", "slide-right", "zoom", "iris", "dissolve", "push-up", "push-down", "cover-left", "cover-up", "clock-wipe", "blinds", "diagonal-wipe", "pixel-dissolve", "blur-fade", "spin", "diamond", "barn-door"];
 
@@ -104,11 +105,43 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
       rows[index].classList.toggle("is-off", !on);
       setValue(rows[index].querySelector("input")!, String(entry.amount));
       if (kind === "effects") effectParameters(rows[index], entry, catalog.video.find(e => e.id === entry.id)?.declarations ?? [], (name, value) => void safe(() => {
-        const next = structuredClone(selected()?.effects ?? []);
+        const clip = selected();
+        if (!clip) return;
+        // A keyed parameter keeps its keys: the slider writes the key at the
+        // playhead (adding one there), the way a keyed transform edit does.
+        const prop = `fx.${index}.${name}` as KeyframeProp;
+        if (propPoints(clip, prop).length) {
+          const local = Math.round((engine.snapshot.playhead - clip.start) * 100) / 100;
+          if (local >= 0 && local <= clip.duration) engine.dispatch("clip.keyframe", { clipId: clip.id, t: local, set: { [prop]: value } });
+          return;
+        }
+        const next = structuredClone(clip.effects ?? []);
         if (!next[index]) return;
         next[index].params = { ...next[index].params, [name]: value };
         patch({ effects: next });
-      }));
+      }), {
+        state: (key) => {
+          const clip = selected(); if (!clip) return "none";
+          const prop = `fx.${index}.${key}` as KeyframeProp;
+          const points = propPoints(clip, prop);
+          if (!points.length) return "none";
+          const local = engine.snapshot.playhead - clip.start;
+          return points.some((point) => Math.abs(point.t - local) < 0.02) ? "here" : "keyed";
+        },
+        value: (key, base) => {
+          const clip = selected(); if (!clip) return base;
+          return propValue(clip, `fx.${index}.${key}` as KeyframeProp, engine.snapshot.playhead - clip.start);
+        },
+        toggle: (key, value) => void safe(() => {
+          const clip = selected(); if (!clip) return;
+          const prop = `fx.${index}.${key}` as KeyframeProp;
+          const local = Math.round((engine.snapshot.playhead - clip.start) * 100) / 100;
+          if (local < 0 || local > clip.duration) return;
+          const here = propPoints(clip, prop).some((point) => Math.abs(point.t - local) < 0.02);
+          if (here) engine.dispatch("clip.keyframe", { clipId: clip.id, t: local, remove: prop });
+          else engine.dispatch("clip.keyframe", { clipId: clip.id, t: local, set: { [prop]: value } });
+        }),
+      });
     });
     stacks.set(kind, rows);
   };
@@ -355,6 +388,14 @@ export function buildCreatorPanel(engine: ProjectEngine): HTMLElement {
   root.dataset.brush = "off";
   query("brush").addEventListener("change", () => { root.dataset.brush = query<HTMLSelectElement>("brush").value; });
   engine.subscribe((_state, changed) => { if (["clips", "clip-selection", "timeline"].includes(changed)) refill(); });
+  // A keyed parameter's slider reads the value at the playhead, so the rows
+  // follow it; without keys on the selected clip nothing changes and the
+  // refill is skipped.
+  engine.subscribe((state, changed) => {
+    if (changed !== "playhead") return;
+    const clip = state.selectedClipId ? engine.findClip(state.selectedClipId)?.clip : null;
+    if (clip?.keyframes?.some((frame) => Object.keys(frame.props).some((key) => key.startsWith("fx.")))) refill();
+  });
   refill();
   localizeElement(root);
   return root;

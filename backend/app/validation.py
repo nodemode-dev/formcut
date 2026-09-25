@@ -8,6 +8,15 @@ def number(value, name, low=-100000, high=100000):
         raise ValueError("Invalid " + name)
 
 
+def _effect_prop(key: str, clip: dict) -> bool:
+    """fx.<index>.<parameter>: a keyframe on an effect the clip carries, its amount or one of its parameters."""
+    parts = key.split(".", 2)
+    if len(parts) != 3 or parts[0] != "fx" or not parts[1].isdigit() or not parts[2]:
+        return False
+    effects = clip.get("effects") or []
+    return int(parts[1]) < len(effects) and (parts[2] == "amount" or parts[2].replace("_", "").isalnum())
+
+
 def project_values(project):
     fill = project.get("background")
     if fill is None:
@@ -124,7 +133,7 @@ def clip_values(clip):
         if frame.get("interp", "linear") not in set(EASINGS) | {"hold", "bezier"}:
             raise ValueError("Unknown interpolation")
         for key, value in frame.get("props", {}).items():
-            if key not in ("posX", "posY", "scale", "rotation", "opacity"):
+            if key not in ("posX", "posY", "scale", "rotation", "opacity") and not _effect_prop(key, clip):
                 raise ValueError("Unknown animated property")
             number(value, key)
     from .effect_packages import entries as package_entries

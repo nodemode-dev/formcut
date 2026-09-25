@@ -17,7 +17,7 @@ import { apply, diff, deltaSize, type Delta } from "./json-delta";
 type DocumentSlice = Pick<ProjectState, "timelines" | "duration" | "selectedClipId" | "selection" | "activeTimeline" | "width" | "height" | "fps" | "aspect">;
 const HISTORY_LIMIT = 200;
 const FOLD_MS = 500;
-import type { ClipKey, ClipMask, KeyframeProp } from "./types";
+import type { ClipKey, ClipMask, KeyframeProp, TransformProp } from "./types";
 
 type Listener = (state: ProjectState, changed: string) => void;
 
@@ -1038,7 +1038,7 @@ export class ProjectEngine {
     const found = this.findClip(clipId); if (!found) return;
     found.clip.transform = { ...defaultTransform(), ...found.clip.transform, ...patch };
     const local = this.state.playhead - found.clip.start;
-    for (const prop of ["posX", "posY", "scale", "rotation", "opacity"] as KeyframeProp[]) {
+    for (const prop of ["posX", "posY", "scale", "rotation", "opacity"] as TransformProp[]) {
       if (patch[prop] !== undefined && found.clip.keyframes?.some(k => prop in k.props)) upsertKeyframe(found.clip, local, { [prop]: patch[prop] });
     }
     this.emit("clips");

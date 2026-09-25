@@ -1,5 +1,6 @@
 import type { Clip } from "../engine/types";
 import { t } from "../i18n";
+import { icon } from "./icons";
 
 export interface ParamDeclaration {
   key: string;
@@ -14,11 +15,19 @@ export interface ParamDeclaration {
 
 const fmt = (value: number, step: number) => step >= 1 ? String(Math.round(value)) : String(Math.round(value * 1000) / 1000);
 
+/** How a parameter row keys itself: whether the parameter has keys, whether one sits at the playhead, its value there, and the toggle. */
+export interface ParamKeying {
+  state: (key: string) => "none" | "keyed" | "here";
+  value: (key: string, base: number) => number;
+  toggle: (key: string, value: number) => void;
+}
+
 export function effectParameters(
   row: HTMLElement,
   entry: NonNullable<Clip["effects"]>[number],
   declarations: ParamDeclaration[],
   update: (name: string, value: number) => void,
+  keying?: ParamKeying,
 ): void {
   let panel = row.querySelector<HTMLDetailsElement>("details");
   if (!panel) {
@@ -66,13 +75,35 @@ export function effectParameters(
         update(decl.key, decl.default);
       });
       line.append(text, slider, readout, reset);
+      if (keying) {
+        // A keyframe on the parameter at the playhead: the same diamond the
+        // transform rows carry, so a keyed effect reads like a keyed move.
+        const diamond = document.createElement("button");
+        diamond.type = "button";
+        diamond.className = "iconbtn kf-btn param-key";
+        diamond.title = t("kf.at");
+        diamond.setAttribute("aria-label", t("kf.at"));
+        diamond.innerHTML = icon("diamond");
+        diamond.addEventListener("click", (event) => {
+          event.preventDefault();
+          keying.toggle(decl.key, Number(slider.value));
+        });
+        line.append(diamond);
+      }
       panel.append(line);
     }
     const slider = line.querySelector<HTMLInputElement>("input")!;
     const readout = line.querySelector<HTMLElement>(".param-value")!;
-    const value = entry.params?.[decl.key] ?? decl.default;
+    const state = keying?.state(decl.key) ?? "none";
+    const base = entry.params?.[decl.key] ?? decl.default;
+    const value = state === "none" ? base : keying!.value(decl.key, base);
     if (document.activeElement !== slider && Number(slider.value) !== value) slider.value = String(value);
     const shown = fmt(value, decl.step) + (decl.unit ? ` ${decl.unit}` : "");
     if (readout.textContent !== shown) readout.textContent = shown;
+    const diamond = line.querySelector<HTMLElement>(".param-key");
+    if (diamond) {
+      if (diamond.classList.contains("is-accent") !== (state === "here")) diamond.classList.toggle("is-accent", state === "here");
+      if (diamond.classList.contains("is-keyed") !== (state !== "none")) diamond.classList.toggle("is-keyed", state !== "none");
+    }
   }
 }

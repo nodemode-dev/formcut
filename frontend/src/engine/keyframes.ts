@@ -3,12 +3,14 @@
 // follow-up. Keyframe times are clip-local timeline seconds.
 import {
   defaultTransform,
+  isEffectProp,
   type Clip,
   type ClipTransform,
   KEYFRAME_INTERPS,
   type Keyframe,
   type KeyframeInterp,
   type KeyframeProp,
+  type TransformProp,
 } from "./types";
 
 export function easeProgress(p: number, interp: KeyframeInterp): number {
@@ -57,11 +59,27 @@ export function samplePoints(
 export function sampledTransform(clip: Clip, local: number): ClipTransform {
   const base: ClipTransform = { ...defaultTransform(), ...clip.transform };
   if (!clip.keyframes || clip.keyframes.length === 0) return base;
-  for (const prop of ["posX", "posY", "scale", "rotation", "opacity"] as KeyframeProp[]) {
+  for (const prop of ["posX", "posY", "scale", "rotation", "opacity"] as TransformProp[]) {
     const value = samplePoints(propPoints(clip, prop), local);
     if (value !== undefined) base[prop] = value;
   }
   return base;
+}
+
+/** The static value a prop has without keyframes: a transform value, or an effect's amount or parameter. */
+export function propStatic(clip: Clip, prop: KeyframeProp): number {
+  if (isEffectProp(prop)) {
+    const [, index, name] = prop.split(".");
+    const entry = clip.effects?.[Number(index)];
+    if (!entry) return 0;
+    return name === "amount" ? entry.amount : (entry.params?.[name] ?? 0);
+  }
+  return ({ ...defaultTransform(), ...clip.transform })[prop];
+}
+
+/** The value of any keyed prop at a local time, the static value where it has no keys. */
+export function propValue(clip: Clip, prop: KeyframeProp, local: number): number {
+  return samplePoints(propPoints(clip, prop), local) ?? propStatic(clip, prop);
 }
 
 export function upsertKeyframe(clip: Clip, t: number, set: Partial<Record<KeyframeProp, number>>): void {

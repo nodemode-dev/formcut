@@ -32,7 +32,11 @@ export function defaultTextStyle(content = "Title"): TextStyle {
 }
 
 export const KEYFRAME_PROPS = ["posX", "posY", "scale", "rotation", "opacity"] as const;
-export type KeyframeProp = (typeof KEYFRAME_PROPS)[number];
+export type TransformProp = (typeof KEYFRAME_PROPS)[number];
+/** An effect's amount or one of its parameters, keyed on the clip as fx.<effect index>.<name>. */
+export type EffectProp = `fx.${number}.${string}`;
+export type KeyframeProp = TransformProp | EffectProp;
+export const isEffectProp = (prop: string): prop is EffectProp => /^fx\.\d+\.[^.]+$/.test(prop);
 
 export type KeyframeInterp = "linear" | "ease" | "easeIn" | "easeOut" | "easeInOut" | "smooth" | "snap" | "overshoot" | "anticipate" | "hold" | "bezier";
 export const KEYFRAME_INTERPS: KeyframeInterp[] = ["linear", "ease", "easeIn", "easeOut", "easeInOut", "smooth", "snap", "overshoot", "anticipate", "hold", "bezier"];

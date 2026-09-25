@@ -94,7 +94,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (125L)
-- `renderer.py` (1084L)
+- `renderer.py` (1102L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
@@ -108,7 +108,7 @@ the automation transports.
 - `text_templates.py` (393L)
 - `timing.py` (269L)
 - `tools.py` (232L)
-- `validation.py` (209L)
+- `validation.py` (218L)
 - `video_source.py` (238L)
 - `windows_console.py` (43L)
 

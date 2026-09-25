@@ -993,6 +993,24 @@ class FrameRenderer:
                 if entry.get("keys"):
                     # K3: keyed parameters resolve per frame before the stack runs
                     entry["params"] = effect_params_at(entry, local)
+            # The clip's own keyframes may name an effect's parameter or amount
+            # as fx.<index>.<name>, which is how the timeline graph keys them;
+            # they resolve here with the same easing as the transform keys.
+            fx_props = {key for frame in clip.get("keyframes") or [] for key in (frame.get("props") or {}) if str(key).startswith("fx.")}
+            if fx_props:
+                all_effects = clip.get("effects") or []
+                enabled_index = [i for i, entry in enumerate(all_effects) if entry.get("enabled", True) is not False]
+                for key in fx_props:
+                    _, index, name = key.split(".", 2)
+                    if int(index) not in enabled_index:
+                        continue
+                    entry = effects[enabled_index.index(int(index))]
+                    if name == "amount":
+                        entry["amount"] = property_at(clip, key, local, float(entry.get("amount", 1)))
+                    else:
+                        params = dict(entry.get("params") or {})
+                        params[name] = property_at(clip, key, local, float(params.get(name, 0)))
+                        entry["params"] = params
                 # Pixel-measured parameters follow the decoded resolution, so a
                 # preview and its export agree on how strong an effect looks.
             if clip.get("effectId"):

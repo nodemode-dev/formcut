@@ -1,7 +1,7 @@
 import { easeAt } from "../engine/timing";
 import { EASING_HANDLES } from "../engine/types";
-import { KEYFRAME_PROPS, type Clip, type Keyframe, type KeyframeProp } from "../engine/types";
-import { propPoints, samplePoints, sampledTransform } from "../engine/keyframes";
+import { KEYFRAME_PROPS, isEffectProp, type Clip, type Keyframe, type KeyframeProp, type TransformProp } from "../engine/types";
+import { propPoints, propValue, samplePoints } from "../engine/keyframes";
 import type { ProjectEngine } from "../engine/project";
 import { t } from "../i18n";
 import { icon } from "./icons";
@@ -11,16 +11,44 @@ const GRAPH_H = ROW * KEYFRAME_PROPS.length;
 const graphHeight = (body: HTMLElement): number => {
   const track = parseFloat(body.style.getPropertyValue("--track-h"));
   const row = Number.isFinite(track) && track > 0 ? Math.min(44, Math.max(18, track * 0.393)) : ROW;
-  return Math.round(row * KEYFRAME_PROPS.length);
+  const rows = Number(body.style.getPropertyValue("--kf-rows")) || KEYFRAME_PROPS.length;
+  return Math.round(row * rows);
 };
 const SVG_NS = "http://www.w3.org/2000/svg";
-const RANGE: Record<KeyframeProp, [number, number]> = {
+const RANGE: Record<TransformProp, [number, number]> = {
   posX: [-100, 100],
   posY: [-100, 100],
   scale: [0, 400],
   rotation: [-180, 180],
   opacity: [0, 100],
 };
+
+/** The graph's vertical range for a prop: the transform ranges as always; an effect parameter spans its own keys, padded, never flat. */
+function rangeOf(prop: KeyframeProp, clips: Clip[]): [number, number] {
+  if (!isEffectProp(prop)) return RANGE[prop];
+  const values = clips.flatMap((clip) => propPoints(clip, prop).map((point) => point.v));
+  if (!values.length) return [0, 1];
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const pad = Math.max(0.5, (high - low) * 0.15);
+  return [low - pad, high + pad];
+}
+
+/** The effect props keyed on any of these clips, in order of first appearance. */
+function effectProps(clips: Clip[]): KeyframeProp[] {
+  const seen: KeyframeProp[] = [];
+  for (const clip of clips) for (const frame of clip.keyframes ?? []) for (const key of Object.keys(frame.props)) {
+    if (isEffectProp(key) && !seen.includes(key)) seen.push(key);
+  }
+  return seen;
+}
+
+/** The label of an effect prop: the effect's id and the parameter, since the graph has no catalogue. */
+function effectLabel(prop: KeyframeProp, clips: Clip[]): string {
+  const [, index, name] = prop.split(".");
+  const entry = clips.map((clip) => clip.effects?.[Number(index)]).find((candidate) => candidate);
+  return `${entry?.id ?? `fx ${index}`} · ${name}`;
+}
 
 type Mode = "lanes" | "graph";
 type Point = ReturnType<typeof propPoints>[number];
@@ -129,7 +157,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     setAttr(block.graph, "width", String(width));
     const height = graphHeight(block.body);
     if (block.graph.getAttribute("height") !== String(height)) setAttr(block.graph, "height", String(height));
-    const [low, high] = RANGE[block.prop];
+    const [low, high] = rangeOf(block.prop, clips);
     const yOf = (value: number) => 4 + (1 - (value - low) / (high - low)) * (height - 8);
     patch(block.guides, [low, (low + high) / 2, high].map((value, i) => [`g${i}`, value] as const), () => svgNode("line", "kfb-guide"), (line, value) => {
       const y = String(Math.round(yOf(value)) + 0.5);
@@ -218,6 +246,28 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     if (index < 0 || block.body.hidden) return;
     const px = scale();
     const clips = clipsOn(index);
+    // The rows: the transform props always, then every effect parameter keyed
+    // on this track's clips, so a keyed blur radius gets a lane and a graph.
+    const props: KeyframeProp[] = [...KEYFRAME_PROPS, ...effectProps(clips)];
+    const labelOf = (prop: KeyframeProp) => isEffectProp(prop) ? effectLabel(prop, clips) : t("row." + prop.toLowerCase());
+    patch(block.labels, props.map((prop) => [prop, prop] as const), () => document.createElement("span"), (span, prop) => {
+      const text = labelOf(prop);
+      if (span.textContent !== text) span.textContent = text;
+    });
+    patch(block.rows, props.map((prop) => [prop, prop] as const), () => {
+      const row = document.createElement("div");
+      row.className = "kfb-row";
+      return row;
+    }, (row, prop) => {
+      if (row.dataset.prop !== prop) row.dataset.prop = prop;
+    });
+    patch(block.select, props.map((prop) => [prop, prop] as const), () => document.createElement("option"), (option, prop) => {
+      if (option.value !== prop) option.value = prop;
+      const text = labelOf(prop);
+      if (option.textContent !== text) option.textContent = text;
+    });
+    if (!props.includes(block.prop)) { block.prop = "scale"; block.select.value = "scale"; }
+    block.body.style.setProperty("--kf-rows", String(props.length));
     patch(block.spans, clips.map((clip) => [clip.id, clip] as const), () => {
       const span = document.createElement("div");
       span.className = "kfb-span";
@@ -268,7 +318,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     event.preventDefault();
   });
   const addPointAt = (block: Block, index: number, event: PointerEvent, timeAt: (x: number) => number) => {
-    const [low, high] = RANGE[block.prop];
+    const [low, high] = rangeOf(block.prop, clipsOn(index));
     const box = block.graph.getBoundingClientRect();
     const fraction = 1 - (event.clientY - box.top - 4) / (graphHeight(block.body) - 8);
     const value = Math.round(Math.max(low, Math.min(high, low + fraction * (high - low))) * 10) / 10;
@@ -445,7 +495,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
           const clip = clipAt(index, time);
           if (!clip) return;
           const local = localTime(clip, time - clip.start);
-          engine.dispatch("clip.keyframe", { clipId: clip.id, t: local, set: { [prop]: sampledTransform(clip, local)[prop] } });
+          engine.dispatch("clip.keyframe", { clipId: clip.id, t: local, set: { [prop]: propValue(clip, prop, local) } });
           return;
         }
         const clip = findClip(index, dot.getAttribute("data-clip"));
@@ -475,7 +525,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         if (!next) return;
         const box = block.graph.getBoundingClientRect();
         const x0 = (found.clip.start + list[index].t) * px, x1 = (found.clip.start + next.t) * px;
-        const [lowValue, highValue] = RANGE[block.prop];
+        const [lowValue, highValue] = rangeOf(block.prop, clipsOn(index));
         const graphH = graphHeight(block.body);
         const toY = (value: number) => graphH - ((value - lowValue) / (highValue - lowValue)) * graphH;
         const y0 = toY(list[index].v), y1 = toY(next.v);
@@ -524,7 +574,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         boxSelect(block, event);
         return;
       }
-      const [low, high] = RANGE[block.prop];
+      const [low, high] = rangeOf(block.prop, clipsOn(index));
       const valueAt = (clientY: number) => {
         const box = block.graph.getBoundingClientRect();
         const fraction = 1 - (clientY - box.top - 4) / (graphHeight(block.body) - 8);
@@ -569,7 +619,6 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
   };
 
   const create = (lane: HTMLElement): Block => {
-    const label = (prop: KeyframeProp) => t("row." + prop.toLowerCase());
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "iconbtn kfb-toggle";
@@ -587,15 +636,15 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
           <button type="button" data-mode="lanes" class="is-active" title="${t("kf.lanes")}" aria-label="${t("kf.lanes")}">${icon("diamond")}</button>
           <button type="button" data-mode="graph" title="${t("kf.graph")}" aria-label="${t("kf.graph")}">${icon("curve")}</button>
         </div>
-        <select class="mini-select" aria-label="${t("kf.property")}" hidden>${KEYFRAME_PROPS.map((prop) => `<option value="${prop}">${label(prop)}</option>`).join("")}</select>
+        <select class="mini-select" aria-label="${t("kf.property")}" hidden></select>
         <button type="button" class="iconbtn kfb-curved" data-curved title="${t("kf.curves")}" aria-label="${t("kf.curves")}" aria-pressed="true" hidden>${icon("activity")}</button>
       </div>
-      <div class="kfb-labels">${KEYFRAME_PROPS.map((prop) => `<span>${label(prop)}</span>`).join("")}</div>`;
+      <div class="kfb-labels"></div>`;
     const body = document.createElement("div");
     body.className = "kfb-body";
     body.hidden = true;
     body.title = t("kf.hint");
-    body.innerHTML = `<div class="kfb-spans"></div><div class="kfb-rows">${KEYFRAME_PROPS.map((prop) => `<div class="kfb-row" data-prop="${prop}"></div>`).join("")}</div>`;
+    body.innerHTML = `<div class="kfb-spans"></div><div class="kfb-rows"></div>`;
     const graph = svgNode("svg", "kfb-graph");
     graph.setAttribute("height", String(GRAPH_H));
     graph.toggleAttribute("hidden", true);
