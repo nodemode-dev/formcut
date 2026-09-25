@@ -129,7 +129,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       <div class="panel-section"><div class="panel-section-head"><span>Local speech</span><small>Install the local speech runtime once with backend/setup_local_ai.py. Download Kokoro under Local models. Synthesis then runs offline.</small></div><div class="panel-rows"><textarea data-speech-text rows="6" placeholder="Text to speak"></textarea><label>Engine <select data-speech-engine><option value="kokoro">Kokoro</option><option value="pocket">Pocket TTS</option><option value="chatterbox">Chatterbox</option></select></label><small data-speech-engine-note></small><button class="tool-chip" type="button" data-speech-install hidden>Install</button><label>Voice <select data-speech-voice></select></label><label data-speech-clone hidden>Clone a voice from <select data-speech-reference><option value="">None</option></select></label><label data-speech-consent-row hidden><input type="checkbox" data-speech-consent> I have the speaker's permission</label><label data-speech-expression-row hidden>Expression <input data-speech-exaggeration type="range" min="0.25" max="1.5" step="0.05" value="0.5"></label><label>Language <select data-speech-language><option value="en-us">English (US)</option><option value="en-gb">English (UK)</option><option value="es">Español</option><option value="fr-fr">Français</option><option value="it">Italiano</option><option value="pt-br">Português</option><option value="ja">日本語</option><option value="cmn">中文</option></select></label><label data-speech-speed-row>Speed <input data-speech-speed type="number" min="0.5" max="2" step="0.1" value="1"></label><div class="studio-actions"><button class="tool-chip is-primary" data-speech-create>${icon("speak")}Generate and add to timeline</button></div></div></div>
     </section>
     <section data-view="models" class="set-view" hidden>
-      <div class="panel-section"><div class="panel-section-head"><span>Local models</span><small>Download once, then process media locally. You can also import model files acquired separately.</small></div><div class="panel-rows"><div data-model-list></div></div></div>
+      <div class="panel-section"><div class="panel-section-head"><span>Local models</span><small>Download once, then process media locally. You can also import model files acquired separately.</small></div><div class="panel-rows"><small data-model-runtime hidden></small><div data-model-list></div></div></div>
     </section>
     </div><footer class="set-foot studio-footer"><span role="status" data-status></span><button class="tool-chip" data-cancel hidden>Cancel job</button></footer></section></div>`;
   localizeElement(modal);
@@ -196,6 +196,14 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   };
   const modelRows = new Map<string, HTMLElement>();
   const refreshModels = async () => {
+    // BG6: which processor the model sessions run on, shown where the models
+    // are managed; written only when it changes, so a refresh mutates nothing.
+    const runtime = await api<{ active: string }>("/api/models/runtime");
+    const providerLabels: Record<string, string> = { CPUExecutionProvider: "CPU", CoreMLExecutionProvider: "Core ML", DmlExecutionProvider: "DirectML", CUDAExecutionProvider: "CUDA" };
+    const runtimeLine = q("model-runtime");
+    const wanted = `${text("Processor")}: ${providerLabels[runtime.active] ?? runtime.active.replace("ExecutionProvider", "")}`;
+    if (runtimeLine.textContent !== wanted) runtimeLine.textContent = wanted;
+    runtimeLine.hidden = false;
     const models = await api<any[]>("/api/models");
     for (const model of models) {
       let row = modelRows.get(model.id);
@@ -211,7 +219,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         row.append(name, status, download, files, importer); modelRows.set(model.id, row); q("model-list").append(row);
         if (model.id === "local-speech") { const note = document.createElement("span"); note.className = "text-add-hint"; note.textContent = t("models.speechsetup"); row.append(note); }
       }
-      row.querySelector<HTMLElement>("[data-ready]")!.textContent = model.ready ? "Ready offline" : "Not installed";
+      const readiness = text(model.ready ? "Ready offline" : "Not installed");
+      const readyEl = row.querySelector<HTMLElement>("[data-ready]")!;
+      if (readyEl.textContent !== readiness) readyEl.textContent = readiness;
       row.querySelector("button")!.disabled = model.ready;
     }
   };

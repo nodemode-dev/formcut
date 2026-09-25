@@ -28,7 +28,6 @@ FILE = "realesrgan-x4plus.onnx"
 SCALE = 4
 TILE = 256  # source pixels per tile side
 MARGIN = 16  # context read around each tile and discarded from its result
-PREFERRED = ("CoreMLExecutionProvider", "DmlExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider")
 
 _session = None
 _lock = threading.Lock()
@@ -40,9 +39,9 @@ def _run_model(batch: np.ndarray) -> np.ndarray:
         if _session is None:
             import onnxruntime as ort
 
-            available = ort.get_available_providers()
-            chosen = [name for name in PREFERRED if name in available] or ["CPUExecutionProvider"]
-            _session = ort.InferenceSession(str(MODELS_ROOT / FILE), providers=chosen)
+            from .model_manager import providers
+
+            _session = ort.InferenceSession(str(MODELS_ROOT / FILE), providers=providers())
         return _session.run(None, {"input": batch})[0]
 
 

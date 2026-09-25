@@ -232,3 +232,15 @@ The gate's ordering rule stands: no entry in the model manager without a hash
 in the registry table above, taken from a real fetch of the file and enforced
 at download time through the manager's `PINNED` table. A candidate's hash is
 recorded in the same change that registers it.
+
+Execution providers (BG6, recorded at v1.60.0): every ONNX Runtime session the
+engine opens takes one ordering from `model_manager.providers()`, preferring
+the platform accelerator where its provider is present and always keeping the
+CPU provider as the floor. The standard `onnxruntime` wheel (MIT) carries the
+CPU provider everywhere and Core ML on macOS; DirectML on Windows comes from
+`onnxruntime-directml` (MIT, bundling Microsoft's DirectML redistributable);
+CUDA on Linux comes from `onnxruntime-gpu` (MIT), which links the machine's
+own NVIDIA CUDA libraries at run time under their EULA and redistributes none
+of them. Each is a straight package swap the person or a platform build makes;
+the engine ships none of the accelerator runtimes itself, and Settings under
+Local models names the provider actually in use.

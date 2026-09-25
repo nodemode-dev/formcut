@@ -33,6 +33,22 @@ def model_file(name: str) -> Path:
     if bundled.is_file():
         return bundled
     return path
+
+
+# BG6: one ordering for every ONNX Runtime session the engine opens. The
+# platform accelerator comes first where its provider is present (Core ML on
+# macOS in the standard wheel, DirectML on Windows via onnxruntime-directml,
+# CUDA on Linux via onnxruntime-gpu), and the CPU provider is always the
+# floor, so a machine with nothing extra runs everything unchanged.
+PROVIDERS = ("CoreMLExecutionProvider", "DmlExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider")
+
+
+def providers() -> list[str]:
+    """The execution providers to hand a session, best first."""
+    import onnxruntime as ort
+
+    available = ort.get_available_providers()
+    return [name for name in PROVIDERS if name in available] or ["CPUExecutionProvider"]
 MODELS = {
     # Heavier segmentation, offered rather than required: the cutout works
     # without them and is better with them.
@@ -109,6 +125,15 @@ _downloading: set[str] = set()
 
 def ready(model: str) -> bool:
     return model in MODELS and all(model_file(name).is_file() and model_file(name).stat().st_size > 1024 for name in MODELS[model]["files"])
+
+
+@router.get("/runtime")
+def runtime():
+    """BG6: what this machine offers and which provider sessions will use."""
+    import onnxruntime as ort
+
+    chosen = providers()
+    return {"active": chosen[0], "available": ort.get_available_providers()}
 
 
 @router.get("")

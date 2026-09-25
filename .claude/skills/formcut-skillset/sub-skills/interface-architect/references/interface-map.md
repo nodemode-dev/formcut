@@ -67,7 +67,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/settings-link.ts` (8L)
 - `ui/settings-popout.ts` (609L)
 - `ui/start-screen.ts` (638L)
-- `ui/studio-tools.ts` (673L)
+- `ui/studio-tools.ts` (683L)
 - `ui/tiktok-dialog.ts` (258L)
 - `ui/tiktok-settings.ts` (89L)
 - `ui/timeline-pane.ts` (697L)

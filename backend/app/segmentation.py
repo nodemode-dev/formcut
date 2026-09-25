@@ -6,7 +6,7 @@ from collections import OrderedDict
 import cv2
 import numpy as np
 
-from .model_manager import MODELS, model_file, ready
+from .model_manager import MODELS, model_file, providers, ready
 
 _sessions = {}
 _cache = OrderedDict()
@@ -51,7 +51,7 @@ def _session(model: str, name: str | None = None):
     if file not in _sessions:
         config = ort.SessionOptions()
         config.intra_op_num_threads = 2
-        _sessions[file] = ort.InferenceSession(str(model_file(file)), sess_options=config, providers=["CPUExecutionProvider"])
+        _sessions[file] = ort.InferenceSession(str(model_file(file)), sess_options=config, providers=providers())
     return _sessions[file]
 
 

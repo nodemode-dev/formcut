@@ -24,7 +24,7 @@ from collections import deque
 import cv2
 import numpy as np
 
-from .model_manager import ROOT
+from .model_manager import ROOT, providers
 
 MODEL = "click-track"
 PREFIX = "sam21-video-"
@@ -42,7 +42,7 @@ def _session(name: str):
         # back after each run instead of being held for the session's life.
         config.enable_cpu_mem_arena = False
         config.enable_mem_pattern = False
-        _sessions[name] = ort.InferenceSession(str(ROOT / f"{PREFIX}{name}.onnx"), sess_options=config, providers=["CPUExecutionProvider"])
+        _sessions[name] = ort.InferenceSession(str(ROOT / f"{PREFIX}{name}.onnx"), sess_options=config, providers=providers())
     return _sessions[name]
 
 

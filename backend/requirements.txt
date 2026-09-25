@@ -12,6 +12,12 @@ Pillow==11.*
 pi-heif==1.*
 numpy>=2.0.2,<2.3
 wgpu==0.31.1
+# BG6: the standard wheel carries the CPU provider everywhere and Core ML on
+# macOS. For an accelerator elsewhere, replace this one package: on Windows,
+# onnxruntime-directml (MIT); on Linux with NVIDIA, onnxruntime-gpu (MIT,
+# using the machine's own CUDA libraries). The engine orders providers itself
+# (model_manager.providers) and falls back to the CPU, so either swap is
+# optional and nothing else changes. Licences.md carries the records.
 onnxruntime==1.23.2
 grpcio>=1.70,<2
 # Used by setup/preflight.py to parse the workflow files before a tag.
