@@ -157,7 +157,7 @@ def test_a_cutout_is_computed_from_the_clip_not_the_canvas(monkeypatch):
     subject. Handing over the canvas is what turned a person cutout into a blob.
     """
     import numpy as np
-    from app import model_manager, segmentation
+    from app import segmentation
     from app.renderer import FrameRenderer
 
     SOURCE = (120, 200)  # deliberately not the canvas size
@@ -168,7 +168,7 @@ def test_a_cutout_is_computed_from_the_clip_not_the_canvas(monkeypatch):
         return np.ones(image.shape[:2], np.float32)
 
     monkeypatch.setattr(segmentation, "raw_alpha", fake_alpha)
-    monkeypatch.setattr(model_manager, "ready", lambda model: True)
+    monkeypatch.setattr(segmentation, "ready", lambda model: True)
     monkeypatch.setattr(FrameRenderer, "media_frame", lambda self, clip, at: np.zeros((*SOURCE, 3), np.uint8))
 
     document = make_project(

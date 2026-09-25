@@ -11,7 +11,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 import pytest
-from app import model_manager, segmentation
+from app import segmentation
 from app.prompt_space import placement, to_source
 from conftest import make_project
 
@@ -130,7 +130,7 @@ def test_the_renderer_hands_sam_the_point_in_the_clips_own_pixels(tmp_path, monk
     from app.renderer import FrameRenderer
 
     asked = []
-    monkeypatch.setattr(model_manager, "ready", lambda model: True)
+    monkeypatch.setattr(segmentation, "ready", lambda model: True)
     monkeypatch.setattr(
         segmentation, "raw_alpha", lambda image, model, points=None, box=None: asked.append(points) or np.ones(image.shape[:2], np.float32)
     )
