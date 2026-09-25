@@ -114,13 +114,11 @@ def _probe(path: Path, kind: str) -> dict:
         # ffprobe cannot read every image the engine can (HEIC among them);
         # the size comes from the decoder that will actually draw it.
         if not info["width"]:
-            try:
+            with contextlib.suppress(Exception):
                 from PIL import Image, ImageOps
 
                 with Image.open(path) as picture:
                     info["width"], info["height"] = ImageOps.exif_transpose(picture).size
-            except Exception:
-                pass
     return info
 
 

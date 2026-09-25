@@ -25,6 +25,8 @@ def cutout_ready(model: str) -> bool:
     if model == "auto":
         return ready("person-cutout") and ready("object-cutout")
     return model in MODELS and ready(model)
+
+
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
 SAM_ENCODER = "sam2_hiera_tiny.encoder.onnx"

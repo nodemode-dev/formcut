@@ -49,6 +49,8 @@ def providers() -> list[str]:
 
     available = ort.get_available_providers()
     return [name for name in PROVIDERS if name in available] or ["CPUExecutionProvider"]
+
+
 MODELS = {
     # Heavier segmentation, offered rather than required: the cutout works
     # without them and is better with them.
