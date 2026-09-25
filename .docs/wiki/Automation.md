@@ -54,7 +54,7 @@ WebSocket `/api/rpc/ws` sends the same JSON objects over a loopback connection. 
 
 
 ### v0.56.0
-`project.edit` adds `clips.split`, `clip.rejoin`, `clip.freeze-insert`, `clip.reattach`; magnetic tracks settle after each batch; `clip_properties` includes `reversed`; per-timeline formats apply to `project.export`.
+`project.edit` adds `clips.split`, `clip.rejoin`, `clip.freeze-insert`, `clip.reattach`; magnetic tracks settle after each batch; `clip_properties` includes `reversed` and `audioStream` (which of the media's audio streams a clip plays); per-timeline formats apply to `project.export`.
 
 
 ### v0.57.0
