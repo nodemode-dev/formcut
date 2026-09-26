@@ -167,6 +167,40 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       return node;
     });
     orderNodes(markerLayer, ordered);
+    paintKeyDiamonds();
+  };
+  // Keyframe diamonds on the ruler: one per key on the selected clip, at its
+  // timeline instant, so a person scrubbing sees where the keys are without
+  // opening the inspector. Patched in place; a node per key by its clip and time.
+  const keyNodes = new Map<string, HTMLElement>();
+  const paintKeyDiamonds = () => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    const keys = found?.clip.keyframes ?? [];
+    const wanted = new Set<string>();
+    const ordered: HTMLElement[] = [];
+    for (const key of keys) {
+      const id = `${found!.clip.id}:${key.t}`;
+      wanted.add(id);
+      let node = keyNodes.get(id);
+      if (!node) {
+        const made = document.createElement("span");
+        made.className = "tl-key-diamond";
+        made.dataset.keyDiamond = id;
+        node = made;
+        keyNodes.set(id, node);
+      }
+      const at = found!.clip.start + key.t;
+      const left = `${at * PX_PER_SEC}px`;
+      if (node.style.left !== left) node.style.left = left;
+      const title = `${formatTimecode(at, state.fps)} ${Object.keys(key.props).join(", ")}`;
+      if (node.title !== title) node.title = title;
+      ordered.push(node);
+    }
+    for (const [id] of keyNodes) if (!wanted.has(id)) keyNodes.delete(id);
+    const existing = Array.from(markerLayer.querySelectorAll<HTMLElement>(".tl-key-diamond"));
+    for (const node of existing) if (!wanted.has(node.dataset.keyDiamond!)) node.remove();
+    for (const node of ordered) if (node.parentElement !== markerLayer) markerLayer.append(node);
   };
   markerLayer.addEventListener("click", (ev) => {
     const node = (ev.target as HTMLElement).closest<HTMLElement>("[data-marker]");
@@ -236,6 +270,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
         // skips the work itself when nothing that changes the picture moved.
         paintClipBody(node, clip, bin);
       }
+      paintKeyDiamonds();
       for (const clip of byId.values()) {
         lane.insertAdjacentHTML("beforeend", clipHtml(clip, state.selectedClipId));
         const added = lane.querySelector<HTMLElement>(`.clip[data-clip="${clip.id}"]`);
