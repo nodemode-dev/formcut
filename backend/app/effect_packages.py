@@ -107,8 +107,8 @@ def _check_manifest(manifest: dict) -> str | None:
     for field in ("id", "name", "kind"):
         if not isinstance(manifest.get(field), str) or not manifest[field].strip():
             return f"the manifest needs a {field}"
-    if manifest["kind"] not in ("video", "audio"):
-        return "kind must be video or audio"
+    if manifest["kind"] not in ("video", "audio", "captions"):
+        return "kind must be video, audio or captions"
     if not re.match(r"^[a-z0-9][a-z0-9-]{1,63}$", manifest["id"]):
         return "the id must be lowercase letters, digits and hyphens"
     names = manifest.get("names")
@@ -195,6 +195,37 @@ def load_package(folder) -> dict:
     declarations = manifest.get("parameters") or {}
     chain_path = folder / "chain.txt"
     shader_path = folder / "shader.wgsl"
+    if manifest["kind"] == "captions":
+        # A caption look: a style the caption track and the transcription
+        # take, listed beside the eight looks the engine ships, drawn by the
+        # same preview and applied by the same Captions panel (v1.76.0).
+        style = manifest.get("style")
+        if not isinstance(style, dict) or not style:
+            raise ValueError("a captions package needs a style object")
+        # The vocabulary is the shipped looks' own: every key one of the eight
+        # uses, plus a few the caption track also takes.
+        from .presets import CAPTION_STYLES
+
+        allowed = {key for look in CAPTION_STYLES for key in look["style"]} | {"posY", "font", "tracking", "textOpacity"}
+        unknown = sorted(set(style) - allowed)
+        if unknown:
+            raise ValueError(f"the style has keys the caption track does not take: {', '.join(unknown[:5])}")
+        word = style.get("wordStyle")
+        if word is not None and (not isinstance(word, dict) or word.get("mode") not in (None, "none", "highlight", "pop", "box")):
+            raise ValueError("wordStyle must be an object with a mode of none, highlight, pop or box")
+        return {
+            "id": manifest["id"],
+            "name": manifest["name"],
+            "kind": "captions",
+            "category": manifest.get("category", "Packages"),
+            "names": manifest.get("names") or {},
+            "style": {key: style[key] for key in style if isinstance(style[key], (str, int, float, bool, dict))},
+            "parameters": {},
+            "declarations": {},
+            "backend": {"type": "captions"},
+            "folder": str(folder),
+            "package": True,
+        }
     if "stack" in manifest:
         if manifest["kind"] != "video":
             raise ValueError("a stack package must be kind video")

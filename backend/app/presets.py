@@ -433,6 +433,16 @@ CAPTION_STYLES: list[dict] = [
 CAPTION_STYLE_IDS = {entry["id"] for entry in CAPTION_STYLES}
 
 
+def caption_style(look_id: str) -> dict | None:
+    """A shipped look or a packaged one, by id."""
+    found = next((e for e in CAPTION_STYLES if e["id"] == look_id), None)
+    if found is not None:
+        return found
+    from .effect_packages import entries
+
+    return next(({"id": e["id"], "name": e["name"], "style": e["style"]} for e in entries("captions") if e["id"] == look_id), None)
+
+
 @router.get("/titles")
 def list_title_styles() -> list[dict]:
     return TITLE_STYLES
@@ -440,7 +450,11 @@ def list_title_styles() -> list[dict]:
 
 @router.get("/captions")
 def list_caption_styles() -> list[dict]:
-    return CAPTION_STYLES
+    """The eight shipped looks, then every installed captions package as a look of its own."""
+    from .effect_packages import entries
+
+    packaged = [{"id": e["id"], "name": e["name"], "style": e["style"], "package": True} for e in entries("captions")]
+    return [*CAPTION_STYLES, *packaged]
 
 
 @router.get("/texttemplates")

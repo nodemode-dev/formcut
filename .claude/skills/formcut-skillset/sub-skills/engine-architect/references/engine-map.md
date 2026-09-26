@@ -42,7 +42,7 @@ The rest is written by hand.
 | media.py | 864 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| presets.py | 451 | /api/presets | 8 |
+| presets.py | 465 | /api/presets | 8 |
 | project_packages.py | 239 | /api/projects | 2 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 172 | /api/projects | 9 |
@@ -76,7 +76,7 @@ the automation transports.
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
-- `effect_packages.py` (402L)
+- `effect_packages.py` (433L)
 - `encoders.py` (297L)
 - `expressions.py` (51L)
 - `fast_export.py` (301L)
@@ -86,7 +86,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (372L)
-- `gpu_effects.py` (849L)
+- `gpu_effects.py` (972L)
 - `local_diffusion.py` (241L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)

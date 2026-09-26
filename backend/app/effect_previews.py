@@ -46,9 +46,9 @@ def known(kind: str, item: str) -> bool:
 
         return item in TITLE_STYLE_IDS
     if kind == "caption":
-        from .presets import CAPTION_STYLE_IDS
+        from .presets import caption_style
 
-        return item in CAPTION_STYLE_IDS
+        return caption_style(item) is not None
     if kind == "texttemplate":
         from .text_templates import IDS
 
@@ -158,10 +158,10 @@ def title_style_preview(item: str) -> np.ndarray:
 
 def caption_style_preview(item: str) -> np.ndarray:
     """Draw a caption look through the renderer's word path, the second word lit."""
-    from .presets import CAPTION_STYLES
+    from .presets import caption_style
     from .renderer import FrameRenderer
 
-    entry = next((e for e in CAPTION_STYLES if e["id"] == item), None)
+    entry = caption_style(item)
     if entry is None:
         raise HTTPException(404, "Unknown preview")
     words = ["the", "word", "being", "spoken"]

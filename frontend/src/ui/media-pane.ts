@@ -388,6 +388,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     }
   };
   const refreshPackages = async () => {
+    document.dispatchEvent(new CustomEvent("formcut:packages-changed"));
     const res = await fetch("/api/catalogue");
     if (!res.ok) return;
     type Listed = { id: string; name: string; group?: string; names?: Record<string, string> };
@@ -1047,16 +1048,24 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   // transcription (the word style and colour controls follow it).
   const captionGrid = el.querySelector<HTMLElement>('[data-ref="caption-grid"]')!;
   let captionLooks: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
-  void fetch("/api/presets/captions")
+  // The looks: the eight the engine ships and every installed captions
+  // package; the grid is patched in place, and rebuilt from the engine when
+  // the packages change (an install or a removal dispatches the event).
+  const loadCaptionLooks = () => fetch("/api/presets/captions")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
     .then((looks: Array<{ id: string; name: string; style: Record<string, unknown> }>) => {
       captionLooks = looks;
-      captionGrid.insertAdjacentHTML("beforeend", looks.map((entry) =>
+      const wanted = new Set(looks.map((entry) => entry.id));
+      for (const card of captionGrid.querySelectorAll<HTMLElement>("[data-caption-look]")) if (!wanted.has(card.dataset.captionLook!)) card.remove();
+      const present = new Set(Array.from(captionGrid.querySelectorAll<HTMLElement>("[data-caption-look]")).map((c) => c.dataset.captionLook));
+      captionGrid.insertAdjacentHTML("beforeend", looks.filter((entry) => !present.has(entry.id)).map((entry) =>
         `<div class="effect-card title-card" data-caption-look="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-label="${escapeHtml(entry.name)}">` +
         `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/caption/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
         `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
     })
     .catch(() => { /* the gallery is optional if the engine is offline */ });
+  void loadCaptionLooks();
+  document.addEventListener("formcut:packages-changed", () => void loadCaptionLooks());
   captionGrid.addEventListener("click", (ev) => {
     const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-caption-look]");
     if (!card) return;

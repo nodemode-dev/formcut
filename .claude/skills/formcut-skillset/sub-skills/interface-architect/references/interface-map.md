@@ -57,7 +57,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
 - `ui/library-view.ts` (145L)
-- `ui/media-pane.ts` (1352L)
+- `ui/media-pane.ts` (1361L)
 - `ui/mode-popout.ts` (157L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
