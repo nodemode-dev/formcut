@@ -105,7 +105,7 @@ class VideoSource:
         self.requested = 0
         self.process = None
         self.errors = None
-        self.key = (self.path, limit)
+        self.key = (self.path, limit, self.deep)
         self.last = None
         # R8: one frame read ahead on a thread while the caller renders.
         self.ahead = None
@@ -470,8 +470,8 @@ def hwaccel_flags() -> list[str]:
     return _HWACCEL
 
 
-def acquire(path, limit=None, at=None) -> VideoSource:
-    key = (str(path), limit)
+def acquire(path, limit=None, at=None, deep: bool = False) -> VideoSource:
+    key = (str(path), limit, deep)
     now = time.monotonic()
     with _pool_lock:
         stale = [entry for entry in _idle if now - entry[0] > IDLE_SECONDS]
@@ -484,7 +484,7 @@ def acquire(path, limit=None, at=None) -> VideoSource:
             _idle.remove(match)
     for _, source in stale:
         source.release()
-    return match[1] if match else _open(path, limit)
+    return match[1] if match else _open(path, limit, deep=deep)
 
 
 def recycle(source: VideoSource) -> None:

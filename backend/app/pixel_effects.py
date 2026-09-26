@@ -715,7 +715,8 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         result = np.empty(image.shape, np.float32)
         to_float(image, result)
     else:
-        result = image.astype(np.float32) / 255
+        scale = 65535.0 if image.dtype == np.uint16 else 255.0
+        result = image.astype(np.float32) / scale
     for entry in effects:
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
         if entry["id"] not in GRADES and entry["id"] not in VIDEO_EFFECTS:
@@ -767,6 +768,8 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         changed += result[:, :, :3] * (1 - amount)
         np.clip(changed, 0, 1, out=changed)
         result[:, :, :3] = changed
+    if image.dtype == np.uint16:
+        return np.round(np.clip(result, 0, 1) * 65535).astype(np.uint16)
     if to_bytes is not None and result.flags.c_contiguous:
         # np.round(result * 255).astype(np.uint8), to the bit, in one parallel pass.
         out = np.empty(result.shape, np.uint8)

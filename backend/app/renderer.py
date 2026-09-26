@@ -389,12 +389,63 @@ def _pixelated(image: np.ndarray, block: int) -> np.ndarray:
     return cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
 
 
+def _lift_table(transfer: str) -> np.ndarray:
+    """The 256 byte values of an SDR picture as sixteen-bit code values in the HDR transfer, SDR white at 203 nits."""
+    v = np.arange(256, dtype=np.float64) / 255
+    linear = np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4)
+    if transfer == "pq":
+        y = np.clip(linear * 203 / 10000, 0, 1)
+        m1, m2, c1, c2, c3 = 0.1593017578125, 78.84375, 0.8359375, 18.8515625, 18.6875
+        yy = y**m1
+        code = ((c1 + c2 * yy) / (1 + c3 * yy)) ** m2
+    else:  # HLG: SDR white at 203 nits is 0.203 of the 1000-nit nominal peak, in scene light
+        y = np.clip(linear * 203 / 1000, 0, 1)
+        a, b, c = 0.17883277, 0.28466892, 0.55991073
+        code = np.where(y <= 1 / 12, np.sqrt(3 * y), a * np.log(np.maximum(12 * y - b, 1e-9)) + c)
+    return np.round(np.clip(code, 0, 1) * 65535).astype(np.uint16)
+
+
+def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
+    """A deep frame for an SDR monitor: the transfer decoded to light, rolled off above SDR white with a
+    soft knee (BT.2390's shape at a 1000-nit source), encoded through sRGB to bytes. A byte frame passes."""
+    if frame.dtype != np.uint16:
+        return frame
+    v = frame[:, :, :3].astype(np.float32) / 65535
+    if transfer == "pq":
+        m1, m2, c1, c2, c3 = 0.1593017578125, 78.84375, 0.8359375, 18.8515625, 18.6875
+        e = np.power(v, 1 / m2)
+        nits = np.power(np.maximum(e - c1, 0) / (c2 - c3 * e), 1 / m1) * 10000
+    else:
+        a, b, c = 0.17883277, 0.28466892, 0.55991073
+        scene = np.where(v <= 0.5, v * v / 3, (np.exp((v - c) / a) + b) / 12)
+        nits = scene * 1000
+    relative = nits / 203  # 1.0 at SDR white
+    knee = 0.8
+    peak = 1000 / 203
+    over = relative > knee
+    rolled = np.where(over, knee + (1 - knee) * (1 - np.exp(-(relative - knee) / max(peak - knee, 1e-6))), relative)
+    rolled = np.clip(rolled, 0, 1)
+    srgb = np.where(rolled <= 0.0031308, rolled * 12.92, 1.055 * np.power(rolled, 1 / 2.4) - 0.055)
+    out = np.empty((frame.shape[0], frame.shape[1], 4), np.uint8)
+    out[:, :, :3] = np.round(np.clip(srgb, 0, 1) * 255).astype(np.uint8)
+    out[:, :, 3] = (frame[:, :, 3] // 257).astype(np.uint8)
+    return out
+
+
 class FrameRenderer:
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
         self.width = width or self.project["width"]
         self.height = max(2, round(self.project["height"] * self.width / self.project["width"]))
         self.decode_limit = max(self.width, self.height) if width else None
+        # The HDR working space (steps 4 and 5): a project whose output colour is HLG or PQ works deep.
+        # Frames are uint16 RGBA in that transfer; an HDR source arrives in it from the decoder with no
+        # tone-map, an SDR source, a still, a title or a background is lifted into it once at SDR white
+        # (203 nits), and the frame leaves the renderer deep: the export takes it as it is and the
+        # monitor rolls it off (rolloff_for_display). An SDR project is bytes, as before.
+        self.transfer = str(project.get("outputColour") or "bt709").lower()
+        self.deep = self.transfer in ("hlg", "pq")
+        self._lift = _lift_table(self.transfer) if self.deep else None
         self.prepared = {}
         self.nested: dict[str, FrameRenderer] = {}
         self.clips = flatten(self.project)
@@ -511,7 +562,7 @@ class FrameRenderer:
                 chosen = min(cursors, key=lambda cursor: self.cursor_used.get(cursor, 0))
         if chosen is None:
             chosen = (media_id, len(cursors))
-            self.sources[chosen] = acquire(path, self.decode_limit, time)
+            self.sources[chosen] = acquire(path, self.decode_limit, time, deep=self.deep)
             cursors.append(chosen)
         self.uses += 1
         self.cursor_used[chosen] = self.uses
@@ -563,6 +614,24 @@ class FrameRenderer:
                 return None
             renderer = self.nested[key] = FrameRenderer(document, self.width)
         return renderer.frame(max(0.0, min(time, renderer.project["duration"])))
+
+    def as_working(self, frame: np.ndarray) -> np.ndarray:
+        """A decoded frame as the working picture: RGBA bytes for an SDR project; for a deep project, a
+        deep HDR frame (uint16 RGB in the transfer) gets its alpha, and a byte frame is lifted."""
+        if frame.dtype == np.uint16:
+            h, w = frame.shape[:2]
+            return np.concatenate([frame, np.full((h, w, 1), 65535, np.uint16)], axis=2)
+        rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        return self.lift(rgba)
+
+    def lift(self, rgba: np.ndarray) -> np.ndarray:
+        """A byte RGBA picture into the deep working space at SDR white, alpha scaled with it; unchanged when the project is bytes."""
+        if not self.deep or rgba.dtype != np.uint8:
+            return rgba
+        out = np.empty(rgba.shape, np.uint16)
+        out[:, :, :3] = self._lift[rgba[:, :, :3]]
+        out[:, :, 3] = rgba[:, :, 3].astype(np.uint16) * 257
+        return out
 
     def media_frame(self, clip: dict, time: float) -> np.ndarray:
         media_id = clip.get("mediaId")
@@ -620,7 +689,7 @@ class FrameRenderer:
             # The cache holds the decoded frame, which nothing writes to; each use
             # converts it afresh, so what a caller receives is its own to change,
             # without copying every frame to protect the cache.
-            return apply_crop(cv2.cvtColor(self.frames[cursor], cv2.COLOR_BGR2RGBA), clip)
+            return apply_crop(self.as_working(self.frames[cursor]), clip)
         if wanted != current + 1:
             capture.seek(wanted)
         ok, frame = capture.read()
@@ -639,7 +708,7 @@ class FrameRenderer:
                 frame = frame if ok else None
             if frame is None:
                 raise ValueError("Could not decode source frame")
-        result = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        result = self.as_working(frame)
         self.frame_numbers[cursor] = wanted
         self.frames[cursor] = frame
         if native:
@@ -737,8 +806,8 @@ class FrameRenderer:
         if opacity < 1:
             faded = np.array(image)
             faded[:, :, 3] = np.round(faded[:, :, 3] * max(0.0, min(1.0, opacity))).astype(np.uint8)
-            return faded
-        return np.array(image)
+            return self.lift(faded)
+        return self.lift(np.array(image))
 
     def mask_alpha(self, mask: dict, w: int, h: int) -> np.ndarray:
         """The mask as an alpha field for a layer of this size, cached by its settings.
@@ -895,15 +964,15 @@ class FrameRenderer:
             target = color - color.mean()
             distance = np.linalg.norm(chroma - target, axis=2) / math.sqrt(2)
             similarity, blend = float(key.get("similarity", 0.25)), max(0.001, float(key.get("blend", 0.05)))
-            out[:, :, 3] = np.round(out[:, :, 3] * np.clip((distance - similarity) / blend, 0, 1)).astype(np.uint8)
+            out[:, :, 3] = np.round(out[:, :, 3] * np.clip((distance - similarity) / blend, 0, 1)).astype(out.dtype)
         mask = clip.get("mask")
         if mask:
             alpha = self.mask_alpha(mask, w, h)
-            out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
+            out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(out.dtype)
         if clip.get("cutout"):
             matte = self.cutout_alpha(clip, out)
             if matte is not None:
-                out[:, :, 3] = np.round(out[:, :, 3] * matte).astype(np.uint8)
+                out[:, :, 3] = np.round(out[:, :, 3] * matte).astype(out.dtype)
         return out
 
     def transition(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
@@ -1081,16 +1150,16 @@ class FrameRenderer:
         if gpu.stack_active():
             self.pending_layers.append((layer, mode))
             return canvas
-        return gpu.composite(canvas, layer, mode)
+        return gpu.composite(canvas, layer, mode, transfer=self.transfer)
 
     def _flush(self, canvas: np.ndarray) -> np.ndarray:
         if self.pending_layers:
-            canvas = gpu.composite_stack(canvas, self.pending_layers)
+            canvas = gpu.composite_stack(canvas, self.pending_layers, transfer=self.transfer)
             self.pending_layers = []
         return canvas
 
     def frame(self, time: float) -> np.ndarray:
-        canvas = np.zeros((self.height, self.width, 4), np.uint8)
+        canvas = np.zeros((self.height, self.width, 4), np.uint16 if self.deep else np.uint8)
         canvas[:, :, 3] = 255
         # T3: what shows behind footage that does not fill the frame. Black is
         # the default, so a project without a background renders as before.
@@ -1257,7 +1326,7 @@ class FrameRenderer:
             # R3: the transform as a device pass, the alpha scaled inside it; cv2 stays the reference.
             layer = gpu_effects.warp(image, matrix, alpha, (self.width, self.height))
             if layer is None:
-                image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(np.uint8)
+                image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(image.dtype)
                 layer = cv2.warpAffine(image, matrix, (self.width, self.height), flags=cv2.INTER_LINEAR)
             layer = self.transition(layer, clip, local)
             layer = self.transition_out(layer, clip, local)

@@ -176,19 +176,25 @@ def status() -> dict:
         return out
 
 
-def composite(base: np.ndarray, front: np.ndarray, mode: str) -> np.ndarray:
+def composite(base: np.ndarray, front: np.ndarray, mode: str, transfer: str = "srgb") -> np.ndarray:
     index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
-    b, f = base.astype(np.float32) / 255, front.astype(np.float32) / 255
+    deep = base.dtype == np.uint16
+    scale = 65535.0 if deep else 255.0
+    b, f = base.astype(np.float32) / scale, front.astype(np.float32) / scale
     if index and status()["available"]:
         from wgpu.utils.compute import compute_with_buffers
 
         with _lock:
             out = compute_with_buffers(
-                {0: b, 1: f, 2: np.array([index], np.float32)}, {3: (b.size, "f")}, BLEND_CODE, n=(b.shape[0] * b.shape[1] + 63) // 64
+                {0: b, 1: f, 2: np.array([index, TRANSFERS.get(transfer.lower(), 0), 0, 0], np.float32)},
+                {3: (b.size, "f")},
+                BLEND_CODE,
+                n=(b.shape[0] * b.shape[1] + 63) // 64,
             )[3]
-        return np.round(np.frombuffer(out, np.float32).reshape(b.shape) * 255).astype(np.uint8)
+        floats = np.frombuffer(out, np.float32).reshape(b.shape)
+        return np.round(floats * scale).astype(np.uint16 if deep else np.uint8)
     # R24: in light, as the device blends (see BLEND_CODE); the same transfer both ways.
-    rgb_b, rgb_f = _to_linear(b[:, :, :3]), _to_linear(f[:, :, :3])
+    rgb_b, rgb_f = _to_linear(b[:, :, :3], transfer), _to_linear(f[:, :, :3], transfer)
     modes = [
         lambda: rgb_f,
         lambda: rgb_b * rgb_f,
@@ -202,19 +208,41 @@ def composite(base: np.ndarray, front: np.ndarray, mode: str) -> np.ndarray:
         lambda: (1 - 2 * rgb_f) * rgb_b**2 + 2 * rgb_f * rgb_b,
     ]
     alpha = f[:, :, 3:4]
-    b[:, :, :3] = _to_display(rgb_b * (1 - alpha) + modes[index]() * alpha)
+    b[:, :, :3] = _to_display(rgb_b * (1 - alpha) + modes[index]() * alpha, transfer)
     b[:, :, 3] = 1
+    if deep:
+        return np.round(b * 65535).astype(np.uint16)
     return np.round(b * 255).astype(np.uint8)
 
 
-def _to_linear(v: np.ndarray) -> np.ndarray:
-    """The sRGB transfer decoded: display-referred 0..1 to linear light."""
+_PQ = (0.1593017578125, 78.84375, 0.8359375, 18.8515625, 18.6875)
+_HLG = (0.17883277, 0.28466892, 0.55991073)
+
+
+def _to_linear(v: np.ndarray, transfer: str = "srgb") -> np.ndarray:
+    """The signal's transfer decoded to light: sRGB, or PQ (units of 10000 nits) or HLG (units of the nominal peak)."""
+    t = transfer.lower()
+    if t in ("pq", "smpte2084"):
+        m1, m2, c1, c2, c3 = _PQ
+        e = np.power(np.clip(v, 0, 1), 1 / m2)
+        return np.power(np.maximum(e - c1, 0) / (c2 - c3 * e), 1 / m1).astype(np.float32)
+    if t in ("hlg", "arib-std-b67"):
+        a, b, c = _HLG
+        return np.where(v <= 0.5, v * v / 3, (np.exp((v - c) / a) + b) / 12).astype(np.float32)
     return np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4).astype(np.float32)
 
 
-def _to_display(v: np.ndarray) -> np.ndarray:
-    """Linear light encoded back through the sRGB transfer, clipped to 0..1."""
+def _to_display(v: np.ndarray, transfer: str = "srgb") -> np.ndarray:
+    """Light encoded back through the same transfer, clipped to 0..1."""
     c = np.clip(v, 0, 1)
+    t = transfer.lower()
+    if t in ("pq", "smpte2084"):
+        m1, m2, c1, c2, c3 = _PQ
+        y = np.power(c, m1)
+        return np.power((c1 + c2 * y) / (1 + c3 * y), m2).astype(np.float32)
+    if t in ("hlg", "arib-std-b67"):
+        a, b, cc = _HLG
+        return np.where(c <= 1 / 12, np.sqrt(3 * c), a * np.log(np.maximum(12 * c - b, 1e-9)) + cc).astype(np.float32)
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055).astype(np.float32)
 
 

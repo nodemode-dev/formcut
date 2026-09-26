@@ -29,7 +29,7 @@ from .media import MEDIA_DIR, reversed_path
 from .media import has_audio as media_has_audio
 from .paths import DATA_DIR
 from .render_document import validate_document
-from .renderer import FrameRenderer
+from .renderer import FrameRenderer, rolloff_for_display
 
 router = APIRouter(prefix="/api/render", tags=["render"])
 _lock = threading.RLock()
@@ -95,7 +95,10 @@ def create_session(body: RenderInput):
             with lock:
                 renderer.allow_proxy = True
                 try:
-                    return renderer.frame(at)
+                    # step 4 of the HDR working space: a deep frame is rolled off for the SDR monitor here,
+                    # after the whole frame is composed, so the edit happens in the transfer and only the
+                    # picture shown is SDR
+                    return rolloff_for_display(renderer.frame(at), renderer.transfer)
                 finally:
                     renderer.allow_proxy = False
 
@@ -182,6 +185,16 @@ def export_workers() -> int:
         except ValueError:
             pass
     return max(1, min(4, (os.cpu_count() or 1) - 1))
+
+
+def _light_of(frame: np.ndarray, transfer: str) -> tuple[float, float]:
+    """The frame's brightest pixel and its average, in nits, from the deep signal: MaxCLL and MaxFALL's inputs."""
+    from .gpu import _to_linear
+
+    v = frame[:, :, :3].astype(np.float32) / 65535
+    light = _to_linear(v, transfer) * (10000.0 if transfer == "pq" else 1000.0)
+    per_pixel = light.max(axis=2)
+    return float(per_pixel.max()), float(per_pixel.mean())
 
 
 def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) -> list[bytes]:
@@ -316,10 +329,12 @@ def export_media(
             transfer = "arib-std-b67" if output_colour == "hlg" else "smpte2084"
             # The frames arrive as untagged RGB; the colorspace filter names
             # them BT.709 in ten bits first, which is the input zscale accepts.
-            hdr_filter = (
-                "colorspace=all=bt709:iall=bt709:format=yuv444p10,"
-                f"zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt2020,zscale=t={transfer}:m=bt2020nc:r=tv,format=yuv420p10le"
-            )
+            # Step 5 of the HDR working space: the renderer works in the transfer, so the frames arrive
+            # already PQ or HLG at sixteen bits (rgba64) and need only the BT.2020 matrix on the way to
+            # ten-bit 4:2:0; nothing is tone-mapped or transformed. The primaries are declared BT.2020 as
+            # the deep source's are; an SDR source lifted into the space carries its BT.709 primaries into
+            # the wider gamut unconverted, a known approximation until a primaries pass joins the lift.
+            hdr_filter = "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le"
             colour_tags = ["-color_primaries", "bt2020", "-color_trc", transfer, "-colorspace", "bt2020nc", "-color_range", "tv"]
             pix = pixel_format(encoder or "", True)
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *colour_tags, *audio_flags] if encoder else []
@@ -560,7 +575,7 @@ def export_media(
             "-f",
             "rawvideo",
             "-pix_fmt",
-            "rgba",
+            "rgba64le" if renderer.deep else "rgba",
             "-s",
             f"{renderer.width}x{renderer.height}",
             "-r",
@@ -597,20 +612,32 @@ def export_media(
                 with ThreadPoolExecutor(max_workers=workers) as pool:
                     pending = [pool.submit(_render_span, project, fps, span, cancelled) for span in spans]
                     done = 0
+                    max_cll, max_fall = 0.0, 0.0
                     for future in pending:
                         for payload in future.result():
                             if cancelled():
                                 raise InterruptedError("Cancelled")
                             process.stdin.write(payload)
+                            if renderer.deep:
+                                frame_view = np.frombuffer(payload, np.uint16).reshape(renderer.height, renderer.width, 4)
+                                peak, average = _light_of(frame_view, renderer.transfer)
+                                max_cll = max(max_cll, peak)
+                                max_fall = max(max_fall, average)
                             done += 1
                             report(0.1 + 0.85 * done / count)
             else:
+                max_cll, max_fall = 0.0, 0.0
                 for i in range(count):
                     if cancelled():
                         raise InterruptedError("Cancelled")
                     # The pipe takes the array's own memory, the bytes tobytes()
                     # made a copy of, in the same order: 5 ms a 1080p frame saved.
-                    process.stdin.write(np.ascontiguousarray(renderer.frame(i / fps)))
+                    written = renderer.frame(i / fps)
+                    if renderer.deep:
+                        peak, average = _light_of(written, renderer.transfer)
+                        max_cll = max(max_cll, peak)
+                        max_fall = max(max_fall, average)
+                    process.stdin.write(np.ascontiguousarray(written))
                     report(0.1 + 0.85 * (i + 1) / count)
             process.stdin.close()
             process.wait(timeout=600)
@@ -629,6 +656,9 @@ def export_media(
                 "pixelFormat": pix,
                 "rate": out_rate,
                 "renderPath": "frames",
+                "workingSpace": renderer.transfer if renderer.deep else "bt709",
+                "maxCll": round(max_cll) if renderer.deep else None,
+                "maxFall": round(max_fall) if renderer.deep else None,
             }
         )
     except BaseException:
@@ -868,7 +898,7 @@ def sample_frame(body: dict) -> dict:
     project = validate_document(body.get("project") or {})
     renderer = FrameRenderer(project, 480)
     try:
-        pixels = renderer.frame(max(0.0, float(body.get("time") or 0)))
+        pixels = rolloff_for_display(renderer.frame(max(0.0, float(body.get("time") or 0))), renderer.transfer)
     finally:
         renderer.close()
     return reference_statistics(pixels[:, :, :3].astype("float32") / 255)
