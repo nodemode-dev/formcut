@@ -85,8 +85,8 @@ the automation transports.
 - `ffmpeg_fetch.py` (165L)
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
-- `gpu.py` (402L)
-- `gpu_effects.py` (2404L)
+- `gpu.py` (522L)
+- `gpu_effects.py` (2441L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
@@ -114,7 +114,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (220L)
-- `video_source.py` (494L)
+- `video_source.py` (510L)
 - `windows_console.py` (43L)
 
 ## Reading order for a change
