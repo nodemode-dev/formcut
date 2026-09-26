@@ -437,6 +437,7 @@ class FrameRenderer:
     deep = False
     transfer = "bt709"
     _lift = None
+
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
         self.width = width or self.project["width"]

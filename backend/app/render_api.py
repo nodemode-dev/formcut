@@ -339,6 +339,23 @@ def export_media(
             pix = pixel_format(encoder or "", True)
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *colour_tags, *audio_flags] if encoder else []
         count = math.ceil(project["duration"] * fps)
+        # An HDR export writes a lossless sixteen-bit intermediate first: MaxCLL and MaxFALL are measured
+        # while the frames are rendered and the encoder needs them before it starts, so the final
+        # ten-bit encode is a second pass over the intermediate with the measured light in its
+        # parameters (x265's max-cll and master-display, SVT-AV1's content-light) and in the container.
+        hdr_deep = bool(hdr_filter)
+        hdr_final = [*codec] if hdr_deep else []
+        hdr_pix = pix
+        hdr_filter_final = hdr_filter
+        if hdr_deep:
+            hdr_filter = ""
+            path = OUTPUTS / (job_id + ".intermediate.mkv")
+            codec, pix = ["-c:v", "ffv1", "-level", "3", "-c:a", "pcm_s16le"], "rgb48le"
+            outer_report = report
+
+            def report(fraction: float) -> None:
+                outer_report(fraction * 0.6)
+
         if cisco or gif:
             # Whichever path renders writes a lossless intermediate, and finish()
             # encodes it through OpenH264 or the GIF palette: the same pixels any
@@ -478,6 +495,51 @@ def export_media(
         def finish(result: dict) -> dict:
             if fell_back:
                 result["fellBackTo"] = fell_back
+            if hdr_deep:
+                cll, fall = int(result.get("maxCll") or 0), int(result.get("maxFall") or 0)
+                params = [*hdr_final]
+                encoder_name = params[1] if len(params) > 1 else ""
+                if encoder_name == "libx265":
+                    params += [
+                        "-x265-params",
+                        f"max-cll={cll},{fall}:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L({max(cll, 1) * 10000},50)",
+                    ]
+                elif encoder_name == "libsvtav1":
+                    params += [
+                        "-svtav1-params",
+                        f"content-light={cll},{fall}:mastering-display=G(0.265,0.690)B(0.150,0.060)R(0.680,0.320)WP(0.3127,0.3290)L({max(cll, 1)},0.005)",
+                    ]
+                second = [
+                    program,
+                    "-v",
+                    "error",
+                    "-y",
+                    "-i",
+                    str(path),
+                    "-vf",
+                    hdr_filter_final,
+                    *params,
+                    "-pix_fmt",
+                    hdr_pix,
+                    "-c:a",
+                    "copy" if format == "mp4" else "libopus",
+                    "-metadata:s:v",
+                    f"MaxCLL={cll}",
+                    "-metadata:s:v",
+                    f"MaxFALL={fall}",
+                    str(final),
+                ]
+                done = subprocess.run(second, capture_output=True, text=True, check=False)
+                if done.returncode:
+                    raise RuntimeError("HDR encode failed: " + done.stderr[-400:])
+                path.unlink(missing_ok=True)
+                outer_report(1.0)
+                return {
+                    **result,
+                    "file": str(final),
+                    "pixelFormat": hdr_pix,
+                    "hdrMetadataWritten": encoder_name in ("libx265", "libsvtav1"),
+                }
             if gif:
                 gif_export.encode(path, final, quality, lambda done: outer_report(0.6 + 0.4 * done), cancelled)
                 path.unlink(missing_ok=True)
