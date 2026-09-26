@@ -70,6 +70,8 @@ SUPPORTED = frozenset(
         "vhs-tape",
         "skin-smooth",
         "dehaze",
+        "cartoon",
+        "neon-edges",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -1406,6 +1408,240 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R22: Canny on the device, as cv2.Canny(aperture 3, L1) computes it, in three
+# kernels. CANNY_GRAD: the 3x3 Sobel on the byte grid with replicated borders;
+# p[2] = 0 takes the picture's three channels as bytes by truncation (cv2.Canny
+# on a colour image keeps, per pixel, the channel with the largest |dx| + |dy|),
+# p[2] = 1 takes the red channel as the grey byte by rounding; the output is
+# (|dx| + |dy|, dx, dy, 0). CANNY_NMS: cv2's non-maximum suppression with its
+# integer angle test (TG22 = 13573 at a 15-bit shift), p[2] the low and p[3]
+# the high threshold: 2 an edge, 0 a candidate, 1 not. CANNY_PROP: a candidate
+# with an edge among its eight neighbours becomes an edge; iterated by the
+# chain until the walk is done.
+CANNY_GRAD_CODE = """
+fn at(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[clamp(y, 0, h - 1) * w + clamp(x, 0, w - 1)];
+}
+fn bytes(v: vec4<f32>) -> vec3<f32> {
+    if (i32(p[2]) == 1) { return vec3<f32>(round(clamp(v.r, 0.0, 1.0) * 255.0)); }
+    return floor(clamp(v.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 255.0);
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let a = bytes(at(x - 1, y - 1)); let b = bytes(at(x, y - 1)); let c = bytes(at(x + 1, y - 1));
+    let d = bytes(at(x - 1, y));                                let f = bytes(at(x + 1, y));
+    let g = bytes(at(x - 1, y + 1)); let hh = bytes(at(x, y + 1)); let i2 = bytes(at(x + 1, y + 1));
+    let dx = (c + 2.0 * f + i2) - (a + 2.0 * d + g);
+    let dy = (g + 2.0 * hh + i2) - (a + 2.0 * b + c);
+    let mag = abs(dx) + abs(dy);
+    var pick = 0;
+    if (mag.g > mag[pick]) { pick = 1; }
+    if (mag.b > mag[pick]) { pick = 2; }
+    dst[y * w + x] = vec4<f32>(mag[pick], dx[pick], dy[pick], 0.0);
+}
+"""
+
+CANNY_NMS_CODE = """
+fn m(x: i32, y: i32) -> f32 {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    if (x < 0 || y < 0 || x >= w || y >= h) { return 0.0; }
+    return src[y * w + x].r;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let mag = s.r;
+    let low = p[2];
+    let high = p[3];
+    var cls = 1.0;
+    if (mag > low) {
+        let xs = i32(s.g);
+        let ys = i32(s.b);
+        let ax = abs(xs);
+        let ay = abs(ys) << 15u;
+        let tg22x = ax * 13573;
+        var is_max = false;
+        if (ay < tg22x) {
+            is_max = mag > m(x - 1, y) && mag >= m(x + 1, y);
+        } else {
+            let tg67x = tg22x + (ax << 16u);
+            if (ay > tg67x) {
+                // cv2 compares strictly against the row above and loosely against the row below
+                is_max = mag > m(x, y - 1) && mag >= m(x, y + 1);
+            } else {
+                let sgn = select(1, -1, (xs ^ ys) < 0);
+                is_max = mag > m(x - sgn, y - 1) && mag >= m(x + sgn, y + 1);
+            }
+        }
+        if (is_max) { cls = select(0.0, 2.0, mag > high); }
+    }
+    dst[i] = vec4<f32>(cls, 0.0, 0.0, 0.0);
+}
+"""
+
+CANNY_PROP_CODE = """
+fn e(x: i32, y: i32) -> bool {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    if (x < 0 || y < 0 || x >= w || y >= h) { return false; }
+    return src[y * w + x].r == 2.0;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    var cls = src[i].r;
+    if (cls == 0.0) {
+        if (e(x - 1, y - 1) || e(x, y - 1) || e(x + 1, y - 1) || e(x - 1, y) || e(x + 1, y) || e(x - 1, y + 1) || e(x, y + 1) || e(x + 1, y + 1)) { cls = 2.0; }
+    }
+    dst[i] = vec4<f32>(cls, 0.0, 0.0, 0.0);
+}
+"""
+
+# R22: the two effects on Canny. BILATERAL as cv2.bilateralFilter over floats
+# (p[2] = d, p[3] = sigma colour, p[4] = sigma space): a circular window of
+# radius d / 2, the colour distance the L1 sum over channels, reflect-101
+# borders. CARTOON: round(smooth * bands) / bands where the edge map (held, 2
+# where an edge) is clear, black where it is not. NEON: the hue by position
+# (cv2's HSV to RGB at full saturation and value, the hue a byte in 0..179)
+# times the dilated edges (src, dilated here by a 3x3 look at held), written
+# as neon into dst; the glow and the screen follow in NEON_GLOW.
+BILATERAL_CODE = """
+fn at(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let r = i32(p[2]) / 2;
+    let gc = -0.5 / (p[3] * p[3]);
+    let gs = -0.5 / (p[4] * p[4]);
+    let c0 = src[i].rgb;
+    var sum = vec3<f32>(0.0);
+    var total = 0.0;
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            let d2 = f32(dx * dx + dy * dy);
+            if (sqrt(d2) > f32(r)) { continue; }
+            let c = at(x + dx, y + dy);
+            let diff = abs(c.r - c0.r) + abs(c.g - c0.g) + abs(c.b - c0.b);
+            let wgt = exp(d2 * gs) * exp(diff * diff * gc);
+            sum = sum + c * wgt;
+            total = total + wgt;
+        }
+    }
+    dst[i] = vec4<f32>(sum / total, src[i].a);
+}
+"""
+
+CARTOON_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let bands = p[2];
+    let clear = select(1.0, 0.0, held[i].r == 2.0);
+    dst[i] = vec4<f32>(round(src[i].rgb * bands) / bands * clear, src[i].a);
+}
+"""
+
+NEON_CODE = """
+fn edge(x: i32, y: i32) -> bool {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    if (x < 0 || y < 0 || x >= w || y >= h) { return false; }
+    return src[y * w + x].r == 2.0;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    var lit = false;
+    for (var dy = -1; dy <= 1; dy = dy + 1) {
+        for (var dx = -1; dx <= 1; dx = dx + 1) {
+            if (edge(x + dx, y + dy)) { lit = true; }
+        }
+    }
+    let u = (f32(x) + 0.5) / p[0];
+    let v = (f32(y) + 0.5) / p[1];
+    let hue = round(fract(u * 0.6 + v * 0.4 + p[2] * 0.15) * 179.0);
+    // cv2 HSV2RGB, 8-bit: sector = hue / 30, the fraction within it
+    let sector = i32(floor(hue / 30.0));
+    let f = (hue - f32(sector) * 30.0) / 30.0;
+    var rgb = vec3<f32>(1.0, f, 0.0);
+    if (sector == 1) { rgb = vec3<f32>(1.0 - f, 1.0, 0.0); }
+    if (sector == 2) { rgb = vec3<f32>(0.0, 1.0, f); }
+    if (sector == 3) { rgb = vec3<f32>(0.0, 1.0 - f, 1.0); }
+    if (sector == 4) { rgb = vec3<f32>(f, 0.0, 1.0); }
+    if (sector >= 5) { rgb = vec3<f32>(1.0, 0.0, 1.0 - f); }
+    rgb = round(rgb * 255.0) / 255.0;
+    dst[i] = vec4<f32>(rgb * select(0.0, 1.0, lit), held[i].a);
+}
+"""
+
+# NEON_GLOW: clip(neon (held) + clip(blurred neon (src) * p[2])). NEON_MIX:
+# 1 - (1 - original (held) * 0.12) * (1 - src).
+NEON_GLOW_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let glow = clamp(src[i].rgb * p[2], vec3<f32>(0.0), vec3<f32>(1.0));
+    dst[i] = vec4<f32>(clamp(held[i].rgb + glow, vec3<f32>(0.0), vec3<f32>(1.0)), 1.0);
+}
+"""
+
+NEON_MIX_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let o = held[i];
+    dst[i] = vec4<f32>(vec3<f32>(1.0) - (vec3<f32>(1.0) - o.rgb * 0.12) * (vec3<f32>(1.0) - src[i].rgb), o.a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1699,6 +1935,16 @@ class _Chain:
         """Bring the set-aside picture back into the held slot."""
         self.c.copy(self.c.buffers[3], self.c.buffers[2], self.h, self.w)
 
+    def _canny(self, source: int, work_a: int, work_b: int, mode: int, low: float, high: float, walks: int = 128) -> int:
+        """cv2.Canny's edges (2 where an edge) from the picture in `source`, using two work buffers; the buffer the result is in comes back."""
+        self._pass(CANNY_GRAD_CODE, [mode], source=source, target=work_a)
+        self._pass(CANNY_NMS_CODE, [low, high, 0.0], source=work_a, target=work_b)
+        current, other = work_b, work_a
+        for _ in range(walks):
+            self._pass(CANNY_PROP_CODE, [], source=current, target=other)
+            current, other = other, current
+        return current
+
     def _multi_remap(self, maps: list, weights: list) -> None:
         """A weighted sum of remaps of the current picture: the source held, each map sampled into scratch and accumulated."""
         self._hold()
@@ -1842,6 +2088,42 @@ class _Chain:
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
             self._restore()
+            return
+        if effect == "cartoon":
+            pixels = self.current
+            self._hold()
+            self._keep()
+            other = (pixels + 1) % 2
+            # the edges first, in the two free work buffers, then the bilateral into whichever is left
+            edges = self._canny(pixels, other, 4, 0, 80.0, 140.0)
+            smooth = other if edges == 4 else 4
+            self._pass(BILATERAL_CODE, [7, 0.2, 5.0], source=pixels, target=smooth)
+            self.c.copy(self.c.buffers[edges], self.c.buffers[2], self.h, self.w)
+            self._pass(CARTOON_CODE, [float(max(2, int(params.get("levels", 5))))], source=smooth, target=pixels)
+            self._restore()
+            self.current = pixels
+            return
+        if effect == "neon-edges":
+            pixels = self.current
+            self._hold()
+            self._keep()
+            other = (pixels + 1) % 2
+            taps = _gaussian_taps(1.0)
+            self._pass(VHS_YCC_CODE, [], source=pixels, target=4)
+            self._pass(CONV_CODE, [1, 0, len(taps), len(taps) // 2], taps, source=4, target=other)
+            self._pass(CONV_CODE, [0, 1, len(taps), len(taps) // 2], taps, source=other, target=4)
+            edges = self._canny(4, other, 4, 1, 50.0, 130.0)
+            neon = other if edges == 4 else 4
+            self._pass(NEON_CODE, [local], source=edges, target=neon)
+            self.c.copy(self.c.buffers[neon], self.c.buffers[2], self.h, self.w)
+            glow_taps = _gaussian_taps(max(2.0, self.w / 250))
+            self._pass(CONV_CODE, [1, 0, len(glow_taps), len(glow_taps) // 2], glow_taps, source=neon, target=edges)
+            self._pass(CONV_CODE, [0, 1, len(glow_taps), len(glow_taps) // 2], glow_taps, source=edges, target=neon)
+            self._pass(NEON_GLOW_CODE, [2.2 * float(params.get("intensity", 1))], source=neon, target=edges)
+            self.c.copy(self.c.buffers[pixels], self.c.buffers[2], self.h, self.w)
+            self._pass(NEON_MIX_CODE, [], source=edges, target=pixels)
+            self._restore()
+            self.current = pixels
             return
         if effect == "dehaze":
             w = self.w

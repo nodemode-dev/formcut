@@ -86,7 +86,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (372L)
-- `gpu_effects.py` (2122L)
+- `gpu_effects.py` (2404L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
