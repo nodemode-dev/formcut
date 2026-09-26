@@ -335,6 +335,125 @@ def export_media(
             def report(fraction: float) -> None:
                 outer_report(fraction * 0.6)
 
+        def note(line: str) -> None:
+            with open(log, "a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
+
+        def held_to_frame_path(file_path, label: str) -> bool:
+            """R25: the fast path is held to the frame path per export. One frame in the middle of the finished
+            file is decoded and compared with the frame renderer's own frame at that instant; the encoder's loss
+            is cancelled (the renderer's frame goes once through the same encoder), and a mean over three counts or a
+            99th percentile over 48 means
+            the graph and the renderer disagree on this project, so the export is redone through the frame path."""
+            try:
+                import cv2
+
+                from .renderer import FrameRenderer
+
+                # the frame path renders frame k at k / rate; the file's frame k is read by index, not by a seek,
+                # and decoded through the file's own colour tags into full-range RGB as the renderer's frame is
+                index = max(0, int(count) // 2)
+                middle = index / float(out_rate)
+                probe = subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-v",
+                        "error",
+                        "-i",
+                        str(file_path),
+                        "-vf",
+                        f"select=eq(n\\,{index}),scale=in_range=tv:out_range=pc",
+                        "-vsync",
+                        "0",
+                        "-frames:v",
+                        "1",
+                        "-pix_fmt",
+                        "rgba",
+                        "-f",
+                        "rawvideo",
+                        "pipe:1",
+                    ],
+                    capture_output=True,
+                    check=False,
+                )
+                if probe.returncode or len(probe.stdout) != out_w * out_h * 4:
+                    note(f"{label}: the check frame could not be read; keeping the export")
+                    return False
+                got = np.frombuffer(probe.stdout, np.uint8).reshape(out_h, out_w, 4)[:, :, :3].astype(np.int16)
+                renderer = FrameRenderer(project, out_w)
+                try:
+                    want = renderer.frame(middle)
+                finally:
+                    renderer.close()
+                if want.shape[1] != out_w or want.shape[0] != out_h:
+                    want = cv2.resize(want, (out_w, out_h), interpolation=cv2.INTER_AREA)
+                # the encoder's own loss cancels: the renderer's frame is sent once through the same encoder
+                # and read back the same way, and the file's frame is compared with that
+                baseline = subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-v",
+                        "error",
+                        "-f",
+                        "rawvideo",
+                        "-pix_fmt",
+                        "rgba",
+                        "-s",
+                        f"{out_w}x{out_h}",
+                        "-r",
+                        str(out_rate),
+                        "-i",
+                        "pipe:0",
+                        *codec,
+                        "-pix_fmt",
+                        pix,
+                        "-frames:v",
+                        "1",
+                        "-f",
+                        "matroska",
+                        "pipe:1",
+                    ],
+                    input=np.ascontiguousarray(want).tobytes(),
+                    capture_output=True,
+                    check=False,
+                )
+                back = subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-v",
+                        "error",
+                        "-i",
+                        "pipe:0",
+                        "-vf",
+                        "scale=in_range=tv:out_range=pc",
+                        "-frames:v",
+                        "1",
+                        "-pix_fmt",
+                        "rgba",
+                        "-f",
+                        "rawvideo",
+                        "pipe:1",
+                    ],
+                    input=baseline.stdout,
+                    capture_output=True,
+                    check=False,
+                )
+                reference = want[:, :, :3].astype(np.int16)
+                if not back.returncode and len(back.stdout) == out_w * out_h * 4:
+                    reference = np.frombuffer(back.stdout, np.uint8).reshape(out_h, out_w, 4)[:, :, :3].astype(np.int16)
+                diff = np.abs(reference - got)
+                mean, p99 = float(diff.mean()), float(np.percentile(diff, 99))
+                note(f"{label} held to the frame path: mean {mean:.2f} counts, 99th percentile {p99:.0f}")
+                if os.environ.get("FORMCUT_HOLD_TRACE"):
+                    print(f"[hold] {label}: mean {mean:.2f} p99 {p99:.0f} max {int(diff.max())}", flush=True)
+                # calibrated on the synthetic bars the fast-export tests cut, the harshest content for a
+                # scaler: mean 1.2 counts, 99th percentile 18 to 22, with the encoder's loss cancelled; a graph
+                # that dropped an effect, a colour tag or a layer lands far beyond this
+                return mean > 3.0 or p99 > 48
+            except (OSError, ValueError, RuntimeError) as exc:
+                note(f"{label}: the check failed ({exc}); keeping the export")
+                return False
+
         def finish(result: dict) -> dict:
             if fell_back:
                 result["fellBackTo"] = fell_back
@@ -361,6 +480,11 @@ def export_media(
             fast_export.run(
                 native, program, audio, [*codec, "-pix_fmt", pix], out_w, out_h, out_rate, project["duration"], path, log, report, cancelled
             )
+            if held_to_frame_path(path, "native"):
+                native = None
+                layered = None
+                note("the native graph disagreed with the frame path on this project; exporting through the frame path")
+        if native is not None:
             return finish(
                 {
                     "file": str(path),
@@ -402,6 +526,10 @@ def export_media(
                 report,
                 cancelled,
             )
+            if held_to_frame_path(path, "layered"):
+                layered = None
+                note("the layered graph disagreed with the frame path on this project; exporting through the frame path")
+        if layered is not None:
             return finish(
                 {
                     "file": str(path),

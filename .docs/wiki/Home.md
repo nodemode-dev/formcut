@@ -12,6 +12,7 @@ formcut is a local video editor: a TypeScript interface, a Python engine that re
 - [Models](Models): every open-weight model, its link, licence and loader
 - [Licences](Licences): model and asset licences, and the gate that keeps them honest
 - [Mobile notes](Mobile-notes): the phone layout
+- [Phones](Phones): the desktop is the editor, the phones reach it, and why.
 
 ## Where things live
 
