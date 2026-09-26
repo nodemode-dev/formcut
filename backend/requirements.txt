@@ -25,3 +25,4 @@ PyYAML>=6.0
 # The test suite, and setup/benchmark_routes.py, which builds its scenes with the
 # suite's helpers; the version CI runs. The frozen engine never imports it.
 pytest==8.3.4
+av==18.1.0

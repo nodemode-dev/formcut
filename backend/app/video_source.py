@@ -1,9 +1,16 @@
 import atexit
+import contextlib
 import math
 import os
 import subprocess
+import sys
 import tempfile
 import threading
+
+try:
+    import av
+except ImportError:  # the pipe remains the decoder where PyAV is not installed
+    av = None
 import time
 from fractions import Fraction
 
@@ -57,6 +64,7 @@ class VideoSource:
         if stream is None:
             raise ValueError("This media has no video stream")
         self.width, self.height = int(stream["width"]), int(stream["height"])
+        self.codec = str(stream.get("codec_name") or "")
         # X7: PQ and HLG decode washed out when read as if they were SDR. The
         # chain linearises through zscale, tone-maps with hable, and lands on
         # BT.709, the same recipe for preview and export because every decode
@@ -136,6 +144,9 @@ class VideoSource:
             stderr=self.errors,
         )
 
+    def _active(self) -> bool:
+        return self.process is not None
+
     def _pull(self):
         """One frame off the pipe into a fresh buffer, or None when the pipe ends."""
         size = self.width * self.height * 3
@@ -193,7 +204,7 @@ class VideoSource:
             self.requested = self.position
             return True, self.last[1]
         gap = self.requested - self.position
-        if self.process is None or gap < 0 or gap > max(1, round(self.fps * 2)):
+        if not self._active() or gap < 0 or gap > max(1, round(self.fps * 2)):
             self._start()
         while True:
             ahead = self._take_ahead()
@@ -226,6 +237,163 @@ class VideoSource:
         with self.ahead_lock:
             self.ahead = None
             self.ahead_thread = None
+
+
+class NativeSource(VideoSource):
+    """R23: the decoder in the engine. FFmpeg's libraries through PyAV, in-process: no pipe, no
+    second process, the frame scaled by swscale into the buffer the passes upload. Each stream
+    is decoded by whichever of the CPU and the chip is faster, measured once per codec and
+    size on this machine (videotoolbox on macOS, d3d11va on Windows, vaapi or cuda on Linux),
+    with the CPU as the fallback when the chip refuses the stream. An HDR source keeps the
+    pipe until the HDR working space lands, because its tone-map lives in that filter chain.
+    """
+
+    def _start(self):
+        self.release()
+        with self.ahead_lock:
+            self.ahead = None
+        self.position = self.requested
+        self.container = av.open(self.path, hwaccel=_hwaccel_for(self))
+        self.stream = self.container.streams.video[0]
+        self.stream.thread_type = "AUTO"
+        base = self.stream.time_base
+        if self.position > 0:
+            self.container.seek(int(self.position / self.fps / float(base)), stream=self.stream, backward=True, any_frame=False)
+        self.decoded = self.container.decode(self.stream)
+        self.native_index = -1  # the CFR index of the last frame decoded
+        self.pending = None  # a decoded frame ahead of the CFR clock, held for duplication
+        self.process = None
+        self.errors = None
+        # a seek lands on the keyframe before the target: decode forward to the target
+        while True:
+            index, frame = self._next()
+            if frame is None:
+                break
+            if index >= self.position:
+                self.pending = (index, frame)
+                break
+
+    def _active(self) -> bool:
+        return getattr(self, "container", None) is not None
+
+    def _next(self):
+        """The next decoded frame with its constant-rate index, or (None, None) at the end."""
+        try:
+            frame = next(self.decoded)
+        except (StopIteration, av.error.EOFError):
+            return None, None
+        except av.error.InvalidDataError:
+            return self._next()
+        pts = frame.pts if frame.pts is not None else 0
+        index = round(float(pts * self.stream.time_base) * self.fps)
+        return index, frame
+
+    def _pull(self):
+        """One frame at the CFR clock: a decoded frame ahead of the clock is repeated, one behind is dropped, as fps= does."""
+        wanted = self.position
+        while True:
+            if self.pending is not None:
+                index, frame = self.pending
+                if index > wanted:
+                    return self._as_bgr(frame)  # the clock has not reached it: repeat the picture
+                self.pending = None
+                if index == wanted:
+                    self.last_frame = frame
+                    return self._as_bgr(frame)
+                self.last_frame = frame  # behind the clock: dropped, but kept in case the clock lands between
+                continue
+            index, frame = self._next()
+            if frame is None:
+                if getattr(self, "last_frame", None) is not None and self.frame_count and wanted < self.frame_count:
+                    return self._as_bgr(self.last_frame)
+                return None
+            self.pending = (index, frame)
+
+    def _as_bgr(self, frame):
+        picture = frame.reformat(width=self.width, height=self.height, format="bgr24", interpolation="BICUBIC")
+        return picture.to_ndarray()
+
+    def release(self):
+        thread = self.ahead_thread
+        container = getattr(self, "container", None)
+        if container is not None:
+            with contextlib.suppress(Exception):
+                container.close()
+            self.container = None
+            self.decoded = None
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=1.0)
+        with self.ahead_lock:
+            self.ahead = None
+            self.ahead_thread = None
+
+
+_hw_choice: dict = {}
+_hw_lock = threading.Lock()
+
+
+def _device_type() -> str | None:
+    if os.environ.get("FORMCUT_HWDEC") == "off":
+        return None
+    if sys.platform == "darwin":
+        return "videotoolbox"
+    if sys.platform.startswith("win"):
+        return "d3d11va"
+    return os.environ.get("FORMCUT_HWDEC_LINUX", "vaapi")
+
+
+def _hwaccel_for(source: VideoSource):
+    """The chip, when it decodes this stream and does so faster than the CPU, measured once per codec and size."""
+    device = _device_type()
+    if device is None:
+        return None
+    key = (source.codec, source.width, source.height, device)
+    with _hw_lock:
+        if key in _hw_choice:
+            return _hw_choice[key]
+        choice = None
+        try:
+            from av.codec.hwaccel import HWAccel
+
+            hw = HWAccel(device_type=device, allow_software_fallback=False)
+            fast = _decode_rate(source.path, hw)
+            soft = _decode_rate(source.path, None)
+            if fast and soft and fast > soft:
+                choice = hw
+        except Exception:
+            choice = None
+        _hw_choice[key] = choice
+        return choice
+
+
+def _decode_rate(path: str, hwaccel, frames: int = 24) -> float | None:
+    began = time.perf_counter()
+    try:
+        with av.open(path, hwaccel=hwaccel) as container:
+            stream = container.streams.video[0]
+            stream.thread_type = "AUTO"
+            count = 0
+            for frame in container.decode(stream):
+                frame.reformat(format="bgr24")
+                count += 1
+                if count >= frames:
+                    break
+    except Exception:
+        return None
+    took = time.perf_counter() - began
+    return count / took if took > 0 and count else None
+
+
+def _open(path, limit=None) -> VideoSource:
+    """The decoder for this stream: in the engine for an SDR stream when PyAV is here (FORMCUT_DECODE=pipe pins the pipe), the pipe otherwise."""
+    if av is not None and os.environ.get("FORMCUT_DECODE", "native") != "pipe":
+        probe = VideoSource(path, limit)
+        if not probe.tonemap:
+            native = NativeSource.__new__(NativeSource)
+            native.__dict__.update(probe.__dict__)
+            return native
+        return probe
+    return VideoSource(path, limit)
 
 
 _pool_lock = threading.Lock()
@@ -300,7 +468,7 @@ def acquire(path, limit=None, at=None) -> VideoSource:
             _idle.remove(match)
     for _, source in stale:
         source.release()
-    return match[1] if match else VideoSource(path, limit)
+    return match[1] if match else _open(path, limit)
 
 
 def recycle(source: VideoSource) -> None:
