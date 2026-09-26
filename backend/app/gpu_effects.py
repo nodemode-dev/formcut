@@ -62,6 +62,9 @@ SUPPORTED = frozenset(
         "clarity",
         "block-glitch",
         "slice-glitch",
+        "median-soften",
+        "ink-outline",
+        "oil-paint",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -734,6 +737,134 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R16: a median over a k by k window (p[2] = k), per channel, on the byte
+# grid the CPU medians: each channel's value is rounded to a byte and the
+# median found by bisection over the 256 levels (eight counting passes over
+# the window), which is exact where a sort would be and needs no sort;
+# cv2.medianBlur replicates the border. p[3] = 1 medians the grey only and
+# writes it to every channel (the ink outline's first step).
+MEDIAN_CODE = """
+fn at(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[clamp(y, 0, h - 1) * w + clamp(x, 0, w - 1)];
+}
+fn level(v: f32) -> i32 { return i32(round(clamp(v, 0.0, 1.0) * 255.0)); }
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let k = i32(p[2]);
+    let r = k / 2;
+    let half = (k * k + 1) / 2;
+    let grey_only = i32(p[3]) == 1;
+    var out = vec3<f32>(0.0);
+    for (var c = 0; c < 3; c = c + 1) {
+        if (grey_only && c > 0) { break; }
+        var lo = 0;
+        var hi = 255;
+        for (var step = 0; step < 8; step = step + 1) {
+            let mid = (lo + hi) / 2;
+            var count = 0;
+            for (var dy = -r; dy <= r; dy = dy + 1) {
+                for (var dx = -r; dx <= r; dx = dx + 1) {
+                    let s = at(x + dx, y + dy);
+                    var v = s[c];
+                    if (grey_only) { v = dot(s.rgb, vec3<f32>(0.299, 0.587, 0.114)); }
+                    if (level(v) <= mid) { count = count + 1; }
+                }
+            }
+            if (count >= half) { hi = mid; } else { lo = mid + 1; }
+        }
+        out[c] = f32(lo) / 255.0;
+    }
+    if (grey_only) { out = vec3<f32>(out.x); }
+    dst[y * w + x] = vec4<f32>(out, src[y * w + x].a);
+}
+"""
+
+# The ink outline's second step: an adaptive threshold, the pixel against the
+# mean of its block (p[2] = block, replicated border) less p[3] / 255, on the
+# byte grid: 1 where the pixel is above, 0 where it is not.
+INK_CODE = """
+fn at(x: i32, y: i32) -> f32 {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[clamp(y, 0, h - 1) * w + clamp(x, 0, w - 1)].r;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let k = i32(p[2]);
+    let r = k / 2;
+    var sum = 0.0;
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            sum = sum + round(at(x + dx, y + dy) * 255.0);
+        }
+    }
+    let mean = sum / f32(k * k);
+    let t = round(mean) - p[3];
+    let v = round(at(x, y) * 255.0);
+    dst[y * w + x] = vec4<f32>(vec3<f32>(select(0.0, 1.0, v > t)), src[y * w + x].a);
+}
+"""
+
+# Kuwahara (oil-paint): each pixel takes the mean of whichever of its four
+# k by k corner windows has the smallest grey variance, reflected borders.
+OIL_CODE = """
+fn at(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    var xx = x;
+    var yy = y;
+    if (xx < 0) { xx = -xx - 1; }
+    if (yy < 0) { yy = -yy - 1; }
+    if (xx >= w) { xx = 2 * w - xx - 1; }
+    if (yy >= h) { yy = 2 * h - yy - 1; }
+    return src[yy * w + xx].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let k = i32(p[2]);
+    var best = vec3<f32>(0.0);
+    var best_spread = 1e30;
+    for (var q = 0; q < 4; q = q + 1) {
+        // the window whose anchor sits at (k-1,k-1), (0,k-1), (k-1,0), (0,0) of the kernel
+        let ax = select(0, k - 1, q == 0 || q == 2);
+        let ay = select(0, k - 1, q == 0 || q == 1);
+        var sum = vec3<f32>(0.0);
+        var g1 = 0.0;
+        var g2 = 0.0;
+        for (var dy = 0; dy < k; dy = dy + 1) {
+            for (var dx = 0; dx < k; dx = dx + 1) {
+                let c = at(x + dx - ax, y + dy - ay);
+                let g = dot(c, vec3<f32>(0.299, 0.587, 0.114));
+                sum = sum + c;
+                g1 = g1 + g;
+                g2 = g2 + g * g;
+            }
+        }
+        let n = f32(k * k);
+        let spread = g2 / n - (g1 / n) * (g1 / n);
+        if (spread < best_spread) { best_spread = spread; best = sum / n; }
+    }
+    dst[y * w + x] = vec4<f32>(best, src[y * w + x].a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1166,6 +1297,18 @@ class _Chain:
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
             self._restore()
+            return
+        if effect == "median-soften":
+            k = max(5, int(radius * 3.4) | 1)
+            self._pass(MEDIAN_CODE, [k, 0])
+            return
+        if effect == "ink-outline":
+            block = max(3, int(params.get("size", 9)) | 1)
+            self._pass(MEDIAN_CODE, [5, 1])
+            self._pass(INK_CODE, [block, 5.0])
+            return
+        if effect == "oil-paint":
+            self._pass(OIL_CODE, [max(3, size // 2) + 1])
             return
         if effect == "pencil":
             self._hold()
