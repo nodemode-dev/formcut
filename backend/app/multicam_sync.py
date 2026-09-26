@@ -19,7 +19,9 @@ from .media import MEDIA_DIR
 from .rhythm import RATE, _envelope
 
 HOP = 0.01
-MAX_LAG = 8.0  # seconds either way: cameras that started within a few seconds of each other
+MAX_LAG = 8.0  # the fine search, seconds either way; the coarse pass first covers COARSE_LAG
+COARSE_LAG = 120.0  # a camera started two minutes late is still found
+COARSE_HOP = 0.1
 CONFIDENCE = 0.25
 
 
@@ -71,8 +73,11 @@ def _track_samples(track: dict, seconds: float) -> np.ndarray | None:
     return out if found else None
 
 
-def best_lag(reference: np.ndarray, other: np.ndarray, hop: float = HOP, max_lag: float = MAX_LAG) -> tuple[float, float]:
-    """The lag (seconds, positive when `other` runs late) with the best normalised match, and that match in 0..1."""
+def best_lag(
+    reference: np.ndarray, other: np.ndarray, hop: float = HOP, max_lag: float = MAX_LAG, centre: float = 0.0
+) -> tuple[float, float]:
+    """The lag (seconds, positive when `other` runs late) with the best normalised match, and that match in 0..1;
+    the search runs `max_lag` either way around `centre`."""
     a = reference - reference.mean()
     b = other - other.mean()
     if not len(a) or not len(b) or not a.std() or not b.std():
@@ -84,8 +89,9 @@ def best_lag(reference: np.ndarray, other: np.ndarray, hop: float = HOP, max_lag
     corr = np.fft.irfft(np.fft.rfft(a, size) * np.conj(np.fft.rfft(b, size)), size)
     # corr[k] pairs a[i] with b[i - k]; lag k means `other` sits k steps late
     limit = int(max_lag / hop)
-    lags = np.concatenate([np.arange(0, limit + 1), np.arange(-limit, 0)])
-    values = np.concatenate([corr[: limit + 1], corr[size - limit :]])
+    middle = round(-centre / hop)  # the correlation's index runs the other way from the promised sign
+    lags = np.arange(middle - limit, middle + limit + 1)
+    values = corr[np.mod(lags, size)]
     # Music and speech repeat, so a periodic signal can match itself one
     # period away nearly as well as at the true lag. Among peaks within a few
     # percent of the best, the smallest lag wins: cameras were started
@@ -117,7 +123,15 @@ def sync_tracks(timeline: dict, seconds: float = 120.0) -> list[dict]:
             )
             continue
         env, _ = _envelope(samples, RATE, HOP)
-        lag, match = best_lag(ref_env, env, hop)
+        # Two stages: a coarse pass on a ten-times-hopped envelope over two
+        # minutes either way finds the neighbourhood, and the fine pass
+        # searches eight seconds around it at ten milliseconds, so a camera
+        # started late is found without a manual trim and the fine result
+        # keeps its precision.
+        coarse_ref, coarse_hop = _envelope(reference, RATE, COARSE_HOP)
+        coarse_env, _ = _envelope(samples, RATE, COARSE_HOP)
+        coarse, _match = best_lag(coarse_ref, coarse_env, coarse_hop, COARSE_LAG)
+        lag, match = best_lag(ref_env, env, hop, MAX_LAG, centre=coarse)
         applied = match >= CONFIDENCE and abs(lag) >= hop / 2
         if applied:
             lags[index] = lag
