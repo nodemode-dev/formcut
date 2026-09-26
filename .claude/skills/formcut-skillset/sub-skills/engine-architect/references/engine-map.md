@@ -37,7 +37,7 @@ The rest is written by hand.
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
 | library.py | 2258 | /api/library | 3 |
-| local_speech.py | 422 | /api/speech | 4 |
+| local_speech.py | 425 | /api/speech | 4 |
 | main.py | 410 | /api/health | 13 |
 | media.py | 864 | /api/media | 25 |
 | model_manager.py | 492 | /api/models | 8 |
