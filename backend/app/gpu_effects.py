@@ -68,6 +68,7 @@ SUPPORTED = frozenset(
         "lens-blur",
         "stained-glass",
         "vhs-tape",
+        "skin-smooth",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -1125,6 +1126,150 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R20: skin-smooth, a guided filter over a k by k box (p[2] = k, reflect-101
+# as cv2.boxFilter), the guide the grey, mixed in only where the skin mask
+# says. SKIN_MASK writes the CPU's YCrCb skin test as a mask picture (it is
+# blurred by the chain's own gaussian afterwards). GUIDE_AB writes, per pixel,
+# the gain a (p[3] = 0) or the offset b (p[3] = 1) from the window means; in
+# mode a the alpha carries the blurred mask read from held. GUIDE_OUT means a
+# (src) and b (held) over the window and writes smooth = mean(a) * grey +
+# mean(b), with the mask in its alpha; SKIN_MIX mixes it into the original
+# (held) by that mask times p[2].
+SKIN_MASK_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let c = clamp(src[i].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+    let yy = dot(c, vec3<f32>(0.299, 0.587, 0.114));
+    let cr = 0.713 * (c.r - yy) + 0.5;
+    let cb = 0.564 * (c.b - yy) + 0.5;
+    let skin = select(0.0, 1.0, cr > 0.52 && cr < 0.68 && cb > 0.30 && cb < 0.52);
+    dst[i] = vec4<f32>(vec3<f32>(skin), src[i].a);
+}
+"""
+
+GUIDE_AB_CODE = """
+fn at(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)];
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let k = i32(p[2]);
+    let r = k / 2;
+    let n = f32(k * k);
+    var mg = 0.0;
+    var mgg = 0.0;
+    var mc = vec3<f32>(0.0);
+    var mgc = vec3<f32>(0.0);
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            let c = at(x + dx, y + dy).rgb;
+            let g = dot(c, vec3<f32>(0.299, 0.587, 0.114));
+            mg = mg + g;
+            mgg = mgg + g * g;
+            mc = mc + c;
+            mgc = mgc + g * c;
+        }
+    }
+    mg = mg / n;
+    mgg = mgg / n;
+    mc = mc / n;
+    mgc = mgc / n;
+    let a = (mgc - mg * mc) / (mgg - mg * mg + 0.004);
+    let b = mc - a * mg;
+    let grey = dot(clamp(src[i].rgb, vec3<f32>(0.0), vec3<f32>(1.0)), vec3<f32>(0.299, 0.587, 0.114));
+    if (i32(p[3]) == 0) { dst[i] = vec4<f32>(a, held[i].r); } else { dst[i] = vec4<f32>(b, grey); }
+}
+"""
+
+# BOXMEAN: the k by k mean of the rgb (reflect-101), the alpha passed through
+# from the centre pixel, which is how the original's grey rides beside mean(b).
+BOXMEAN_CODE = """
+fn at(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let k = i32(p[2]);
+    let r = k / 2;
+    var m = vec3<f32>(0.0);
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            m = m + at(x + dx, y + dy);
+        }
+    }
+    dst[i] = vec4<f32>(m / f32(k * k), src[i].a);
+}
+"""
+
+# GUIDE_OUT: mean(a) over the window from src (its alpha the mask), held
+# carrying mean(b) with the original's grey in its alpha: smooth = mean(a) *
+# grey + mean(b), the mask kept in the alpha for the mix.
+GUIDE_OUT_CODE = """
+fn at(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let k = i32(p[2]);
+    let r = k / 2;
+    var ma = vec3<f32>(0.0);
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            ma = ma + at(x + dx, y + dy);
+        }
+    }
+    ma = ma / f32(k * k);
+    let guided = ma * held[i].a + held[i].rgb;
+    dst[i] = vec4<f32>(guided, src[i].a);
+}
+"""
+
+# SKIN_MIX: the original (held) moved toward the smooth picture (src) by the
+# mask in src's alpha times p[2].
+SKIN_MIX_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let o = held[i];
+    dst[i] = vec4<f32>(o.rgb + (src[i].rgb - o.rgb) * src[i].a * p[2], o.a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1231,7 +1376,11 @@ class _Context:
         # Four resident buffers: two the chain alternates between, the third
         # every pass sees as held, and a fourth that keeps the held picture
         # while an effect needs the held slot for an intermediate (R15).
-        self.buffers = [self.device.create_buffer(size=size, usage=usage) for _ in range(4)]
+        # Five resident buffers: two the chain alternates between, the third
+        # every pass sees as held, a fourth that keeps the held picture while an
+        # effect needs the held slot (R15), and a fifth workspace for a mask an
+        # effect builds beside the picture (R20).
+        self.buffers = [self.device.create_buffer(size=size, usage=usage) for _ in range(5)]
         self.params = self.device.create_buffer(size=PARAM_FLOATS * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
         # R6: user kernels compiled in this context, by their source
         self.custom_pipelines: dict = {}
@@ -1557,6 +1706,30 @@ class _Chain:
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
             self._restore()
+            return
+        if effect == "skin-smooth":
+            w = self.w
+            k = max(2, w // 200) * 2 + 1
+            taps = _gaussian_taps(max(1.0, w / 200))
+            anchor = len(taps) // 2
+            pixels, other = self.current, (self.current + 1) % 2
+            # the original must be the picture as it is now: at full amount the chain has not held it yet
+            self._hold()
+            self._keep()
+            self._pass(SKIN_MASK_CODE, [], source=pixels, target=4)
+            self._pass(CONV_CODE, [1, 0, len(taps), anchor], taps, source=4, target=other)
+            self._pass(CONV_CODE, [0, 1, len(taps), anchor], taps, source=other, target=4)
+            self.c.copy(self.c.buffers[4], self.c.buffers[2], self.h, self.w)
+            self._pass(GUIDE_AB_CODE, [k, 0], source=pixels, target=other)
+            self._pass(GUIDE_AB_CODE, [k, 1], source=pixels, target=4)
+            # mean(b) cannot be written into the held slot while it is bound: it lands in the pixel buffer
+            # (the original is kept in the fourth) and is copied into held for the next pass
+            self._pass(BOXMEAN_CODE, [k], source=4, target=pixels)
+            self.c.copy(self.c.buffers[pixels], self.c.buffers[2], self.h, self.w)
+            self._pass(GUIDE_OUT_CODE, [k], source=other, target=4)
+            self._restore()
+            self._pass(SKIN_MIX_CODE, [min(1.0, 0.85 * float(params.get("intensity", 1)))], source=4, target=pixels)
+            self.current = pixels
             return
         if effect == "vhs-tape":
             w, h = self.w, self.h
