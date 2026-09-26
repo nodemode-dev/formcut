@@ -19,7 +19,7 @@ import numpy as np
 
 from . import gpu
 from .catalogue import EFFECT_DEFAULTS, GRADES, clamp_params
-from .pixel_effects import REMAP_EFFECTS, remap_maps
+from .pixel_effects import FIELD_EFFECTS, REMAP_EFFECTS, field_for, remap_maps
 
 SUPPORTED = frozenset(
     {
@@ -43,6 +43,14 @@ SUPPORTED = frozenset(
         "ghost-trail",
         "tilt-shift",
         "soft-focus",
+        "light-leak",
+        "lens-flare",
+        "aperture-grille",
+        "paper-texture",
+        "chroma-noise",
+        "film-scratches",
+        "camera-shake",
+        "crosshatch",
         "gaussian",
         "box",
         "directional-blur",
@@ -200,6 +208,17 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         let gl = dot(left, vec3<f32>(0.299, 0.587, 0.114));
         let gr = dot(right, vec3<f32>(0.299, 0.587, 0.114));
         rgb = vec3<f32>(gl, gr, gr);
+    }
+    if (mode == 14) {
+        // crosshatch: three hatch families by the grey under them, p[3] the period
+        let period = p[3];
+        let fx = f32(x);
+        let fy = f32(y);
+        let d1 = (fx + fy) - floor((fx + fy) / period) * period;
+        let d2 = (fx - fy) - floor((fx - fy) / period) * period;
+        let d3 = fx - floor(fx / period) * period;
+        let ink = (d1 < 1.2 && grey < 0.75) || (d2 < 1.2 && grey < 0.5) || (d3 < 1.2 && grey < 0.28);
+        rgb = vec3<f32>(1.0 - select(0.0, 0.9, ink));
     }
     if (mode == 13) {
         // fog: the field slice in aux, denser down the frame, p[3] the density
@@ -464,6 +483,30 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let i = y * w + x;
     let o = held[i];
     dst[i] = vec4<f32>(vec3<f32>(1.0) - (vec3<f32>(1.0) - o.rgb) * (vec3<f32>(1.0) - src[i].rgb * 0.55), o.a);
+}
+"""
+
+# R12: a field the picture does not feed, computed by the CPU from coordinates
+# and noise (pixel_effects.field_for), three floats a pixel in aux, which is
+# what the aux buffer holds. Mode 1 multiplies by the field, mode 2 adds it,
+# mode 3 screens it over the picture; an effect with both a multiply and an
+# add runs two passes.
+FIELD_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let b = i * 3;
+    let f = vec3<f32>(aux[b], aux[b + 1], aux[b + 2]);
+    var rgb = s.rgb * f;
+    if (i32(p[2]) == 2) { rgb = s.rgb + f; }
+    if (i32(p[2]) == 3) { rgb = vec3<f32>(1.0) - (vec3<f32>(1.0) - s.rgb) * (vec3<f32>(1.0) - f); }
+    dst[i] = vec4<f32>(rgb, s.a);
 }
 """
 
@@ -770,6 +813,24 @@ class _Chain:
             return
         radius = max(0.1, min(100, float(params.get("radius", 3))))
         size = max(1, int(params.get("size", 12)))
+        if effect in FIELD_EFFECTS:
+            mul, add, mode = field_for(effect, self.h, self.w, local, params)
+            if mode == 2:
+                self._pass(FIELD_CODE, [3], np.ascontiguousarray(add))
+                return
+            if not np.all(mul == 1):
+                self._pass(FIELD_CODE, [1], np.ascontiguousarray(mul))
+            if np.any(add != 0):
+                self._pass(FIELD_CODE, [2], np.ascontiguousarray(add))
+            return
+        if effect == "camera-shake":
+            from .pixel_effects import _grid
+
+            y, x, _u, _v = _grid(self.h, self.w)
+            xy = np.empty((self.h, self.w, 2), np.float32)
+            xy[:, :, 0], xy[:, :, 1] = x + math.sin(local * 27) * size / 2, y + math.sin(local * 19) * size / 2
+            self._pass(REMAP_CODE, [], xy)
+            return
         if effect in REMAP_EFFECTS:
             maps = remap_maps(effect, self.h, self.w, local, params)
             if maps is None:
@@ -833,6 +894,8 @@ class _Chain:
         elif effect == "grain":
             rng = np.random.default_rng(int(local * 1000) % (2**32))
             self._pass(POINT_CODE, [POINT_MODES[effect]], rng.normal(0, params.get("strength", 0.07), (self.h, self.w)).astype(np.float32))
+        elif effect == "crosshatch":
+            self._pass(POINT_CODE, [14, float(max(4, size // 2))])
         elif effect == "solarize":
             self._pass(POINT_CODE, [POINT_MODES[effect], float(params.get("threshold", 0.5))])
         elif effect == "duotone":

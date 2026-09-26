@@ -132,6 +132,57 @@ def remap_maps(effect: str, h: int, w: int, local: float, params: dict) -> tuple
     return None
 
 
+FIELD_EFFECTS = ("light-leak", "lens-flare", "aperture-grille", "paper-texture", "chroma-noise", "film-scratches")
+
+
+def field_for(effect: str, h: int, w: int, local: float, params: dict) -> tuple[np.ndarray, np.ndarray, int] | None:
+    """For an effect that combines the picture with a field the picture does not feed (R12): the multiply
+    field, the add field and the mode, 1 for rgb * mul + add and 2 for a screen with add, from the formulas
+    process() uses, so the device pass (FIELD_CODE) and the reference agree."""
+    y, x, u, v = _grid(h, w)
+    ones = np.ones((h, w, 3), np.float32)
+    if effect == "light-leak":
+        cx = 0.12 + 0.1 * math.sin(local * 0.7)
+        glow = np.clip(1 - np.sqrt((u - cx) ** 2 + (v - 0.15) ** 2) * 1.5, 0, 1) ** 2
+        glow = np.clip(glow * float(params.get("intensity", 1)), 0, 1)
+        return ones, (glow[:, :, None] * np.float32([1.0, 0.45, 0.12])).astype(np.float32), 2
+    if effect == "lens-flare":
+        px, py = float(params.get("x", 0.72)) * w, float(params.get("y", 0.22)) * h
+        distance = np.hypot(x - px, y - py)
+        light = np.exp(-((distance / (w * 0.03)) ** 2)) + np.exp(-((distance / (w * 0.15)) ** 2)) * 0.35
+        streak = np.exp(-(((y - py) / max(1.0, h * 0.004)) ** 2)) * np.exp(-np.abs(x - px) / (w * 0.35)) * 0.6
+        flare = (light + streak)[:, :, None] * np.array([1.0, 0.9, 0.7], np.float32)
+        for step, radius, tint in ((1.4, 0.05, (0.5, 0.8, 1.0)), (1.8, 0.03, (1.0, 0.6, 0.9)), (2.3, 0.08, (0.6, 1.0, 0.7))):
+            gx, gy = px + (w / 2 - px) * step, py + (h / 2 - py) * step
+            ghost = np.exp(-((np.hypot(x - gx, y - gy) / (w * radius)) ** 4)) * 0.15
+            flare = flare + ghost[:, :, None] * np.array(tint, np.float32)
+        flare = flare * (0.92 + 0.08 * math.sin(local * 7)) * float(params.get("intensity", 1))
+        return ones, np.clip(flare, 0, 1).astype(np.float32), 2
+    if effect == "aperture-grille":
+        phase = np.mod(x, 3)
+        mask = np.stack([phase < 1, (phase >= 1) & (phase < 2), phase >= 2], axis=2).astype(np.float32)
+        grille = (0.55 + 0.6 * mask) * (0.85 + 0.15 * np.cos(y * math.pi))[:, :, None]
+        return (1 + float(params.get("intensity", 1)) * (grille - 1)).astype(np.float32), np.zeros((h, w, 3), np.float32), 1
+    if effect == "paper-texture":
+        fibre = cv2.GaussianBlur(np.random.default_rng(1009).random((h, w)).astype(np.float32), (0, 0), 1.2)
+        fibre = (fibre - fibre.mean()) / max(1e-6, float(fibre.std()))
+        amount = float(params.get("intensity", 1))
+        mul = np.repeat((1 + amount * (-0.1 + 0.035 * fibre))[:, :, None], 3, 2).astype(np.float32)
+        add = np.broadcast_to(amount * np.float32([0.05, 0.035, 0.0]), (h, w, 3)).astype(np.float32)
+        return mul, add, 1
+    if effect == "chroma-noise":
+        noise = np.random.default_rng(int(local * 1000) % (2**32)).normal(0, 1, (h, w, 3)).astype(np.float32)
+        return ones, (cv2.GaussianBlur(noise, (0, 0), 0.8) * float(params.get("strength", 0.15))).astype(np.float32), 1
+    if effect == "film-scratches":
+        add = np.broadcast_to(np.float32([0.06, 0.045, 0.02]), (h, w, 3)).astype(np.float32).copy()
+        rng = np.random.default_rng(int(local * 12))
+        for _ in range(round(14 * float(params.get("density", 1)))):
+            col, top, bright = int(rng.random() * w), int(rng.random() * h * 0.6), 0.3 + 0.4 * rng.random()
+            add[top:, col : col + max(1, w // 320)] += bright
+        return np.full((h, w, 3), 0.9, np.float32), add, 1
+    return None
+
+
 def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndarray:
     if effect in GRADES:
         return grade(rgb, {**GRADES[effect], **params})
