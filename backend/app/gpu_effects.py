@@ -10,6 +10,7 @@ FORMCUT_EFFECTS=cpu forces the reference; =gpu forces this; unset follows the
 compositor (gpu.stack_active), so a software adapter never carries it.
 """
 
+import math
 import os
 import threading
 
@@ -36,6 +37,12 @@ SUPPORTED = frozenset(
         "night-vision",
         "anaglyph",
         "fog",
+        "radial-blur",
+        "spin-blur",
+        "diagonal-blur",
+        "ghost-trail",
+        "tilt-shift",
+        "soft-focus",
         "gaussian",
         "box",
         "directional-blur",
@@ -397,6 +404,69 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R11: the accumulating passes the blur family is built from. ACCUM adds the
+# source into the destination with a weight (the destination is read and
+# written); SCALE multiplies; TILT mixes the held original and the blurred
+# source by a band across the middle; SOFT is soft-focus's screen of the
+# blurred picture over the original.
+ACCUM_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    dst[i] = vec4<f32>(dst[i].rgb + s.rgb * p[2], s.a);
+}
+"""
+
+SCALE_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    dst[i] = vec4<f32>(s.rgb * p[2], s.a);
+}
+"""
+
+TILT_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let v = (f32(y) + 0.5) / p[1];
+    let m = clamp((abs(v - 0.5) - 0.12) * 4.0, 0.0, 1.0);
+    let o = held[i];
+    dst[i] = vec4<f32>(o.rgb * (1.0 - m) + src[i].rgb * m, o.a);
+}
+"""
+
+SOFT_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let o = held[i];
+    dst[i] = vec4<f32>(vec3<f32>(1.0) - (vec3<f32>(1.0) - o.rgb) * (vec3<f32>(1.0) - src[i].rgb * 0.55), o.a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -675,6 +745,25 @@ class _Chain:
         """Keep the current picture in the third buffer, which every pass sees as held."""
         self.c.copy(self.c.buffers[self.current], self.c.buffers[2], self.h, self.w)
 
+    def _multi_remap(self, maps: list, weights: list) -> None:
+        """A weighted sum of remaps of the current picture: the source held, each map sampled into scratch and accumulated."""
+        self._hold()
+        source, scratch, acc = 2, self.current, (self.current + 1) % 2
+        first = True
+        for (mx, my), weight in zip(maps, weights, strict=True):
+            xy = np.empty((self.h, self.w, 2), np.float32)
+            xy[:, :, 0], xy[:, :, 1] = mx, my
+            if first:
+                self._pass(REMAP_CODE, [], xy, source=source, target=acc)
+                if weight != 1.0:
+                    self._pass(SCALE_CODE, [float(weight)], source=acc, target=scratch)
+                    scratch, acc = acc, scratch
+                first = False
+                continue
+            self._pass(REMAP_CODE, [], xy, source=source, target=scratch)
+            self._pass(ACCUM_CODE, [float(weight)], source=scratch, target=acc)
+        self.current = acc
+
     def apply(self, effect: str, local: float, params: dict):
         if effect in GRADES:
             self._pass(GRADE_CODE, _grade_params({**GRADES[effect], **params}))
@@ -688,6 +777,40 @@ class _Chain:
             xy = np.empty((self.h, self.w, 2), np.float32)
             xy[:, :, 0], xy[:, :, 1] = maps
             self._pass(REMAP_CODE, [], xy)
+            return
+        if effect in ("radial-blur", "spin-blur", "diagonal-blur", "ghost-trail"):
+            from .pixel_effects import _grid
+
+            y, x, _u, _v = _grid(self.h, self.w)
+            w, h = self.w, self.h
+            if effect == "radial-blur":
+                spread = 0.1 * float(params.get("intensity", 1))
+                scales = np.linspace(1 - spread, 1 + spread, 9)
+                self._multi_remap([((x - w / 2) * sc + w / 2, (y - h / 2) * sc + h / 2) for sc in scales], [1 / 9] * 9)
+            elif effect == "spin-blur":
+                dx, dy = x - w / 2, y - h / 2
+                arc = 0.12 * float(params.get("intensity", 1))
+                maps = []
+                for angle in np.linspace(-arc, arc, 7):
+                    c, sn = math.cos(angle), math.sin(angle)
+                    maps.append((w / 2 + dx * c - dy * sn, h / 2 + dx * sn + dy * c))
+                self._multi_remap(maps, [1 / 7] * 7)
+            elif effect == "diagonal-blur":
+                steps = list(range(-size, size + 1, 2))
+                # np.roll wraps: integer coordinates modulo the size, so the taps are exact
+                self._multi_remap([(np.mod(x - k, w), np.mod(y - k, h)) for k in steps], [1 / len(steps)] * len(steps))
+            else:
+                self._multi_remap([(x, y), (np.mod(x - size, w), y), (np.mod(x - size * 2, w), y)], [0.55, 0.27, 0.18])
+            return
+        if effect == "tilt-shift":
+            self._hold()
+            self._blur(_gaussian_taps(radius * 2.5))
+            self._pass(TILT_CODE, [])
+            return
+        if effect == "soft-focus":
+            self._hold()
+            self._blur(_gaussian_taps(radius * 4))
+            self._pass(SOFT_CODE, [])
             return
         if effect == "gaussian":
             self._blur(_gaussian_taps(radius))
