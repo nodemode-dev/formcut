@@ -86,6 +86,52 @@ def _fog_field(h: int, w: int) -> np.ndarray:
     return field
 
 
+REMAP_EFFECTS = ("fisheye", "wave", "kaleidoscope", "swirl", "ripple", "pinch", "tile-repeat", "polar-wrap", "heat-haze")
+
+
+def remap_maps(effect: str, h: int, w: int, local: float, params: dict) -> tuple[np.ndarray, np.ndarray] | None:
+    """The sample coordinates a remap effect reads the picture at, the formulas process() uses, for the device pass (R10)."""
+    y, x, u, v = _grid(h, w)
+    size = max(1, int(params.get("size", 12)))
+    if effect == "fisheye":
+        dx, dy = (u - 0.5) * 2, (v - 0.5) * 2
+        r = np.sqrt(dx * dx + dy * dy)
+        factor = 1 + 0.45 * float(params.get("intensity", 1)) * r * r
+        return (dx / factor / 2 + 0.5) * w, (dy / factor / 2 + 0.5) * h
+    if effect == "wave":
+        return x + np.sin(v * 30 + local * 4) * size, y
+    if effect == "kaleidoscope":
+        dx, dy = x - w / 2, y - h / 2
+        r = np.sqrt(dx * dx + dy * dy)
+        wedge = 2 * math.pi / max(2, int(params.get("segments", 6)))
+        angle = np.abs(np.mod(np.arctan2(dy, dx), wedge) - wedge / 2)
+        return w / 2 + r * np.cos(angle), h / 2 + r * np.sin(angle)
+    if effect == "swirl":
+        dx, dy = x - w / 2, y - h / 2
+        turn = float(params.get("twist", 2.2)) * np.clip(1 - np.sqrt(dx * dx + dy * dy) / (0.5 * min(w, h)), 0, 1) ** 2
+        c, s = np.cos(turn), np.sin(turn)
+        return w / 2 + dx * c - dy * s, h / 2 + dx * s + dy * c
+    if effect == "ripple":
+        dx, dy = x - w / 2, y - h / 2
+        r = np.sqrt(dx * dx + dy * dy) + 1e-6
+        shift = np.sin(r / max(4, size) - local * 6) * size * 0.8
+        return x + dx / r * shift, y + dy / r * shift
+    if effect == "pinch":
+        dx, dy = (u - 0.5) * 2, (v - 0.5) * 2
+        factor = 1 + 0.5 * float(params.get("intensity", 1)) * (1 - np.clip(dx * dx + dy * dy, 0, 1))
+        return (dx * factor / 2 + 0.5) * w, (dy * factor / 2 + 0.5) * h
+    if effect == "tile-repeat":
+        tiles = max(1, int(params.get("tiles", 2)))
+        return np.mod(x * tiles, w), np.mod(y * tiles, h)
+    if effect == "polar-wrap":
+        dx, dy = (u - 0.5) * 2, (v - 0.5) * 2
+        r = np.clip(np.sqrt(dx * dx + dy * dy), 0, 1)
+        return (np.arctan2(dy, dx) / (2 * math.pi) + 0.5) * (w - 1), (1 - r) * (h - 1)
+    if effect == "heat-haze":
+        return x + np.sin(y / 11 + local * 5) * np.sin(x / 23 + local * 3) * size * 0.6, y + np.cos(x / 13 + local * 4) * size * 0.4
+    return None
+
+
 def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndarray:
     if effect in GRADES:
         return grade(rgb, {**GRADES[effect], **params})

@@ -18,9 +18,24 @@ import numpy as np
 
 from . import gpu
 from .catalogue import EFFECT_DEFAULTS, GRADES, clamp_params
+from .pixel_effects import REMAP_EFFECTS, remap_maps
 
 SUPPORTED = frozenset(
     {
+        "fisheye",
+        "wave",
+        "kaleidoscope",
+        "swirl",
+        "ripple",
+        "pinch",
+        "tile-repeat",
+        "polar-wrap",
+        "heat-haze",
+        "solarize",
+        "duotone",
+        "night-vision",
+        "anaglyph",
+        "fog",
         "gaussian",
         "box",
         "directional-blur",
@@ -37,7 +52,21 @@ SUPPORTED = frozenset(
         "scanlines",
     }
 )
-POINT_MODES = {"invert": 1, "posterize": 2, "threshold": 3, "vignette": 4, "scanlines": 5, "grain": 6, "chromatic": 7, "mirror": 8}
+POINT_MODES = {
+    "invert": 1,
+    "posterize": 2,
+    "threshold": 3,
+    "vignette": 4,
+    "scanlines": 5,
+    "grain": 6,
+    "chromatic": 7,
+    "mirror": 8,
+    "solarize": 9,
+    "duotone": 10,
+    "night-vision": 11,
+    "anaglyph": 12,
+    "fog": 13,
+}
 PARAM_FLOATS = 32
 
 HEADER = """
@@ -131,6 +160,45 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         let x0 = i32(floor(sx));
         let fx = sx - f32(x0);
         rgb = mix(at(x0, y).rgb, at(x0 + 1, y).rgb, fx);
+    }
+    // R10: five pointwise effects from pixel_effects.process, mode 9 to 13.
+    let grey = dot(rgb, vec3<f32>(0.299, 0.587, 0.114));
+    if (mode == 9) {
+        // solarize: above the threshold, inverted
+        rgb = select(rgb, vec3<f32>(1.0) - rgb, rgb > vec3<f32>(p[3]));
+    }
+    if (mode == 10) {
+        // duotone
+        rgb = vec3<f32>(0.07, 0.09, 0.24) * (1.0 - grey) + vec3<f32>(1.0, 0.68, 0.17) * grey;
+    }
+    if (mode == 11) {
+        // night-vision: the noise field in aux, a falloff from the centre
+        let u = (f32(x) + 0.5) / p[0];
+        let v = (f32(y) + 0.5) / p[1];
+        let fall = clamp(1.25 - ((u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5)) * 2.4, 0.0, 1.0);
+        let lum = clamp(grey * 1.6 + aux[i], 0.0, 1.0) * fall;
+        rgb = vec3<f32>(lum * 0.25, lum, lum * 0.3);
+    }
+    if (mode == 12) {
+        // anaglyph: the grey of the pixels an offset left and right, wrapped as np.roll wraps
+        // no i32 modulo here: llvmpipe gets it wrong on negatives (the chromatic pass learned the same)
+        let offset = i32(p[3]);
+        let w0 = i32(p[0]);
+        var xl = x + offset;
+        if (xl >= w0) { xl = xl - w0; }
+        var xr = x - offset;
+        if (xr < 0) { xr = xr + w0; }
+        let left = at(xl, y).rgb;
+        let right = at(xr, y).rgb;
+        let gl = dot(left, vec3<f32>(0.299, 0.587, 0.114));
+        let gr = dot(right, vec3<f32>(0.299, 0.587, 0.114));
+        rgb = vec3<f32>(gl, gr, gr);
+    }
+    if (mode == 13) {
+        // fog: the field slice in aux, denser down the frame, p[3] the density
+        let v = (f32(y) + 0.5) / p[1];
+        let density = clamp(aux[i] * (0.45 + 0.55 * v) * p[3], 0.0, 1.0) * 0.7;
+        rgb = rgb * (1.0 - density) + 0.82 * density;
     }
     dst[i] = vec4<f32>(rgb, pixel.a);
 }
@@ -296,6 +364,36 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if (x >= w || y >= h) { return; }
     let i = y * w + x;
     dst[i] = round(src[i] * 255.0) / 255.0;
+}
+"""
+
+# R10: a remap effect samples the picture at coordinates the CPU computed
+# (pixel_effects.remap_maps, the same formulas process() uses); aux carries
+# x and y interleaved, two floats a pixel; bilinear with reflect-101 borders,
+# as cv2.remap samples, in float rather than its five-bit weights.
+REMAP_CODE = """
+fn tap(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)];
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let sx = aux[i * 2];
+    let sy = aux[i * 2 + 1];
+    let x0 = i32(floor(sx));
+    let y0 = i32(floor(sy));
+    let fx = sx - f32(x0);
+    let fy = sy - f32(y0);
+    let top = mix(tap(x0, y0), tap(x0 + 1, y0), fx);
+    let bottom = mix(tap(x0, y0 + 1), tap(x0 + 1, y0 + 1), fx);
+    dst[i] = mix(top, bottom, fy);
 }
 """
 
@@ -583,6 +681,14 @@ class _Chain:
             return
         radius = max(0.1, min(100, float(params.get("radius", 3))))
         size = max(1, int(params.get("size", 12)))
+        if effect in REMAP_EFFECTS:
+            maps = remap_maps(effect, self.h, self.w, local, params)
+            if maps is None:
+                raise ValueError(effect)
+            xy = np.empty((self.h, self.w, 2), np.float32)
+            xy[:, :, 0], xy[:, :, 1] = maps
+            self._pass(REMAP_CODE, [], xy)
+            return
         if effect == "gaussian":
             self._blur(_gaussian_taps(radius))
         elif effect == "box":
@@ -604,6 +710,25 @@ class _Chain:
         elif effect == "grain":
             rng = np.random.default_rng(int(local * 1000) % (2**32))
             self._pass(POINT_CODE, [POINT_MODES[effect]], rng.normal(0, params.get("strength", 0.07), (self.h, self.w)).astype(np.float32))
+        elif effect == "solarize":
+            self._pass(POINT_CODE, [POINT_MODES[effect], float(params.get("threshold", 0.5))])
+        elif effect == "duotone":
+            self._pass(POINT_CODE, [POINT_MODES[effect]])
+        elif effect == "night-vision":
+            rng = np.random.default_rng(int(local * 1000) % (2**32))
+            self._pass(
+                POINT_CODE, [POINT_MODES[effect]], rng.normal(0, float(params.get("strength", 0.05)), (self.h, self.w)).astype(np.float32)
+            )
+        elif effect == "anaglyph":
+            self._pass(POINT_CODE, [POINT_MODES[effect], max(1, round(self.w * 0.004 * size / 12))])
+        elif effect == "fog":
+            from .pixel_effects import _fog_field
+
+            field = _fog_field(self.h, self.w)
+            drift = int(local * self.w * 0.03) % self.w
+            self._pass(
+                POINT_CODE, [POINT_MODES[effect], float(params.get("density", 1))], np.ascontiguousarray(field[:, drift : drift + self.w])
+            )
         elif effect == "posterize":
             self._pass(POINT_CODE, [POINT_MODES[effect], max(2, min(32, int(params.get("levels", 5))))])
         elif effect == "threshold":
