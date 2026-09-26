@@ -90,7 +90,7 @@ the automation transports.
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
-- `multicam_sync.py` (144L)
+- `multicam_sync.py` (158L)
 - `openh264.py` (410L)
 - `package_registry.py` (80L)
 - `paths.py` (32L)
