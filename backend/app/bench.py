@@ -75,6 +75,12 @@ def main(argv: list[str] | None = None) -> int:
 
     doc = _load(args.project)
     status = gpu.status()
+    if not status.get("available"):
+        print("no WebGPU adapter in this interpreter: " + str(status.get("reason", "wgpu is not importable")))
+        print("this is not a reading. Run the bench with the engine's own Python, the one that has wgpu installed:")
+        print("  cd backend && ../.venv/bin/python -m app.bench     (or the interpreter $FORMCUT_MCP names in the agent terminal)")
+        print("  or: python3 -m pip install -r requirements.txt && python3 -m app.bench")
+        return 2
     adapter = status.get("adapter", {})
     name = adapter.get("device", adapter.get("name", "none"))
     print(f"adapter: {name} ({adapter.get('adapter_type', 'unknown')}, {adapter.get('backend_type', '')})")
@@ -91,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     over = float(np.mean([(d > 1).mean() for d in diffs]) * 100)
     worst = max(int(d.max()) for d in diffs)
     print(f"difference between the paths: mean {mad:.4f} counts, {over:.3f}% of pixels over 1/255, largest {worst}/255")
-    if adapter.get("adapter_type", "CPU").lower() == "cpu":
+    if adapter.get("adapter_type", "").lower() == "cpu":
         print("this adapter is a software rasteriser; the device path shares the CPU with NumPy here,")
         print("and the reading that matters is on a real GPU")
     return 0
