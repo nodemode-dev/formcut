@@ -107,7 +107,51 @@ with wave.open(args["output"],"wb") as out:
 _runtime: dict = {}
 
 
+ENGINE_RUNTIME = "engine"
+
+
+def kokoro_in_engine() -> bool:
+    """Whether Kokoro runs in the engine's own process: a checkout whose interpreter has kokoro-onnx (pip install -r requirements_speech.txt).
+
+    The frozen app never carries it: kokoro-onnx pulls eSpeak through its loader, whose GPL terms Licences.md keeps out of the
+    Apache-2.0 binary. That is the one reason a second environment exists, and it is an opt-in, never a boot step."""
+    if _runtime.get(ENGINE_RUNTIME) is None:
+        try:
+            import kokoro_onnx  # noqa: F401
+
+            _runtime[ENGINE_RUNTIME] = True
+        except ImportError:
+            _runtime[ENGINE_RUNTIME] = False
+    return bool(_runtime[ENGINE_RUNTIME])
+
+
+def synthesise_in_engine(args: dict) -> None:
+    """The Kokoro worker, in-process: the same eleven lines the subprocess ran."""
+    import wave
+
+    import numpy as np
+    from kokoro_onnx import Kokoro
+
+    engine = _kokoro_models.get(args["model"])
+    if engine is None:
+        engine = _kokoro_models[args["model"]] = Kokoro(args["model"], args["voices"])
+    audio, rate = engine.create(args["text"], voice=args["voice"], speed=args["speed"], lang=args["language"])
+    with wave.open(args["output"], "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(rate)
+        out.writeframes(np.round(np.clip(audio, -1, 1) * 32767).astype("<i2").tobytes())
+
+
+_kokoro_models: dict = {}
+
+
 def interpreter():
+    # The shipped voice runs in the engine itself when it can; the override
+    # and the data/ai-runtime venv are for the two PyTorch voices, which are
+    # an opt-in that creates that second environment only when installed.
+    if kokoro_in_engine() and not os.environ.get("FORMCUT_AI_PYTHON"):
+        return ENGINE_RUNTIME
     override = os.environ.get("FORMCUT_AI_PYTHON")
     venv = DATA_DIR / "ai-runtime" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     candidate = override or (str(venv) if venv.is_file() else (sys.executable if not getattr(sys, "frozen", False) else None))
@@ -133,6 +177,8 @@ def installed(engine: str) -> bool:
     python = interpreter() if engine == "kokoro" else runtime()
     if not python:
         return False
+    if python == ENGINE_RUNTIME:
+        return engine == "kokoro"
     key = f"{python}:{engine}"
     if _runtime.get(key) is None:
         probe = subprocess.run([python, "-c", f"import {ENGINES[engine]['module']}"], capture_output=True, text=True, check=False)
@@ -353,6 +399,11 @@ def speak(body: SpeechInput):
             "voices": str(ROOT / "voices-v1.0.bin"),
             "output": str(output),
         }
+        if python == ENGINE_RUNTIME:
+            synthesise_in_engine(args)
+            if cancelled():
+                raise InterruptedError("Cancelled")
+            return {"media": ingest_path(output, body.text[:40] + ".wav", {"source": "kokoro", "voice": body.voice})}
         process = subprocess.Popen(
             [python, "-c", WORKER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=_worker_env()
         )
