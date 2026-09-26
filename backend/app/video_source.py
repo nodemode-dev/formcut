@@ -57,8 +57,13 @@ def colour_of(stream: dict) -> dict:
 
 
 class VideoSource:
-    def __init__(self, path, limit=None):
+    def __init__(self, path, limit=None, deep: bool = False):
         self.path = str(path)
+        # HDR working space, step 1: a deep source. With `deep`, a PQ or HLG stream is
+        # delivered as sixteen-bit RGB in its own transfer, no tone-map, so the light
+        # above white the camera recorded reaches the working space intact; an SDR
+        # stream is unchanged. Frames come as uint16 RGB (not BGR) at 65535 full scale.
+        self.deep = bool(deep)
         metadata = _ffprobe(path)
         stream = next((item for item in metadata.get("streams", []) if item.get("codec_type") == "video"), None)
         if stream is None:
@@ -75,6 +80,10 @@ class VideoSource:
             if stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
             else conversion_for(stream)
         )
+        self.hdr = stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
+        self.transfer = str(stream.get("color_transfer") or "")
+        if self.deep and self.hdr:
+            self.tonemap = ""  # the signal stays in its own transfer; nothing is rolled off
         rotation = float(stream.get("tags", {}).get("rotate", 0))
         for item in stream.get("side_data_list", []):
             if "rotation" in item:
@@ -135,7 +144,7 @@ class VideoSource:
                 "-threads",
                 "1",
                 "-pix_fmt",
-                "bgr24",
+                "rgb48le" if self.deep and self.hdr else "bgr24",
                 "-f",
                 "rawvideo",
                 "pipe:1",
@@ -149,7 +158,8 @@ class VideoSource:
 
     def _pull(self):
         """One frame off the pipe into a fresh buffer, or None when the pipe ends."""
-        size = self.width * self.height * 3
+        deep = self.deep and self.hdr
+        size = self.width * self.height * (6 if deep else 3)
         pieces = bytearray(size)
         view = memoryview(pieces)
         filled = 0
@@ -160,6 +170,8 @@ class VideoSource:
                 return None
             filled += count
         view.release()
+        if deep:
+            return np.frombuffer(pieces, np.uint16).reshape(self.height, self.width, 3)
         return np.frombuffer(pieces, np.uint8).reshape(self.height, self.width, 3)
 
     def _prefetch(self):
@@ -310,6 +322,9 @@ class NativeSource(VideoSource):
             self.pending = (index, frame)
 
     def _as_bgr(self, frame):
+        if self.deep and self.hdr:
+            picture = frame.reformat(width=self.width, height=self.height, format="rgb48le", interpolation="BICUBIC")
+            return picture.to_ndarray().view(np.uint16).reshape(self.height, self.width, 3)
         picture = frame.reformat(width=self.width, height=self.height, format="bgr24", interpolation="BICUBIC")
         return picture.to_ndarray()
 
@@ -384,16 +399,17 @@ def _decode_rate(path: str, hwaccel, frames: int = 24) -> float | None:
     return count / took if took > 0 and count else None
 
 
-def _open(path, limit=None) -> VideoSource:
-    """The decoder for this stream: in the engine for an SDR stream when PyAV is here (FORMCUT_DECODE=pipe pins the pipe), the pipe otherwise."""
+def _open(path, limit=None, deep: bool = False) -> VideoSource:
+    """The decoder for this stream: in the engine when PyAV is here and the stream needs no tone-map (an SDR
+    stream, or an HDR stream taken deep); the pipe otherwise, and always when FORMCUT_DECODE=pipe."""
     if av is not None and os.environ.get("FORMCUT_DECODE", "native") != "pipe":
-        probe = VideoSource(path, limit)
+        probe = VideoSource(path, limit, deep=deep)
         if not probe.tonemap:
             native = NativeSource.__new__(NativeSource)
             native.__dict__.update(probe.__dict__)
             return native
         return probe
-    return VideoSource(path, limit)
+    return VideoSource(path, limit, deep=deep)
 
 
 _pool_lock = threading.Lock()

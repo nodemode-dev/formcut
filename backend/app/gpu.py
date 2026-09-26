@@ -16,16 +16,66 @@ BLEND_CODE = """
 // and the result is encoded back, so a dissolve between two bright clips does
 // not dip and a fade is a fade of light; the CPU reference (composite) does
 // the same. Blend modes keep their formulas, applied to light.
-fn lin(v: vec3<f32>) -> vec3<f32> {
+// options[1] names the transfer the signal is in: 0 sRGB (SDR), 1 PQ, 2 HLG.
+// PQ light is in units of 10000 nits; HLG in units of the nominal peak, both
+// kept as the signal's own scale so nothing above white is lost in the blend.
+fn lin_srgb(v: vec3<f32>) -> vec3<f32> {
     let low = v / 12.92;
     let high = pow((v + 0.055) / 1.055, vec3<f32>(2.4));
     return select(high, low, v <= vec3<f32>(0.04045));
 }
-fn enc(v: vec3<f32>) -> vec3<f32> {
+fn enc_srgb(v: vec3<f32>) -> vec3<f32> {
     let c = clamp(v, vec3<f32>(0.0), vec3<f32>(1.0));
     let low = c * 12.92;
     let high = 1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055;
     return select(high, low, c <= vec3<f32>(0.0031308));
+}
+fn lin_pq(v: vec3<f32>) -> vec3<f32> {
+    let m1 = 0.1593017578125;
+    let m2 = 78.84375;
+    let c1 = 0.8359375;
+    let c2 = 18.8515625;
+    let c3 = 18.6875;
+    let e = pow(clamp(v, vec3<f32>(0.0), vec3<f32>(1.0)), vec3<f32>(1.0 / m2));
+    return pow(max(e - c1, vec3<f32>(0.0)) / (c2 - c3 * e), vec3<f32>(1.0 / m1));
+}
+fn enc_pq(v: vec3<f32>) -> vec3<f32> {
+    let m1 = 0.1593017578125;
+    let m2 = 78.84375;
+    let c1 = 0.8359375;
+    let c2 = 18.8515625;
+    let c3 = 18.6875;
+    let y = pow(clamp(v, vec3<f32>(0.0), vec3<f32>(1.0)), vec3<f32>(m1));
+    return pow((c1 + c2 * y) / (1.0 + c3 * y), vec3<f32>(m2));
+}
+fn lin_hlg(v: vec3<f32>) -> vec3<f32> {
+    let a = 0.17883277;
+    let b = 0.28466892;
+    let c = 0.55991073;
+    let low = v * v / 3.0;
+    let high = (exp((v - c) / a) + b) / 12.0;
+    return select(high, low, v <= vec3<f32>(0.5));
+}
+fn enc_hlg(v: vec3<f32>) -> vec3<f32> {
+    let a = 0.17883277;
+    let b = 0.28466892;
+    let c = 0.55991073;
+    let l = clamp(v, vec3<f32>(0.0), vec3<f32>(1.0));
+    let low = sqrt(3.0 * l);
+    let high = a * log(12.0 * l - b) + c;
+    return select(high, low, l <= vec3<f32>(1.0 / 12.0));
+}
+fn lin(v: vec3<f32>) -> vec3<f32> {
+    let t = u32(options[1]);
+    if (t == 1u) { return lin_pq(v); }
+    if (t == 2u) { return lin_hlg(v); }
+    return lin_srgb(v);
+}
+fn enc(v: vec3<f32>) -> vec3<f32> {
+    let t = u32(options[1]);
+    if (t == 1u) { return enc_pq(v); }
+    if (t == 2u) { return enc_hlg(v); }
+    return enc_srgb(v);
 }
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -47,7 +97,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if (mode == 9u) { color = (1.0-2.0*f)*b*b+2.0*f*b; }
     // rounded to the byte grid after every blend, as the CPU reference rounds each composite, so a stack of
     // layers lands where the sequential reference lands rather than drifting in the darks
-    result[i] = vec4<f32>(round(enc(mix(b, color, alpha)) * 255.0) / 255.0, 1.0);
+    let grid = select(255.0, 65535.0, u32(options[1]) > 0u);
+    result[i] = vec4<f32>(round(enc(mix(b, color, alpha)) * grid) / grid, 1.0);
 }
 """
 
@@ -64,6 +115,32 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if (i >= arrayLength(&result)) { return; }
     let v = packed[i];
     result[i] = vec4<f32>(f32(v & 255u), f32((v >> 8u) & 255u), f32((v >> 16u) & 255u), f32(v >> 24u)) / 255.0;
+}
+"""
+
+UNPACK16_CODE = """
+@group(0) @binding(0) var<storage, read> packed: array<u32>;
+@group(0) @binding(1) var<storage, read_write> result: array<vec4<f32>>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let i = id.x;
+    if (i >= arrayLength(&result)) { return; }
+    let lo = packed[i * 2u];
+    let hi = packed[i * 2u + 1u];
+    result[i] = vec4<f32>(f32(lo & 65535u), f32(lo >> 16u), f32(hi & 65535u), f32(hi >> 16u)) / 65535.0;
+}
+"""
+
+PACK16_CODE = """
+@group(0) @binding(0) var<storage, read> source: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> packed: array<u32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let i = id.x;
+    if (i * 2u + 1u >= arrayLength(&packed)) { return; }
+    let c = vec4<u32>(round(clamp(source[i], vec4<f32>(0.0), vec4<f32>(1.0)) * 65535.0));
+    packed[i * 2u] = c.x | (c.y << 16u);
+    packed[i * 2u + 1u] = c.z | (c.w << 16u);
 }
 """
 
@@ -197,9 +274,10 @@ class _StackCompositor:
         # R7: bytes in, bytes out. packed_in takes a canvas or a numpy layer as
         # its own RGBA bytes; packed_out holds the blended frame as bytes; read
         # maps it. Both a quarter of the float buffers.
-        self.packed_in = self.device.create_buffer(size=self.count * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
-        self.packed_out = self.device.create_buffer(size=self.count * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC)
-        self.read = self.device.create_buffer(size=self.count * 4, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
+        # eight bytes a pixel so a deep (sixteen-bit) frame fits; a byte frame uses the first half
+        self.packed_in = self.device.create_buffer(size=self.count * 8, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
+        self.packed_out = self.device.create_buffer(size=self.count * 8, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC)
+        self.read = self.device.create_buffer(size=self.count * 8, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
         module = self.device.create_shader_module(code=BLEND_CODE)
         self.pipeline = self.device.create_compute_pipeline(layout="auto", compute={"module": module, "entry_point": "main"})
         self.layout = self.pipeline.get_bind_group_layout(0)
@@ -207,6 +285,31 @@ class _StackCompositor:
         self.unpack = self.device.create_compute_pipeline(layout="auto", compute={"module": unpack, "entry_point": "main"})
         pack = self.device.create_shader_module(code=PACK_CODE)
         self.pack = self.device.create_compute_pipeline(layout="auto", compute={"module": pack, "entry_point": "main"})
+        unpack16 = self.device.create_shader_module(code=UNPACK16_CODE)
+        self.unpack16 = self.device.create_compute_pipeline(layout="auto", compute={"module": unpack16, "entry_point": "main"})
+        pack16 = self.device.create_shader_module(code=PACK16_CODE)
+        self.pack16 = self.device.create_compute_pipeline(layout="auto", compute={"module": pack16, "entry_point": "main"})
+        self.unpack16_groups = {
+            id(target): self.device.create_bind_group(
+                layout=self.unpack16.get_bind_group_layout(0),
+                entries=[
+                    {"binding": 0, "resource": {"buffer": self.packed_in, "offset": 0, "size": self.count * 8}},
+                    {"binding": 1, "resource": {"buffer": target, "offset": 0, "size": size}},
+                ],
+            )
+            for target in (self.a, self.front)
+        }
+        self.pack16_groups = {
+            id(source): self.device.create_bind_group(
+                layout=self.pack16.get_bind_group_layout(0),
+                entries=[
+                    {"binding": 0, "resource": {"buffer": source, "offset": 0, "size": size}},
+                    {"binding": 1, "resource": {"buffer": self.packed_out, "offset": 0, "size": self.count * 8}},
+                ],
+            )
+            for source in (self.a, self.b)
+        }
+        self.transfer = 0
         self.unpack_groups = {
             id(target): self.device.create_bind_group(
                 layout=self.unpack.get_bind_group_layout(0),
@@ -238,6 +341,16 @@ class _StackCompositor:
     def _upload(self, image: np.ndarray, target) -> None:
         """A uint8 RGBA image into a float buffer: the bytes go up, the device spreads them."""
         queue = self.device.queue
+        if image.dtype == np.uint16 and image.shape[2] == 4:
+            queue.write_buffer(self.packed_in, 0, np.ascontiguousarray(image))
+            encoder = self.device.create_command_encoder()
+            step = encoder.begin_compute_pass()
+            step.set_pipeline(self.unpack16)
+            step.set_bind_group(0, self.unpack16_groups[id(target)])
+            step.dispatch_workgroups((self.count + 63) // 64)
+            step.end()
+            queue.submit([encoder.finish()])
+            return
         if image.dtype == np.uint8 and image.shape[2] == 4:
             queue.write_buffer(self.packed_in, 0, np.ascontiguousarray(image))
             encoder = self.device.create_command_encoder()
@@ -290,7 +403,7 @@ class _StackCompositor:
             else:
                 self._upload(layer, self.front)
                 group = self.ab if source_is_a else self.ba
-            queue.write_buffer(self.opts, 0, np.array([index, 0, 0, 0], np.float32))
+            queue.write_buffer(self.opts, 0, np.array([index, self.transfer, 0, 0], np.float32))
             encoder = self.device.create_command_encoder()
             step = encoder.begin_compute_pass()
             step.set_pipeline(self.pipeline)
@@ -301,16 +414,19 @@ class _StackCompositor:
             source_is_a = not source_is_a
         self.staged = 0
         final = self.a if source_is_a else self.b
+        deep = canvas.dtype == np.uint16
         encoder = self.device.create_command_encoder()
         step = encoder.begin_compute_pass()
-        step.set_pipeline(self.pack)
-        step.set_bind_group(0, self.pack_groups[id(final)])
+        step.set_pipeline(self.pack16 if deep else self.pack)
+        step.set_bind_group(0, (self.pack16_groups if deep else self.pack_groups)[id(final)])
         step.dispatch_workgroups((self.count + 63) // 64)
         step.end()
-        encoder.copy_buffer_to_buffer(self.packed_out, 0, self.read, 0, self.count * 4)
+        encoder.copy_buffer_to_buffer(self.packed_out, 0, self.read, 0, self.count * (8 if deep else 4))
         queue.submit([encoder.finish()])
         self.read.map_sync(wgpu.MapMode.READ)
-        data = np.frombuffer(self.read.read_mapped(), np.uint8).reshape(canvas.shape[0], canvas.shape[1], 4).copy()
+        raw = self.read.read_mapped()
+        kind = np.uint16 if deep else np.uint8
+        data = np.frombuffer(raw, kind)[: self.count * 4].reshape(canvas.shape[0], canvas.shape[1], 4).copy()
         self.read.unmap()
         return data
 
@@ -329,7 +445,10 @@ def stage_layer(layer: DeviceLayer, height: int, width: int) -> int | None:
         return None
 
 
-def composite_stack(canvas: np.ndarray, layers: list) -> np.ndarray:
+TRANSFERS = {"srgb": 0, "bt709": 0, "pq": 1, "smpte2084": 1, "hlg": 2, "arib-std-b67": 2}
+
+
+def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb") -> np.ndarray:
     """Blend a run of (layer, mode) onto the canvas in one device pass.
 
     Falls back layer by layer through composite() if the device path fails,
@@ -348,6 +467,7 @@ def composite_stack(canvas: np.ndarray, layers: list) -> np.ndarray:
                 _compositors[key] = _StackCompositor(*key)
                 while len(_compositors) > 3:
                     _compositors.pop(next(iter(_compositors)))
+            _compositors[key].transfer = TRANSFERS.get(transfer.lower(), 0)
             return _compositors[key].run(canvas, layers)
     except Exception as exc:
         if any(isinstance(layer, int) for layer, _ in layers):

@@ -146,6 +146,30 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# HDR working space, step 2: sixteen bits a channel across the bus. A deep
+# layer arrives as RGBA16, two u32 words a pixel in aux (r | g << 16, then
+# b | a << 16), and is spread into the vec4<f32> the chain works in at 65535
+# full scale.
+UNPACK16_CODE = """
+@group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> dst: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<u32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let lo = aux[i * 2];
+    let hi = aux[i * 2 + 1];
+    dst[i] = vec4<f32>(f32(lo & 65535u), f32(lo >> 16u), f32(hi & 65535u), f32(hi >> 16u)) / 65535.0;
+}
+"""
+
 # One pointwise pass: p[2] picks the effect, p[3..] its settings.
 POINT_CODE = """
 fn at(x: i32, y: i32) -> vec4<f32> {
@@ -1809,8 +1833,16 @@ class _Context:
         self.device.queue.submit([encoder.finish()])
 
     def upload(self, buffer, image: np.ndarray):
-        """R7: four bytes a pixel over the bus, no conversion on this side; the device unpacks."""
+        """R7: four bytes a pixel over the bus, no conversion on this side; the device unpacks. A uint16 picture
+        (the HDR working space's deep source) goes as eight bytes a pixel and unpacks at 65535 full scale."""
         h, w = image.shape[:2]
+        if image.dtype == np.uint16 and h * w * 8 <= self.aux_size:
+            if image.shape[2] == 3:
+                image = np.concatenate([image, np.full((h, w, 1), 65535, np.uint16)], axis=2)
+            self.device.queue.write_buffer(self.aux, 0, np.ascontiguousarray(image))
+            other = next(b for b in self.buffers if b is not buffer)
+            self.run(UNPACK16_CODE, other, buffer, [w, h], None, w, h)
+            return
         if image.dtype == np.uint8 and image.shape[2] == 4 and h * w * 4 <= self.aux_size:
             self.device.queue.write_buffer(self.aux, 0, np.ascontiguousarray(image))
             # The pass reads aux and writes the target; the source binding is the other chain buffer, unread.
@@ -1818,6 +1850,11 @@ class _Context:
             self.run(UNPACK_CODE, other, buffer, [w, h], None, w, h)
             return
         self.device.queue.write_buffer(buffer, 0, np.ascontiguousarray(image.astype(np.float32) / 255))
+
+    def download16(self, buffer, height: int, width: int) -> np.ndarray:
+        """The picture as RGBA16, rounded on this side from the floats; the deep counterpart of download."""
+        floats = self.download(buffer, height, width)
+        return np.round(np.clip(floats, 0, 1) * 65535).astype(np.uint16)
 
     def download(self, buffer, height: int, width: int) -> np.ndarray:
         import wgpu
