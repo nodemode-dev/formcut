@@ -41,12 +41,14 @@ def joined(kind: str, media_id: str = "m1") -> dict:
     return make_project(width=320, height=180, fps=30, clips=[video("a", 0, 1.5, media_id), later], duration=3.0)
 
 
-def test_a_crossfade_is_layered():
-    assert refusal(joined("crossfade")) is None
+def test_a_crossfade_keeps_the_frame_path():
+    # since R24 a crossfade mixes in light on the frame path, and the layered graph would mix it in gamma
+    assert refusal(joined("crossfade")) == "transition"
 
 
-def test_a_dip_is_layered():
-    assert refusal(joined("dip")) is None
+def test_a_dip_keeps_the_frame_path():
+    # since R24 a dip mixes in light on the frame path, and the layered graph would mix it in gamma
+    assert refusal(joined("dip")) == "transition"
 
 
 @pytest.mark.parametrize("kind", ["wipe-left", "slide-right", "zoom", "iris", "dissolve"])
@@ -150,18 +152,29 @@ def planned(project: dict):
     return plan(document, math.ceil(document["duration"] * document["fps"]))
 
 
-def test_the_outgoing_side_of_a_crossfade_keeps_drawing_through_it(footage):
+def test_the_outgoing_side_of_a_crossfade_keeps_drawing_through_it(footage, monkeypatch):
+    from app import fast_layers
+
+    monkeypatch.setattr(fast_layers, "TRANSITIONS", ("crossfade", "dip"))
     layers = planned(joined("crossfade", footage[0])).layers
     outgoing = next(item for item in layers if item.first == 0)
     assert outgoing.frames == round((1.5 + 0.6) * 30) and outgoing.fade_out == 0
 
 
-def test_the_incoming_side_of_a_crossfade_fades_in_over_it(footage):
+def test_the_incoming_side_of_a_crossfade_fades_in_over_it(footage, monkeypatch):
+    from app import fast_layers
+
+    monkeypatch.setattr(fast_layers, "TRANSITIONS", ("crossfade", "dip"))
     incoming = next(item for item in planned(joined("crossfade", footage[0])).layers if item.first == 45)
     assert incoming.fade_in == pytest.approx(0.6)
 
 
-def test_a_dip_fades_each_side_over_half_its_length(footage):
+def test_a_dip_fades_each_side_over_half_its_length(footage, monkeypatch):
+    # a dip leaves the layered graph since R24 (its fades now mix in light on the frame path); the plan's
+    # fade arithmetic is kept under test by planning the same join with the transition kinds re-enabled
+    from app import fast_layers
+
+    monkeypatch.setattr(fast_layers, "TRANSITIONS", ("crossfade", "dip"))
     layers = planned(joined("dip", footage[0])).layers
     outgoing, incoming = sorted(layers, key=lambda item: item.first)
     assert outgoing.fade_out == pytest.approx(0.3) and incoming.fade_in == pytest.approx(0.3)
@@ -208,7 +221,9 @@ def test_a_crossfade_exports_natively_close_to_the_frame_path(footage, monkeypat
     # R24 moved the frame path's dissolve into linear light; the layered graph's xfade still mixes in gamma,
     # so the two now sit at 37 to 38 dB where they sat above 40. The hold's own standard is 30 dB; a
     # crossfade in light for the graph is on the plan as the layered path's known difference.
-    assert layered["renderPath"] in ("layered", "frames") and psnr(frames["file"], layered["file"]) > 34
+    # a crossfade now goes to the frame path outright (fast_layers.TRANSITIONS is empty), so the two files are
+    # the same path's pictures
+    assert layered["renderPath"] == "frames" and psnr(frames["file"], layered["file"]) > 40
 
 
 @DECODER_PARITY

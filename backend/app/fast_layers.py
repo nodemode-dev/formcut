@@ -48,8 +48,12 @@ ALLOWED = {
 }
 # The renderer draws these two as alpha ramps alone: a crossfade ramps the
 # incoming clip in over the outgoing one, which keeps playing; a dip ramps one
-# out and the other in through the background.
-TRANSITIONS = ("crossfade", "dip")
+# out and the other in through the background. Since R24 the frame path
+# mixes them in linear light and this graph's overlay mixes in gamma, which
+# the crossfade test measured at 37.8 dB against the frame path where it
+# had been above 40; so a clip carrying either goes to the frame path, which
+# is what the hold would send it to anyway, and the graph keeps the cuts.
+TRANSITIONS = ()
 LIMIT = 32
 CUBE = 33
 

@@ -389,20 +389,28 @@ def _pixelated(image: np.ndarray, block: int) -> np.ndarray:
     return cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
 
 
-def _lift_table(transfer: str) -> np.ndarray:
-    """The 256 byte values of an SDR picture as sixteen-bit code values in the HDR transfer, SDR white at 203 nits."""
+# BT.709 to BT.2020 primaries, in linear light (ITU-R BT.2087).
+_709_TO_2020 = np.array([[0.6274, 0.3293, 0.0433], [0.0691, 0.9195, 0.0114], [0.0164, 0.0880, 0.8956]], np.float32)
+_ENCODE_STEPS = 4096
+
+
+def _lift_table(transfer: str) -> tuple[np.ndarray, np.ndarray]:
+    """The two tables the lift uses: the 256 byte values decoded to linear light at SDR white (203 nits,
+    as a fraction of the transfer's peak), and the transfer's encoding sampled at 4096 steps of light."""
     v = np.arange(256, dtype=np.float64) / 255
     linear = np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4)
+    peak = 10000.0 if transfer == "pq" else 1000.0
+    decode = (linear * 203 / peak).astype(np.float32)
+    y = np.linspace(0, 1, _ENCODE_STEPS, dtype=np.float64)
     if transfer == "pq":
-        y = np.clip(linear * 203 / 10000, 0, 1)
         m1, m2, c1, c2, c3 = 0.1593017578125, 78.84375, 0.8359375, 18.8515625, 18.6875
         yy = y**m1
         code = ((c1 + c2 * yy) / (1 + c3 * yy)) ** m2
-    else:  # HLG: SDR white at 203 nits is 0.203 of the 1000-nit nominal peak, in scene light
-        y = np.clip(linear * 203 / 1000, 0, 1)
+    else:
         a, b, c = 0.17883277, 0.28466892, 0.55991073
         code = np.where(y <= 1 / 12, np.sqrt(3 * y), a * np.log(np.maximum(12 * y - b, 1e-9)) + c)
-    return np.round(np.clip(code, 0, 1) * 65535).astype(np.uint16)
+    encode = np.round(np.clip(code, 0, 1) * 65535).astype(np.uint16)
+    return decode, encode
 
 
 def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
@@ -633,8 +641,13 @@ class FrameRenderer:
         """A byte RGBA picture into the deep working space at SDR white, alpha scaled with it; unchanged when the project is bytes."""
         if not self.deep or rgba.dtype != np.uint8:
             return rgba
+        # decode to light at SDR white, move the primaries from BT.709 to BT.2020 (the deep timeline's
+        # gamut), encode through the transfer: a byte picture lands where an HDR camera would have put it
+        decode, encode = self._lift
+        light = decode[rgba[:, :, :3]]
+        wide = np.clip(light @ _709_TO_2020.T, 0, 1)
         out = np.empty(rgba.shape, np.uint16)
-        out[:, :, :3] = self._lift[rgba[:, :, :3]]
+        out[:, :, :3] = encode[np.round(wide * (_ENCODE_STEPS - 1)).astype(np.int32)]
         out[:, :, 3] = rgba[:, :, 3].astype(np.uint16) * 257
         return out
 
