@@ -251,6 +251,15 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
         <button class="toggle" data-ref="tenbit" aria-label="10-bit"></button>
       </div>
       <div class="modal-row">
+        <span>${text("Output colour")}</span>
+        <div class="seg" data-ref="colour">
+          <button class="is-active" data-val="bt709">Rec.709</button>
+          <button data-val="hlg">HLG</button>
+          <button data-val="pq">PQ (HDR10)</button>
+        </div>
+      </div>
+      <p class="modal-note">${text("HLG and PQ export in ten bits with the BT.2020 transform applied on the way out; they need an encoder that carries ten bits (HEVC, AV1 or VP9), and a Rec.709 file is written otherwise.")}</p>
+      <div class="modal-row">
         <span>${t("export.exact")}</span>
         <button class="toggle" data-ref="exact" aria-label="${t("export.exact")}"></button>
       </div>
@@ -432,7 +441,8 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     cancelExport.hidden = false;
     showToast("Exporting 0%");
     try {
-      const done = await exportProject(state, format, quality, showToast, exportController.signal, {
+      const colour = (segValue("colour") || "bt709") as "bt709" | "hlg" | "pq";
+      const done = await exportProject({ ...state, outputColour: colour }, format, quality, showToast, exportController.signal, {
         codec: segValue("codec") || null,
         tenBit: modal.querySelector('[data-ref="tenbit"]')!.classList.contains("is-on"),
         exact: modal.querySelector('[data-ref="exact"]')!.classList.contains("is-on"),

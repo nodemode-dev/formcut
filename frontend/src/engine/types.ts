@@ -254,6 +254,8 @@ export interface ClipTransform {
 export interface ProjectState {
   revision?: number;
   projectId: string | null;
+  /** The export's colour: Rec.709 as the working space is, or an HLG or PQ output transform in ten bits. */
+  outputColour?: "bt709" | "hlg" | "pq";
   title: string;
   saved: boolean;
   width: number;

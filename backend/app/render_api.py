@@ -295,6 +295,33 @@ def export_media(
         # or converted at decode), so the file says so; an untagged file is
         # guessed at by players, and not always the same way.
         colour_tags = ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]
+        # An HDR output: the project's outputColour asks for HLG or PQ. The
+        # working space is BT.709; the export applies the inverse transform
+        # (BT.709 to BT.2020 primaries, the HLG or PQ transfer) with zscale,
+        # in ten bits, and tags the file as what it is. Both encoders that
+        # carry ten bits are asked for it; an encoder that cannot keeps 709.
+        output_colour = str(project.get("outputColour") or "bt709").lower()
+        hdr_filter = ""
+        if output_colour in ("hlg", "pq") and encoder in (
+            "libx265",
+            "libsvtav1",
+            "libaom-av1",
+            "libvpx-vp9",
+            "hevc_videotoolbox",
+            "hevc_nvenc",
+            "hevc_qsv",
+            "hevc_amf",
+        ):
+            ten_bit = True
+            transfer = "arib-std-b67" if output_colour == "hlg" else "smpte2084"
+            # The frames arrive as untagged RGB; the colorspace filter names
+            # them BT.709 in ten bits first, which is the input zscale accepts.
+            hdr_filter = (
+                "colorspace=all=bt709:iall=bt709:format=yuv444p10,"
+                f"zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt2020,zscale=t={transfer}:m=bt2020nc:r=tv,format=yuv420p10le"
+            )
+            colour_tags = ["-color_primaries", "bt2020", "-color_trc", transfer, "-colorspace", "bt2020nc", "-color_range", "tv"]
+            pix = pixel_format(encoder or "", True)
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *colour_tags, *audio_flags] if encoder else []
         count = math.ceil(project["duration"] * fps)
         if cisco or gif:
@@ -327,7 +354,9 @@ def export_media(
         # An H.264 add-on the person installed runs from its own binary; the
         # bundled LGPL ffmpeg drives everything else.
         program = str(addon_binary_for(encoder) or "ffmpeg")
-        native = None if os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload else fast_export.plan(project, count)
+        # An HDR output needs the frame path: the two graphs feed the file to
+        # the encoder untouched and would tag Rec.709 pixels as HLG or PQ.
+        native = None if os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter else fast_export.plan(project, count)
         if native is not None:
             fast_export.run(
                 native, program, audio, [*codec, "-pix_fmt", pix], out_w, out_h, out_rate, project["duration"], path, log, report, cancelled
@@ -348,7 +377,9 @@ def export_media(
                 }
             )
         layered = (
-            None if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload else fast_layers.plan(project, count)
+            None
+            if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter
+            else fast_layers.plan(project, count)
         )
         if layered is not None and exact and os.environ.get("FORMCUT_EXPORT_PATH") != "layered":
             # Exact colours: the frame path renders what the preview shows. The graph is
@@ -409,7 +440,9 @@ def export_media(
             "-map",
             "1:a",
             "-vf",
-            f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2" + (f",{upload}" if upload else ""),
+            f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2"
+            + (f",{hdr_filter}" if hdr_filter else "")
+            + (f",{upload}" if upload else ""),
             "-r",
             out_rate,
             *codec,

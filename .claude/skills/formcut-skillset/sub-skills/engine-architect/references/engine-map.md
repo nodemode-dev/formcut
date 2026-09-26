@@ -49,7 +49,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 734 | /api/render | 13 |
+| render_api.py | 767 | /api/render | 13 |
 | render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -113,7 +113,7 @@ the automation transports.
 - `text_templates.py` (393L)
 - `timing.py` (269L)
 - `tools.py` (232L)
-- `validation.py` (218L)
+- `validation.py` (220L)
 - `video_source.py` (326L)
 - `windows_console.py` (43L)
 

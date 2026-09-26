@@ -18,6 +18,8 @@ def _effect_prop(key: str, clip: dict) -> bool:
 
 
 def project_values(project):
+    if project.get("outputColour") not in (None, "bt709", "hlg", "pq"):
+        raise ValueError("outputColour must be bt709, hlg or pq")
     fill = project.get("background")
     if fill is None:
         return
