@@ -58,6 +58,8 @@ SUPPORTED = frozenset(
         "bokeh-spots",
         "sparkles",
         "snowfall",
+        "pencil",
+        "clarity",
         "gaussian",
         "box",
         "directional-blur",
@@ -215,6 +217,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         let gl = dot(left, vec3<f32>(0.299, 0.587, 0.114));
         let gr = dot(right, vec3<f32>(0.299, 0.587, 0.114));
         rgb = vec3<f32>(gl, gr, gr);
+    }
+    if (mode == 15) {
+        // one minus grey, in every channel: the pencil's inverse before its blur
+        rgb = vec3<f32>(1.0 - grey);
     }
     if (mode == 14) {
         // crosshatch: three hatch families by the grey under them, p[3] the period
@@ -576,6 +582,42 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if (i32(p[2]) == 3) { rgb = vec3<f32>(1.0) - (vec3<f32>(1.0) - s.rgb) * (vec3<f32>(1.0) - f); }
     if (i32(p[2]) == 4) { rgb = select(s.rgb, f, f.r >= 0.0); }
     dst[i] = vec4<f32>(rgb, s.a);
+}
+"""
+
+# R14: pencil and clarity over the held original. PENCIL: the original's grey
+# divided by one minus the blurred inverse grey in src, capped at one.
+# CLARITY: the original plus its difference from the blur, scaled by p[2] and
+# by how far the original sits from black and white.
+PENCIL_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let o = held[i];
+    let grey = dot(o.rgb, vec3<f32>(0.299, 0.587, 0.114));
+    let v = min(1.0, grey / max(0.001, 1.0 - src[i].r));
+    dst[i] = vec4<f32>(vec3<f32>(v), o.a);
+}
+"""
+
+CLARITY_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let o = held[i];
+    let grey = dot(o.rgb, vec3<f32>(0.299, 0.587, 0.114));
+    let midtones = 1.0 - abs(grey * 2.0 - 1.0);
+    dst[i] = vec4<f32>(o.rgb + (o.rgb - src[i].rgb) * p[2] * midtones, o.a);
 }
 """
 
@@ -952,6 +994,17 @@ class _Chain:
                 self._multi_remap([(np.mod(x - k, w), np.mod(y - k, h)) for k in steps], [1 / len(steps)] * len(steps))
             else:
                 self._multi_remap([(x, y), (np.mod(x - size, w), y), (np.mod(x - size * 2, w), y)], [0.55, 0.27, 0.18])
+            return
+        if effect == "pencil":
+            self._hold()
+            self._pass(POINT_CODE, [15])
+            self._blur(_gaussian_taps(radius))
+            self._pass(PENCIL_CODE, [])
+            return
+        if effect == "clarity":
+            self._hold()
+            self._blur(_gaussian_taps(max(2.0, self.w / 80)))
+            self._pass(CLARITY_CODE, [0.7 * float(params.get("intensity", 1))])
             return
         if effect == "tilt-shift":
             self._hold()
