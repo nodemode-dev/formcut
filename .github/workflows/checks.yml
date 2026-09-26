@@ -160,7 +160,14 @@ jobs:
         run: |
           cd backend
           python -c "from app.bench import _demo_project" 2>/dev/null || true
-          python -m app.bench --frames 12 --width 640 || echo "bench: no adapter on this runner, refused as designed"
+          python -m app.bench --frames 12 --width 640 --record ../bench-${{ matrix.os }}.json || echo "bench: no adapter on this runner, refused as designed"
+      - name: the perf table
+        if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.os }}
+          path: bench-${{ matrix.os }}.json
+          if-no-files-found: ignore
 
       # bash on every runner: Windows would run this under PowerShell, which
       # cannot read the heredoc.

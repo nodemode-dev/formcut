@@ -32,6 +32,15 @@ def _demo_project() -> dict:
     projects = data if isinstance(data, list) else data.get("projects", [])
     if not projects:
         return _synthetic_project()
+
+    # the demo by name when it is there, else the longest saved project: a one-second test project would
+    # bench empty frames past its end
+    def clips_in(p):
+        doc = p.get("document") or p
+        return sum(len(t.get("clips") or []) for tl in doc.get("timelines") or [] for t in tl.get("tracks") or [])
+
+    named = [p for p in projects if str(p.get("title", "")).lower().startswith("demo")]
+    projects = sorted(named or projects, key=clips_in, reverse=True)
     demos = [p for p in projects if "demo" in str(p.get("title", p.get("name", ""))).lower()]
     return (demos or projects)[-1]
 
@@ -164,7 +173,11 @@ def _run(doc: dict, width: int, frames: int, path: str):
     # them; spreading the samples across the clip made every read skip a
     # run of frames through the pipe, which measured seeking, not rendering.
     fps = float(doc.get("fps", 30) or 30)
-    start = min(1.0, max(0.0, doc["duration"] - frames / fps))
+    # from the first instant footage is on screen (a saved demo may have been cut about), one second in at most
+    tracks = doc["timelines"][doc.get("activeTimeline", 0)]["tracks"]
+    starts = [float(c.get("start") or 0) for t in tracks for c in t.get("clips") or [] if c.get("kind") == "video"]
+    first = min(starts) + 0.2 if starts else 0.0
+    start = min(max(1.0, first), max(0.0, doc["duration"] - frames / fps))
     times = [start + i / fps for i in range(frames)]
     renderer.frame(times[0])  # warm: sessions, decoders, pipelines
     began = time.perf_counter()
@@ -180,6 +193,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("project", nargs="?", help="a project.json; the demo when omitted")
     parser.add_argument("--frames", type=int, default=24)
     parser.add_argument("--width", type=int, default=1280)
+    parser.add_argument("--record", help="write the readings to this JSON table (a perf table with budgets)")
+    parser.add_argument(
+        "--budget",
+        help="compare with a recorded table for this adapter and fail (exit 3) when a scenario is slower than the budget fraction of its record",
+    )
+    parser.add_argument("--budget-fraction", type=float, default=0.7, help="how much of the recorded rate a scenario must still reach")
     args = parser.parse_args(argv)
     os.environ.setdefault("FORMCUT_NO_WARM", "1")
     from . import gpu
@@ -214,6 +233,48 @@ def main(argv: list[str] | None = None) -> int:
     if adapter.get("adapter_type", "").lower() == "cpu":
         print("this adapter is a software rasteriser; the device path shares the CPU with NumPy here,")
         print("and the reading that matters is on a real GPU")
+    # A perf table with budgets: every reading is a scenario keyed by the adapter, the width and the frame
+    # count; --record writes them, --budget reads them back and fails when a scenario fell below the budget
+    # fraction of its recorded rate on the same adapter, so a regression is caught by a machine before a person.
+    scenario = f"{args.width}w-{args.frames}f"
+    readings = {
+        "decode_floor": floor or 0.0,
+        "cpu_fps": cpu_fps,
+        "device_fps": dev_fps,
+        "difference_mean": mad,
+        "difference_max": int(worst),
+    }
+    if args.record:
+        table = {}
+        if os.path.exists(args.record):
+            with open(args.record, encoding="utf-8") as handle:
+                table = json.load(handle)
+        table.setdefault(name, {})[scenario] = readings
+        with open(args.record, "w", encoding="utf-8") as handle:
+            json.dump(table, handle, indent=1)
+        print(f"recorded {name} / {scenario} into {args.record}")
+    if args.budget and os.path.exists(args.budget):
+        with open(args.budget, encoding="utf-8") as handle:
+            table = json.load(handle)
+        recorded = table.get(name, {}).get(scenario)
+        if recorded is None:
+            print(f"no record for {name} / {scenario} in {args.budget}; nothing to hold against")
+        else:
+            failed = []
+            for key in ("cpu_fps", "device_fps"):
+                floor_rate = recorded[key] * args.budget_fraction
+                state = "ok" if readings[key] >= floor_rate else "BELOW BUDGET"
+                print(
+                    f"budget {key}: {readings[key]:.2f} against {recorded[key]:.2f} recorded ({args.budget_fraction:.0%} = {floor_rate:.2f}) {state}"
+                )
+                if readings[key] < floor_rate:
+                    failed.append(key)
+            if readings["difference_max"] > max(8, recorded["difference_max"]):
+                print(f"budget parity: largest {readings['difference_max']}/255 against {recorded['difference_max']} recorded BELOW BUDGET")
+                failed.append("parity")
+            if failed:
+                print("perf budget failed: " + ", ".join(failed))
+                return 3
     return 0
 
 
