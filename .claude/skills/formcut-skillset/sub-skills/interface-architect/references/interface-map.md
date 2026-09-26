@@ -28,10 +28,10 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1148L)
+- `engine/project.ts` (1157L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
-- `engine/types.ts` (287L)
+- `engine/types.ts` (289L)
 - `i18n/index.ts` (211L)
 - `i18n/language-pack.ts` (1185L)
 - `i18n/text.ts` (29L)
@@ -66,8 +66,8 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/render-preview.ts` (244L)
 - `ui/safe-text.ts` (3L)
 - `ui/settings-link.ts` (8L)
-- `ui/settings-popout.ts` (598L)
-- `ui/start-screen.ts` (697L)
+- `ui/settings-popout.ts` (613L)
+- `ui/start-screen.ts` (752L)
 - `ui/studio-tools.ts` (847L)
 - `ui/tiktok-dialog.ts` (258L)
 - `ui/tiktok-settings.ts` (89L)
@@ -137,6 +137,7 @@ and a UI module that mutates state directly is a defect.
 - `project.load`
 - `project.rename`
 - `project.saved`
+- `project.sync-folder`
 - `timeline.activate`
 - `timeline.cut-range`
 - `timeline.move`

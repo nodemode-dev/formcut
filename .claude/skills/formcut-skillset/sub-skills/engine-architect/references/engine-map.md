@@ -36,16 +36,16 @@ The rest is written by hand.
 | generate.py | 308 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
-| library.py | 2258 | /api/library | 3 |
+| library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | main.py | 410 | /api/health | 13 |
 | media.py | 864 | /api/media | 25 |
 | model_manager.py | 528 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 465 | /api/presets | 8 |
-| project_packages.py | 239 | /api/projects | 2 |
+| project_packages.py | 312 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
-| projects.py | 172 | /api/projects | 9 |
+| projects.py | 175 | /api/projects | 9 |
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
@@ -106,14 +106,14 @@ the automation transports.
 - `security.py` (68L)
 - `segmentation.py` (323L)
 - `stabilise.py` (209L)
-- `store.py` (57L)
+- `store.py` (71L)
 - `subject.py` (220L)
 - `template_assets.py` (92L)
 - `template_library.py` (452L)
 - `text_templates.py` (393L)
 - `timing.py` (269L)
 - `tools.py` (232L)
-- `validation.py` (220L)
+- `validation.py` (222L)
 - `video_source.py` (510L)
 - `windows_console.py` (43L)
 
