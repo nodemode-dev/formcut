@@ -71,7 +71,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/studio-tools.ts` (847L)
 - `ui/tiktok-dialog.ts` (258L)
 - `ui/tiktok-settings.ts` (89L)
-- `ui/timeline-pane.ts` (731L)
+- `ui/timeline-pane.ts` (766L)
 - `ui/timeline-structure.ts` (50L)
 - `ui/title-speech.ts` (53L)
 - `ui/titlebar.ts` (468L)
