@@ -86,7 +86,7 @@ def _fog_field(h: int, w: int) -> np.ndarray:
     return field
 
 
-REMAP_EFFECTS = ("fisheye", "wave", "kaleidoscope", "swirl", "ripple", "pinch", "tile-repeat", "polar-wrap", "heat-haze")
+REMAP_EFFECTS = ("fisheye", "wave", "kaleidoscope", "swirl", "ripple", "pinch", "tile-repeat", "polar-wrap", "heat-haze", "interference")
 
 
 def remap_maps(effect: str, h: int, w: int, local: float, params: dict) -> tuple[np.ndarray, np.ndarray] | None:
@@ -129,10 +129,31 @@ def remap_maps(effect: str, h: int, w: int, local: float, params: dict) -> tuple
         return (np.arctan2(dy, dx) / (2 * math.pi) + 0.5) * (w - 1), (1 - r) * (h - 1)
     if effect == "heat-haze":
         return x + np.sin(y / 11 + local * 5) * np.sin(x / 23 + local * 3) * size * 0.6, y + np.cos(x / 13 + local * 4) * size * 0.4
+    if effect == "interference":
+        return x + np.sin(y / 9 + local * 15) * (np.sin(local * 12) ** 8) * size * 2, y
+    if effect == "hex-pixelate":
+        s, root = float(size), math.sqrt(3.0)
+        q, r = (root / 3 * x - y / 3) / s, (2 / 3 * y) / s
+        cube = np.stack([q, -q - r, r])
+        rounded = np.round(cube)
+        diff = np.abs(rounded - cube)
+        rounded[0] = np.where((diff[0] > diff[1]) & (diff[0] > diff[2]), -rounded[1] - rounded[2], rounded[0])
+        rounded[2] = np.where(~((diff[0] > diff[1]) & (diff[0] > diff[2])) & ~(diff[1] > diff[2]), -rounded[0] - rounded[1], rounded[2])
+        return (s * root * (rounded[0] + rounded[2] / 2)).astype(np.float32), (s * 1.5 * rounded[2]).astype(np.float32)
     return None
 
 
-FIELD_EFFECTS = ("light-leak", "lens-flare", "aperture-grille", "paper-texture", "chroma-noise", "film-scratches")
+FIELD_EFFECTS = (
+    "light-leak",
+    "lens-flare",
+    "aperture-grille",
+    "paper-texture",
+    "chroma-noise",
+    "film-scratches",
+    "bokeh-spots",
+    "sparkles",
+    "snowfall",
+)
 
 
 def field_for(effect: str, h: int, w: int, local: float, params: dict) -> tuple[np.ndarray, np.ndarray, int] | None:
@@ -173,6 +194,45 @@ def field_for(effect: str, h: int, w: int, local: float, params: dict) -> tuple[
     if effect == "chroma-noise":
         noise = np.random.default_rng(int(local * 1000) % (2**32)).normal(0, 1, (h, w, 3)).astype(np.float32)
         return ones, (cv2.GaussianBlur(noise, (0, 0), 0.8) * float(params.get("strength", 0.15))).astype(np.float32), 1
+    if effect == "bokeh-spots":
+        spots = np.zeros((h, w, 3), np.float32)
+        rng = np.random.default_rng(433)
+        scale = float(params.get("scale", 1))
+        for px, py, sp in rng.random((78, 3))[: round(26 * float(params.get("density", 1)))]:
+            cv2.circle(
+                spots, (int(px * w), int((py + local * 0.01) % 1 * h)), max(2, int(w * (0.03 + 0.05 * sp) * scale)), (0.9, 0.7, 0.35), -1
+            )
+        return ones, (cv2.GaussianBlur(spots, (0, 0), max(1.0, w / 200)) * 0.6).astype(np.float32), 2
+    if effect == "sparkles":
+        rng = np.random.default_rng(11)
+        sky = np.zeros((h, w, 3), np.float32)
+        stars = np.stack([rng.random(40), rng.random(40), rng.random(40) * 6.3, 0.5 + rng.random(40)], axis=1)
+        wanted = round(40 * float(params.get("density", 1)))
+        if wanted > 40:
+            more = np.random.default_rng(12).random((wanted - 40, 4)) * [1, 1, 6.3, 1] + [0, 0, 0, 0.5]
+            stars = np.concatenate([stars, more])
+        size = float(params.get("scale", 1))
+        for sx, sy, phase, scale in stars[:wanted]:
+            bright = max(0.0, math.sin(local * 4 + phase)) ** 3
+            if bright < 0.02:
+                continue
+            reach, centre = max(2, int(w * 0.02 * scale * size * bright)), (int(sx * w), int(sy * h))
+            colour = (bright, bright * 0.95, bright * 0.85)
+            cv2.line(sky, (centre[0] - reach, centre[1]), (centre[0] + reach, centre[1]), colour, 1, cv2.LINE_AA)
+            cv2.line(sky, (centre[0], centre[1] - reach), (centre[0], centre[1] + reach), colour, 1, cv2.LINE_AA)
+        sky = sky + cv2.GaussianBlur(sky, (0, 0), max(1.5, w / 300)) * 2
+        return ones, np.clip(sky, 0, 1).astype(np.float32), 2
+    if effect == "snowfall":
+        # mode 3: rgb * 0.88 + 0.07, then the flakes cover; the cover field is -1 where nothing is drawn
+        cover = np.full((h, w, 3), -1.0, np.float32)
+        rng = np.random.default_rng(907)
+        flakes = rng.random((1080, 3))[: round(360 * float(params.get("density", 1)))]
+        scale = float(params.get("scale", 1))
+        for px, py, rate in flakes:
+            a = int((px + math.sin(local * 1.3 + py * 9) * 0.02) % 1 * w)
+            b = int((py + local * (rate * 0.5 + 0.15) * 0.2) % 1 * h)
+            cv2.circle(cover, (a, b), max(1, int(w / 320 * (1 + 1.5 * rate) * scale)), (0.95, 0.97, 1.0), -1)
+        return np.full((h, w, 3), 0.88, np.float32), cover, 3
     if effect == "film-scratches":
         add = np.broadcast_to(np.float32([0.06, 0.045, 0.02]), (h, w, 3)).astype(np.float32).copy()
         rng = np.random.default_rng(int(local * 12))

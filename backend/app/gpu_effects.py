@@ -51,6 +51,13 @@ SUPPORTED = frozenset(
         "film-scratches",
         "camera-shake",
         "crosshatch",
+        "halftone",
+        "bayer-dither",
+        "interference",
+        "hex-pixelate",
+        "bokeh-spots",
+        "sparkles",
+        "snowfall",
         "gaussian",
         "box",
         "directional-blur",
@@ -345,6 +352,67 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R13: halftone and bayer-dither over the same INTER_AREA cell average as
+# pixelate, with the cell addressed the way process() addresses it. Halftone
+# reads the grey of cell (x // cell, y // cell) clamped to the small grid and
+# draws a dot whose radius follows the darkness; p[2] cols, p[3] rows, p[4]
+# the cell. Bayer takes the cell average of colour, adds the 4x4 threshold
+# of the cell's position and floors to four levels; p[4] the step.
+CELL_CODE = """
+fn cell_mean(cx: i32, cy: i32, cols: f32, rows: f32, w: i32, h: i32) -> vec3<f32> {
+    let x0 = f32(cx) * p[0] / cols;
+    let x1 = f32(cx + 1) * p[0] / cols;
+    let y0 = f32(cy) * p[1] / rows;
+    let y1 = f32(cy + 1) * p[1] / rows;
+    var sum = vec3<f32>(0.0);
+    var total = 0.0;
+    for (var sy = i32(floor(y0)); sy < min(h, i32(ceil(y1))); sy = sy + 1) {
+        let wy = min(f32(sy) + 1.0, y1) - max(f32(sy), y0);
+        if (wy <= 0.0) { continue; }
+        for (var sx = i32(floor(x0)); sx < min(w, i32(ceil(x1))); sx = sx + 1) {
+            let wx = min(f32(sx) + 1.0, x1) - max(f32(sx), x0);
+            if (wx <= 0.0) { continue; }
+            sum = sum + src[sy * w + sx].rgb * (wx * wy);
+            total = total + wx * wy;
+        }
+    }
+    return sum / max(total, 1e-9);
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let cols = p[2];
+    let rows = p[3];
+    let cell = i32(p[4]);
+    let cx = min(x / cell, i32(cols) - 1);
+    let cy = min(y / cell, i32(rows) - 1);
+    let mean = cell_mean(cx, cy, cols, rows, w, h);
+    var rgb = vec3<f32>(1.0);
+    if (i32(p[5]) == 1) {
+        let level = dot(mean, vec3<f32>(0.299, 0.587, 0.114));
+        let fx = f32(x % cell) - f32(cell) / 2.0;
+        let fy = f32(y % cell) - f32(cell) / 2.0;
+        let dot_here = sqrt(fx * fx + fy * fy) < (1.0 - level) * f32(cell) * 0.62;
+        rgb = vec3<f32>(select(1.0, 0.0, dot_here));
+    } else {
+        // the Bayer 4x4 threshold, indexed by the cell's position in the small grid
+        let mrow = cy % 4;
+        let mcol = cx % 4;
+        var t = 0.0;
+        if (mrow == 0) { t = select(select(select(0.0, 8.0, mcol == 1), 2.0, mcol == 2), 10.0, mcol == 3); }
+        if (mrow == 1) { t = select(select(select(12.0, 4.0, mcol == 1), 14.0, mcol == 2), 6.0, mcol == 3); }
+        if (mrow == 2) { t = select(select(select(3.0, 11.0, mcol == 1), 1.0, mcol == 2), 9.0, mcol == 3); }
+        if (mrow == 3) { t = select(select(select(15.0, 7.0, mcol == 1), 13.0, mcol == 2), 5.0, mcol == 3); }
+        rgb = floor(clamp(mean, vec3<f32>(0.0), vec3<f32>(1.0)) * 3.0 + t / 16.0) / 3.0;
+    }
+    dst[y * w + x] = vec4<f32>(rgb, src[y * w + x].a);
+}
+"""
+
 # The transform: dst pixel to source through the inverse affine in p[4..9],
 # bilinear with a transparent border, as cv2.warpAffine(INTER_LINEAR) does,
 # after the alpha channel is scaled by p[10] on the byte grid.
@@ -506,6 +574,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var rgb = s.rgb * f;
     if (i32(p[2]) == 2) { rgb = s.rgb + f; }
     if (i32(p[2]) == 3) { rgb = vec3<f32>(1.0) - (vec3<f32>(1.0) - s.rgb) * (vec3<f32>(1.0) - f); }
+    if (i32(p[2]) == 4) { rgb = select(s.rgb, f, f.r >= 0.0); }
     dst[i] = vec4<f32>(rgb, s.a);
 }
 """
@@ -818,10 +887,31 @@ class _Chain:
             if mode == 2:
                 self._pass(FIELD_CODE, [3], np.ascontiguousarray(add))
                 return
+            if mode == 3:
+                # snowfall: rgb * 0.88 + 0.07, then the flakes cover where the field is drawn
+                self._pass(FIELD_CODE, [1], np.ascontiguousarray(mul))
+                self._pass(FIELD_CODE, [2], np.full((self.h, self.w, 3), 0.07, np.float32))
+                self._pass(FIELD_CODE, [4], np.ascontiguousarray(add))
+                return
             if not np.all(mul == 1):
                 self._pass(FIELD_CODE, [1], np.ascontiguousarray(mul))
             if np.any(add != 0):
                 self._pass(FIELD_CODE, [2], np.ascontiguousarray(add))
+            return
+        if effect == "hex-pixelate":
+            self._blur(_gaussian_taps(max(0.5, float(size) / 3)))
+            maps = remap_maps(effect, self.h, self.w, local, params)
+            xy = np.empty((self.h, self.w, 2), np.float32)
+            xy[:, :, 0], xy[:, :, 1] = maps
+            self._pass(REMAP_CODE, [], xy)
+            return
+        if effect == "halftone":
+            cell = max(4, size)
+            self._pass(CELL_CODE, [max(1, self.w // cell), max(1, self.h // cell), cell, 1])
+            return
+        if effect == "bayer-dither":
+            step = max(1, size // 4)
+            self._pass(CELL_CODE, [max(1, self.w // step), max(1, self.h // step), step, 2])
             return
         if effect == "camera-shake":
             from .pixel_effects import _grid
