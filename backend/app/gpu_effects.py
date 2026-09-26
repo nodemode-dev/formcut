@@ -66,6 +66,7 @@ SUPPORTED = frozenset(
         "ink-outline",
         "oil-paint",
         "lens-blur",
+        "stained-glass",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -958,6 +959,69 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R18: stained glass. The panes are a Voronoi labelling the CPU computes once
+# per size (pixel_effects._glass_cells); aux carries each pixel's label and
+# whether it is lead, two floats a pixel. GLASS_SCATTER sums every pane's
+# colour and count into the next buffer with atomics, in fixed point (1/1024
+# a count, well under a byte); GLASS_PANE paints each pixel its pane's mean,
+# lifted 1.08, and darkens the lead. ZERO clears the sums first.
+ZERO_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    dst[y * w + x] = vec4<f32>(0.0);
+}
+"""
+
+GLASS_SCATTER_CODE = """
+@group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> sums: array<atomic<u32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<f32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let label = u32(aux[i * 2]);
+    let c = clamp(src[i].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+    atomicAdd(&sums[label * 4u], u32(round(c.r * 1024.0)));
+    atomicAdd(&sums[label * 4u + 1u], u32(round(c.g * 1024.0)));
+    atomicAdd(&sums[label * 4u + 2u], u32(round(c.b * 1024.0)));
+    atomicAdd(&sums[label * 4u + 3u], 1u);
+}
+"""
+
+GLASS_PANE_CODE = """
+@group(0) @binding(0) var<storage, read> sums: array<u32>;
+@group(0) @binding(1) var<storage, read_write> dst: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<f32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let label = u32(aux[i * 2]);
+    let count = max(1.0, f32(sums[label * 4u + 3u]));
+    let mean = vec3<f32>(f32(sums[label * 4u]), f32(sums[label * 4u + 1u]), f32(sums[label * 4u + 2u])) / (1024.0 * count);
+    let lead = select(1.0, 0.08, aux[i * 2 + 1] > 0.5);
+    dst[i] = vec4<f32>(mean * 1.08 * lead, held[i].a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1389,6 +1453,21 @@ class _Chain:
             self._pass(SCALE_CODE, [1.0], source=2, target=acc)
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
+            self._restore()
+            return
+        if effect == "stained-glass":
+            from .pixel_effects import _glass_cells
+
+            labels, leading = _glass_cells(self.h, self.w, max(8, int(size * 2.5)))
+            field = np.empty((self.h, self.w, 2), np.float32)
+            field[:, :, 0], field[:, :, 1] = labels, leading
+            pixels, sums = self.current, (self.current + 1) % 2
+            self._keep()
+            self._hold()
+            self._pass(ZERO_CODE, [], source=pixels, target=sums)
+            self._pass(GLASS_SCATTER_CODE, [], field, source=pixels, target=sums)
+            self._pass(GLASS_PANE_CODE, [], field, source=sums, target=pixels)
+            self.current = pixels
             self._restore()
             return
         if effect == "lens-blur":
