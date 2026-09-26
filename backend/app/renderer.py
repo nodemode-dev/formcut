@@ -433,6 +433,10 @@ def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
 
 
 class FrameRenderer:
+    # A renderer built without its constructor (the tail tests do this) is an SDR renderer.
+    deep = False
+    transfer = "bt709"
+    _lift = None
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
         self.width = width or self.project["width"]
