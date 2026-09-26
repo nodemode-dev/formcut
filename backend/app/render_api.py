@@ -202,14 +202,16 @@ def _light_table(transfer: str) -> np.ndarray:
     return table
 
 
-def _light_of(frame: np.ndarray, transfer: str) -> tuple[float, float]:
+def _light_of(frame: np.ndarray, transfer: str, stride: int = 2) -> tuple[float, float]:
     """The frame's brightest pixel and its average, in nits, from the deep signal: MaxCLL and MaxFALL's inputs.
     The transfer is monotonic, so the brightest channel's code is the brightest channel's light, and one table
     lookup on the per-pixel code maximum replaces a pow over every channel of every pixel (a hundred
     milliseconds a frame at 1080p, which the M5 reading showed)."""
     codes = frame[:, :, :3].max(axis=2)
-    light = _light_table(transfer)[codes]
-    return float(light.max()), float(light.mean())
+    table = _light_table(transfer)
+    peak = float(table[int(codes.max())])  # the brightest code is the brightest pixel, exactly
+    average = float(table[codes[::stride, ::stride]].mean())  # the frame average from every other pixel each way
+    return peak, average
 
 
 def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) -> list[bytes]:
@@ -358,14 +360,25 @@ def export_media(
         # while the frames are rendered and the encoder needs them before it starts, so the final
         # ten-bit encode is a second pass over the intermediate with the measured light in its
         # parameters (x265's max-cll and master-display, SVT-AV1's content-light) and in the container.
-        hdr_deep = bool(hdr_filter)
+        # The two-pass buys the light in the stream only where the encoder can write it (x265 and SVT-AV1);
+        # a hardware encoder (VideoToolbox, NVENC, QSV, AMF) cannot take the SEI from ffmpeg at all, so an
+        # HDR export through one is a single pass straight into it, render-bound, with the measured light in
+        # the result and the job log. The M5 reading showed the two-pass costing the export two thirds of
+        # its rate for a stream that could not carry the values anyway.
+        hdr_deep = bool(hdr_filter) and encoder in ("libx265", "libsvtav1")
         hdr_final = [*codec] if hdr_deep else []
         hdr_pix = pix
         hdr_filter_final = hdr_filter
         if hdr_deep:
-            hdr_filter = ""
+            # the intermediate is lossless in the final layout (ten-bit 4:2:0 with the BT.2020 matrix), a
+            # quarter the samples of sixteen-bit RGB, so the second pass only adds the light
+            hdr_filter = hdr_filter_final
+            hdr_filter_final = ""
             path = OUTPUTS / (job_id + ".intermediate.mkv")
-            codec, pix = ["-c:v", "ffv1", "-level", "3", "-slices", "8", "-slicecrc", "0", "-threads", "8", "-c:a", "pcm_s16le"], "rgb48le"
+            codec, pix = (
+                ["-c:v", "ffv1", "-level", "3", "-slices", "24", "-slicecrc", "0", "-threads", "0", "-c:a", "pcm_s16le"],
+                "yuv420p10le",
+            )
             outer_report = report
 
             def report(fraction: float) -> None:
@@ -531,8 +544,6 @@ def export_media(
                     "-y",
                     "-i",
                     str(path),
-                    "-vf",
-                    hdr_filter_final,
                     *params,
                     "-pix_fmt",
                     hdr_pix,
