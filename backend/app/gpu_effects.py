@@ -69,6 +69,7 @@ SUPPORTED = frozenset(
         "stained-glass",
         "vhs-tape",
         "skin-smooth",
+        "dehaze",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -1270,6 +1271,141 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R21: dehaze without a readback. DARK: the dark channel, the minimum over a k
+# by k window (p[2] = k) clamped to the picture, as cv2.erode's default border
+# leaves the outside out. HIST: a 256-level histogram of the dark channel by
+# atomics into the next buffer's first words. AIR: each invocation finds the
+# 99.9th percentile as np.percentile interpolates it (from the histogram, a
+# few hundred reads) and, where its pixel's dark is at or above it, adds the
+# pixel's colour (held) and a count into the words after the histogram.
+# PASSING: writes 1 - c * dark / max(air) into red with air in the other three
+# channels, from the sums; the chain blurs it; FINAL applies (rgb - air) /
+# clamp(passing, 0.35, 1) + air with the original in held.
+DARK_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let k = i32(p[2]);
+    let r = k / 2;
+    var m = 1e9;
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        let yy = y + dy;
+        if (yy < 0 || yy >= h) { continue; }
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            let xx = x + dx;
+            if (xx < 0 || xx >= w) { continue; }
+            let c = src[yy * w + xx].rgb;
+            m = min(m, min(c.r, min(c.g, c.b)));
+        }
+    }
+    dst[y * w + x] = vec4<f32>(vec3<f32>(m), src[y * w + x].a);
+}
+"""
+
+HIST_CODE = """
+@group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> words: array<atomic<u32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<f32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let level = u32(clamp(round(src[y * w + x].r * 255.0), 0.0, 255.0));
+    atomicAdd(&words[level], 1u);
+}
+"""
+
+AIR_CODE = """
+@group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> words: array<atomic<u32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<f32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+fn threshold(n: u32) -> f32 {
+    // np.percentile(dark, 99.9), linear between the two order statistics
+    let rank = 0.999 * f32(n - 1u);
+    let lo = u32(floor(rank));
+    let frac = rank - floor(rank);
+    var seen = 0u;
+    var a = 255u;
+    var b = 255u;
+    var got_a = false;
+    for (var level = 0u; level < 256u; level = level + 1u) {
+        let count = atomicLoad(&words[level]);
+        if (!got_a && seen + count > lo) { a = level; got_a = true; }
+        if (seen + count > lo + 1u) { b = level; break; }
+        seen = seen + count;
+    }
+    return (f32(a) + frac * (f32(b) - f32(a))) / 255.0;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let t = threshold(u32(w * h));
+    if (round(src[i].r * 255.0) / 255.0 + 1e-6 >= t) {
+        let c = clamp(held[i].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+        atomicAdd(&words[256u], u32(round(c.r * 4096.0)));
+        atomicAdd(&words[257u], u32(round(c.g * 4096.0)));
+        atomicAdd(&words[258u], u32(round(c.b * 4096.0)));
+        atomicAdd(&words[259u], 1u);
+    }
+}
+"""
+
+PASSING_CODE = """
+@group(0) @binding(0) var<storage, read> words: array<u32>;
+@group(0) @binding(1) var<storage, read_write> dst: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> p: array<f32>;
+@group(0) @binding(3) var<storage, read> aux: array<f32>;
+@group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let count = f32(words[259u]);
+    var air = vec3<f32>(1.0);
+    if (count > 0.0) { air = vec3<f32>(f32(words[256u]), f32(words[257u]), f32(words[258u])) / (4096.0 * count); }
+    let dark = held[i].r;
+    let passing = 1.0 - p[2] * dark / max(max(air.r, max(air.g, air.b)), 1e-3);
+    dst[i] = vec4<f32>(passing, air);
+}
+"""
+
+DEHAZE_FINAL_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let air = vec3<f32>(s.g, s.b, s.a);
+    let passing = clamp(s.r, 0.35, 1.0);
+    let o = held[i];
+    dst[i] = vec4<f32>((o.rgb - air) / passing + air, o.a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1706,6 +1842,26 @@ class _Chain:
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
             self._restore()
+            return
+        if effect == "dehaze":
+            w = self.w
+            k = max(3, w // 120)
+            taps = _gaussian_taps(max(1.0, w / 150))
+            anchor = len(taps) // 2
+            pixels, other = self.current, (self.current + 1) % 2
+            self._hold()
+            self._keep()
+            self._pass(DARK_CODE, [k], source=pixels, target=4)
+            self._pass(ZERO_CODE, [], source=pixels, target=other)
+            self._pass(HIST_CODE, [], source=4, target=other)
+            self._pass(AIR_CODE, [], source=4, target=other)
+            self.c.copy(self.c.buffers[4], self.c.buffers[2], self.h, self.w)
+            self._pass(PASSING_CODE, [min(0.95, 0.85 * float(params.get("intensity", 1)))], source=other, target=4)
+            self._pass(CONV_CODE, [1, 0, len(taps), anchor], taps, source=4, target=other)
+            self._pass(CONV_CODE, [0, 1, len(taps), anchor], taps, source=other, target=4)
+            self._restore()
+            self._pass(DEHAZE_FINAL_CODE, [], source=4, target=pixels)
+            self.current = pixels
             return
         if effect == "skin-smooth":
             w = self.w
