@@ -14,7 +14,9 @@ this file cannot supply; it makes the number a minute's work wherever one is.
 import argparse
 import json
 import os
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -43,6 +45,136 @@ def _demo_project() -> dict:
     projects = sorted(named or projects, key=clips_in, reverse=True)
     demos = [p for p in projects if "demo" in str(p.get("title", p.get("name", ""))).lower()]
     return (demos or projects)[-1]
+
+
+def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) -> dict:
+    """A PQ timeline for the HDR scenarios: a ten-bit PQ clip made by ffmpeg once and ingested through the app's
+    own media model (a moving gradient with light to full scale), over a lifted title, in a project whose output
+    colour is PQ, so the frames run deep, the monitor rolls them off and the export keeps the light."""
+    from .media import MEDIA_DIR, ingest_path
+
+    clip = MEDIA_DIR / "bench-pq.mp4"
+    if not clip.is_file():
+        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=white:s={width}x{height}:r=30:d={seconds},format=rgb48le,geq=r='(X+T*200)/W*65535':g='Y/H*65535':b='65535'",
+                "-c:v",
+                "libx265",
+                "-preset",
+                "ultrafast",
+                "-pix_fmt",
+                "yuv420p10le",
+                "-color_primaries",
+                "bt2020",
+                "-color_trc",
+                "smpte2084",
+                "-colorspace",
+                "bt2020nc",
+                "-x265-params",
+                "log-level=0",
+                str(clip),
+            ],
+            check=True,
+        )
+    record = ingest_path(clip, "bench-pq.mp4", {"source": "bench"})
+    base = {
+        "scale": 100,
+        "posX": 0,
+        "posY": 0,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "opacity": 100,
+        "blendMode": "Normal",
+        "flipH": False,
+    }
+    return {
+        "title": "bench-hdr",
+        "width": width,
+        "height": height,
+        "fps": 30,
+        "duration": seconds,
+        "activeTimeline": 0,
+        "outputColour": "pq",
+        "timelines": [
+            {
+                "id": "t",
+                "name": "t",
+                "tracks": [
+                    {
+                        "id": "titles",
+                        "name": "Titles",
+                        "clips": [
+                            {
+                                "id": "t",
+                                "kind": "text",
+                                "label": "bench",
+                                "start": 0,
+                                "duration": seconds,
+                                "transform": {**base, "posY": -30},
+                                "textStyle": {"content": "formcut HDR bench", "size": 8, "color": "#ffffff"},
+                            }
+                        ],
+                    },
+                    {
+                        "id": "video",
+                        "name": "Video",
+                        "clips": [
+                            {
+                                "id": "a",
+                                "kind": "video",
+                                "label": "a",
+                                "mediaId": record["id"],
+                                "start": 0,
+                                "duration": seconds,
+                                "transform": dict(base),
+                                "effects": [{"id": "teal-amber", "amount": 0.6}],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+
+def _export_rate(doc: dict, width: int, frames: int) -> float:
+    """Frames a second through the frame path's own encode loop: the renderer's frames into the ten-bit encoder
+    (HEVC, PQ tagged) for an HDR project, or H.264 for an SDR one; the file is discarded."""
+    from .renderer import FrameRenderer
+
+    renderer = FrameRenderer(doc, width)
+    fps = float(doc.get("fps", 30) or 30)
+    deep = renderer.deep
+    with tempfile.TemporaryDirectory(prefix="formcut-bench-") as scratch:
+        out = os.path.join(scratch, "bench.mp4")
+        command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba64le" if deep else "rgba"]
+        command += ["-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-an"]
+        if deep:
+            command += ["-vf", "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le", "-c:v", "libx265", "-preset", "fast"]
+            command += ["-pix_fmt", "yuv420p10le", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc"]
+            command += ["-x265-params", "log-level=0"]
+        else:
+            command += ["-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p"]
+        command += [out]
+        process = subprocess.Popen(command, stdin=subprocess.PIPE)
+        renderer.frame(0.0)
+        began = time.perf_counter()
+        for i in range(frames):
+            process.stdin.write(np.ascontiguousarray(renderer.frame(i / fps)))
+        process.stdin.close()
+        process.wait()
+        took = time.perf_counter() - began
+    renderer.close()
+    return frames / took if took > 0 else 0.0
 
 
 def _synthetic_project() -> dict:
@@ -193,6 +325,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("project", nargs="?", help="a project.json; the demo when omitted")
     parser.add_argument("--frames", type=int, default=24)
     parser.add_argument("--width", type=int, default=1280)
+    parser.add_argument("--hdr", action="store_true", help="bench a PQ timeline: deep frames, the export ten-bit HEVC with the light kept")
+    parser.add_argument(
+        "--export", action="store_true", help="also time the frame path's own encode loop (frames a second into the encoder)"
+    )
     parser.add_argument("--record", help="write the readings to this JSON table (a perf table with budgets)")
     parser.add_argument(
         "--budget",
@@ -203,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("FORMCUT_NO_WARM", "1")
     from . import gpu
 
-    doc = _load(args.project)
+    doc = _hdr_project(args.width, round(args.width * 9 / 16 / 2) * 2) if args.hdr else _load(args.project)
     status = gpu.status()
     if not status.get("available"):
         print("no WebGPU adapter in this interpreter: " + str(status.get("reason", "wgpu is not importable")))
@@ -225,10 +361,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"device path: {dev_fps:6.2f} fps   ({dev_fps / cpu_fps:.2f}x)   layers resident on the device: {resident}")
     if fault:
         print(f"stack fault: {fault}")
-    diffs = [np.abs(a[:, :, :3].astype(int) - b[:, :, :3].astype(int)) for a, b in zip(cpu_frames, dev_frames, strict=True)]
+    # deep frames are compared in byte-equivalent counts, so the gate reads the same for an HDR timeline
+    scale = 257 if cpu_frames and cpu_frames[0].dtype == np.uint16 else 1
+    diffs = [
+        np.abs(a[:, :, :3].astype(np.int64) - b[:, :, :3].astype(np.int64)) / scale for a, b in zip(cpu_frames, dev_frames, strict=True)
+    ]
     mad = float(np.mean([d.mean() for d in diffs]))
     over = float(np.mean([(d > 1).mean() for d in diffs]) * 100)
-    worst = max(int(d.max()) for d in diffs)
+    worst = max(round(float(d.max())) for d in diffs)
     print(f"difference between the paths: mean {mad:.4f} counts, {over:.3f}% of pixels over 1/255, largest {worst}/255")
     if adapter.get("adapter_type", "").lower() == "cpu":
         print("this adapter is a software rasteriser; the device path shares the CPU with NumPy here,")
@@ -236,7 +376,7 @@ def main(argv: list[str] | None = None) -> int:
     # A perf table with budgets: every reading is a scenario keyed by the adapter, the width and the frame
     # count; --record writes them, --budget reads them back and fails when a scenario fell below the budget
     # fraction of its recorded rate on the same adapter, so a regression is caught by a machine before a person.
-    scenario = f"{args.width}w-{args.frames}f"
+    scenario = f"{args.width}w-{args.frames}f" + ("-hdr" if args.hdr else "")
     readings = {
         "decode_floor": floor or 0.0,
         "cpu_fps": cpu_fps,
@@ -244,6 +384,14 @@ def main(argv: list[str] | None = None) -> int:
         "difference_mean": mad,
         "difference_max": int(worst),
     }
+    if args.export:
+        os.environ["FORMCUT_COMPOSITE"] = "gpu"
+        os.environ["FORMCUT_EFFECTS"] = "gpu"
+        gpu._status = None
+        export_fps = _export_rate(doc, args.width, args.frames)
+        readings["export_fps"] = export_fps
+        what = "ten-bit HEVC, PQ" if args.hdr else "H.264"
+        print(f"export:      {export_fps:6.2f} fps   (the frame path's frames into {what}, encode included)")
     if args.record:
         table = {}
         if os.path.exists(args.record):
