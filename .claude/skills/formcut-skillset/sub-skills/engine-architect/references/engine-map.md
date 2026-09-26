@@ -40,7 +40,7 @@ The rest is written by hand.
 | local_speech.py | 425 | /api/speech | 4 |
 | main.py | 410 | /api/health | 13 |
 | media.py | 864 | /api/media | 25 |
-| model_manager.py | 492 | /api/models | 8 |
+| model_manager.py | 528 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 465 | /api/presets | 8 |
 | project_packages.py | 239 | /api/projects | 2 |
@@ -72,7 +72,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
-- `bench.py` (144L)
+- `bench.py` (221L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
@@ -87,7 +87,7 @@ the automation transports.
 - `gif_export.py` (78L)
 - `gpu.py` (372L)
 - `gpu_effects.py` (972L)
-- `local_diffusion.py` (241L)
+- `local_diffusion.py` (243L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (144L)

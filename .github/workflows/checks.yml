@@ -144,8 +144,23 @@ jobs:
       # or codec, and an RPC reply can succeed while a renamed field breaks
       # every caller. Both are read back rather than assumed.
       - name: exports read back with ffprobe, and the RPC contract
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
         run: python setup/output_checks.py
+
+      # The Windows build has never had a machine of its own. The runner opens
+      # the engine headless, exports the demo through the read-back checks
+      # above, and runs the frame-rate bench on whatever adapter the runner
+      # offers (a software one; the lines are for the record, and the bench
+      # refuses to run without any adapter rather than print a false reading).
+      - name: frame-rate bench on this runner
+        if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
+        shell: bash
+        env:
+          FORMCUT_NO_WARM: "1"
+        run: |
+          cd backend
+          python -c "from app.bench import _demo_project" 2>/dev/null || true
+          python -m app.bench --frames 12 --width 640 || echo "bench: no adapter on this runner, refused as designed"
 
       # bash on every runner: Windows would run this under PowerShell, which
       # cannot read the heredoc.

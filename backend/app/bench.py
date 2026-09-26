@@ -27,13 +27,90 @@ def _demo_project() -> dict:
 
     store = DATA_DIR / "projects.json"
     if not store.is_file():
-        raise SystemExit(f"no projects at {store}; open the demo in formcut once, or pass a project.json")
+        return _synthetic_project()
     data = json.loads(store.read_text(encoding="utf-8"))
     projects = data if isinstance(data, list) else data.get("projects", [])
     if not projects:
-        raise SystemExit("no saved project; open the demo in formcut once, or pass a project.json")
+        return _synthetic_project()
     demos = [p for p in projects if "demo" in str(p.get("title", p.get("name", ""))).lower()]
     return (demos or projects)[-1]
+
+
+def _synthetic_project() -> dict:
+    """A repeatable timeline for a machine that has never opened the app (a CI runner): the demo media
+    seeded through the model the app uses, the two clips stacked with a grade, a mask and a title."""
+    from .demo import seed_demo
+
+    media = seed_demo()["media"]
+    videos = [m for m in media if m.get("kind") == "video"]
+    if not videos:
+        raise SystemExit("the demo media did not seed; pass a project.json")
+    base = {
+        "scale": 100,
+        "posX": 0,
+        "posY": 0,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "opacity": 100,
+        "blendMode": "Normal",
+        "flipH": False,
+    }
+    clips_a = [
+        {
+            "id": "a",
+            "kind": "video",
+            "label": "a",
+            "mediaId": videos[0]["id"],
+            "start": 0,
+            "duration": 6,
+            "transform": dict(base),
+            "effects": [{"id": "teal-amber", "amount": 0.8}],
+        }
+    ]
+    clips_b = []
+    if len(videos) > 1:
+        clips_b = [
+            {
+                "id": "b",
+                "kind": "video",
+                "label": "b",
+                "mediaId": videos[1]["id"],
+                "start": 0,
+                "duration": 6,
+                "transform": {**base, "scale": 45, "posX": 22, "posY": 18},
+                "mask": {"shape": "ellipse", "x": 5, "y": 5, "w": 90, "h": 90, "feather": 4},
+            }
+        ]
+    title = [
+        {
+            "id": "t",
+            "kind": "text",
+            "label": "bench",
+            "start": 0,
+            "duration": 6,
+            "transform": {**base, "posY": -30},
+            "textStyle": {"content": "formcut bench", "size": 8, "color": "#ffffff"},
+        }
+    ]
+    return {
+        "title": "bench",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "activeTimeline": 0,
+        "timelines": [
+            {
+                "id": "t",
+                "name": "t",
+                "tracks": [
+                    {"id": "titles", "name": "Titles", "clips": title},
+                    {"id": "over", "name": "Overlay", "clips": clips_b},
+                    {"id": "video", "name": "Video", "clips": clips_a},
+                ],
+            }
+        ],
+    }
 
 
 def _load(path: str | None) -> dict:

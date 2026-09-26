@@ -27,7 +27,7 @@ BUNDLED = Path(__file__).resolve().parent / "bundled_models"
 def model_file(name: str) -> Path:
     """Where a model file actually is: the model folder, else the bundle."""
     path = ROOT / name
-    if path.is_file() and path.stat().st_size > 1024:
+    if path.is_file() and path.stat().st_size > (1024 if path.suffix in (".onnx", ".bin", ".pth", ".safetensors") else 0):
         return path
     bundled = BUNDLED / name
     if bundled.is_file():
@@ -105,6 +105,31 @@ MODELS = {
         "license": "Apache-2.0",
         "files": {"u2net_human_seg.onnx": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_human_seg.onnx"},
     },
+    "local-image": {
+        # A model the local generator can run out of the box, downloaded on
+        # request and never on boot: SD Turbo's ONNX export, 2.4 GB, one step
+        # a picture. Its licence is Stability's non-commercial research
+        # licence and the panel shows it before the download starts; a person
+        # who needs commercial terms declares another model in the slot
+        # registry instead. The files land in the diffusers layout the local
+        # diffusion runner reads (models/diffusion/sd-turbo).
+        "name": "SD Turbo (local image generation)",
+        "license": "Stability AI Non-Commercial Research Community License (non-commercial)",
+        "files": {
+            "diffusion/sd-turbo/LICENSE": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/LICENSE",
+            "diffusion/sd-turbo/model_index.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/model_index.json",
+            "diffusion/sd-turbo/scheduler/scheduler_config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/scheduler/scheduler_config.json",
+            "diffusion/sd-turbo/tokenizer/merges.txt": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/merges.txt",
+            "diffusion/sd-turbo/tokenizer/special_tokens_map.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/special_tokens_map.json",
+            "diffusion/sd-turbo/tokenizer/tokenizer_config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/tokenizer_config.json",
+            "diffusion/sd-turbo/tokenizer/vocab.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/vocab.json",
+            "diffusion/sd-turbo/unet/config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/unet/config.json",
+            "diffusion/sd-turbo/vae_decoder/config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/vae_decoder/config.json",
+            "diffusion/sd-turbo/text_encoder/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/text_encoder/model.onnx",
+            "diffusion/sd-turbo/unet/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/unet/model.onnx",
+            "diffusion/sd-turbo/vae_decoder/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/vae_decoder/model.onnx",
+        },
+    },
     "ai-upscale": {
         "name": "Real-ESRGAN x4plus",
         "license": "BSD-3-Clause",
@@ -126,7 +151,17 @@ _downloading: set[str] = set()
 
 
 def ready(model: str) -> bool:
-    return model in MODELS and all(model_file(name).is_file() and model_file(name).stat().st_size > 1024 for name in MODELS[model]["files"])
+    """Every file of the model is there: weights past the one-kilobyte floor, a config or licence file merely non-empty."""
+    if model not in MODELS:
+        return False
+    for name in MODELS[model]["files"]:
+        path = model_file(name)
+        if not path.is_file():
+            return False
+        floor = 1024 if path.suffix in (".onnx", ".bin", ".pth", ".safetensors") else 1
+        if path.stat().st_size < floor:
+            return False
+    return True
 
 
 @router.get("/runtime")
@@ -166,6 +201,7 @@ def download(model: str, report, cancelled):
             # A per-model source may override the declared one; keeping it in a
             # separate name makes clear the loop's value is not being rewritten.
             download_url = source_for(model, name, url)
+            path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_suffix(path.suffix + ".download")
             digest = hashlib.sha256()
             try:

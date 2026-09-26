@@ -21,9 +21,11 @@ from pathlib import Path
 import numpy as np
 
 from .model_manager import providers
-from .paths import DATA_DIR
+from .paths import MODELS_DIR
 
-MODELS = DATA_DIR / "models" / "diffusion"
+# The same models root the model manager downloads into, so a pinned model
+# (local-image) and a folder a person drops in are found in one place.
+MODELS = MODELS_DIR / "diffusion"
 _lock = threading.Lock()
 _loaded: dict = {}
 
