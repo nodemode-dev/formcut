@@ -1666,6 +1666,56 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# The lift, on the device: a byte (SDR) layer entering a deep timeline is
+# decoded through sRGB to light at SDR white (203 nits as a fraction of the
+# transfer's peak), moved from BT.709 to BT.2020 primaries in light and
+# encoded through the transfer, exactly as renderer.lift does on the CPU,
+# so an SDR layer costs no CPU work in an HDR project. p[2] = 1 PQ, 2 HLG.
+LIFT_CODE = """
+fn lin_srgb(v: vec3<f32>) -> vec3<f32> {
+    let low = v / 12.92;
+    let high = pow((v + 0.055) / 1.055, vec3<f32>(2.4));
+    return select(high, low, v <= vec3<f32>(0.04045));
+}
+fn enc_pq(v: vec3<f32>) -> vec3<f32> {
+    let m1 = 0.1593017578125;
+    let m2 = 78.84375;
+    let c1 = 0.8359375;
+    let c2 = 18.8515625;
+    let c3 = 18.6875;
+    let y = pow(clamp(v, vec3<f32>(0.0), vec3<f32>(1.0)), vec3<f32>(m1));
+    return pow((c1 + c2 * y) / (1.0 + c3 * y), vec3<f32>(m2));
+}
+fn enc_hlg(v: vec3<f32>) -> vec3<f32> {
+    let a = 0.17883277;
+    let b = 0.28466892;
+    let c = 0.55991073;
+    let l = clamp(v, vec3<f32>(0.0), vec3<f32>(1.0));
+    let low = sqrt(3.0 * l);
+    let high = a * log(12.0 * l - b) + c;
+    return select(high, low, l <= vec3<f32>(1.0 / 12.0));
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let peak = select(1000.0, 10000.0, i32(p[2]) == 1);
+    let light = lin_srgb(clamp(s.rgb, vec3<f32>(0.0), vec3<f32>(1.0))) * (203.0 / peak);
+    let wide = clamp(vec3<f32>(
+        0.6274 * light.r + 0.3293 * light.g + 0.0433 * light.b,
+        0.0691 * light.r + 0.9195 * light.g + 0.0114 * light.b,
+        0.0164 * light.r + 0.0880 * light.g + 0.8956 * light.b), vec3<f32>(0.0), vec3<f32>(1.0));
+    var code = enc_pq(wide);
+    if (i32(p[2]) == 2) { code = enc_hlg(wide); }
+    dst[i] = vec4<f32>(round(code * 65535.0) / 65535.0, s.a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -2380,6 +2430,7 @@ def effects_and_warp(
     key: tuple[tuple[float, float, float], float, float] | None = None,
     matte: np.ndarray | None = None,
     shader: tuple[str, float, list | None] | None = None,
+    lift: str | None = None,
 ):
     """The chain, a LUT, a key, a mask, a cutout matte and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
     if not active() or (effects and not supported(effects)):
@@ -2424,6 +2475,13 @@ def effects_and_warp(
                 frame_h,
             )
             result = context.buffers[(chain.current + 1) % 2]
+            if lift and image.dtype == np.uint8:
+                # a byte layer entering a deep timeline is lifted here, on the frame-sized picture after its
+                # transform, where the CPU path lifts it too (at the blend), so the interpolation happens on
+                # display bytes on both paths and the two agree at the edges
+                lifted = context.buffers[chain.current]
+                context.run(LIFT_CODE, result, lifted, [frame_w, frame_h, 1 if lift == "pq" else 2], None, frame_w, frame_h)
+                result = lifted
             if resident:
                 # R4: the layer never comes back. The compositor copies it on
                 # the device into a pooled buffer of its own before this

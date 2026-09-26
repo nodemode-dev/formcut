@@ -391,26 +391,23 @@ def _pixelated(image: np.ndarray, block: int) -> np.ndarray:
 
 # BT.709 to BT.2020 primaries, in linear light (ITU-R BT.2087).
 _709_TO_2020 = np.array([[0.6274, 0.3293, 0.0433], [0.0691, 0.9195, 0.0114], [0.0164, 0.0880, 0.8956]], np.float32)
-_ENCODE_STEPS = 4096
 
 
-def _lift_table(transfer: str) -> tuple[np.ndarray, np.ndarray]:
-    """The two tables the lift uses: the 256 byte values decoded to linear light at SDR white (203 nits,
-    as a fraction of the transfer's peak), and the transfer's encoding sampled at 4096 steps of light."""
+def _lift_table(transfer: str) -> np.ndarray:
+    """The 256 byte values decoded to linear light at SDR white (203 nits as a fraction of the transfer's peak)."""
     v = np.arange(256, dtype=np.float64) / 255
     linear = np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4)
     peak = 10000.0 if transfer == "pq" else 1000.0
-    decode = (linear * 203 / peak).astype(np.float32)
-    y = np.linspace(0, 1, _ENCODE_STEPS, dtype=np.float64)
-    if transfer == "pq":
-        m1, m2, c1, c2, c3 = 0.1593017578125, 78.84375, 0.8359375, 18.8515625, 18.6875
-        yy = y**m1
-        code = ((c1 + c2 * yy) / (1 + c3 * yy)) ** m2
-    else:
-        a, b, c = 0.17883277, 0.28466892, 0.55991073
-        code = np.where(y <= 1 / 12, np.sqrt(3 * y), a * np.log(np.maximum(12 * y - b, 1e-9)) + c)
-    encode = np.round(np.clip(code, 0, 1) * 65535).astype(np.uint16)
-    return decode, encode
+    return (linear * 203 / peak).astype(np.float32)
+
+
+def _encode_transfer(light: np.ndarray, transfer: str) -> np.ndarray:
+    """Linear light (a fraction of the transfer's peak) encoded through PQ or HLG, exactly; the reference the
+    device's LIFT pass is measured against. A table sampled on linear light was tried first and quantised the
+    whole SDR range into eighty steps of PQ, forty counts off; the curve is too steep at the bottom for that."""
+    from .gpu import _to_display
+
+    return _to_display(light.astype(np.float32), transfer)
 
 
 def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
@@ -634,8 +631,9 @@ class FrameRenderer:
         if frame.dtype == np.uint16:
             h, w = frame.shape[:2]
             return np.concatenate([frame, np.full((h, w, 1), 65535, np.uint16)], axis=2)
-        rgba = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        return self.lift(rgba)
+        # a byte frame stays bytes here: in a deep project the device lifts it in its own chain (LIFT_CODE)
+        # and the CPU path lifts it at the blend, so no full-frame lift runs on the CPU per frame
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
 
     def lift(self, rgba: np.ndarray) -> np.ndarray:
         """A byte RGBA picture into the deep working space at SDR white, alpha scaled with it; unchanged when the project is bytes."""
@@ -643,11 +641,10 @@ class FrameRenderer:
             return rgba
         # decode to light at SDR white, move the primaries from BT.709 to BT.2020 (the deep timeline's
         # gamut), encode through the transfer: a byte picture lands where an HDR camera would have put it
-        decode, encode = self._lift
-        light = decode[rgba[:, :, :3]]
+        light = self._lift[rgba[:, :, :3]]
         wide = np.clip(light @ _709_TO_2020.T, 0, 1)
         out = np.empty(rgba.shape, np.uint16)
-        out[:, :, :3] = encode[np.round(wide * (_ENCODE_STEPS - 1)).astype(np.int32)]
+        out[:, :, :3] = np.round(_encode_transfer(wide, self.transfer) * 65535).astype(np.uint16)
         out[:, :, 3] = rgba[:, :, 3].astype(np.uint16) * 257
         return out
 
@@ -1165,6 +1162,8 @@ class FrameRenderer:
         uploaded once and read back once. Anything that reads the canvas
         mid-frame flushes first, so both paths see identical state.
         """
+        if self.deep and layer.dtype == np.uint8:
+            layer = self.lift(layer)  # a byte layer that reached the blend on the CPU path
         if gpu.stack_active():
             self.pending_layers.append((layer, mode))
             return canvas
@@ -1254,6 +1253,7 @@ class FrameRenderer:
                         self._alpha(clip, local, transform),
                         (self.width, self.height),
                         resident=True,
+                        lift=self.transfer if self.deep else None,
                         **fields,
                     )
                     if isinstance(staged, int):
@@ -1300,6 +1300,7 @@ class FrameRenderer:
                         resident=True,
                         lut=lut,
                         shader=self._shader_of(clip, local),
+                        lift=self.transfer if self.deep else None,
                         **fields,
                     )
                     if isinstance(staged, int):

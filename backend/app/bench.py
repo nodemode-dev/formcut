@@ -378,6 +378,12 @@ def main(argv: list[str] | None = None) -> int:
     dev_fps, dev_frames, resident = _run(doc, args.width, args.frames, "gpu")
     if args.profile:
         profiler.disable()
+        # what the sources really were: the decoder class, whether it ran deep and what dtype its frames had
+        from .video_source import _hw_choice
+
+        print(
+            f"decoders: hardware choice per stream {[(k[0], k[3], v is not None) for k, v in _hw_choice.items()] or 'not measured'}; frames deep: {dev_frames[0].dtype.name if dev_frames else 'none'}"
+        )
         text = io.StringIO()
         pstats.Stats(profiler, stream=text).sort_stats("tottime").print_stats(12)
         print("\n".join(line[:140] for line in text.getvalue().splitlines()[4:20]))
