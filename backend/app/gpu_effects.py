@@ -60,6 +60,10 @@ SUPPORTED = frozenset(
         "snowfall",
         "pencil",
         "clarity",
+        "block-glitch",
+        "slice-glitch",
+        "led-wall",
+        "crt-screen",
         "gaussian",
         "box",
         "directional-blur",
@@ -621,6 +625,115 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R15: the glitches, the LED wall and the CRT.
+# CHANNELS samples each channel at its own x on the same row (three floats a
+# pixel in aux), bilinear with reflect-101 borders: block-glitch's rolls (integer
+# coordinates, exact) and slice-glitch's red channel pulled further than the
+# rest.
+CHANNELS_CODE = """
+fn tap(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)];
+}
+fn along(sx: f32, y: i32, c: i32) -> f32 {
+    let x0 = i32(floor(sx));
+    let fx = sx - f32(x0);
+    let a = tap(x0, y);
+    let b = tap(x0 + 1, y);
+    return mix(a[c], b[c], fx);
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let b = i * 3;
+    dst[i] = vec4<f32>(along(aux[b], y, 0), along(aux[b + 1], y, 1), along(aux[b + 2], y, 2), src[i].a);
+}
+"""
+
+# LED: the pixelated cells become dots by their distance from the cell centre
+# (p[2] cols, p[3] rows); the screen of the glow follows in SCREEN2.
+LED_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let ux = f32(x) * p[2] / p[0];
+    let uy = f32(y) * p[3] / p[1];
+    let fx = ux - floor(ux) - 0.5;
+    let fy = uy - floor(uy) - 0.5;
+    let k = clamp((0.42 - sqrt(fx * fx + fy * fy)) / 0.08, 0.0, 1.0) * 1.15;
+    dst[i] = vec4<f32>(src[i].rgb * k, src[i].a);
+}
+"""
+
+# 1 - (1 - clamp(held)) * (1 - clamp(src * p[2])): the LED wall's glow over its dots.
+SCREEN2_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let a = clamp(held[i].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+    let g = clamp(src[i].rgb * p[2], vec3<f32>(0.0), vec3<f32>(1.0));
+    dst[i] = vec4<f32>(vec3<f32>(1.0) - (vec3<f32>(1.0) - a) * (vec3<f32>(1.0) - g), held[i].a);
+}
+"""
+
+# CRT: the tube's bend as a remap with a black border (cv2.remap's default), the
+# outside masked, scanlines every p[2] rows, the phosphor triad and the corner
+# falloff, in one pass; the soft bloom is added afterwards.
+CRT_CODE = """
+fn tap0(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    if (x < 0 || y < 0 || x >= w || y >= h) { return vec3<f32>(0.0); }
+    return src[y * w + x].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let nu = ((f32(x) + 0.5) / p[0] - 0.5) * 2.0;
+    let nv = ((f32(y) + 0.5) / p[1] - 0.5) * 2.0;
+    let bend = 1.0 + p[3] * (nu * nu + nv * nv);
+    let su = nu * bend;
+    let sv = nv * bend;
+    let sx = (su / 2.0 + 0.5) * p[0] - 0.5;
+    let sy = (sv / 2.0 + 0.5) * p[1] - 0.5;
+    let x0 = i32(floor(sx));
+    let y0 = i32(floor(sy));
+    let fx = sx - f32(x0);
+    let fy = sy - f32(y0);
+    var tube = mix(mix(tap0(x0, y0), tap0(x0 + 1, y0), fx), mix(tap0(x0, y0 + 1), tap0(x0 + 1, y0 + 1), fx), fy);
+    if (abs(su) > 1.0 || abs(sv) > 1.0) { tube = vec3<f32>(0.0); }
+    let half = max(1, i32(p[2]) / 2);
+    if ((y / half) % 2 == 1) { tube = tube * 0.72; }
+    let phase = x % 3;
+    var phosphor = vec3<f32>(1.0, 0.86, 0.86);
+    if (phase == 1) { phosphor = vec3<f32>(0.86, 1.0, 0.86); }
+    if (phase == 2) { phosphor = vec3<f32>(0.86, 0.86, 1.0); }
+    tube = tube * phosphor * (1.0 - 0.18 * (nu * nu + nv * nv));
+    dst[i] = vec4<f32>(tube, src[i].a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -724,7 +837,10 @@ class _Context:
         self.count = height * width
         size = self.count * 16
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
-        self.buffers = [self.device.create_buffer(size=size, usage=usage) for _ in range(3)]
+        # Four resident buffers: two the chain alternates between, the third
+        # every pass sees as held, and a fourth that keeps the held picture
+        # while an effect needs the held slot for an intermediate (R15).
+        self.buffers = [self.device.create_buffer(size=size, usage=usage) for _ in range(4)]
         self.params = self.device.create_buffer(size=PARAM_FLOATS * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
         # R6: user kernels compiled in this context, by their source
         self.custom_pipelines: dict = {}
@@ -899,6 +1015,14 @@ class _Chain:
         """Keep the current picture in the third buffer, which every pass sees as held."""
         self.c.copy(self.c.buffers[self.current], self.c.buffers[2], self.h, self.w)
 
+    def _keep(self):
+        """Set the held picture aside (the chain's original, when the amount mix needs it) in the fourth buffer."""
+        self.c.copy(self.c.buffers[2], self.c.buffers[3], self.h, self.w)
+
+    def _restore(self):
+        """Bring the set-aside picture back into the held slot."""
+        self.c.copy(self.c.buffers[3], self.c.buffers[2], self.h, self.w)
+
     def _multi_remap(self, maps: list, weights: list) -> None:
         """A weighted sum of remaps of the current picture: the source held, each map sampled into scratch and accumulated."""
         self._hold()
@@ -994,6 +1118,54 @@ class _Chain:
                 self._multi_remap([(np.mod(x - k, w), np.mod(y - k, h)) for k in steps], [1 / len(steps)] * len(steps))
             else:
                 self._multi_remap([(x, y), (np.mod(x - size, w), y), (np.mod(x - size * 2, w), y)], [0.55, 0.27, 0.18])
+            return
+        if effect in ("block-glitch", "slice-glitch"):
+            from .pixel_effects import _grid
+
+            y, x, _u, _v = _grid(self.h, self.w)
+            w, h = self.w, self.h
+            maps = np.repeat(x[:, :, None], 3, 2).astype(np.float32)
+            if effect == "block-glitch":
+                rng = np.random.default_rng(int(local * 12) % (2**32))
+                for _ in range(round(10 * float(params.get("density", 1)))):
+                    height = int(rng.integers(max(1, h // 40), max(2, h // 8)))
+                    top = int(rng.integers(0, max(1, h - height)))
+                    shift = int(rng.integers(-max(1, w // 12), max(2, w // 12)))
+                    maps[top : top + height] = np.mod(x[top : top + height] - shift, w)[:, :, None]
+                    if rng.random() < 0.5:
+                        channel = int(rng.integers(0, 3))
+                        maps[top : top + height, :, channel] = np.mod(x[top : top + height] - shift * 2, w)
+            else:
+                rng = np.random.default_rng(int(local * 8))
+                rows = h // 12 + 1
+                offsets = rng.integers(-size * 3, size * 3 + 1, rows) * (rng.random(rows) < 0.55)
+                shift = np.repeat(offsets, 12)[:h].astype(np.float32)[:, None]
+                maps[:, :, 1] = x + shift
+                maps[:, :, 2] = x + shift
+                maps[:, :, 0] = x + shift * 1.4
+            self._pass(CHANNELS_CODE, [], np.ascontiguousarray(maps))
+            return
+        if effect == "led-wall":
+            cols, rows = max(1, self.w // size), max(1, self.h // size)
+            self._pass(PIXELATE_CODE, [cols, rows])
+            self._pass(LED_CODE, [cols, rows])
+            self._keep()
+            self._hold()
+            self._blur(_gaussian_taps(max(1.0, 0.6 * self.w / cols)))
+            self._pass(SCREEN2_CODE, [0.6])
+            self._restore()
+            return
+        if effect == "crt-screen":
+            period = max(2, self.h // 240)
+            self._pass(CRT_CODE, [period, float(params.get("curvature", 0.12))])
+            self._keep()
+            self._hold()
+            self._blur(_gaussian_taps(max(1.0, self.w / 400)))
+            scratch, acc = self.current, (self.current + 1) % 2
+            self._pass(SCALE_CODE, [1.0], source=2, target=acc)
+            self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
+            self.current = acc
+            self._restore()
             return
         if effect == "pencil":
             self._hold()
