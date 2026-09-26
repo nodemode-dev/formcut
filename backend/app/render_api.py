@@ -187,14 +187,29 @@ def export_workers() -> int:
     return max(1, min(4, (os.cpu_count() or 1) - 1))
 
 
-def _light_of(frame: np.ndarray, transfer: str) -> tuple[float, float]:
-    """The frame's brightest pixel and its average, in nits, from the deep signal: MaxCLL and MaxFALL's inputs."""
-    from .gpu import _to_linear
+_LIGHT_TABLES: dict[str, np.ndarray] = {}
 
-    v = frame[:, :, :3].astype(np.float32) / 65535
-    light = _to_linear(v, transfer) * (10000.0 if transfer == "pq" else 1000.0)
-    per_pixel = light.max(axis=2)
-    return float(per_pixel.max()), float(per_pixel.mean())
+
+def _light_table(transfer: str) -> np.ndarray:
+    """Nits for every sixteen-bit code value of the transfer, once."""
+    table = _LIGHT_TABLES.get(transfer)
+    if table is None:
+        from .gpu import _to_linear
+
+        codes = np.arange(65536, dtype=np.float64) / 65535
+        table = (_to_linear(codes, transfer) * (10000.0 if transfer == "pq" else 1000.0)).astype(np.float32)
+        _LIGHT_TABLES[transfer] = table
+    return table
+
+
+def _light_of(frame: np.ndarray, transfer: str) -> tuple[float, float]:
+    """The frame's brightest pixel and its average, in nits, from the deep signal: MaxCLL and MaxFALL's inputs.
+    The transfer is monotonic, so the brightest channel's code is the brightest channel's light, and one table
+    lookup on the per-pixel code maximum replaces a pow over every channel of every pixel (a hundred
+    milliseconds a frame at 1080p, which the M5 reading showed)."""
+    codes = frame[:, :, :3].max(axis=2)
+    light = _light_table(transfer)[codes]
+    return float(light.max()), float(light.mean())
 
 
 def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) -> list[bytes]:
@@ -350,7 +365,7 @@ def export_media(
         if hdr_deep:
             hdr_filter = ""
             path = OUTPUTS / (job_id + ".intermediate.mkv")
-            codec, pix = ["-c:v", "ffv1", "-level", "3", "-c:a", "pcm_s16le"], "rgb48le"
+            codec, pix = ["-c:v", "ffv1", "-level", "3", "-slices", "8", "-slicecrc", "0", "-threads", "8", "-c:a", "pcm_s16le"], "rgb48le"
             outer_report = report
 
             def report(fraction: float) -> None:

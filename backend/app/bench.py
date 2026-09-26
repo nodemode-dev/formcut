@@ -16,7 +16,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -146,35 +145,43 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
     }
 
 
-def _export_rate(doc: dict, width: int, frames: int) -> float:
-    """Frames a second through the frame path's own encode loop: the renderer's frames into the ten-bit encoder
-    (HEVC, PQ tagged) for an HDR project, or H.264 for an SDR one; the file is discarded."""
-    from .renderer import FrameRenderer
+def _export_rate(doc: dict, width: int, frames: int) -> tuple[float, str]:
+    """Frames a second through the real export (render_api.export_media): the encoder the export chooses on this
+    machine (VideoToolbox, NVENC, QSV, AMF or the software one), the HDR two-pass with the light written into the
+    stream for a deep project, the hold on a fast path, all of it; the file is discarded. The encoder's name comes
+    back with the rate so the reading says what it measured."""
+    import uuid
 
-    renderer = FrameRenderer(doc, width)
+    from .render_api import OUTPUTS, export_media
+
     fps = float(doc.get("fps", 30) or 30)
-    deep = renderer.deep
-    with tempfile.TemporaryDirectory(prefix="formcut-bench-") as scratch:
-        out = os.path.join(scratch, "bench.mp4")
-        command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba64le" if deep else "rgba"]
-        command += ["-s", f"{renderer.width}x{renderer.height}", "-r", str(fps), "-i", "pipe:0", "-an"]
-        if deep:
-            command += ["-vf", "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le", "-c:v", "libx265", "-preset", "fast"]
-            command += ["-pix_fmt", "yuv420p10le", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc"]
-            command += ["-x265-params", "log-level=0"]
-        else:
-            command += ["-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p"]
-        command += [out]
-        process = subprocess.Popen(command, stdin=subprocess.PIPE)
-        renderer.frame(0.0)
-        began = time.perf_counter()
-        for i in range(frames):
-            process.stdin.write(np.ascontiguousarray(renderer.frame(i / fps)))
-        process.stdin.close()
-        process.wait()
-        took = time.perf_counter() - began
-    renderer.close()
-    return frames / took if took > 0 else 0.0
+    trimmed = json.loads(json.dumps(doc))
+    trimmed["duration"] = frames / fps
+    for timeline in trimmed.get("timelines") or []:
+        for track in timeline.get("tracks") or []:
+            for clip in track.get("clips") or []:
+                clip["duration"] = min(float(clip.get("duration") or 0), trimmed["duration"])
+    trimmed["width"], trimmed["height"] = width, round(width * doc["height"] / doc["width"] / 2) * 2
+    job_id = "bench-" + uuid.uuid4().hex[:8]
+    began = time.perf_counter()
+    result = export_media(
+        trimmed,
+        job_id,
+        lambda fraction: None,
+        lambda: False,
+        "mp4",
+        "high",
+        "hevc" if doc.get("outputColour") in ("hlg", "pq") else None,
+        False,
+        None,
+        None,
+        True,
+    )
+    took = time.perf_counter() - began
+    for item in OUTPUTS.glob(job_id + "*"):
+        item.unlink(missing_ok=True)
+    encoder = str(result.get("encoder") or "")
+    return (frames / took if took > 0 else 0.0), encoder
 
 
 def _synthetic_project() -> dict:
@@ -329,6 +336,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--export", action="store_true", help="also time the frame path's own encode loop (frames a second into the encoder)"
     )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="print the device path's twelve costliest functions by own time, for a reading that is slower than it should be",
+    )
     parser.add_argument("--record", help="write the readings to this JSON table (a perf table with budgets)")
     parser.add_argument(
         "--budget",
@@ -356,7 +368,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"decode floor: {floor:6.2f} fps   (the video sources read sequentially at this width, no rendering; both paths pay this)")
     cpu_fps, cpu_frames, _ = _run(doc, args.width, args.frames, "cpu")
     print(f"cpu path:    {cpu_fps:6.2f} fps")
+    if args.profile:
+        import cProfile
+        import io
+        import pstats
+
+        profiler = cProfile.Profile()
+        profiler.enable()
     dev_fps, dev_frames, resident = _run(doc, args.width, args.frames, "gpu")
+    if args.profile:
+        profiler.disable()
+        text = io.StringIO()
+        pstats.Stats(profiler, stream=text).sort_stats("tottime").print_stats(12)
+        print("\n".join(line[:140] for line in text.getvalue().splitlines()[4:20]))
     fault = gpu.stack_fault()
     print(f"device path: {dev_fps:6.2f} fps   ({dev_fps / cpu_fps:.2f}x)   layers resident on the device: {resident}")
     if fault:
@@ -388,10 +412,11 @@ def main(argv: list[str] | None = None) -> int:
         os.environ["FORMCUT_COMPOSITE"] = "gpu"
         os.environ["FORMCUT_EFFECTS"] = "gpu"
         gpu._status = None
-        export_fps = _export_rate(doc, args.width, args.frames)
+        export_fps, encoder = _export_rate(doc, args.width, args.frames)
         readings["export_fps"] = export_fps
-        what = "ten-bit HEVC, PQ" if args.hdr else "H.264"
-        print(f"export:      {export_fps:6.2f} fps   (the frame path's frames into {what}, encode included)")
+        readings["export_encoder"] = encoder
+        what = f"the real export, {encoder}" + (", ten-bit PQ with the light written" if args.hdr else "")
+        print(f"export:      {export_fps:6.2f} fps   ({what}, render and encode included)")
     if args.record:
         table = {}
         if os.path.exists(args.record):
