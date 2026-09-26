@@ -11,12 +11,28 @@ BLEND_CODE = """
 @group(0) @binding(1) var<storage, read> foreground: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read> options: array<f32>;
 @group(0) @binding(3) var<storage, read_write> result: array<vec4<f32>>;
+// R24: the blend happens in light. Both operands are decoded through the sRGB
+// transfer to linear light, the mode and the opacity mix are computed there,
+// and the result is encoded back, so a dissolve between two bright clips does
+// not dip and a fade is a fade of light; the CPU reference (composite) does
+// the same. Blend modes keep their formulas, applied to light.
+fn lin(v: vec3<f32>) -> vec3<f32> {
+    let low = v / 12.92;
+    let high = pow((v + 0.055) / 1.055, vec3<f32>(2.4));
+    return select(high, low, v <= vec3<f32>(0.04045));
+}
+fn enc(v: vec3<f32>) -> vec3<f32> {
+    let c = clamp(v, vec3<f32>(0.0), vec3<f32>(1.0));
+    let low = c * 12.92;
+    let high = 1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055;
+    return select(high, low, c <= vec3<f32>(0.0031308));
+}
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let i = id.x;
     if (i >= arrayLength(&result)) { return; }
-    let b = background[i].rgb;
-    let f = foreground[i].rgb;
+    let b = lin(background[i].rgb);
+    let f = lin(foreground[i].rgb);
     let alpha = foreground[i].a;
     var color = f;
     let mode = u32(options[0]);
@@ -29,7 +45,9 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if (mode == 7u) { color = min(vec3<f32>(1.0), b+f); }
     if (mode == 8u) { color = max(vec3<f32>(0.0), b-f); }
     if (mode == 9u) { color = (1.0-2.0*f)*b*b+2.0*f*b; }
-    result[i] = vec4<f32>(clamp(mix(b, color, alpha), vec3<f32>(0.0), vec3<f32>(1.0)), 1.0);
+    // rounded to the byte grid after every blend, as the CPU reference rounds each composite, so a stack of
+    // layers lands where the sequential reference lands rather than drifting in the darks
+    result[i] = vec4<f32>(round(enc(mix(b, color, alpha)) * 255.0) / 255.0, 1.0);
 }
 """
 
@@ -92,7 +110,8 @@ def composite(base: np.ndarray, front: np.ndarray, mode: str) -> np.ndarray:
                 {0: b, 1: f, 2: np.array([index], np.float32)}, {3: (b.size, "f")}, BLEND_CODE, n=(b.shape[0] * b.shape[1] + 63) // 64
             )[3]
         return np.round(np.frombuffer(out, np.float32).reshape(b.shape) * 255).astype(np.uint8)
-    rgb_b, rgb_f = b[:, :, :3], f[:, :, :3]
+    # R24: in light, as the device blends (see BLEND_CODE); the same transfer both ways.
+    rgb_b, rgb_f = _to_linear(b[:, :, :3]), _to_linear(f[:, :, :3])
     modes = [
         lambda: rgb_f,
         lambda: rgb_b * rgb_f,
@@ -106,9 +125,20 @@ def composite(base: np.ndarray, front: np.ndarray, mode: str) -> np.ndarray:
         lambda: (1 - 2 * rgb_f) * rgb_b**2 + 2 * rgb_f * rgb_b,
     ]
     alpha = f[:, :, 3:4]
-    b[:, :, :3] = np.clip(rgb_b * (1 - alpha) + modes[index]() * alpha, 0, 1)
+    b[:, :, :3] = _to_display(rgb_b * (1 - alpha) + modes[index]() * alpha)
     b[:, :, 3] = 1
     return np.round(b * 255).astype(np.uint8)
+
+
+def _to_linear(v: np.ndarray) -> np.ndarray:
+    """The sRGB transfer decoded: display-referred 0..1 to linear light."""
+    return np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4).astype(np.float32)
+
+
+def _to_display(v: np.ndarray) -> np.ndarray:
+    """Linear light encoded back through the sRGB transfer, clipped to 0..1."""
+    c = np.clip(v, 0, 1)
+    return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055).astype(np.float32)
 
 
 # R3: the layer stack composited on the device. The per-pair path above uploads
