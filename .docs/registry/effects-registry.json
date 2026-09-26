@@ -1,17 +1,71 @@
 {
-  "format": "formcut-effects-registry",
-  "formatVersion": 1,
-  "name": "formcut community packages",
-  "description": "Effect packages anyone can install from the effects browser. Each entry names a zip of a package folder (manifest.json plus its shader.wgsl or audio template) hosted anywhere; the engine downloads it, checks it the way the loader checks every package, and installs it. To list a package here, open a pull request adding an entry.",
-  "packages": [
-    {
-      "id": "warm-dust",
-      "name": "Warm dust",
-      "kind": "video",
-      "author": "formcut",
-      "description": "A warm grade with a little dust and a soft vignette, the example stack package from the wiki.",
-      "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/warm-dust.zip",
-      "sha256": "158f34ac584b4a1584d58e55397c91ae5df2b28a52a53b0f303f3c46dbf3b3ab"
-    }
-  ]
+ "format": "formcut-effects-registry",
+ "formatVersion": 1,
+ "name": "formcut community packages",
+ "description": "Effect packages anyone can install from the effects browser. Each entry names a zip of a package folder (manifest.json plus its shader.wgsl or audio template) hosted anywhere; the engine downloads it, checks it the way the loader checks every package, and installs it. To list a package here, open a pull request adding an entry.",
+ "packages": [
+  {
+   "id": "warm-dust",
+   "name": "Warm dust",
+   "kind": "video",
+   "author": "formcut",
+   "description": "A warm grade with a little dust and a soft vignette, the example stack package from the wiki.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/warm-dust.zip",
+   "sha256": "158f34ac584b4a1584d58e55397c91ae5df2b28a52a53b0f303f3c46dbf3b3ab"
+  },
+  {
+   "id": "sunset-pop",
+   "name": "Sunset pop",
+   "kind": "captions",
+   "author": "formcut",
+   "description": "Warm cream over a rust outline, the spoken word popping in amber.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/sunset-pop.zip",
+   "sha256": "d801e836dcb8d9876f31731fbdf409523be2b954ae17588cbeda444546ba3c47"
+  },
+  {
+   "id": "midnight-box",
+   "name": "Midnight box",
+   "kind": "captions",
+   "author": "formcut",
+   "description": "White on a deep navy plate, the spoken word boxed in electric blue.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/midnight-box.zip",
+   "sha256": "d6f89f680e278903b77d0b7b5797d26292a24a39b83a617281792ce1852c1e1f"
+  },
+  {
+   "id": "mint-highlight",
+   "name": "Mint highlight",
+   "kind": "captions",
+   "author": "formcut",
+   "description": "Charcoal text with a mint highlight running under each word as it is said.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/mint-highlight.zip",
+   "sha256": "86bb4c70d0469676e52e68576cced9fc023ae5910f4cbceacabe5f3205f1c9f8"
+  },
+  {
+   "id": "bold-red",
+   "name": "Bold red",
+   "kind": "captions",
+   "author": "formcut",
+   "description": "Heavy white capitals with a red outline and the spoken word in red.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/bold-red.zip",
+   "sha256": "336417e63bfe6d991f8f859efec6763eb96e2cf451e770e285296e9bc3bad533"
+  },
+  {
+   "id": "soft-shadow",
+   "name": "Soft shadow",
+   "kind": "captions",
+   "author": "formcut",
+   "description": "Plain white with a soft drop shadow and no word animation, for quiet talking-head cuts.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/soft-shadow.zip",
+   "sha256": "5034fcafeb1efd902ba938909ec0bb0ff99e501f73368e85a8420842b3baa5f3"
+  },
+  {
+   "id": "gold-plate",
+   "name": "Gold plate",
+   "kind": "captions",
+   "author": "formcut",
+   "description": "Black text on a gold plate, the spoken word boxed darker.",
+   "url": "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/gold-plate.zip",
+   "sha256": "11ca37ead0ed90778893350a45403296019f212d2de829cfe087f93901b3b246"
+  }
+ ]
 }
