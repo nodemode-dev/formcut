@@ -45,6 +45,35 @@ def _load(path: str | None) -> dict:
     return doc
 
 
+def _decode_floor(doc: dict, width: int, frames: int) -> float | None:
+    """How fast the project's video sources decode on their own, sequentially, at this width: the ceiling either path could reach."""
+    from .media import MEDIA_DIR
+    from .video_source import VideoSource
+
+    tracks = doc["timelines"][doc["activeTimeline"]]["tracks"]
+    media_ids = {c["mediaId"] for t in tracks for c in t["clips"] if c.get("kind") == "video" and c.get("mediaId")}
+    paths = [next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in media_ids]
+    paths = [p for p in paths if p]
+    if not paths:
+        return None
+    total = 0.0
+    for path in paths:
+        source = VideoSource(str(path), width)
+        source.seek(0)
+        began = time.perf_counter()
+        read = 0
+        while read < frames:
+            ok, _ = source.read()
+            if not ok:
+                break
+            read += 1
+        took = time.perf_counter() - began
+        source.release()
+        if read:
+            total += took / read
+    return len(paths) / total if total else None
+
+
 def _run(doc: dict, width: int, frames: int, path: str):
     from . import gpu
     from .renderer import FrameRenderer
@@ -54,7 +83,12 @@ def _run(doc: dict, width: int, frames: int, path: str):
     gpu._status = None
     gpu._stack_fuse = None
     renderer = FrameRenderer(doc, width)
-    times = [doc["duration"] * (i + 0.5) / frames for i in range(frames)]
+    # Consecutive frames from one second in, as playback and export ask for
+    # them; spreading the samples across the clip made every read skip a
+    # run of frames through the pipe, which measured seeking, not rendering.
+    fps = float(doc.get("fps", 30) or 30)
+    start = min(1.0, max(0.0, doc["duration"] - frames / fps))
+    times = [start + i / fps for i in range(frames)]
     renderer.frame(times[0])  # warm: sessions, decoders, pipelines
     began = time.perf_counter()
     out = [renderer.frame(t) for t in times]
@@ -84,7 +118,10 @@ def main(argv: list[str] | None = None) -> int:
     adapter = status.get("adapter", {})
     name = adapter.get("device", adapter.get("name", "none"))
     print(f"adapter: {name} ({adapter.get('adapter_type', 'unknown')}, {adapter.get('backend_type', '')})")
-    print(f"project: {doc.get('title', 'demo')} at {args.width} wide, {args.frames} frames")
+    print(f"project: {doc.get('title', 'demo')} at {args.width} wide, {args.frames} consecutive frames at {doc.get('fps', 30)} fps")
+    floor = _decode_floor(doc, args.width, args.frames)
+    if floor:
+        print(f"decode floor: {floor:6.2f} fps   (the video sources read sequentially at this width, no rendering; both paths pay this)")
     cpu_fps, cpu_frames, _ = _run(doc, args.width, args.frames, "cpu")
     print(f"cpu path:    {cpu_fps:6.2f} fps")
     dev_fps, dev_frames, resident = _run(doc, args.width, args.frames, "gpu")

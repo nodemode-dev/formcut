@@ -90,12 +90,18 @@ class VideoSource:
         self.errors = None
         self.key = (self.path, limit)
         self.last = None
+        # R8: one frame read ahead on a thread while the caller renders.
+        self.ahead = None
+        self.ahead_thread = None
+        self.ahead_lock = threading.Lock()
 
     def seek(self, frame):
         self.requested = max(0, int(frame))
 
     def _start(self):
         self.release()
+        with self.ahead_lock:
+            self.ahead = None
         self.position = self.requested
         self.errors = tempfile.TemporaryFile()
         self.process = subprocess.Popen(
@@ -130,6 +136,56 @@ class VideoSource:
             stderr=self.errors,
         )
 
+    def _pull(self):
+        """One frame off the pipe into a fresh buffer, or None when the pipe ends."""
+        size = self.width * self.height * 3
+        pieces = bytearray(size)
+        view = memoryview(pieces)
+        filled = 0
+        while filled < size:
+            count = self.process.stdout.readinto(view[filled:])
+            if not count:
+                view.release()
+                return None
+            filled += count
+        view.release()
+        return np.frombuffer(pieces, np.uint8).reshape(self.height, self.width, 3)
+
+    def _prefetch(self):
+        """R8: the frame after the one just served, read on a thread while the caller renders.
+
+        Playback and export ask for consecutive frames; the pipe's next frame is
+        always the one they will want, so it is pulled ahead into `ahead` and
+        the next read() takes it without waiting on ffmpeg. A seek (a gap the
+        sequential case does not cover) restarts the pipe and drops it."""
+        with self.ahead_lock:
+            if self.process is None or self.ahead is not None or self.ahead_thread is not None:
+                return
+            process = self.process
+            position = self.position
+
+            def pull():
+                try:
+                    frame = self._pull() if self.process is process else None
+                except (OSError, ValueError):
+                    frame = None  # the pipe was closed under the thread by a release
+                with self.ahead_lock:
+                    if self.process is process:
+                        self.ahead = (position, frame)
+                    self.ahead_thread = None
+
+            self.ahead_thread = threading.Thread(target=pull, daemon=True)
+            self.ahead_thread.start()
+
+    def _take_ahead(self):
+        """The prefetched frame, waiting for the thread if it is still pulling; None when there is none."""
+        thread = self.ahead_thread
+        if thread is not None:
+            thread.join()
+        with self.ahead_lock:
+            ahead, self.ahead = self.ahead, None
+            return ahead
+
     def read(self):
         if self.frame_count and self.requested >= self.frame_count:
             return False, None
@@ -139,33 +195,23 @@ class VideoSource:
         gap = self.requested - self.position
         if self.process is None or gap < 0 or gap > max(1, round(self.fps * 2)):
             self._start()
-        size = self.width * self.height * 3
-        # One buffer per frame returned, filled in place. Reading chunks into new
-        # bytes objects and appending them copied every byte twice, and the array
-        # then copied it a third time, though no buffer is ever reused: 16 ms a
-        # frame for a 1080p picture in picture, of the engine's 41.
-        pieces = bytearray(size)
-        view = memoryview(pieces)
         while True:
-            filled = 0
-            while filled < size:
-                count = self.process.stdout.readinto(view[filled:])
-                if not count:
-                    view.release()
-                    self.release()
-                    return False, None
-                filled += count
+            ahead = self._take_ahead()
+            frame = ahead[1] if ahead is not None and ahead[0] == self.position else self._pull()
+            if frame is None:
+                self.release()
+                return False, None
             self.position += 1
             if self.position > self.requested:
                 break
-        view.release()
         self.requested = self.position
-        frame = np.frombuffer(pieces, np.uint8).reshape(self.height, self.width, 3)
         if self.key[1]:
             self.last = (self.position - 1, frame)
+        self._prefetch()
         return True, frame
 
     def release(self):
+        thread = self.ahead_thread
         if self.process is not None:
             if self.process.poll() is None:
                 self.process.kill()
@@ -175,6 +221,11 @@ class VideoSource:
         if self.errors is not None:
             self.errors.close()
             self.errors = None
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=1.0)
+        with self.ahead_lock:
+            self.ahead = None
+            self.ahead_thread = None
 
 
 _pool_lock = threading.Lock()

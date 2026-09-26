@@ -417,6 +417,8 @@ class FrameRenderer:
         self.resident_layers = 0
         # R6: package shader sources by asset id, read once.
         self.shader_sources: dict[str, str] = {}
+        # R8: static titles rasterised once, by style and frame size.
+        self.text_cache: dict = {}
         self.closed = False
 
     def close(self):
@@ -663,7 +665,24 @@ class FrameRenderer:
         return out
 
     def text_frame(self, clip: dict, local: float = 0.0) -> np.ndarray:
+        """A title's pixels. R8: a title whose words do not move with time is rasterised once and served from
+        a cache keyed by its style and the frame size; a word-animated title is drawn per frame as before."""
         text = clip.get("textStyle") or {"content": clip.get("label", "Title")}
+        words = clip.get("words") or []
+        animated = bool(words) and (text.get("wordMode", "none") in ("highlight", "pop", "box") or any(w.get("colour") for w in words))
+        if not animated:
+            key = (clip.get("id"), json.dumps(text, sort_keys=True, default=str), self.width, self.height)
+            cached = self.text_cache.get(key)
+            if cached is not None:
+                return cached.copy()
+            drawn = self._draw_text(clip, text, local)
+            if len(self.text_cache) > 24:
+                self.text_cache.clear()
+            self.text_cache[key] = drawn
+            return drawn.copy()
+        return self._draw_text(clip, text, local)
+
+    def _draw_text(self, clip: dict, text: dict, local: float) -> np.ndarray:
         image = Image.new("RGBA", (self.width, self.height))
         size = max(1, round(float(text.get("size", 8)) / 100 * self.height))
         font = title_font(text, size)
