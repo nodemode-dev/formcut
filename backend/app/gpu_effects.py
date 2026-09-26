@@ -65,6 +65,7 @@ SUPPORTED = frozenset(
         "median-soften",
         "ink-outline",
         "oil-paint",
+        "lens-blur",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -865,6 +866,98 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R17: lens-blur in three passes on the full-size buffers, the half-size
+# picture living in their top-left quadrant. LENS_DOWN: the INTER_AREA
+# average of each half-size cell (p[2] cols, p[3] rows), clamped and raised
+# to 2.2. LENS_DISC: the disc convolution (the disc in aux, p[4] its radius)
+# over the quadrant with reflect-101 borders, then the 1/2.2 root. LENS_UP:
+# cv2.resize's INTER_LINEAR back to full size, clamped at the quadrant's edge.
+LENS_DOWN_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let cols = i32(p[2]);
+    let rows = i32(p[3]);
+    let cx = i32(id.x);
+    let cy = i32(id.y);
+    if (cx >= w || cy >= h) { return; }
+    if (cx >= cols || cy >= rows) { dst[cy * w + cx] = vec4<f32>(0.0); return; }
+    let x0 = f32(cx) * p[0] / p[2];
+    let x1 = f32(cx + 1) * p[0] / p[2];
+    let y0 = f32(cy) * p[1] / p[3];
+    let y1 = f32(cy + 1) * p[1] / p[3];
+    var sum = vec3<f32>(0.0);
+    var total = 0.0;
+    for (var sy = i32(floor(y0)); sy < min(h, i32(ceil(y1))); sy = sy + 1) {
+        let wy = min(f32(sy) + 1.0, y1) - max(f32(sy), y0);
+        if (wy <= 0.0) { continue; }
+        for (var sx = i32(floor(x0)); sx < min(w, i32(ceil(x1))); sx = sx + 1) {
+            let wx = min(f32(sx) + 1.0, x1) - max(f32(sx), x0);
+            if (wx <= 0.0) { continue; }
+            sum = sum + clamp(src[sy * w + sx].rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * (wx * wy);
+            total = total + wx * wy;
+        }
+    }
+    dst[cy * w + cx] = vec4<f32>(pow(sum / max(total, 1e-9), vec3<f32>(2.2)), 1.0);
+}
+"""
+
+LENS_DISC_CODE = """
+fn at(x: i32, y: i32, cols: i32, rows: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    return src[reflect101(y, rows) * w + reflect101(x, cols)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let cols = i32(p[2]);
+    let rows = i32(p[3]);
+    let r = i32(p[4]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    if (x >= cols || y >= rows) { dst[y * w + x] = vec4<f32>(0.0); return; }
+    let side = 2 * r + 1;
+    var sum = vec3<f32>(0.0);
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            let weight = aux[(dy + r) * side + (dx + r)];
+            if (weight == 0.0) { continue; }
+            sum = sum + at(x + dx, y + dy, cols, rows) * weight;
+        }
+    }
+    dst[y * w + x] = vec4<f32>(pow(max(sum, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2)), 1.0);
+}
+"""
+
+LENS_UP_CODE = """
+fn at(x: i32, y: i32, cols: i32, rows: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    return src[clamp(y, 0, rows - 1) * w + clamp(x, 0, cols - 1)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let cols = i32(p[2]);
+    let rows = i32(p[3]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let sx = (f32(x) + 0.5) * p[2] / p[0] - 0.5;
+    let sy = (f32(y) + 0.5) * p[3] / p[1] - 0.5;
+    let x0 = i32(floor(sx));
+    let y0 = i32(floor(sy));
+    let fx = clamp(sx - f32(x0), 0.0, 1.0);
+    let fy = clamp(sy - f32(y0), 0.0, 1.0);
+    let top = mix(at(x0, y0, cols, rows), at(x0 + 1, y0, cols, rows), fx);
+    let bottom = mix(at(x0, y0 + 1, cols, rows), at(x0 + 1, y0 + 1, cols, rows), fx);
+    dst[y * w + x] = vec4<f32>(mix(top, bottom, fy), held[y * w + x].a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1296,6 +1389,18 @@ class _Chain:
             self._pass(SCALE_CODE, [1.0], source=2, target=acc)
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
+            self._restore()
+            return
+        if effect == "lens-blur":
+            r = max(1, int(radius * 2))
+            disc = np.zeros((2 * r + 1, 2 * r + 1), np.float32)
+            cv2.circle(disc, (r, r), r, 1.0, -1)
+            cols, rows = max(1, self.w // 2), max(1, self.h // 2)
+            self._keep()
+            self._hold()  # the alpha comes back from the original
+            self._pass(LENS_DOWN_CODE, [cols, rows])
+            self._pass(LENS_DISC_CODE, [cols, rows, r], np.ascontiguousarray(disc / disc.sum()))
+            self._pass(LENS_UP_CODE, [cols, rows])
             self._restore()
             return
         if effect == "median-soften":
