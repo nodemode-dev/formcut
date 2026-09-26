@@ -389,6 +389,61 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       }
     }
     reconcile(grid, ordered);
+    await renderSynced(host);
+  };
+  // Synced projects: the .fc packages found in every sync folder a project names
+  // (a folder the person's own Drive, Dropbox or iCloud client carries). A row
+  // per package with an Import chip; the list is patched in place and hidden
+  // when there is nothing to show, so a person with no sync folder never sees it.
+  const syncedNodes = new Map<string, HTMLElement>();
+  const renderSynced = async (host: HTMLElement) => {
+    let found: Array<{ path: string; title: string; exported?: number; media?: number; folder: string }> = [];
+    try {
+      found = await fetch("/api/projects/synced").then((r) => (r.ok ? r.json() : []));
+    } catch {
+      found = [];
+    }
+    let block = host.querySelector<HTMLElement>(":scope > .home-synced");
+    if (!found.length) {
+      if (block) block.remove();
+      return;
+    }
+    if (!block) {
+      block = document.createElement("div");
+      block.className = "home-synced";
+      block.innerHTML = `<h3>${text("Synced projects")}</h3><p class="set-note">${text("Packages in the folders your projects sync to; import one to open it on this machine.")}</p><div class="home-synced-list"></div>`;
+      host.append(block);
+    }
+    const list = block.querySelector<HTMLElement>(".home-synced-list")!;
+    const wanted = new Set(found.map((entry) => entry.path));
+    for (const [path, node] of syncedNodes) if (!wanted.has(path)) { node.remove(); syncedNodes.delete(path); }
+    const ordered: HTMLElement[] = [];
+    for (const entry of found) {
+      let node = syncedNodes.get(entry.path);
+      if (!node) {
+        node = document.createElement("div");
+        node.className = "home-synced-row";
+        node.innerHTML = `<span class="home-synced-title"></span><span class="home-synced-meta"></span><button type="button" class="tool-chip is-primary" data-import-synced>${icon("import")}${text("Import")}</button>`;
+        node.querySelector("[data-import-synced]")!.addEventListener("click", () => void (async () => {
+          try {
+            const response = await fetch("/api/projects/synced/import", { method: "POST", headers: { "Content-Type": "application/json", "x-formcut-local": "1" }, body: JSON.stringify({ path: entry.path }) });
+            if (!response.ok) throw new Error(String(response.status));
+            say(text("Imported"));
+            await renderProjects();
+          } catch (error) {
+            say(error instanceof Error ? error.message : String(error));
+          }
+        })());
+        syncedNodes.set(entry.path, node);
+      }
+      const title = node.querySelector<HTMLElement>(".home-synced-title")!;
+      if (title.textContent !== entry.title) title.textContent = entry.title;
+      const meta = `${entry.folder}${entry.media ? ` · ${entry.media} media` : ""}`;
+      const metaNode = node.querySelector<HTMLElement>(".home-synced-meta")!;
+      if (metaNode.textContent !== meta) metaNode.textContent = meta;
+      ordered.push(node);
+    }
+    reconcile(list, ordered);
   };
 
   // --- media ----------------------------------------------------------------

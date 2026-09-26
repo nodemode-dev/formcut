@@ -1009,5 +1009,8 @@
   "cap.transcript": "Transcripción: el texto de la pista de subtítulos, editable; un botón de tiempo lleva a su subtítulo",
   "cap.cutFootage": "Cortar esta frase y el metraje que hay debajo",
   "export.openh264First": "Este equipo no tiene codificador H.264 propio, así que esta exportación usa OpenH264 de Cisco, descargado de Cisco (alrededor de 1 MB) la primera vez. Su licencia y el interruptor están en Ajustes, Avanzado.",
-  "media.timelines": "Líneas de tiempo: coloca otra línea de tiempo de este proyecto sobre esta como un solo clip, en el cabezal"
+  "media.timelines": "Líneas de tiempo: coloca otra línea de tiempo de este proyecto sobre esta como un solo clip, en el cabezal",
+  "save.sync": "Sync",
+  "save.sync.hint": "This project's package follows every save into a folder your own sync client carries; nothing is uploaded by formcut.",
+  "save.syncfolder": "Sync folder"
 }

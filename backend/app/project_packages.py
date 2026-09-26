@@ -14,6 +14,7 @@ the project under a new id, so a dropped package never overwrites anything.
 import base64
 import io
 import json
+import shutil
 import tempfile
 import threading
 import time
@@ -115,6 +116,78 @@ def build(project_id: str) -> Path:
         for media_id, source in files:
             archive.write(source, f"media/{media_id}{source.suffix}", compress_type=zipfile.ZIP_STORED)
     return path
+
+
+# Project sync, opt-in per project (the comparison's "a project that follows a
+# person between machines"). formcut uploads nothing: a project names a folder
+# on this computer that the person's own sync client (Drive, Dropbox, iCloud,
+# a NAS) already carries, the .fc package is written there on every save, and
+# the home screen lists the packages found in every such folder so the other
+# machine imports them. The local-first promise holds: the file leaves through
+# the person's own client, by their choice, project by project.
+
+
+def sync_folder_of(document: dict) -> Path | None:
+    folder = document.get("syncFolder")
+    if not folder:
+        return None
+    path = Path(str(folder)).expanduser()
+    return path if path.is_dir() else None
+
+
+def sync_after_save(project: dict) -> Path | None:
+    """Write the package into the project's sync folder, when it names one that exists."""
+    document = project.get("document") or project
+    folder = sync_folder_of(document)
+    if folder is None:
+        return None
+    built = build(project["id"])
+    target = folder / f"{_safe_name(document.get('title') or project.get('title') or 'project')}.fc"
+    shutil.copyfile(built, target)
+    built.unlink(missing_ok=True)
+    return target
+
+
+def synced_packages() -> list[dict]:
+    """Every .fc package in every sync folder any project names, newest first, with the manifest read."""
+    folders: dict[Path, None] = {}
+    for record in store.list_projects():
+        folder = sync_folder_of(record.get("document") or record)
+        if folder is not None:
+            folders[folder] = None
+    found = []
+    for folder in folders:
+        for item in folder.glob("*.fc"):
+            try:
+                with zipfile.ZipFile(item) as archive:
+                    manifest = json.loads(archive.read("manifest.json"))
+            except (zipfile.BadZipFile, KeyError, ValueError):
+                continue
+            found.append(
+                {
+                    "path": str(item),
+                    "title": manifest.get("title") or item.stem,
+                    "exported": manifest.get("exported"),
+                    "media": manifest.get("media"),
+                    "folder": str(folder),
+                }
+            )
+    return sorted(found, key=lambda entry: entry.get("exported") or 0, reverse=True)
+
+
+@router.get("/synced")
+def list_synced() -> list[dict]:
+    return synced_packages()
+
+
+@router.post("/synced/import", status_code=201)
+def import_synced(body: dict) -> dict:
+    """Import a package listed by GET /synced: the path must be inside a sync folder a project names."""
+    path = Path(str(body.get("path") or "")).expanduser()
+    allowed = {Path(entry["folder"]) for entry in synced_packages()}
+    if not path.is_file() or path.parent not in allowed:
+        raise HTTPException(status_code=400, detail="that package is not in a sync folder")
+    return unpack(path)
 
 
 @router.get("/{project_id}/package")

@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from . import store
 from .paths import DATA_DIR
@@ -11,6 +11,9 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 class ProjectIn(BaseModel):
+    # Project-level fields the editor sets beyond these (background, outputColour, syncFolder, and any a later
+    # version adds) round-trip through a save rather than being dropped; the validator checks the ones it knows.
+    model_config = ConfigDict(extra="allow")
     title: str = "Untitled project"
     width: int = 1080
     height: int = 1920
@@ -143,7 +146,7 @@ def list_projects() -> list[Project]:
 
 @router.post("", status_code=201)
 def create_project(body: ProjectIn) -> Project:
-    project = Project(id=uuid.uuid4().hex, **body.model_dump())
+    project = Project(id=uuid.uuid4().hex, **{key: value for key, value in body.model_dump().items() if key != "id"})
     return Project(**store.save_project(project.model_dump()))
 
 
@@ -159,7 +162,7 @@ def get_project(project_id: str) -> Project:
 def update_project(project_id: str, body: ProjectIn) -> Project:
     if store.get_project(project_id) is None:
         raise HTTPException(status_code=404, detail="project not found")
-    project = Project(id=project_id, **body.model_dump())
+    project = Project(id=project_id, **{key: value for key, value in body.model_dump().items() if key != "id"})
     try:
         return Project(**store.save_project(project.model_dump(), expected_revision=body.revision))
     except ValueError as exc:

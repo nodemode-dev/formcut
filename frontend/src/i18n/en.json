@@ -1009,5 +1009,8 @@
   "cap.transcript": "Transcript: the caption track's text, editable; a time button seeks to its caption",
   "cap.cutFootage": "Cut this sentence and the footage under it",
   "export.openh264First": "This computer has no H.264 encoder of its own, so this export uses Cisco's OpenH264, downloaded from Cisco (about 1 MB) the first time. Its licence and the switch are in Settings, Advanced.",
-  "media.timelines": "Timelines: place another timeline of this project on this one as a single clip, at the playhead"
+  "media.timelines": "Timelines: place another timeline of this project on this one as a single clip, at the playhead",
+  "save.sync": "Sync",
+  "save.sync.hint": "This project's package follows every save into a folder your own sync client carries; nothing is uploaded by formcut.",
+  "save.syncfolder": "Sync folder"
 }

@@ -20,6 +20,8 @@ def _effect_prop(key: str, clip: dict) -> bool:
 def project_values(project):
     if project.get("outputColour") not in (None, "bt709", "hlg", "pq"):
         raise ValueError("outputColour must be bt709, hlg or pq")
+    if project.get("syncFolder") is not None and (not isinstance(project["syncFolder"], str) or len(project["syncFolder"]) > 1024):
+        raise ValueError("syncFolder must be a path")
     fill = project.get("background")
     if fill is None:
         return

@@ -112,6 +112,21 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   autosaveBox.checked = autosaveEnabled();
   autosaveBox.addEventListener("change", () => setAutosaveEnabled(autosaveBox.checked));
   row(saving, "save.autosave", autosaveBox);
+  // Opt-in sync: a folder this project's .fc package is written to on every
+  // save, one the person's own Drive, Dropbox or iCloud client already carries;
+  // the other machine lists it on the home screen and imports it. Nothing is
+  // uploaded by formcut.
+  const sync = group(project, "save.sync", "save.sync.hint");
+  const syncField = document.createElement("input");
+  syncField.type = "text";
+  syncField.placeholder = text("A folder your sync client carries, or empty");
+  syncField.value = engine.snapshot.syncFolder ?? "";
+  syncField.addEventListener("change", () => engine.dispatch("project.sync-folder", syncField.value));
+  row(sync, "save.syncfolder", syncField);
+  engine.subscribe(() => {
+    const value = engine.snapshot.syncFolder ?? "";
+    if (syncField.value !== value && document.activeElement !== syncField) syncField.value = value;
+  });
 
   // --- playback --------------------------------------------------------------
   const playback = view("playback");

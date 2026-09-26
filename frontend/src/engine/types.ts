@@ -256,6 +256,8 @@ export interface ProjectState {
   projectId: string | null;
   /** The export's colour: Rec.709 as the working space is, or an HLG or PQ output transform in ten bits. */
   outputColour?: "bt709" | "hlg" | "pq";
+  /** Opt-in sync: a folder on this computer the person's own sync client carries; the package is written there on save. */
+  syncFolder?: string;
   title: string;
   saved: boolean;
   width: number;

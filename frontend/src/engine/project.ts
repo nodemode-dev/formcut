@@ -1007,6 +1007,15 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "project.sync-folder": {
+        // Opt-in sync: the folder this project's package is written to on every save, or none.
+        const next = String(payload ?? "").trim();
+        if ((s.syncFolder ?? "") === next) break;
+        s.syncFolder = next || undefined;
+        s.saved = false;
+        this.emit("project");
+        break;
+      }
       case "project.rename": {
         const next = (payload as string).trim();
         if (!next || next === s.title) break;

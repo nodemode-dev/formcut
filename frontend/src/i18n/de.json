@@ -1009,5 +1009,8 @@
   "cap.transcript": "Transkript: der Text der Untertitelspur, bearbeitbar; eine Zeittaste springt zu ihrem Untertitel",
   "cap.cutFootage": "Diesen Satz und das Material darunter herausschneiden",
   "export.openh264First": "Dieser Computer hat keinen eigenen H.264-Encoder, daher verwendet dieser Export Ciscos OpenH264, das beim ersten Mal von Cisco heruntergeladen wird (etwa 1 MB). Lizenz und Schalter stehen unter Einstellungen, Erweitert.",
-  "media.timelines": "Zeitleisten: eine andere Zeitleiste dieses Projekts als einen Clip auf diese setzen, an der Abspielposition"
+  "media.timelines": "Zeitleisten: eine andere Zeitleiste dieses Projekts als einen Clip auf diese setzen, an der Abspielposition",
+  "save.sync": "Synchronisieren",
+  "save.sync.hint": "Das Paket dieses Projekts folgt jedem Speichern in einen Ordner, den dein eigener Sync-Client trägt; formcut lädt nichts hoch.",
+  "save.syncfolder": "Sync-Ordner"
 }

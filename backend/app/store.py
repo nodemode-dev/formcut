@@ -1,3 +1,4 @@
+import contextlib
 import json
 import threading
 import time
@@ -32,6 +33,19 @@ def get_project(project_id: str) -> dict | None:
 
 
 def save_project(project: dict, expected_revision: int | None = None) -> dict:
+    saved = _save_project(project, expected_revision)
+    # Opt-in sync: the package follows the save into the project's own sync folder, when it names one.
+    document = saved.get("document") or saved
+    if document.get("syncFolder"):
+        from .project_packages import sync_after_save
+
+        # a folder that vanished or a full disk does not fail the save; the next save tries again
+        with contextlib.suppress(OSError):
+            sync_after_save(saved)
+    return saved
+
+
+def _save_project(project: dict, expected_revision: int | None = None) -> dict:
     # When it was last written, so the home screen can say more than a title.
     project = {**project, "updated": time.time()}
     with _lock:
