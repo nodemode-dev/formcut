@@ -35,9 +35,10 @@ LEGACY = {
 }
 # R4: a clip carrying any of these takes a CPU step between its effects and
 # its blend for every frame, so its layer cannot stay on the device. R5 took
-# the LUT and the mask out of the list and made the transitions and the push
-# a matter of time, so only the frames they touch come back.
-CPU_STEPS = ("shaderId", "cutout", "key")
+# the LUT and the mask out and made the transitions and the push a matter of
+# time; R6 took the key, the cutout and the shader, which is chained into the
+# layer's own passes. Nothing is left: every layer can stay on the device.
+CPU_STEPS: tuple[str, ...] = ()
 
 DEFAULTS = {
     "scale": 100,
@@ -414,6 +415,8 @@ class FrameRenderer:
         self.pending_layers: list = []
         # R4: how many layers stayed on the device between their passes and the blend, for the reading.
         self.resident_layers = 0
+        # R6: package shader sources by asset id, read once.
+        self.shader_sources: dict[str, str] = {}
         self.closed = False
 
     def close(self):
@@ -772,14 +775,9 @@ class FrameRenderer:
             self.mask_cache[signature] = alpha
         return alpha
 
-    def mask_frame(self, image: np.ndarray, clip: dict) -> np.ndarray:
-        # Only a key, a mask or a cutout changes the picture below; without them
-        # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
-        # one caller replaces its frame with the result, so no one shares it.
-        if not (clip.get("key") or clip.get("mask") or clip.get("cutout")):
-            return image
-        out = image.copy()
-        h, w = out.shape[:2]
+    @staticmethod
+    def masking_clip(clip: dict) -> dict:
+        """The clip with its mask and cutout re-expressed inside its crop, so both land where the person drew them on the cropped picture."""
         box = crop_box(clip)
         if box:
             # Mask and stroke coordinates are fractions of the SOURCE frame; the
@@ -804,6 +802,72 @@ class FrameRenderer:
                     strokes.append(moved)
                 options["strokes"] = strokes
                 clip["cutout"] = options
+        return clip
+
+    def cutout_alpha(self, clip: dict, image: np.ndarray) -> np.ndarray | None:
+        """The cutout's feathered matte for this layer, or None when there is none to apply (BG3: the cached matte; a missing one renders unmatted rather than stalling). One builder for the CPU path and the device pass."""
+        # BG3: read the cached matte; rendering never runs inference. A clip
+        # whose mattes are not ready renders unmatted rather than stalling.
+        from .matte_cache import matte_key
+        from .matte_cache import read as read_matte
+        from .segmentation import feathered
+
+        options = clip["cutout"]
+        key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
+        h2, w2 = image.shape[:2]
+        alpha = read_matte(key, self.matte_time, (w2, h2))
+        if alpha is None and not self.allow_proxy:
+            # No matte has been computed for this moment. Rather than render
+            # the clip untouched and leave a person wondering why the cutout
+            # does nothing, compute it here and keep it. The precompute pass
+            # is a speed-up, not a precondition, and treating it as one is
+            # why cutout appeared to be broken while the model sat ready.
+            try:
+                from .segmentation import cutout_ready as model_ready
+                from .segmentation import prompts, raw_alpha
+
+                model = options.get("model", "object-cutout")
+                if model_ready(model):
+                    # The model must see the clip's own pixels, the way the
+                    # precompute pass feeds it: a composited frame has the
+                    # clip already scaled, rotated and placed on the canvas,
+                    # so segmenting that finds whatever happens to be in the
+                    # frame rather than the subject. Feeding it the canvas
+                    # is what turned the cutout into a blob.
+                    source = self.media_frame(clip, self.matte_time)
+                    # Prompts are stored where the person pointed, on the
+                    # picture; the model sees the clip's own pixels.
+                    from .prompt_space import to_source
+
+                    points, box = to_source(clip, (self.width, self.height), (source.shape[1], source.shape[0]), *prompts(options))
+                    found = raw_alpha(source, model, points, box) if model == "click-select" else raw_alpha(source, model)
+                    # A click says which of the things the model found was
+                    # meant. Without it a frame with two people keeps both.
+                    if points and model != "click-select":
+                        from .segmentation import pick_region
+
+                        found = pick_region(found, float(points[0]["x"]), float(points[0]["y"]))
+                    alpha = cv2.resize(found, (w2, h2), interpolation=cv2.INTER_LINEAR)
+            except Exception:
+                alpha = None
+        if alpha is None and (options.get("strokes") or []):
+            # A brush stroke is a person's own instruction, not part of the
+            # model's guess, so it has to apply whether or not a matte has
+            # been computed. Skipping the whole branch when the matte was
+            # missing threw the strokes away silently, which is why cutout
+            # and brushes stopped doing anything at all.
+            alpha = np.ones((h2, w2), np.float32)
+        return feathered(alpha, options) if alpha is not None else None
+
+    def mask_frame(self, image: np.ndarray, clip: dict) -> np.ndarray:
+        # Only a key, a mask or a cutout changes the picture below; without them
+        # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
+        # one caller replaces its frame with the result, so no one shares it.
+        if not (clip.get("key") or clip.get("mask") or clip.get("cutout")):
+            return image
+        out = image.copy()
+        h, w = out.shape[:2]
+        clip = self.masking_clip(clip)
         key = clip.get("key")
         if key:
             color = np.array([int(key["color"][i : i + 2], 16) for i in (1, 3, 5)], np.float32) / 255
@@ -818,59 +882,9 @@ class FrameRenderer:
             alpha = self.mask_alpha(mask, w, h)
             out[:, :, 3] = np.round(out[:, :, 3] * alpha).astype(np.uint8)
         if clip.get("cutout"):
-            # BG3: read the cached matte; rendering never runs inference. A clip
-            # whose mattes are not ready renders unmatted rather than stalling.
-            from .matte_cache import matte_key
-            from .matte_cache import read as read_matte
-            from .segmentation import feathered
-
-            options = clip["cutout"]
-            key = matte_key(str(clip.get("mediaId") or clip["id"]), options.get("model", "object-cutout"), options)
-            h2, w2 = out.shape[:2]
-            alpha = read_matte(key, self.matte_time, (w2, h2))
-            if alpha is None and not self.allow_proxy:
-                # No matte has been computed for this moment. Rather than render
-                # the clip untouched and leave a person wondering why the cutout
-                # does nothing, compute it here and keep it. The precompute pass
-                # is a speed-up, not a precondition, and treating it as one is
-                # why cutout appeared to be broken while the model sat ready.
-                try:
-                    from .segmentation import cutout_ready as model_ready
-                    from .segmentation import prompts, raw_alpha
-
-                    model = options.get("model", "object-cutout")
-                    if model_ready(model):
-                        # The model must see the clip's own pixels, the way the
-                        # precompute pass feeds it: a composited frame has the
-                        # clip already scaled, rotated and placed on the canvas,
-                        # so segmenting that finds whatever happens to be in the
-                        # frame rather than the subject. Feeding it the canvas
-                        # is what turned the cutout into a blob.
-                        source = self.media_frame(clip, self.matte_time)
-                        # Prompts are stored where the person pointed, on the
-                        # picture; the model sees the clip's own pixels.
-                        from .prompt_space import to_source
-
-                        points, box = to_source(clip, (self.width, self.height), (source.shape[1], source.shape[0]), *prompts(options))
-                        found = raw_alpha(source, model, points, box) if model == "click-select" else raw_alpha(source, model)
-                        # A click says which of the things the model found was
-                        # meant. Without it a frame with two people keeps both.
-                        if points and model != "click-select":
-                            from .segmentation import pick_region
-
-                            found = pick_region(found, float(points[0]["x"]), float(points[0]["y"]))
-                        alpha = cv2.resize(found, (w2, h2), interpolation=cv2.INTER_LINEAR)
-                except Exception:
-                    alpha = None
-            if alpha is None and (options.get("strokes") or []):
-                # A brush stroke is a person's own instruction, not part of the
-                # model's guess, so it has to apply whether or not a matte has
-                # been computed. Skipping the whole branch when the matte was
-                # missing threw the strokes away silently, which is why cutout
-                # and brushes stopped doing anything at all.
-                alpha = np.ones((h2, w2), np.float32)
-            if alpha is not None:
-                out[:, :, 3] = np.round(out[:, :, 3] * feathered(alpha, options)).astype(np.uint8)
+            matte = self.cutout_alpha(clip, out)
+            if matte is not None:
+                out[:, :, 3] = np.round(out[:, :, 3] * matte).astype(np.uint8)
         return out
 
     def transition(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
@@ -992,12 +1006,38 @@ class FrameRenderer:
         visual_fade = {**clip, "extendOut": 0}
         return max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
 
+    def _layer_fields(self, clip: dict, image: np.ndarray) -> dict:
+        """The key, the mask and the cutout matte for a layer as the device passes take them, from the crop-adjusted clip, built by the same helpers the CPU path uses."""
+        adjusted = self.masking_clip(clip)
+        h, w = image.shape[:2]
+        fields: dict = {}
+        key = adjusted.get("key")
+        if key:
+            colour = tuple(int(key["color"][i : i + 2], 16) / 255 for i in (1, 3, 5))
+            fields["key"] = (colour, float(key.get("similarity", 0.25)), float(key.get("blend", 0.05)))
+        if adjusted.get("mask"):
+            fields["mask"] = self.mask_alpha(adjusted["mask"], w, h)
+        if adjusted.get("cutout"):
+            matte = self.cutout_alpha(adjusted, image)
+            if matte is not None:
+                fields["matte"] = matte
+        return fields
+
+    def _shader_of(self, clip: dict, local: float) -> tuple[str, float, list | None] | None:
+        """A package shader as the device pass takes it: its source, the local time, its parameters; the source is read once and cached by asset."""
+        if not clip.get("shaderId"):
+            return None
+        source = self.shader_sources.get(clip["shaderId"])
+        if source is None:
+            source = self.shader_sources[clip["shaderId"]] = asset_path(clip["shaderId"], ".wgsl").read_text()
+        return (source, local, None)
+
     @staticmethod
     def _device_resident(clip: dict, scaled: list, local: float = 0.0) -> bool:
         """Whether nothing between a layer's effects and its blend needs the bytes on this side at this local time."""
         if scaled and not gpu_effects.supported(scaled):
             return False
-        if any(clip.get(key) for key in ("shaderId", "cutout", "key")):
+        if any(clip.get(key) for key in CPU_STEPS):
             return False
         # A transition and a push change the layer only while they run; the
         # rest of the clip's frames stay on the device.
@@ -1097,8 +1137,7 @@ class FrameRenderer:
                 image = self.prepared[key].copy()
                 if gpu.stack_active() and self._device_resident(clip, [], local):
                     transform = transform_at(clip, local)
-                    h0, w0 = image.shape[:2]
-                    mask = self.mask_alpha(clip["mask"], w0, h0) if clip.get("mask") else None
+                    fields = self._layer_fields(clip, image)
                     staged = gpu_effects.effects_and_warp(
                         image,
                         [],
@@ -1107,7 +1146,7 @@ class FrameRenderer:
                         self._alpha(clip, local, transform),
                         (self.width, self.height),
                         resident=True,
-                        mask=mask,
+                        **fields,
                     )
                     if isinstance(staged, int):
                         self.pending_layers.append((staged, str(transform["blendMode"])))
@@ -1138,8 +1177,7 @@ class FrameRenderer:
                     if clip.get("lutId"):
                         table, low, high = load_cube(clip["lutId"])
                         lut = (table, low, high, float(clip.get("lutIntensity", 1)))
-                    h0, w0 = image.shape[:2]
-                    mask = self.mask_alpha(clip["mask"], w0, h0) if clip.get("mask") else None
+                    fields = self._layer_fields(clip, image)
                     staged = gpu_effects.effects_and_warp(
                         image,
                         scaled,
@@ -1149,7 +1187,8 @@ class FrameRenderer:
                         (self.width, self.height),
                         resident=True,
                         lut=lut,
-                        mask=mask,
+                        shader=self._shader_of(clip, local),
+                        **fields,
                     )
                     if isinstance(staged, int):
                         self.pending_layers.append((staged, str(transform["blendMode"])))

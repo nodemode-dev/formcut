@@ -293,6 +293,30 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# The chroma key as the CPU does it: the pixel's chroma (rgb less its mean)
+# against the key colour's, a distance over root two, then a soft threshold
+# by similarity and blend, rounded into the alpha. p[2..4] the key colour,
+# p[5] similarity, p[6] blend.
+KEY_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let rgb = s.rgb;
+    let chroma = rgb - vec3<f32>((rgb.r + rgb.g + rgb.b) / 3.0);
+    let colour = vec3<f32>(p[2], p[3], p[4]);
+    let key_chroma = colour - vec3<f32>((colour.r + colour.g + colour.b) / 3.0);
+    let distance = length(chroma - key_chroma) / sqrt(2.0);
+    let keep = clamp((distance - p[5]) / p[6], 0.0, 1.0);
+    dst[i] = vec4<f32>(rgb, round(s.a * 255.0 * keep) / 255.0);
+}
+"""
+
 # A .cube LUT in aux as flat rgb triplets indexed [b][g][r] on an n-lattice,
 # sampled trilinearly, mixed by intensity and rounded, as apply_lut does it.
 # p[2] n, p[3..5] the domain's low rgb, p[6..8] its high rgb, p[9] intensity.
@@ -358,6 +382,8 @@ class _Context:
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
         self.buffers = [self.device.create_buffer(size=size, usage=usage) for _ in range(3)]
         self.params = self.device.create_buffer(size=PARAM_FLOATS * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
+        # R6: user kernels compiled in this context, by their source
+        self.custom_pipelines: dict = {}
         self.aux_size = max(size, 4096)
         self.aux = self.device.create_buffer(size=self.aux_size, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST)
         self.read = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
@@ -475,6 +501,43 @@ class _Chain:
         if target is None:
             self.current = dst_index
 
+    def custom(self, source: str, time: float, params: list | None = None) -> None:
+        """R6: a package's WGSL kernel as a pass in the chain. The kernel declares its own three bindings
+        (0 the input floats, 1 [w, h, time, 0] then its parameters, 2 the output floats) and runs one
+        invocation a pixel, as gpu.custom_values runs it; here those bindings are the chain's own buffers,
+        so the layer never leaves the device for it. The CPU rounds to uint8 after it; so does this."""
+        device = self.c.device
+        pipeline = self.c.custom_pipelines.get(source)
+        if pipeline is None:
+            module = device.create_shader_module(code=source)
+            pipeline = device.create_compute_pipeline(layout="auto", compute={"module": module, "entry_point": "main"})
+            self.c.custom_pipelines[source] = pipeline
+        uniform = np.zeros(16, np.float32)
+        uniform[:4] = [self.w, self.h, time, 0]
+        for n, value in enumerate((params or [])[:12]):
+            uniform[4 + n] = float(value)
+        device.queue.write_buffer(self.c.params, 0, uniform)
+        src = self.c.buffers[self.current]
+        dst = self.c.buffers[(self.current + 1) % 2]
+        size = self.w * self.h * 16
+        group = device.create_bind_group(
+            layout=pipeline.get_bind_group_layout(0),
+            entries=[
+                {"binding": 0, "resource": {"buffer": src, "offset": 0, "size": size}},
+                {"binding": 1, "resource": {"buffer": self.c.params, "offset": 0, "size": 64}},
+                {"binding": 2, "resource": {"buffer": dst, "offset": 0, "size": size}},
+            ],
+        )
+        encoder = device.create_command_encoder()
+        step = encoder.begin_compute_pass()
+        step.set_pipeline(pipeline)
+        step.set_bind_group(0, group)
+        step.dispatch_workgroups((self.w * self.h + 63) // 64)
+        step.end()
+        device.queue.submit([encoder.finish()])
+        self.current = (self.current + 1) % 2
+        self._pass(QUANTISE_CODE, [])
+
     def _blur(self, taps: np.ndarray, anchor: int | None = None):
         anchor = len(taps) // 2 if anchor is None else anchor
         self._pass(CONV_CODE, [1, 0, len(taps), anchor], taps)
@@ -567,8 +630,11 @@ def effects_and_warp(
     resident: bool = False,
     lut: tuple[np.ndarray, float, float, float] | None = None,
     mask: np.ndarray | None = None,
+    key: tuple[tuple[float, float, float], float, float] | None = None,
+    matte: np.ndarray | None = None,
+    shader: tuple[str, float, list | None] | None = None,
 ):
-    """The chain, a LUT, a mask and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
+    """The chain, a LUT, a key, a mask, a cutout matte and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
     if not active() or (effects and not supported(effects)):
         return None
     try:
@@ -591,8 +657,15 @@ def effects_and_warp(
                 lows = [float(v) for v in np.broadcast_to(np.asarray(low, np.float32), (3,))]
                 highs = [float(v) for v in np.broadcast_to(np.asarray(high, np.float32), (3,))]
                 chain._pass(LUT_CODE, [n, *lows, *highs, amount], np.ascontiguousarray(table.reshape(-1)))
+            if shader is not None:
+                chain.custom(shader[0], shader[1], shader[2])
+            if key is not None:
+                (kr, kg, kb), similarity, blend = key
+                chain._pass(KEY_CODE, [float(kr), float(kg), float(kb), float(similarity), float(max(0.001, blend))])
             if mask is not None:
                 chain._pass(MASK_CODE, [], np.ascontiguousarray(mask.reshape(-1)))
+            if matte is not None:
+                chain._pass(MASK_CODE, [], np.ascontiguousarray(np.asarray(matte, np.float32).reshape(-1)))
             inverse = cv2.invertAffineTransform(np.float32(matrix))
             context.run(
                 WARP_CODE,
