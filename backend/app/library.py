@@ -2235,11 +2235,257 @@ def describe(kind: str, item: Item) -> dict:
     return entry
 
 
+# A starter set of real recordings (the comparison's "a bigger, better-sounding
+# library"): twenty everyday sounds curated from Openverse under CC0, one per
+# need, pinned by their Openverse ids with the creator kept for the credit a
+# person may want to give anyway. Nothing ships in the repository: an item is
+# fetched through the Openverse importer the first time it is used and then
+# sits in the media bin like any other media. Curated on 2026-09-26; a record
+# Openverse has since removed is reported, not substituted.
+RECORDINGS = [
+    {
+        "id": "a3fcc6d0-c4aa-4c1d-abfe-47287f48777e",
+        "query": "rain",
+        "title": "1 Minute Rain (Medium)",
+        "creator": "yzhamua",
+        "duration": 51.8,
+        "source": "freesound",
+        "url": "https://freesound.org/people/yzhamua/sounds/188655",
+        "preview": "https://cdn.freesound.org/previews/188/188655_1178799-hq.mp3",
+    },
+    {
+        "id": "0346629e-fcee-487d-9106-e6a42ad34d0f",
+        "query": "wind",
+        "title": "Wind Gust",
+        "creator": "crashoverride6",
+        "duration": 7.7,
+        "source": "freesound",
+        "url": "https://freesound.org/people/crashoverride6/sounds/146932",
+        "preview": "https://cdn.freesound.org/previews/146/146932_1274078-hq.mp3",
+    },
+    {
+        "id": "b09fd453-95ae-4604-aab2-3b7c5cfb6b95",
+        "query": "ocean waves",
+        "title": "Zen Ocean Waves,Ocean Waves Ambience.mp3",
+        "creator": "INNORECORDS",
+        "duration": 95.8,
+        "source": "freesound",
+        "url": "https://freesound.org/people/INNORECORDS/sounds/456899",
+        "preview": "https://cdn.freesound.org/previews/456/456899_9518146-hq.mp3",
+    },
+    {
+        "id": "94d8576e-5a1a-48f9-b24e-35022bd8e043",
+        "query": "city traffic",
+        "title": "alley quiet winter wet like rain drips birds distant city tr",
+        "creator": "kyles",
+        "duration": 114.0,
+        "source": "freesound",
+        "url": "https://freesound.org/people/kyles/sounds/452438",
+        "preview": "https://cdn.freesound.org/previews/452/452438_612689-hq.mp3",
+    },
+    {
+        "id": "05ecad98-ebb2-49f2-bc1c-f836c783e75c",
+        "query": "birds morning",
+        "title": "Birds-Morning Dove & Song Birds - St Augustine-April.wav",
+        "creator": "Bansemer",
+        "duration": 12.9,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Bansemer/sounds/117660",
+        "preview": "https://cdn.freesound.org/previews/117/117660_341440-hq.mp3",
+    },
+    {
+        "id": "eca9b874-5e7a-426e-8a08-c61ca7c8ea8c",
+        "query": "crowd chatter",
+        "title": "Small Crowd Chatter",
+        "creator": "snakebarney",
+        "duration": 92.8,
+        "source": "freesound",
+        "url": "https://freesound.org/people/snakebarney/sounds/138118",
+        "preview": "https://cdn.freesound.org/previews/138/138118_1572282-hq.mp3",
+    },
+    {
+        "id": "8dd17c4f-6d81-4e52-a4e2-eab2c2bf98b8",
+        "query": "footsteps gravel",
+        "title": "Footsteps Gravel Running-Stop",
+        "creator": "KikeVilaplana",
+        "duration": 5.9,
+        "source": "freesound",
+        "url": "https://freesound.org/people/KikeVilaplana/sounds/436525",
+        "preview": "https://cdn.freesound.org/previews/436/436525_8938826-hq.mp3",
+    },
+    {
+        "id": "aec0904a-4703-4303-88bb-879ec6031fa5",
+        "query": "door close",
+        "title": "Door closing, door closed",
+        "creator": "steinhyrningur",
+        "duration": 4.4,
+        "source": "freesound",
+        "url": "https://freesound.org/people/steinhyrningur/sounds/466864",
+        "preview": "https://cdn.freesound.org/previews/466/466864_9135300-hq.mp3",
+    },
+    {
+        "id": "b9f90a19-16a9-4099-a860-a53a4cfaa698",
+        "query": "keyboard typing",
+        "title": "Keyboard typing",
+        "creator": "Dasgoat",
+        "duration": 82.0,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Dasgoat/sounds/361703",
+        "preview": "https://cdn.freesound.org/previews/361/361703_3424781-hq.mp3",
+    },
+    {
+        "id": "b9759891-a471-4fdd-bb2f-ce5773e63325",
+        "query": "fireplace crackle",
+        "title": "Fireplace Crackles",
+        "creator": "WavJunction.com",
+        "duration": 16.1,
+        "source": "freesound",
+        "url": "https://freesound.org/people/WavJunction.com/sounds/512685",
+        "preview": "https://cdn.freesound.org/previews/512/512685_9514571-hq.mp3",
+    },
+    {
+        "id": "79b7d9cd-51c6-4064-b66e-5f432cd30fb3",
+        "query": "thunder",
+        "title": "Thunder",
+        "creator": "Fission9",
+        "duration": 32.2,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Fission9/sounds/465314",
+        "preview": "https://cdn.freesound.org/previews/465/465314_9395330-hq.mp3",
+    },
+    {
+        "id": "aa8bb5a6-80ee-4128-93e4-f3b5f1511205",
+        "query": "river stream",
+        "title": "River, stream, creek, sound of waves, moving water",
+        "creator": "kentspublicdomain",
+        "duration": 30.6,
+        "source": "freesound",
+        "url": "https://freesound.org/people/kentspublicdomain/sounds/325182",
+        "preview": "https://cdn.freesound.org/previews/325/325182_5583936-hq.mp3",
+    },
+    {
+        "id": "eab8a6e2-0ac8-4615-9e0d-ebde30523783",
+        "query": "whoosh",
+        "title": "Deep Whoosh #1",
+        "creator": "Kinoton",
+        "duration": 3.2,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Kinoton/sounds/351256",
+        "preview": "https://cdn.freesound.org/previews/351/351256_2247456-hq.mp3",
+    },
+    {
+        "id": "3849018d-0ac8-4f6b-b44d-5ec26a4b32af",
+        "query": "click",
+        "title": "Mouse click sounds",
+        "creator": "Masgame",
+        "duration": 2.3,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Masgame/sounds/347544",
+        "preview": "https://cdn.freesound.org/previews/347/347544_5662401-hq.mp3",
+    },
+    {
+        "id": "baf7990c-657a-47ab-83c0-4ec2437095c3",
+        "query": "applause",
+        "title": "Applause 2.WAV",
+        "creator": "Sandermotions",
+        "duration": 6.3,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Sandermotions/sounds/277021",
+        "preview": "https://cdn.freesound.org/previews/277/277021_1402315-hq.mp3",
+    },
+    {
+        "id": "a018190a-e4b9-463a-a790-04876a045e51",
+        "query": "wind chimes",
+        "title": "Wind chimes 1",
+        "creator": "giddster",
+        "duration": 89.1,
+        "source": "freesound",
+        "url": "https://freesound.org/people/giddster/sounds/437337",
+        "preview": "https://cdn.freesound.org/previews/437/437337_1738686-hq.mp3",
+    },
+    {
+        "id": "c3d53e8d-7608-497b-a92a-12dcec009980",
+        "query": "cafe ambience",
+        "title": "Cafe Ambience Day - 2 - Sound Devices 702 - Senn K6.WAV",
+        "creator": "lunchmoney",
+        "duration": 38.4,
+        "source": "freesound",
+        "url": "https://freesound.org/people/lunchmoney/sounds/380201",
+        "preview": "https://cdn.freesound.org/previews/380/380201_6692504-hq.mp3",
+    },
+    {
+        "id": "32ddca2a-1ac9-4336-98d4-ec4d659807eb",
+        "query": "car passing",
+        "title": "Car passing by.wav",
+        "creator": "hinzebeat",
+        "duration": 5.4,
+        "source": "freesound",
+        "url": "https://freesound.org/people/hinzebeat/sounds/171447",
+        "preview": "https://cdn.freesound.org/previews/171/171447_3191786-hq.mp3",
+    },
+    {
+        "id": "5495e786-b0f1-4e2d-9ab3-23e83eac5e45",
+        "query": "night crickets",
+        "title": "Countryside at the night crickets",
+        "creator": "Martin.Sadoux",
+        "duration": 90.9,
+        "source": "freesound",
+        "url": "https://freesound.org/people/Martin.Sadoux/sounds/422582",
+        "preview": "https://cdn.freesound.org/previews/422/422582_8177280-hq.mp3",
+    },
+    {
+        "id": "69390fd8-ef36-489f-8e57-a1cc40e19ccd",
+        "query": "page turn",
+        "title": "Page turns and book close/open",
+        "creator": "exterminat",
+        "duration": 27.0,
+        "source": "freesound",
+        "url": "https://freesound.org/people/exterminat/sounds/164806",
+        "preview": "https://cdn.freesound.org/previews/164/164806_1460963-hq.mp3",
+    },
+]
+
+
+@router.get("/recordings")
+def recordings() -> dict:
+    return {
+        "kind": "recordings",
+        "licence": "CC0 1.0 (public domain dedication); the creator is named for credit, not by requirement",
+        "items": [{**item, "name": item["title"], "id": item["id"], "duration": item["duration"]} for item in RECORDINGS],
+    }
+
+
+@router.post("/recordings/{item_id}/import", status_code=201)
+def import_recording(item_id: str) -> dict:
+    """Fetch the recording through the Openverse importer and put it in the media bin."""
+    item = next((entry for entry in RECORDINGS if entry["id"] == item_id), None)
+    if item is None:
+        raise HTTPException(404, "no recording by that id in the starter set")
+    from .stock import OpenverseImportBody, openverse_import
+
+    return openverse_import(OpenverseImportBody(id=item["id"], kind="audio"))
+
+
 @router.get("/{kind}")
 def catalogue(kind: str) -> dict:
     if kind not in KINDS:
         raise HTTPException(404, f"no library of {kind}")
-    return {"kind": kind, "licence": LICENCE, "items": [describe(kind, item) for item in KINDS[kind]]}
+    items = [describe(kind, item) for item in KINDS[kind]]
+    if kind == "sounds":
+        # the starter set of real recordings sits in the Sounds panel under its own category, previewed from
+        # Openverse's file and fetched into the bin on Add through the Openverse importer
+        items += [
+            {
+                "id": r["id"],
+                "name": r["title"],
+                "category": "Recordings (CC0)",
+                "url": r["preview"],
+                "seconds": r["duration"],
+                "creator": r["creator"],
+            }
+            for r in RECORDINGS
+        ]
+    return {"kind": kind, "licence": LICENCE, "items": items}
 
 
 @router.get("/{kind}/{item_id}/file")
@@ -2250,6 +2496,8 @@ def item_file(kind: str, item_id: str) -> FileResponse:
 @router.post("/{kind}/{item_id}/import")
 def import_item(kind: str, item_id: str) -> dict:
     """Put a copy of the item in the media bin, where it is used like any other media."""
+    if kind == "sounds" and any(entry["id"] == item_id for entry in RECORDINGS):
+        return import_recording(item_id)
     item = find(kind, item_id)
     source = render(kind, item_id)
     with tempfile.TemporaryDirectory(prefix="formcut-library-") as scratch:

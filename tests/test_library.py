@@ -23,7 +23,8 @@ def shelf(tmp_path, monkeypatch):
 
 def test_the_catalogue_lists_every_kind():
     counts = {kind: len(client.get(f"/api/library/{kind}").json()["items"]) for kind in library.KINDS}
-    assert counts == {"stickers": 86, "sounds": 52, "music": 18}
+    # sounds: 52 synthesised and the 20 CC0 recordings from Openverse
+    assert counts == {"stickers": 86, "sounds": 72, "music": 18}
 
 
 def test_ids_are_unique_and_urls_point_at_their_files():
@@ -32,7 +33,14 @@ def test_ids_are_unique_and_urls_point_at_their_files():
         assert len(ids) == len(set(ids)), kind
         listed = client.get(f"/api/library/{kind}").json()
         assert listed["licence"] == library.LICENCE
-        assert all(entry["url"] == f"/api/library/{kind}/{entry['id']}/file" for entry in listed["items"])
+        # the engine's own items serve their file from the engine; the CC0 recordings in the Sounds panel
+        # preview from Openverse's file and are fetched on Add
+        own = [entry for entry in listed["items"] if entry.get("category") != "Recordings (CC0)"]
+        assert all(entry["url"] == f"/api/library/{kind}/{entry['id']}/file" for entry in own)
+        recordings = [entry for entry in listed["items"] if entry.get("category") == "Recordings (CC0)"]
+        assert all(entry["url"].startswith("https://") and entry.get("creator") is not None for entry in recordings)
+        if kind == "sounds":
+            assert len(recordings) == len(library.RECORDINGS) == 20
 
 
 def test_an_unknown_kind_or_item_is_not_found():
