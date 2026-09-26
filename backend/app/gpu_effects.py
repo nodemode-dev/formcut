@@ -67,6 +67,7 @@ SUPPORTED = frozenset(
         "oil-paint",
         "lens-blur",
         "stained-glass",
+        "vhs-tape",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -1022,6 +1023,108 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# R19: the VHS tape in four passes. VHS_YCC: RGB to YCrCb as cv2 converts
+# floats (Y, then Cr = 0.713 (R - Y) + 0.5, Cb = 0.564 (B - Y) + 0.5). VHS_BLEED:
+# the luma blurred (its taps in aux, p[3] the tap count), the chroma box-blurred
+# across p[2] pixels (reflect-101, as cv2.blur) and rolled right by p[4], then
+# YCrCb back to RGB. VHS_TAPE: the picture sampled with a per-row offset
+# (aux, one float a row, reflected borders as cv2.remap's BORDER_REFLECT),
+# desaturated to 0.85 and the per-row noise added (aux after the offsets, one
+# float a pixel, already scaled by the band and the wear).
+VHS_YCC_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let c = src[i].rgb;
+    let yy = dot(c, vec3<f32>(0.299, 0.587, 0.114));
+    dst[i] = vec4<f32>(yy, 0.713 * (c.r - yy) + 0.5, 0.564 * (c.b - yy) + 0.5, src[i].a);
+}
+"""
+
+VHS_BLEED_CODE = """
+fn at(x: i32, y: i32) -> vec4<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)];
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let bleed = i32(p[2]);
+    let taps = i32(p[3]);
+    let roll = i32(p[4]);
+    // the luma: a gaussian, separable, both directions here
+    let r = taps / 2;
+    var luma = 0.0;
+    for (var dy = -r; dy <= r; dy = dy + 1) {
+        var row = 0.0;
+        for (var dx = -r; dx <= r; dx = dx + 1) {
+            row = row + at(x + dx, y + dy).x * aux[dx + r];
+        }
+        luma = luma + row * aux[dy + r];
+    }
+    // the chroma: a horizontal box over bleed pixels, then rolled right by roll (wrapping as np.roll)
+    var sx = x - roll;
+    if (sx < 0) { sx = sx + w; }
+    let half = bleed / 2;
+    var cr = 0.0;
+    var cb = 0.0;
+    for (var dx = -half; dx <= half; dx = dx + 1) {
+        let s = at(sx + dx, y);
+        cr = cr + s.y;
+        cb = cb + s.z;
+    }
+    cr = cr / f32(bleed);
+    cb = cb / f32(bleed);
+    // YCrCb to RGB as cv2 converts floats
+    let rr = luma + 1.403 * (cr - 0.5);
+    let gg = luma - 0.714 * (cr - 0.5) - 0.344 * (cb - 0.5);
+    let bb = luma + 1.773 * (cb - 0.5);
+    dst[y * w + x] = vec4<f32>(rr, gg, bb, src[y * w + x].a);
+}
+"""
+
+VHS_TAPE_CODE = """
+fn reflect(i: i32, n: i32) -> i32 {
+    var k = i;
+    if (n == 1) { return 0; }
+    loop {
+        if (k < 0) { k = -k - 1; } else if (k >= n) { k = 2 * n - 1 - k; } else { break; }
+    }
+    return k;
+}
+fn at(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect(y, h) * w + reflect(x, w)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let sx = f32(x) + aux[y];
+    let x0 = i32(floor(sx));
+    let fx = sx - f32(x0);
+    let tape = mix(at(x0, y), at(x0 + 1, y), fx);
+    let grey = dot(tape, vec3<f32>(0.299, 0.587, 0.114));
+    let noise = aux[h + i];
+    dst[i] = vec4<f32>(vec3<f32>(grey) + (tape - vec3<f32>(grey)) * 0.85 + vec3<f32>(noise), src[i].a);
+}
+"""
+
 # The mask as an alpha field in aux, one float a pixel, multiplied into the
 # layer's alpha and rounded as the CPU rounds it.
 MASK_CODE = """
@@ -1454,6 +1557,19 @@ class _Chain:
             self._pass(ACCUM_CODE, [0.15], source=scratch, target=acc)
             self.current = acc
             self._restore()
+            return
+        if effect == "vhs-tape":
+            w, h = self.w, self.h
+            rng = np.random.default_rng(int(local * 30) % (2**32))
+            taps = _gaussian_taps(0.9)
+            bleed = max(1, w // 120) * 2 + 1
+            self._pass(VHS_YCC_CODE, [])
+            self._pass(VHS_BLEED_CODE, [bleed, len(taps), max(1, w // 200)], taps)
+            band = np.exp(-((((np.arange(h) / h) - ((local * 0.35) % 1.2 - 0.1)) / 0.02) ** 2)).astype(np.float32)
+            wear = float(params.get("intensity", 1))
+            offsets = ((rng.normal(0, 1.2, h) + band * w * 0.02) * wear).astype(np.float32)
+            noise = rng.normal(0, 1, (h, w)).astype(np.float32) * (0.03 + band[:, None] * 0.25) * wear
+            self._pass(VHS_TAPE_CODE, [], np.concatenate([offsets, noise.reshape(-1)]))
             return
         if effect == "stained-glass":
             from .pixel_effects import _glass_cells
