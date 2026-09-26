@@ -268,6 +268,17 @@ def apply_edit(project: dict, command: dict):
         for other in track["clips"]:
             if other["start"] >= at:
                 other["start"] = round(max(0.0, other["start"] - span) * 100) / 100
+    elif operation == "timeline.sync-angles":
+        # Multicam sync by sound: the named timeline's tracks are lined up
+        # against its first track by their sound; the offsets come back.
+        from .multicam_sync import sync_tracks
+
+        target = timeline
+        if command.get("timelineId"):
+            target = next((tl for tl in project.get("timelines") or [] if tl.get("id") == command["timelineId"]), None)
+            if target is None:
+                raise ValueError("No timeline by that id")
+        return {"angles": sync_tracks(target, float(command.get("seconds", 120)))}
     elif operation == "timeline.cut-range":
         # Text-based editing over RPC: a span leaves every track, clips inside
         # it go, clips straddling it are cut into a head and a tail, and what
@@ -579,6 +590,7 @@ def dispatch(method: str, params: dict):
                 "clip.detach",
                 "clip.ripple-delete",
                 "timeline.cut-range",
+                "timeline.sync-angles",
                 "clip.speed-curve",
                 "clip.animations",
                 "clip.scenes",

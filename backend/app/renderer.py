@@ -1053,9 +1053,11 @@ class FrameRenderer:
 
     @staticmethod
     def _device_resident(clip: dict, scaled: list, local: float = 0.0) -> bool:
-        """Whether nothing between a layer's effects and its blend needs the bytes on this side at this local time."""
-        if scaled and not gpu_effects.supported(scaled):
-            return False
+        """Whether nothing between a layer's effects and its blend needs the bytes on this side at this local time.
+
+        R9: an effect chain without a device pass no longer disqualifies the layer; the chain runs on the CPU
+        before the one upload and everything after it (LUT, shader, key, mask, matte, transform, blend) stays
+        on the device, so such a layer costs its effect and no readback."""
         if any(clip.get(key) for key in CPU_STEPS):
             return False
         # A transition and a push change the layer only while they run; the
@@ -1192,6 +1194,10 @@ class FrameRenderer:
                 # upload to the frame's single readback after the blend.
                 if gpu.stack_active() and self._device_resident(clip, scaled, local):
                     transform = transform_at(clip, local)
+                    if scaled and not gpu_effects.supported(scaled):
+                        # R9: the chain has a CPU-only effect; run the whole chain here, in order, then go up once.
+                        image = apply_effects(image, scaled, local)
+                        scaled = []
                     lut = None
                     if clip.get("lutId"):
                         table, low, high = load_cube(clip["lutId"])

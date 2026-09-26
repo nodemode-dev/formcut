@@ -224,6 +224,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
           <button data-val="gif">GIF</button>
         </div>
       </div>
+      <p class="modal-note" data-ref="h264-note" hidden></p>
       <div class="modal-row">
         <span>${t("export.quality")}</span>
         <div class="seg" data-ref="quality">
@@ -378,6 +379,25 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       return;
     }
     modal.hidden = false;
+    // The H.264 situation on the sheet, the first time and every time: a
+    // computer with no H.264 encoder either downloads Cisco's OpenH264 once
+    // (its licence in Settings) or exports WebM when MP4 was asked for.
+    void (async () => {
+      const note = modal.querySelector<HTMLElement>('[data-ref="h264-note"]')!;
+      try {
+        const codec = await (await fetch("/api/codecs/openh264")).json() as { needed: boolean; installed: boolean; enabled: boolean; supported: boolean };
+        let line = "";
+        if (codec.needed && !(codec.installed && codec.enabled)) {
+          line = codec.supported
+            ? text("This computer has no H.264 encoder. MP4 will download Cisco's OpenH264 once on the first export (its licence is in Settings, Advanced); otherwise the file comes out as WebM.")
+            : text("This computer has no H.264 encoder and OpenH264 is not available for it: an MP4 export comes out as WebM.");
+        } else if (codec.needed && codec.installed && codec.enabled) {
+          line = text("MP4 encodes through Cisco's OpenH264 on this computer (its licence is in Settings, Advanced).");
+        }
+        if (note.textContent !== line) note.textContent = line;
+        if (note.hidden !== !line) note.hidden = !line;
+      } catch { /* the note is a courtesy */ }
+    })();
     // The estimate must reflect the project as it is when the sheet opens, not
     // as it was when the sheet was built.
     void refreshEstimate();

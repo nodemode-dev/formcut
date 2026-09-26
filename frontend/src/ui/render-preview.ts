@@ -18,7 +18,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     <button class="iconbtn play" data-command="transport.toggle" title="Play or pause"><span data-play>${icon("play")}</span><span data-pause hidden>${icon("pause")}</span></button>
     <button class="iconbtn" data-skip="0.5" title="${text("Forward half a second")}">${icon("chevR")}</button>
     <button class="iconbtn" data-command="transport.end" title="End">${icon("toEnd")}</button></div>
-    <select class="mini-select" dir="ltr" aria-label="Preview resolution"><option value="640">640 px</option><option value="960">960 px</option><option value="0">Full size</option></select></div>`;
+    <select class="mini-select" dir="ltr" aria-label="Preview resolution"><option value="0.25">Quarter</option><option value="0.5" selected>Half</option><option value="0">Full size</option></select></div>`;
   const canvas = element.querySelector("canvas")!;
   const context = canvas.getContext("2d", { alpha: false })!;
   const stage = element.querySelector<HTMLElement>(".stage")!;
@@ -69,7 +69,12 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     const hasClips = snapshot.timelines.some((timeline) =>
       timeline.tracks.some((track) => track.clips.length > 0));
     if (!hasClips) return "";
-    const next = await api("/api/render/sessions", { project: snapshot, width: Number(resolution.value) || snapshot.width });
+    // The monitor's control is a fraction of the project's width (quarter,
+    // half, full), as every NLE keeps it beside the picture; a full-size
+    // preview renders at the project's own width.
+    const fraction = Number(resolution.value);
+    const width = fraction > 0 && fraction < 1 ? Math.max(320, Math.round(snapshot.width * fraction / 16) * 16) : snapshot.width;
+    const next = await api("/api/render/sessions", { project: snapshot, width });
     const old = session;
     session = next.id;
     readyRevision = current;

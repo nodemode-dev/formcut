@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 699 | /api/rpc | 2 |
+| automation.py | 711 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 863 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
@@ -90,6 +90,7 @@ the automation transports.
 - `local_diffusion.py` (241L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
+- `multicam_sync.py` (144L)
 - `openh264.py` (410L)
 - `package_registry.py` (80L)
 - `paths.py` (32L)
@@ -98,7 +99,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1262L)
+- `renderer.py` (1268L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)

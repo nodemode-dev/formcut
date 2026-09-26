@@ -4,7 +4,7 @@
 // accent. The rail collapses to icons. Content is built once and switched by
 // hidden, never rebuilt, so a tab change keeps scroll and focus.
 import { t } from "../i18n";
-import { localizeElement } from "../i18n/text";
+import { localizeElement, text } from "../i18n/text";
 import { icon } from "./icons";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
@@ -115,24 +115,13 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
 
   // --- playback --------------------------------------------------------------
   const playback = view("playback");
+  // The preview's size is chosen beside the monitor (quarter, half, full);
+  // the select that lived here emitted an event nothing listened to.
   const preview = group(playback, "set.preview", "set.preview.hint");
-  const previewSize = document.createElement("select");
-  for (const value of [480, 640, 854, 1280]) {
-    const option = document.createElement("option");
-    option.value = String(value);
-    option.textContent = `${value} px`;
-    previewSize.append(option);
-  }
-  previewSize.value = String(localStorage.getItem("formcut.previewWidth") ?? 640);
-  previewSize.addEventListener("change", () => {
-    try {
-      localStorage.setItem("formcut.previewWidth", previewSize.value);
-    } catch {
-      // Not persisting is acceptable; the running session still uses the value.
-    }
-    document.dispatchEvent(new CustomEvent("formcut:preview-width", { detail: Number(previewSize.value) }));
-  });
-  row(preview, "set.previewsize", previewSize);
+  const previewNote = document.createElement("span");
+  previewNote.className = "set-note";
+  previewNote.textContent = text("Quarter, half or full size: the control sits beside the picture");
+  row(preview, "set.previewsize", previewNote);
 
   // --- appearance ------------------------------------------------------------
   const appearance = view("appearance");

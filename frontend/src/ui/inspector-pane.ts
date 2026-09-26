@@ -7,6 +7,7 @@ import { icon } from "./icons";
 import type { MediaBin } from "../engine/media";
 import { t } from "../i18n";
 import { api } from "../engine/api";
+import { openProject, saveProject } from "../engine/persistence";
 import { sourceTime } from "../engine/timing";
 import { activeProfile, onInterfaceMode } from "./interface-mode";
 import { text } from "../i18n/text";
@@ -78,6 +79,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
           <span class="seg multicam-angles" data-ref="mc-angles" role="group" aria-label="${t("mc.angle")}"></span>
           <span class="prop-aux"><select class="mini-select" data-ref="mc-audio" aria-label="${t("mc.audio")}"></select></span>
         </div>
+        <div class="prop-row"><span></span><button type="button" class="tool-chip" data-ref="mc-sync">${icon("magnet")}${text("Sync angles by sound")}</button><span class="prop-aux" data-ref="mc-sync-note"></span></div>
         <div class="text-add-hint multicam-hint" data-ref="mc-hint">${t("mc.hint")}</div>
       </div>
       <div class="section" data-section="transform" data-feature="section.transform">
@@ -568,6 +570,35 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const audioValue = clip.audioAngle === undefined ? "" : String(clip.audioAngle);
     if (document.activeElement !== audioSelect && audioSelect.value !== audioValue) audioSelect.value = audioValue;
   };
+  // Sync by sound: the multicam timeline's tracks are lined up against its
+  // first track through the engine's cross-correlation, then the project is
+  // reloaded so the angles sit where their sound says they were.
+  const syncButton = el.querySelector<HTMLButtonElement>('[data-ref="mc-sync"]')!;
+  const syncNote = el.querySelector<HTMLElement>('[data-ref="mc-sync-note"]')!;
+  syncButton.addEventListener("click", () => void (async () => {
+    const state = engine.snapshot;
+    const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
+    if (!found || found.clip.kind !== "timeline" || !found.clip.timelineId) return;
+    const timelineId = found.clip.timelineId;
+    const before = new Map(engine.snapshot.timelines.find((tl) => tl.id === timelineId)?.tracks.map((track) => [track.id, track.clips[0]?.start ?? 0]) ?? []);
+    syncNote.textContent = text("Listening");
+    try {
+      const saved = await saveProject(engine);
+      if (!saved) throw new Error(text("The project could not be saved first"));
+      await api("/api/rpc", {
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "project.edit",
+        params: { id: saved.id, commands: [{ op: "timeline.sync-angles", timelineId }] },
+      });
+      await openProject(engine, saved.id);
+      const after = engine.snapshot.timelines.find((tl) => tl.id === timelineId)?.tracks ?? [];
+      const moved = after.map((track) => ({ name: track.name, shift: (track.clips[0]?.start ?? 0) - (before.get(track.id) ?? 0) })).filter((m) => Math.abs(m.shift) >= 0.01);
+      syncNote.textContent = moved.length ? moved.map((m) => `${m.name} ${m.shift > 0 ? "+" : ""}${m.shift.toFixed(2)} s`).join(" · ") : text("Already lined up, or too weak a match to move");
+    } catch (error) {
+      syncNote.textContent = error instanceof Error ? error.message : String(error);
+    }
+  })());
   audioSelect.addEventListener("change", () => {
     const state = engine.snapshot;
     const found = state.selectedClipId ? engine.findClip(state.selectedClipId) : null;
