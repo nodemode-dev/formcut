@@ -49,7 +49,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 767 | /api/render | 13 |
+| render_api.py | 895 | /api/render | 13 |
 | render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -85,7 +85,7 @@ the automation transports.
 - `ffmpeg_fetch.py` (165L)
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
-- `gpu.py` (372L)
+- `gpu.py` (402L)
 - `gpu_effects.py` (2404L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
@@ -114,7 +114,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (220L)
-- `video_source.py` (326L)
+- `video_source.py` (494L)
 - `windows_console.py` (43L)
 
 ## Reading order for a change
