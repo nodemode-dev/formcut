@@ -49,7 +49,7 @@ The rest is written by hand.
 | providers.py | 161 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 1088 | /api/render | 13 |
+| render_api.py | 1092 | /api/render | 13 |
 | render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -72,7 +72,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
-- `bench.py` (525L)
+- `bench.py` (529L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
@@ -86,7 +86,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (701L)
-- `gpu_effects.py` (2789L)
+- `gpu_effects.py` (2799L)
 - `gpu_frame.py` (666L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
