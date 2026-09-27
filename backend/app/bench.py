@@ -433,6 +433,11 @@ def main(argv: list[str] | None = None) -> int:
                 frames = max(1, args.frames)
                 listed = ", ".join(f"{_frame_path.kernel_name(code)} {ms / frames:.2f} ms" for code, ms, _n in passes[:6])
                 print(f"device time a frame by kernel: {listed}")
+                kernels = sum(ms for _code, ms, _n in passes) / frames
+                print(
+                    f"device time split: kernels {kernels:.2f} ms, the rest {max(0.0, wait - kernels):.2f} ms "
+                    "(copying the frame to and from the device, the readback into Python, waiting on the queue)"
+                )
             else:
                 print("device time by kernel: not available (no timestamps on this adapter)")
         # what the sources really were: the decoder class, whether it ran deep and what dtype its frames had

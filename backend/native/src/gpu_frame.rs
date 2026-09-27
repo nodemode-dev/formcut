@@ -36,7 +36,9 @@ use std::sync::{Arc, Mutex};
 // 6: a kernel is compiled when it is registered, inside an error scope, and one that does not compile is refused
 // there with naga's message (it had become an invalid pipeline that failed every later run that used it), so
 // the engine can run the passes it would have fused one by one instead.
-const API: u32 = 6;
+// 7: input is written into upload buffers that stay mapped between frames (a belt), not through write_buffer,
+// which made and faulted in a fresh 16 MB staging buffer for every sixteen-bit frame.
+const API: u32 = 7;
 const TIMED_PASSES: u32 = 128;
 
 /// Storage buffers by size class, reused frame after frame: taken for a run, given back when it ends.
@@ -65,8 +67,8 @@ fn bytes_of<'a>(array: &'a PyReadonlyArray1<'_, u8>) -> PyResult<&'a [u8]> {
 }
 
 enum Step {
-    Upload { picture: usize, width: u32, height: u32, deep: bool, staging: wgpu::Buffer },
-    Pass { code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<wgpu::Buffer> },
+    Upload { picture: usize, width: u32, height: u32, deep: bool, staging: wgpu::Buffer, from: wgpu::Buffer, bytes: u64 },
+    Pass { code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<wgpu::Buffer>, from: Option<(wgpu::Buffer, u64)> },
     Copy { from: usize, to: usize, width: u32, height: u32 },
     Clear { picture: usize, bytes: u64 },
     Download { picture: usize, code: usize, width: u32, height: u32, out_bytes: u64, held: usize, params: Vec<f32> },
@@ -99,6 +101,9 @@ pub struct GpuFrame {
     timed: Vec<usize>,
     per_code: HashMap<usize, (f64, u32)>,
     current_code: usize,
+    // upload buffers kept mapped between frames: taken for a write, unmapped for the frame, mapped again after
+    belt_free: Vec<wgpu::Buffer>,
+    belt_used: Vec<wgpu::Buffer>,
 }
 
 #[pymethods]
@@ -163,6 +168,8 @@ impl GpuFrame {
             timed: Vec::new(),
             per_code: HashMap::new(),
             current_code: 0,
+            belt_free: Vec::new(),
+            belt_used: Vec::new(),
         })
         .map(|mut frame| {
             let kept = Arc::clone(&frame.errors);
@@ -237,9 +244,9 @@ impl GpuFrame {
     /// Stage a picture's bytes (RGBA8, or RGBA16 when `deep`) on the device now; the unpack runs with the frame.
     fn upload(&mut self, picture: usize, width: u32, height: u32, deep: bool, data: PyReadonlyArray1<'_, u8>) -> PyResult<()> {
         let bytes = bytes_of(&data)?;
-        let staging = self.pool.take(&self.device, bytes.len() as u64);
-        self.queue.write_buffer(&staging, 0, &bytes[..bytes.len() / 4 * 4]);
-        self.steps.push(Step::Upload { picture, width, height, deep, staging });
+        let (from, size) = self.belt_write(bytes);
+        let staging = self.pool.take(&self.device, size.max(16));
+        self.steps.push(Step::Upload { picture, width, height, deep, staging, from, bytes: size });
         Ok(())
     }
 
@@ -252,16 +259,15 @@ impl GpuFrame {
     #[pyo3(name = "step", signature = (code, src, dst, held, width, height, params, aux=None))]
     #[allow(clippy::too_many_arguments)]
     fn pass(&mut self, code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<PyReadonlyArray1<'_, u8>>) -> PyResult<()> {
-        let aux = match aux {
+        let (aux, from) = match aux {
             Some(data) => {
                 let bytes = bytes_of(&data)?;
-                let buffer = self.pool.take(&self.device, bytes.len().max(16) as u64);
-                self.queue.write_buffer(&buffer, 0, &bytes[..bytes.len() / 4 * 4]);
-                Some(buffer)
+                let (from, size) = self.belt_write(bytes);
+                (Some(self.pool.take(&self.device, size.max(16))), Some((from, size)))
             }
-            None => None,
+            None => (None, None),
         };
-        self.steps.push(Step::Pass { code, src, dst, held, width, height, params, aux });
+        self.steps.push(Step::Pass { code, src, dst, held, width, height, params, aux, from });
         Ok(())
     }
 
@@ -286,7 +292,11 @@ impl GpuFrame {
         let mut used: Vec<wgpu::Buffer> = Vec::new();
         for step in steps {
             match step {
-                Step::Upload { picture, width, height, deep, staging } => {
+                Step::Upload { picture, width, height, deep, staging, from, bytes } => {
+                    if bytes > 0 {
+                        encoder.copy_buffer_to_buffer(&from, 0, &staging, 0, bytes);
+                    }
+                    self.belt_used.push(from);
                     let params = self.params_buffer(&[width as f32, height as f32]);
                     let other = if picture == 0 { 1 } else { 0 };
                     let pipeline = self.pipeline(if deep { unpack16_code } else { unpack_code })?;
@@ -295,7 +305,13 @@ impl GpuFrame {
                     used.push(staging);
                     used.push(params);
                 }
-                Step::Pass { code, src, dst, held, width, height, params, aux } => {
+                Step::Pass { code, src, dst, held, width, height, params, aux, from } => {
+                    if let (Some((belt, bytes)), Some(target)) = (from, aux.as_ref()) {
+                        if bytes > 0 {
+                            encoder.copy_buffer_to_buffer(&belt, 0, target, 0, bytes);
+                        }
+                        self.belt_used.push(belt);
+                    }
                     let mut p = vec![width as f32, height as f32];
                     p.extend(params);
                     let params = self.params_buffer(&p);
@@ -380,6 +396,15 @@ impl GpuFrame {
                 bytes
             }
         };
+        // the upload buffers this frame used are mapped again for the next, now that the device is done with them
+        let belted = std::mem::take(&mut self.belt_used);
+        for buffer in &belted {
+            buffer.slice(..).map_async(wgpu::MapMode::Write, |_| {});
+        }
+        if !belted.is_empty() {
+            self.device.poll(wgpu::Maintain::Wait);
+        }
+        self.belt_free.extend(belted);
         let waited = std::time::Instant::now();
         if let Some(message) = self.errors.lock().ok().and_then(|mut slot| slot.take()) {
             for buffer in used {
@@ -425,6 +450,22 @@ impl GpuFrame {
 }
 
 impl GpuFrame {
+    /// Copy bytes into a mapped upload buffer from the belt (made once, reused every frame) and unmap it for the
+    /// frame; the run copies it into a pooled storage buffer before the pass that reads it.
+    fn belt_write(&mut self, bytes: &[u8]) -> (wgpu::Buffer, u64) {
+        let size = (bytes.len() / 4 * 4) as u64;
+        let class = size.max(256).next_power_of_two();
+        let buffer = match self.belt_free.iter().position(|b| b.size() == class) {
+            Some(at) => self.belt_free.swap_remove(at),
+            None => self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("upload belt"), size: class, usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: true }),
+        };
+        if size > 0 {
+            buffer.slice(..size).get_mapped_range_mut().copy_from_slice(&bytes[..size as usize]);
+        }
+        buffer.unmap();
+        (buffer, size)
+    }
+
     fn params_buffer(&mut self, values: &[f32]) -> wgpu::Buffer {
         let mut padded = values.to_vec();
         while padded.len() < 32 {

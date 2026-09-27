@@ -30,7 +30,7 @@ CANVAS_A = WORKING + POOL + CACHE
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
 # The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
-API = 6
+API = 7
 # Shared by every Recorder: one executor, its kernels by source, the pool of staged layers, the steps pending
 _kernels: dict[str, int] = {}
 _shared = {"pending": 0}
@@ -240,7 +240,7 @@ class Recorder:
     def download(self, buffer, height: int, width: int) -> np.ndarray:
         """A working picture's floats, exactly (a CPU-only effect mid-chain): runs what is recorded so far."""
         self.frame.download(int(buffer), self.kernel(PACK_F32_FRAME_CODE), int(width), int(height), int(width) * int(height) * 16)
-        return np.frombuffer(self._run(), np.float32).reshape(height, width, 4).copy()
+        return np.frombuffer(self._run(), np.float32).reshape(height, width, 4)  # read-only, not copied
 
     def download16(self, buffer, height: int, width: int) -> np.ndarray:
         return np.round(np.clip(self.download(buffer, height, width), 0, 1) * 65535).astype(np.uint16)
@@ -302,8 +302,10 @@ class Recorder:
             tail = np.frombuffer(data, np.uint32, offset=planes, count=groups * 2).reshape(groups, 2)
             total = float(tail[:, 1].view(np.float32).astype(np.float64).sum())
             self.light = (int(tail[:, 0].max()), total / (w * h))
-            return np.frombuffer(data, np.uint8, count=planes).copy()
-        return np.frombuffer(data, np.uint16 if deep else np.uint8).reshape(h, w, 4).copy()
+            return np.frombuffer(data, np.uint8, count=planes)
+        # the frame as a read-only view of the bytes the executor returned: a copy of it was 16.6 MB and 3 ms a
+        # 1080p sixteen-bit frame on the M5, and nothing writes into a rendered frame
+        return np.frombuffer(data, np.uint16 if deep else np.uint8).reshape(h, w, 4)
 
 
 class BaseLayer(int):
