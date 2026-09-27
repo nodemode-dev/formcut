@@ -185,6 +185,30 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
     }
 
 
+def _without(command: list, flags: tuple, values: int) -> list:
+    """The command with each of the flags (and the values after them) left out."""
+    out, skip = [], 0
+    for part in command:
+        if skip:
+            skip -= 1
+            continue
+        if part in flags:
+            skip = values
+            continue
+        out.append(part)
+    return out
+
+
+def _without_audio(command: list) -> list:
+    """The command with its second input, its maps and its audio codec left out."""
+    pipe = command.index("pipe:0")
+    rest = command[pipe + 1 :]
+    if "-i" in rest:
+        at = pipe + 1 + rest.index("-i")
+        command = command[:at] + command[at + 2 :]
+    return _without(command, ("-map", "-c:a", "-b:a", "-ac", "-ar"), 1)
+
+
 def _encoder_alone(frames: list, encoder: str, count: int, command: list | None = None) -> float:
     """The encoder's own rate: the export's encoder and quality flags fed ten-bit frames the device path already
     made (a handful, cycled), with nothing rendered, so an export's rate can be told apart from the encoder's."""
@@ -307,6 +331,7 @@ def _export_rate(doc: dict, width: int, frames: int) -> tuple[float, str]:
         item.unlink(missing_ok=True)
     encoder = str(result.get("encoder") or "")
     _export_rate.timing = result.get("timing") or {}
+    _export_rate.light = result.get("lightWritten") or ""
     _export_rate.command = result.get("encoderCommand") or []
     return (frames / took if took > 0 else 0.0), encoder
 
@@ -551,7 +576,7 @@ def main(argv: list[str] | None = None) -> int:
         from .video_source import _hw_choice
 
         print(
-            f"decoders: hardware choice per stream {[(k[0], k[3], v is not None) for k, v in _hw_choice.items()] or 'not measured'}; frames deep: {dev_frames[0].dtype.name if dev_frames else 'none'}"
+            f"decoders: hardware choice per stream {[(k[0], k[3], k[4] if len(k) > 4 else 'bgr24', v is not None) for k, v in _hw_choice.items()] or 'not measured'}; frames deep: {dev_frames[0].dtype.name if dev_frames else 'none'}"
         )
         text = io.StringIO()
         pstats.Stats(profiler, stream=text).sort_stats("tottime").print_stats(12)
@@ -595,7 +620,14 @@ def main(argv: list[str] | None = None) -> int:
         export_fps, encoder = _export_rate(doc, args.width, args.frames)
         readings["export_fps"] = export_fps
         readings["export_encoder"] = encoder
-        what = f"the real export, {encoder}" + (", ten-bit PQ with the light written" if args.hdr else "")
+        # where the measured light went, as the export says: into the stream and the container (x265, SVT-AV1),
+        # into the container's boxes (a hardware encoder), or only into the job's result
+        light = getattr(_export_rate, "light", "")
+        what = f"the real export, {encoder}" + (
+            f", ten-bit PQ, the light written into the {light}"
+            if args.hdr and light and light != "result only"
+            else (", ten-bit PQ, the light in the job's result only" if args.hdr else "")
+        )
         print(f"export:      {export_fps:6.2f} fps   ({what}, render and encode included)")
         encoder_rate = _encoder_alone(dev_frames, encoder, args.frames)
         if encoder_rate:
@@ -612,6 +644,23 @@ def main(argv: list[str] | None = None) -> int:
                     f"export's own ffmpeg: {exact:6.1f} fps   (the export's exact command, audio, muxing and all, fed the "
                     "same frames with nothing rendering beside it)"
                 )
+                # the command taken apart, one part left out at a time, so the part that costs the rate is named
+                parts = []
+                for label, drop in (
+                    (
+                        "without the colour tags",
+                        lambda c: _without(c, ("-color_primaries", "-color_trc", "-colorspace", "-color_range"), 1),
+                    ),
+                    ("without the audio", _without_audio),
+                    ("without the filter graph", lambda c: _without(c, ("-vf", "-filter_threads"), 1)),
+                    (
+                        "without the output rate and length",
+                        lambda c: _without(c[: c.index("pipe:0") + 1], (), 0) + _without(c[c.index("pipe:0") + 1 :], ("-r", "-t"), 1),
+                    ),
+                ):
+                    rate = _encoder_alone(dev_frames, encoder, min(args.frames, 120), drop(command))
+                    parts.append(f"{label} {rate:.0f}")
+                print("export's ffmpeg, a part left out: " + ", ".join(parts) + " fps")
         timing = getattr(_export_rate, "timing", {})
         if timing:
             readings["export_steady_fps"] = timing["steadyFps"]

@@ -9,6 +9,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
+from pathlib import Path
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
@@ -188,6 +189,99 @@ def export_workers() -> int:
 
 
 _LIGHT_TABLES: dict[str, np.ndarray] = {}
+
+
+def _box(kind: bytes, payload: bytes) -> bytes:
+    return (8 + len(payload)).to_bytes(4, "big") + kind + payload
+
+
+def write_light_boxes(path: Path, max_cll: int, max_fall: int) -> bool:
+    """Write MaxCLL and MaxFALL into an MP4 or MOV the encoder could not tag: a clli box (the content light
+    levels) and an mdcv box (the mastering display, the BT.2020 primaries and D65 the x265 path declares, peak
+    at the measured light) appended to the video sample entry. The boxes above it grow by their size and, when
+    the movie box sits before the media data (a fast-start file), every chunk offset moves by the same amount.
+    Returns whether the boxes were written; a file already carrying them, or not laid out as expected, is left
+    as it was."""
+    data = bytearray(path.read_bytes())
+    extra = _box(
+        b"mdcv",
+        b"".join(v.to_bytes(2, "big") for v in (13250, 34500, 7500, 3000, 34000, 16000, 15635, 16450))
+        + (max(max_cll, 1) * 10000).to_bytes(4, "big")
+        + (50).to_bytes(4, "big"),
+    )
+    extra += _box(b"clli", max(0, min(max_cll, 65535)).to_bytes(2, "big") + max(0, min(max_fall, 65535)).to_bytes(2, "big"))
+
+    def children(start: int, end: int):
+        at = start
+        while at + 8 <= end:
+            size = int.from_bytes(data[at : at + 4], "big")
+            kind = bytes(data[at + 4 : at + 8])
+            head = 8
+            if size == 1:
+                size, head = int.from_bytes(data[at + 8 : at + 16], "big"), 16
+            elif size == 0:
+                size = end - at
+            if size < head or at + size > end:
+                return
+            yield at, size, kind, head
+            at += size
+
+    top = list(children(0, len(data)))
+    moov = next((b for b in top if b[2] == b"moov"), None)
+    mdat = next((b for b in top if b[2] == b"mdat"), None)
+    if moov is None or moov[3] != 8:
+        return False
+    chain, entry = None, None
+    for trak in children(moov[0] + 8, moov[0] + moov[1]):
+        if trak[2] != b"trak":
+            continue
+        path_boxes = [moov, trak]
+        node = trak
+        for want in (b"mdia", b"minf", b"stbl", b"stsd"):
+            node = next((b for b in children(node[0] + node[3], node[0] + node[1]) if b[2] == want), None)
+            if node is None:
+                break
+            path_boxes.append(node)
+        if node is None:
+            continue
+        # stsd: version and flags, an entry count, then the sample entries; a visual one carries 78 bytes of
+        # fields before its own children
+        for sample in children(node[0] + 16, node[0] + node[1]):
+            if sample[2] in (b"hvc1", b"hev1", b"av01", b"avc1", b"avc3", b"vp09", b"dvh1", b"dvhe"):
+                inner = list(children(sample[0] + 8 + 78, sample[0] + sample[1]))
+                if any(b[2] in (b"clli", b"mdcv") for b in inner):
+                    return False
+                chain, entry = path_boxes, sample
+                break
+        if entry is not None:
+            break
+    if entry is None or any(b[3] != 8 for b in [*chain, entry]):
+        return False
+    grow = len(extra)
+    insert_at = entry[0] + entry[1]
+    for at, size, _kind, _head in [*chain, entry]:
+        data[at : at + 4] = (size + grow).to_bytes(4, "big")
+    data[insert_at:insert_at] = extra
+    if mdat is not None and mdat[0] > moov[0]:
+        # a fast-start file: the media data moved down by the boxes' size, so every chunk offset does too
+        def shift(start: int, end: int):
+            for at, size, kind, head in children(start, end):
+                if kind in (b"trak", b"mdia", b"minf", b"stbl", b"edts"):
+                    shift(at + head, at + size)
+                elif kind in (b"stco", b"co64"):
+                    wide = kind == b"co64"
+                    n = int.from_bytes(data[at + head + 4 : at + head + 8], "big")
+                    for k in range(n):
+                        pos = at + head + 8 + k * (8 if wide else 4)
+                        width = 8 if wide else 4
+                        value = int.from_bytes(data[pos : pos + width], "big") + grow
+                        data[pos : pos + width] = value.to_bytes(width, "big")
+
+        shift(moov[0] + 8, moov[0] + moov[1] + grow)
+    temporary = path.with_suffix(path.suffix + ".light")
+    temporary.write_bytes(bytes(data))
+    os.replace(temporary, path)
+    return True
 
 
 def _timing(stamps: dict, count: int) -> dict:
@@ -395,6 +489,12 @@ def export_media(
             colour_tags = ["-color_primaries", "bt2020", "-color_trc", transfer, "-colorspace", "bt2020nc", "-color_range", "tv"]
             pix = pixel_format(encoder or "", True)
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *colour_tags, *audio_flags] if encoder else []
+        # an HDR timeline exported through a codec that cannot carry HDR (H.264, say) renders as SDR: the frames
+        # would otherwise leave the renderer PQ- or HLG-encoded and be tagged BT.709, a washed-out picture
+        render_project = project if hdr_filter or output_colour not in ("hlg", "pq") else {**project, "outputColour": "bt709"}
+        if render_project is not project:
+            renderer.close()
+            renderer = FrameRenderer(render_project)
         count = math.ceil(project["duration"] * fps)
         # An HDR export writes a lossless sixteen-bit intermediate first: MaxCLL and MaxFALL are measured
         # while the frames are rendered and the encoder needs them before it starts, so the final
@@ -480,7 +580,7 @@ def export_media(
                     note(f"{label}: the check frame could not be read; keeping the export")
                     return False
                 got = np.frombuffer(probe.stdout, np.uint8).reshape(out_h, out_w, 4)[:, :, :3].astype(np.int16)
-                renderer = FrameRenderer(project, out_w)
+                renderer = FrameRenderer(render_project, out_w)
                 try:
                     want = renderer.frame(middle)
                 finally:
@@ -563,6 +663,13 @@ def export_media(
         def finish(result: dict) -> dict:
             if fell_back:
                 result["fellBackTo"] = fell_back
+            # an HDR file (tagged PQ or HLG, not an SDR file made from a deep timeline) carries its measured light
+            # in the container as the ISO BMFF boxes a player reads it from (clli and mdcv on the video sample
+            # entry); a hardware encoder cannot take it as SEI from ffmpeg, so there the boxes are all it has
+            hdr_output = any(t in colour_tags for t in ("smpte2084", "arib-std-b67")) and result.get("maxCll") is not None
+            if hdr_output and not hdr_deep and str(result.get("file", "")).endswith((".mp4", ".mov")):
+                written = write_light_boxes(Path(result["file"]), int(result.get("maxCll") or 0), int(result.get("maxFall") or 0))
+                result["lightWritten"] = "container" if written else "result only"
             if hdr_deep:
                 cll, fall = int(result.get("maxCll") or 0), int(result.get("maxFall") or 0)
                 params = [*hdr_final]
@@ -599,12 +706,16 @@ def export_media(
                 if done.returncode:
                     raise RuntimeError("HDR encode failed: " + done.stderr[-400:])
                 path.unlink(missing_ok=True)
+                boxed = str(final).endswith((".mp4", ".mov")) and write_light_boxes(Path(final), cll, fall)
+                in_stream = encoder_name in ("libx265", "libsvtav1")
                 outer_report(1.0)
                 return {
                     **result,
                     "file": str(final),
                     "pixelFormat": hdr_pix,
-                    "hdrMetadataWritten": encoder_name in ("libx265", "libsvtav1"),
+                    "hdrMetadataWritten": in_stream,
+                    "lightWritten": " and ".join(where for where, yes in (("stream", in_stream), ("container", boxed)) if yes)
+                    or "result only",
                 }
             if gif:
                 gif_export.encode(path, final, quality, lambda done: outer_report(0.6 + 0.4 * done), cancelled)
@@ -764,7 +875,7 @@ def export_media(
                 chunk = math.ceil(count / workers)
                 spans = [(start, min(count, start + chunk)) for start in range(0, count, chunk)]
                 with ThreadPoolExecutor(max_workers=workers) as pool:
-                    pending = [pool.submit(_render_span, project, fps, span, cancelled) for span in spans]
+                    pending = [pool.submit(_render_span, render_project, fps, span, cancelled) for span in spans]
                     done = 0
                     max_cll, max_fall = 0.0, 0.0
                     for future in pending:
