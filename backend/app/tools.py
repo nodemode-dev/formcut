@@ -169,6 +169,44 @@ _AUDIO = re.compile(r"Stream #\d+:\d+.*?: Audio: (\w+).*?, (\d+) Hz, ([^,]+)")
 _BITRATE = re.compile(r"bitrate:\s*(\d+) kb/s")
 
 
+def _video_colours(text: str) -> dict:
+    """The pixel format and colour of the first video stream, from ffmpeg's report line, as ffprobe names them:
+    "yuv420p10le(tv, bt2020nc/bt2020/smpte2084, progressive)" gives the range, the matrix, the primaries and the
+    transfer; one name ("bt709") means all three are that. Without these a machine whose ffmpeg ships without
+    ffprobe took every HDR source for SDR: decoded to eight bits with no tone-map and lifted as if sRGB."""
+    found = re.search(r"Video: (.*)", text)
+    if not found:
+        return {}
+    fields, depth, piece = [], 0, ""
+    for ch in found.group(1):
+        depth += (ch in "([") - (ch in ")]")
+        if ch == "," and depth == 0:
+            fields.append(piece.strip())
+            piece = ""
+        else:
+            piece += ch
+    fields.append(piece.strip())
+    if len(fields) < 2:
+        return {}
+    pixel, _, inside = fields[1].partition("(")
+    out = {"pix_fmt": pixel.strip()}
+    inside = inside.removesuffix(")")
+    for item in (part.strip() for part in inside.split(",")):
+        if not item or item == "progressive" or "first" in item or "swapped" in item:
+            continue
+        if item in ("tv", "pc"):
+            out["color_range"] = item
+        elif "/" in item:
+            parts = item.split("/")
+            if len(parts) == 3:
+                for key, value in zip(("color_space", "color_primaries", "color_transfer"), parts, strict=True):
+                    if value != "unknown":
+                        out[key] = value
+        elif item != "unknown":
+            out["color_space"] = out["color_primaries"] = out["color_transfer"] = item
+    return out
+
+
 def _from_ffmpeg(path: Path) -> dict:
     """The same shape ffprobe returns, read from ffmpeg's own report.
 
@@ -190,6 +228,7 @@ def _from_ffmpeg(path: Path) -> dict:
                 "height": int(groups[2]),
                 "avg_frame_rate": f"{rate}/1" if rate else "0/0",
                 "r_frame_rate": f"{rate}/1" if rate else "0/0",
+                **_video_colours(text),
             }
         )
     audio = _AUDIO.search(text)
