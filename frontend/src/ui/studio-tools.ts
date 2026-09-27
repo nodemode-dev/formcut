@@ -135,6 +135,22 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     </section>
     <section data-view="models" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Local models</span><small>Download once, then process media locally. You can also import model files acquired separately.</small></div><div class="panel-rows"><small data-model-runtime hidden></small><div data-model-list></div></div></div>
+      <div class="panel-section krea-card" data-krea-card>
+        <div class="panel-section-head"><span>Krea 2 Turbo (optional)</span><small data-krea-state>Not installed</small></div>
+        <div class="panel-rows">
+          <small>A 12-billion-parameter image model from Krea, run on this computer. Nothing is downloaded until you install it here.</small>
+          <details class="krea-terms"><summary>Krea 2 Community License Agreement</summary><ul data-krea-summary></ul><a data-krea-licence target="_blank" rel="noopener">Read the full agreement</a> · <a data-krea-policy target="_blank" rel="noopener">Acceptable Use Policy</a></details>
+          <label class="krea-check"><input type="checkbox" data-krea-accept> I have read and accept the Krea 2 Community License Agreement</label>
+          <fieldset class="krea-filter"><legend>Content filter, which the licence requires (section 4.2)</legend>
+            <label><input type="radio" name="krea-filter" value="enable" data-krea-filter-enable checked> Install and enable Falconsai/nsfw_image_detection (recommended)</label>
+            <small data-krea-filter-what></small>
+            <label><input type="radio" name="krea-filter" value="decline" data-krea-filter-decline> Continue without a content filter</label>
+            <div class="krea-waiver" data-krea-waiver hidden><p data-krea-waiver-text></p><label class="krea-check"><input type="checkbox" data-krea-waiver-accept> I accept this statement</label></div>
+          </fieldset>
+          <label>Build <select data-krea-build></select></label>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>Install Krea 2</button><button type="button" class="tool-chip" data-krea-enable-filter hidden>Enable the content filter</button></div>
+        </div>
+      </div>
     </section>
     <section data-view="terminal" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>${text("Agent terminal")}</span><small data-term-status></small></div><div class="panel-rows">
@@ -207,6 +223,57 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       row.querySelector("span")!.textContent = `${name} · ${entry.slots.length} slots${entry.bundled ? ` · ${t("tpl.builtin")}` : ""}`;
     }
   };
+  // Krea 2: the card is built once in the markup above; a refresh writes only what changed.
+  let kreaTerms: any;
+  const kreaInstallReady = () => {
+    const accepted = q("krea-accept").checked;
+    const declining = q("krea-filter-decline").checked;
+    q("krea-waiver").hidden = !declining;
+    const allowed = accepted && (!declining || q("krea-waiver-accept").checked);
+    q<HTMLButtonElement>("krea-install").disabled = !allowed;
+  };
+  for (const name of ["krea-accept", "krea-filter-enable", "krea-filter-decline", "krea-waiver-accept"]) q(name).addEventListener("change", kreaInstallReady);
+  const refreshKrea = async () => {
+    if (!kreaTerms) {
+      kreaTerms = await api<any>("/api/models/krea-2/terms", undefined, "GET");
+      const list = q<HTMLUListElement>("krea-summary");
+      for (const line of kreaTerms.licence.summary as string[]) { const item = document.createElement("li"); item.textContent = line; list.append(item); }
+      q<HTMLAnchorElement>("krea-licence").href = kreaTerms.licence.url;
+      q<HTMLAnchorElement>("krea-policy").href = kreaTerms.licence.usePolicy;
+      q("krea-filter-what").textContent = `${kreaTerms.filter.what} ${kreaTerms.filter.licence}, ${Math.round(kreaTerms.filter.size / 1e6)} MB.`;
+      q("krea-waiver-text").textContent = kreaTerms.waiver;
+      const select = q<HTMLSelectElement>("krea-build");
+      for (const [key, build] of Object.entries<any>(kreaTerms.builds)) {
+        const option = document.createElement("option"); option.value = key;
+        option.textContent = `${build.label}, ${(build.size / 1e9).toFixed(1)} GB (${build.note})`;
+        select.append(option);
+      }
+      if (kreaTerms.recommended) select.value = kreaTerms.recommended;
+      if (!select.options.length) { q<HTMLButtonElement>("krea-install").hidden = true; }
+    }
+    const policy = await api<any>("/api/models/krea-2/status", undefined, "GET");
+    const state = !Object.keys(kreaTerms.builds).length
+      ? "No Krea 2 build for this computer"
+      : policy.ready
+        ? `Installed: ${kreaTerms.builds[policy.build]?.label ?? policy.build}, content filter ${policy.filter === "enabled" ? "on" : "off (your statement of responsibility is on record)"}`
+        : policy.licenceAccepted ? `Not ready: ${policy.reason}` : "Not installed";
+    if (q("krea-state").textContent !== state) q("krea-state").textContent = state;
+    q("krea-enable-filter").hidden = policy.filter !== "declined";
+    q<HTMLButtonElement>("krea-install").textContent = policy.build ? "Installed" : "Install Krea 2";
+    if (policy.build) q<HTMLButtonElement>("krea-install").disabled = true; else kreaInstallReady();
+  };
+  q("krea-install").addEventListener("click", () => void run(async () => {
+    const declining = q("krea-filter-decline").checked;
+    await api("/api/models/krea-2/consent", { acceptLicence: q("krea-accept").checked, filter: declining ? "decline" : "enable", acceptWaiver: declining && q("krea-waiver-accept").checked });
+    await job("/api/models/krea-2/install", { build: q<HTMLSelectElement>("krea-build").value });
+    await refreshKrea();
+    say(declining ? "Krea 2 is installed without a content filter, as you chose." : "Krea 2 and its content filter are installed.");
+  }));
+  q("krea-enable-filter").addEventListener("click", () => void run(async () => {
+    await job("/api/models/krea-2/filter");
+    await refreshKrea();
+    say("The content filter is installed and on.");
+  }));
   const modelRows = new Map<string, HTMLElement>();
   const refreshModels = async () => {
     // BG6: which processor the model sessions run on, shown where the models
@@ -219,6 +286,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     runtimeLine.hidden = false;
     const models = await api<any[]>("/api/models");
     for (const model of models) {
+      if (model.managedBy === "krea-2") continue; // installed from the Krea 2 card, after its licence and filter choice
       let row = modelRows.get(model.id);
       if (!row) {
         row = document.createElement("div"); row.className = "studio-model";
@@ -508,7 +576,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     if (activePage === "project") structure();
     if (activePage === "stock" && !stock.loaded) await stock.search(1);
     if (activePage === "templates") await refreshTemplates();
-    if (activePage === "models") await refreshModels();
+    if (activePage === "models") { await refreshModels(); await refreshKrea(); }
     if (activePage === "speech") await loadSpeechEngine();
   };
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });

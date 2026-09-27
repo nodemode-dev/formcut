@@ -59,8 +59,12 @@ def test_the_default_start_fetches_the_first_launch_set(recorded, monkeypatch):
 
 def test_all_fetches_every_permissive_model_for_an_offline_machine(recorded, monkeypatch):
     run_startup(monkeypatch, "all")
-    permissive = [m for m in model_manager.MODELS if "GPL" not in model_manager.MODELS[m]["license"]]
+    # every permissive model but the optional ones: Krea 2's builds and its filter wait for its licence and choices
+    permissive = [
+        m for m in model_manager.MODELS if "GPL" not in model_manager.MODELS[m]["license"] and not model_manager.MODELS[m].get("optional")
+    ]
     assert recorded["models"] == permissive and "video-matting" not in recorded["models"]
+    assert not any(m.startswith("krea-2") or m == "nsfw-filter" for m in recorded["models"])
 
 
 def test_zero_fetches_nothing(recorded, monkeypatch):

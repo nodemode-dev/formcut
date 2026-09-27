@@ -128,6 +128,23 @@ def catalogue_entries() -> list[dict]:
                 "licence": slot["licence"],
             }
         )
+    krea = krea2_slot()
+    if krea is not None:
+        entries.append(
+            {
+                "id": "local:krea-2",
+                "label": "Krea 2 Turbo (local)",
+                "kind": "image",
+                "provider": "local",
+                "providerLabel": "This computer",
+                "sizes": krea["sizes"],
+                "options": {"steps": krea["steps"], "guidance": krea["guidance"]},
+                "ready": krea["ready"],
+                "reason": krea["reason"],
+                "runner": "krea-2",
+                "licence": krea["licence"],
+            }
+        )
     for model in installed():
         if model["id"] in seen_folders:
             continue
@@ -149,8 +166,33 @@ def catalogue_entries() -> list[dict]:
     return entries
 
 
+def krea2_slot() -> dict | None:
+    """Krea 2, once its licence has been accepted: offered in the generator with its readiness and reason."""
+    from . import krea2
+
+    state = krea2.policy()
+    if not state["licenceAccepted"]:
+        return None
+    blank = {"seconds": None, "extension": None, "command": None, "folder": None}
+    return {
+        "id": "krea-2",
+        "label": "Krea 2 Turbo",
+        "kind": "image",
+        "runner": "krea-2",
+        "licence": f"{krea2.LICENCE_NAME} ({krea2.LICENCE_VERSION})",
+        "sizes": ["1024x1024", "1344x768", "768x1344", "1536x1024", "1024x1536"],
+        "steps": krea2.STEPS,
+        "guidance": 1.0,
+        "ready": state["ready"],
+        "reason": state["reason"],
+        **blank,
+    }
+
+
 def resolve(name: str) -> dict | None:
     """The slot behind local:<name>: a declared one, or an undeclared diffusion folder of that name."""
+    if name == "krea-2":
+        return krea2_slot()
     for slot in declared():
         if slot["id"] == name:
             return slot

@@ -52,6 +52,101 @@ def providers() -> list[str]:
 
 
 MODELS = {
+    # Krea 2 Turbo, optional and never fetched on its own: krea2.py records the licence, the content filter choice
+    # and (when the filter is declined) the statement of responsibility before these downloads may start. The
+    # content filter is the classifier section 4.2 of that licence names. Every file pinned below to its SHA-256.
+    "krea-2-mlx-q8": {
+        "name": "Krea 2 Turbo, 8-bit MLX (mflux-community)",
+        "license": "Krea 2 Community License Agreement",
+        "optional": True,
+        "consent": "krea-2",
+        "maxFileBytes": 2241144740,
+        # mflux-community/krea-2-turbo-mflux-q8 at 5f94d7734c8873daddf803721f6423148619f63c, 19 files, 22.19 GB
+        "files": {
+            "krea-2-mlx-q8/.DS_Store": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/.DS_Store",
+            "krea-2-mlx-q8/0.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/0.safetensors",
+            "krea-2-mlx-q8/1.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/1.safetensors",
+            "krea-2-mlx-q8/2.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/2.safetensors",
+            "krea-2-mlx-q8/3.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/3.safetensors",
+            "krea-2-mlx-q8/4.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/4.safetensors",
+            "krea-2-mlx-q8/5.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/5.safetensors",
+            "krea-2-mlx-q8/6.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/6.safetensors",
+            "krea-2-mlx-q8/model.safetensors.index.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/model.safetensors.index.json",
+            "krea-2-mlx-q8/text_encoder/0.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/text_encoder/0.safetensors",
+            "krea-2-mlx-q8/text_encoder/1.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/text_encoder/1.safetensors",
+            "krea-2-mlx-q8/text_encoder/2.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/text_encoder/2.safetensors",
+            "krea-2-mlx-q8/text_encoder/3.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/text_encoder/3.safetensors",
+            "krea-2-mlx-q8/text_encoder/model.safetensors.index.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/text_encoder/model.safetensors.index.json",
+            "krea-2-mlx-q8/tokenizer/chat_template.jinja": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/tokenizer/chat_template.jinja",
+            "krea-2-mlx-q8/tokenizer/tokenizer.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/tokenizer/tokenizer.json",
+            "krea-2-mlx-q8/tokenizer/tokenizer_config.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/tokenizer/tokenizer_config.json",
+            "krea-2-mlx-q8/vae/0.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/vae/0.safetensors",
+            "krea-2-mlx-q8/vae/model.safetensors.index.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q8/resolve/5f94d7734c8873daddf803721f6423148619f63c/vae/model.safetensors.index.json",
+        },
+    },
+    "krea-2-mlx-q4": {
+        "name": "Krea 2 Turbo, 4-bit MLX (mflux-community)",
+        "license": "Krea 2 Community License Agreement",
+        "optional": True,
+        "consent": "krea-2",
+        "maxFileBytes": 2242209936,
+        # mflux-community/krea-2-turbo-mflux-q4 at fa0ba74dc2e50c4288a81216e05487c343196bf7, 16 files, 15.78 GB
+        "files": {
+            "krea-2-mlx-q4/.DS_Store": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/.DS_Store",
+            "krea-2-mlx-q4/0.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/0.safetensors",
+            "krea-2-mlx-q4/1.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/1.safetensors",
+            "krea-2-mlx-q4/2.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/2.safetensors",
+            "krea-2-mlx-q4/3.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/3.safetensors",
+            "krea-2-mlx-q4/model.safetensors.index.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/model.safetensors.index.json",
+            "krea-2-mlx-q4/text_encoder/0.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/text_encoder/0.safetensors",
+            "krea-2-mlx-q4/text_encoder/1.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/text_encoder/1.safetensors",
+            "krea-2-mlx-q4/text_encoder/2.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/text_encoder/2.safetensors",
+            "krea-2-mlx-q4/text_encoder/3.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/text_encoder/3.safetensors",
+            "krea-2-mlx-q4/text_encoder/model.safetensors.index.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/text_encoder/model.safetensors.index.json",
+            "krea-2-mlx-q4/tokenizer/chat_template.jinja": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/tokenizer/chat_template.jinja",
+            "krea-2-mlx-q4/tokenizer/tokenizer.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/tokenizer/tokenizer.json",
+            "krea-2-mlx-q4/tokenizer/tokenizer_config.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/tokenizer/tokenizer_config.json",
+            "krea-2-mlx-q4/vae/0.safetensors": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/vae/0.safetensors",
+            "krea-2-mlx-q4/vae/model.safetensors.index.json": "https://huggingface.co/mflux-community/krea-2-turbo-mflux-q4/resolve/fa0ba74dc2e50c4288a81216e05487c343196bf7/vae/model.safetensors.index.json",
+        },
+    },
+    "krea-2-sdnq-int8": {
+        "name": "Krea 2 Turbo, 8-bit SDNQ (diffusers)",
+        "license": "Krea 2 Community License Agreement",
+        "optional": True,
+        "consent": "krea-2",
+        "maxFileBytes": 10088722566,
+        # OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit at dfa31958258de845f21a86e0dd0566f46d3a7970, 14 files, 18.30 GB
+        "files": {
+            "krea-2-sdnq-int8/LICENSE.pdf": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/LICENSE.pdf",
+            "krea-2-sdnq-int8/model_index.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/model_index.json",
+            "krea-2-sdnq-int8/scheduler/scheduler_config.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/scheduler/scheduler_config.json",
+            "krea-2-sdnq-int8/text_encoder/config.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/text_encoder/config.json",
+            "krea-2-sdnq-int8/text_encoder/model.safetensors": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/text_encoder/model.safetensors",
+            "krea-2-sdnq-int8/tokenizer/chat_template.jinja": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/tokenizer/chat_template.jinja",
+            "krea-2-sdnq-int8/tokenizer/tokenizer.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/tokenizer/tokenizer.json",
+            "krea-2-sdnq-int8/tokenizer/tokenizer_config.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/tokenizer/tokenizer_config.json",
+            "krea-2-sdnq-int8/transformer/config.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/transformer/config.json",
+            "krea-2-sdnq-int8/transformer/diffusion_pytorch_model-00001-of-00002.safetensors": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/transformer/diffusion_pytorch_model-00001-of-00002.safetensors",
+            "krea-2-sdnq-int8/transformer/diffusion_pytorch_model-00002-of-00002.safetensors": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/transformer/diffusion_pytorch_model-00002-of-00002.safetensors",
+            "krea-2-sdnq-int8/transformer/diffusion_pytorch_model.safetensors.index.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/transformer/diffusion_pytorch_model.safetensors.index.json",
+            "krea-2-sdnq-int8/vae/config.json": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/vae/config.json",
+            "krea-2-sdnq-int8/vae/diffusion_pytorch_model.safetensors": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/vae/diffusion_pytorch_model.safetensors",
+        },
+    },
+    "nsfw-filter": {
+        "name": "Falconsai/nsfw_image_detection (ONNX), the content filter for Krea 2",
+        "license": "Apache-2.0",
+        "optional": True,
+        "maxFileBytes": 2000000000,
+        # onnx-community/nsfw_image_detection-ONNX at 1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5, 4 files, 0.34 GB
+        "files": {
+            "nsfw-filter/config.json": "https://huggingface.co/onnx-community/nsfw_image_detection-ONNX/resolve/1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5/config.json",
+            "nsfw-filter/onnx/model.onnx": "https://huggingface.co/onnx-community/nsfw_image_detection-ONNX/resolve/1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5/onnx/model.onnx",
+            "nsfw-filter/preprocessor_config.json": "https://huggingface.co/onnx-community/nsfw_image_detection-ONNX/resolve/1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5/preprocessor_config.json",
+            "nsfw-filter/quantize_config.json": "https://huggingface.co/onnx-community/nsfw_image_detection-ONNX/resolve/1ceb3c7fe1e9f3f2507e6df577437f23a9149fd5/quantize_config.json",
+        },
+    },
     # Heavier segmentation, offered rather than required: the cutout works
     # without them and is better with them.
     "video-matting": {
@@ -183,6 +278,8 @@ def list_models():
             "ready": ready(key),
             "downloading": key in _downloading,
             "files": list(spec["files"]),
+            # Krea 2's builds and its filter are installed from their own card, after the licence and the filter choice
+            "managedBy": "krea-2" if spec.get("consent") == "krea-2" or key == "nsfw-filter" else None,
         }
         for key, spec in MODELS.items()
     ]
@@ -201,6 +298,7 @@ def download(model: str, report, cancelled):
             # A per-model source may override the declared one; keeping it in a
             # separate name makes clear the loop's value is not being rewritten.
             download_url = source_for(model, name, url)
+            limit = int(MODELS[model].get("maxFileBytes", 2_000_000_000))
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_suffix(path.suffix + ".download")
             digest = hashlib.sha256()
@@ -214,12 +312,13 @@ def download(model: str, report, cancelled):
                             if cancelled():
                                 raise InterruptedError("Cancelled")
                             written += len(chunk)
-                            if written > 2_000_000_000:
+                            if written > limit:
                                 raise ValueError("Model exceeds the download limit")
                             out.write(chunk)
                             digest.update(chunk)
                             report((i + (written / length if length else 0.5)) / len(entries))
-                if temporary.stat().st_size < 1024:
+                # the one-kilobyte floor is for weights; a model's config or tokenizer file can be smaller
+                if temporary.stat().st_size < (1024 if path.suffix in (".onnx", ".bin", ".pth", ".safetensors", ".gguf") else 1):
                     raise ValueError("Model download is incomplete")
                 expected = PINNED.get(name)
                 if expected and digest.hexdigest() != expected:
@@ -248,6 +347,12 @@ def _tracked(model: str, report, cancelled):
 def start_download(model: str):
     if model not in MODELS:
         raise HTTPException(404, "Unknown model")
+    if MODELS[model].get("consent") == "krea-2":
+        from .krea2 import consent
+
+        record = consent()
+        if not record.get("licence") or record.get("filter") not in ("enabled", "declined"):
+            raise HTTPException(409, "Krea 2 is installed from its own panel, after its licence and the content filter are decided")
     return jobs.submit("model-download", lambda _id, report, cancelled: _tracked(model, report, cancelled))
 
 
@@ -275,7 +380,11 @@ FIRST_LAUNCH = ("object-cutout",)
 def prepare(report, cancelled, fetch: bool, everything: bool = False) -> dict:
     """Fetch the first-launch models; with everything, every permissively licensed model and the Whisper files."""
     adopted = adopt_legacy()
-    wanted = [model for model in MODELS if "GPL" not in MODELS[model]["license"]] if everything else list(FIRST_LAUNCH)
+    wanted = (
+        [model for model in MODELS if "GPL" not in MODELS[model]["license"] and not MODELS[model].get("optional")]
+        if everything
+        else list(FIRST_LAUNCH)
+    )
     missing = [model for model in wanted if not ready(model)] if fetch else []
     results = []
     for i, model in enumerate(missing):
@@ -397,6 +506,61 @@ def import_model(model: str, file: UploadFile):
 # P8: pinned SHA-256 per file. A name absent here is unpinned and recorded on
 # first download instead, so a pin can be added from a verified machine later.
 PINNED: dict[str, str] = {
+    # Krea 2's builds and its content filter: the SHA-256 Hugging Face records for each large file at the pinned
+    # revision, and for each small one the hash of the file fetched on 27 September 2026
+    "krea-2-mlx-q8/.DS_Store": "bb49144c3319391c31ee22524247e886d795c3841d431559557dd3353cf13c29",
+    "krea-2-mlx-q8/0.safetensors": "7dac52a29577e965460d4bea51f2b3b5b840e3d784715b2c590f810e4248681a",
+    "krea-2-mlx-q8/1.safetensors": "471a58de454f7a04ff9b0ab0f28dbc27900d924d028d336dae92768244be6536",
+    "krea-2-mlx-q8/2.safetensors": "b09c1671a3e966cf25eab5c9e464d1dc14b50ba1ecf14b5e9a98c0b1a838f900",
+    "krea-2-mlx-q8/3.safetensors": "4318c7d38b17add1b2aacaf1422079c89d63a3d27c67a6bd37af4838727b9cec",
+    "krea-2-mlx-q8/4.safetensors": "05c956017ba0dd6bc8c5e582fb867188404608c8660dc7271ab6d8d89c4a6c70",
+    "krea-2-mlx-q8/5.safetensors": "6e39d518ec0179ec9aa60bbb5e9452e80624ea3b598c505b516868c756e27ef6",
+    "krea-2-mlx-q8/6.safetensors": "2bbb8f18ea9387e2061308e134a08f028027a8216d21d7cd897fc03855f72651",
+    "krea-2-mlx-q8/model.safetensors.index.json": "92539c59eab012cb7488fede1ff357edbf5c1245ea65efe875292908a2e4b782",
+    "krea-2-mlx-q8/text_encoder/0.safetensors": "6dd135c977fd4a752c53ca06fd9d65ac1a6891a8771a8d65608a7728f2e3b560",
+    "krea-2-mlx-q8/text_encoder/1.safetensors": "3b4a1c79423cd2a07bfafece4f542e1660133d66bee7985c09fa0939636675e3",
+    "krea-2-mlx-q8/text_encoder/2.safetensors": "bfc931672551062f3f7b66e0c94b779cfa52c499991764d819093329071b4469",
+    "krea-2-mlx-q8/text_encoder/3.safetensors": "88996823c97130307ff00b13291782bb26d25bbfd16f0c148249149a96a433b1",
+    "krea-2-mlx-q8/text_encoder/model.safetensors.index.json": "79b7c1e303763dec75afa890bd20cfb40c0f0445be3e52e85dda1eac66cac3b5",
+    "krea-2-mlx-q8/tokenizer/chat_template.jinja": "3636d0f0bd6bef02654cdffdc447b79cb2cef8ab02cc75267345946291a489e4",
+    "krea-2-mlx-q8/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "krea-2-mlx-q8/tokenizer/tokenizer_config.json": "c871ed314285a377eccf509b906aa5fe015d5e79a3ddab2c198467329127ead6",
+    "krea-2-mlx-q8/vae/0.safetensors": "3bc6157dec03fa1b8be8a97efcf6b3fe19d43b4210d369648b4efb0cc940a74c",
+    "krea-2-mlx-q8/vae/model.safetensors.index.json": "a5c2f350d7b28c10b45ad16e27320021daf190b30af665b52bbe0288ad814be4",
+    "krea-2-mlx-q4/.DS_Store": "fbf84581e26de02330c770e58e34fb36058b753a12c0a2080d129f84e5c8e79c",
+    "krea-2-mlx-q4/0.safetensors": "294800e65afa7d727ef1a1402dfea86fd22c55e15a7631cce63ec84774041582",
+    "krea-2-mlx-q4/1.safetensors": "ebeba87f73c97778a8975a72f15a8349d4483117d41fa7733da724bf4f7fe6b7",
+    "krea-2-mlx-q4/2.safetensors": "30a895386a1fc4159402a24353d69195b87d30904149edaabb9ccae7aab7bf15",
+    "krea-2-mlx-q4/3.safetensors": "c324675dced018804b17c41a52a99bb1ff4edd8836b44c610edf5de7cd475ded",
+    "krea-2-mlx-q4/model.safetensors.index.json": "0143fce31bfab0d961b52d4690ee4ba6f8cd76cb0a2e04b38f78aeebe2e4e35f",
+    "krea-2-mlx-q4/text_encoder/0.safetensors": "4e21e461e115028423a7a7665e3dd9e20c9b2bb3f40e2ee8e213c5fe0bc3d228",
+    "krea-2-mlx-q4/text_encoder/1.safetensors": "83c768a56e0d48a47caa62f30dbf6c01d70f20ae22c4f71b7840b0856f91ccc9",
+    "krea-2-mlx-q4/text_encoder/2.safetensors": "a03ee8c0084b129dcdedb91fe9295c18c0c8217003c6c5913c04156e82df5712",
+    "krea-2-mlx-q4/text_encoder/3.safetensors": "2c274cc1b13f538583999bcb27d322b850109a385e76442575afc692a5832b75",
+    "krea-2-mlx-q4/text_encoder/model.safetensors.index.json": "e5173ccee30fc4a6d3522e599196ba9e6470c6cbed9d10c59122d55c48106256",
+    "krea-2-mlx-q4/tokenizer/chat_template.jinja": "3636d0f0bd6bef02654cdffdc447b79cb2cef8ab02cc75267345946291a489e4",
+    "krea-2-mlx-q4/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "krea-2-mlx-q4/tokenizer/tokenizer_config.json": "c871ed314285a377eccf509b906aa5fe015d5e79a3ddab2c198467329127ead6",
+    "krea-2-mlx-q4/vae/0.safetensors": "b2002a24b9a8227646065a1bd169729968402bda24d83b86fb8981124d324e76",
+    "krea-2-mlx-q4/vae/model.safetensors.index.json": "a60148f10bc24b11909537ea960281eaf16a7ee066f2fe2988607dca62fdd5af",
+    "krea-2-sdnq-int8/LICENSE.pdf": "b82a2805162bde714a4eb27b9063c4fc3345d08a30be055134a6160e5430ba74",
+    "krea-2-sdnq-int8/model_index.json": "7d6c1206e369286df31244670a9a38fc73b077d8f64b4d273abb20ef9a8a8b93",
+    "krea-2-sdnq-int8/scheduler/scheduler_config.json": "4d8ea4471195528cdb84fcb8d37cd54ff442b9c02ff74f7d16d0a7a2f14b9467",
+    "krea-2-sdnq-int8/text_encoder/config.json": "d85211fccf7d376e1cdd77002464cf34cfce71e990147c8388fa643180e1a7e3",
+    "krea-2-sdnq-int8/text_encoder/model.safetensors": "37cae4588e10f282e592dc49fb9944ff09fab5447ce3f705c5451d953b39fa1e",
+    "krea-2-sdnq-int8/tokenizer/chat_template.jinja": "3636d0f0bd6bef02654cdffdc447b79cb2cef8ab02cc75267345946291a489e4",
+    "krea-2-sdnq-int8/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "krea-2-sdnq-int8/tokenizer/tokenizer_config.json": "c871ed314285a377eccf509b906aa5fe015d5e79a3ddab2c198467329127ead6",
+    "krea-2-sdnq-int8/transformer/config.json": "ac5512b2d684ce619a9500c87158e48712e53bfe1f8fda98be5dc57814b76af0",
+    "krea-2-sdnq-int8/transformer/diffusion_pytorch_model-00001-of-00002.safetensors": "4451519f43f91a081fd7d9d881e6c4245759b71cdfa01f8ae9d371e75191c55a",
+    "krea-2-sdnq-int8/transformer/diffusion_pytorch_model-00002-of-00002.safetensors": "7060caf00f7b4c724505d9945b1c79ef6fd861ad07dcdea4e06b299a14a6482f",
+    "krea-2-sdnq-int8/transformer/diffusion_pytorch_model.safetensors.index.json": "aafab68d94c49ea754bb0dd92870ff93889d64933cdcb72be1a2e68447c4293b",
+    "krea-2-sdnq-int8/vae/config.json": "54949c79def0d1060353c3fbfd4d2d2c4815ae241da6d6d28c99634c4eac6e6e",
+    "krea-2-sdnq-int8/vae/diffusion_pytorch_model.safetensors": "ab1b61103959913d6c7e628cf793dbb2ca4726a40a3b3ae206c52b8e75bf6f08",
+    "nsfw-filter/config.json": "0e01783cf842a0acaa6b3b6594b941bee4d39a1918756b27d23f503878889696",
+    "nsfw-filter/onnx/model.onnx": "a4316a4fb750169ac4fcabaabee1fcbd982b0ee8c0cc63fe3e944954bb9a7d9c",
+    "nsfw-filter/preprocessor_config.json": "ae9bb157b9629887cc74913a4e7c12c9308f374f0930e8072320e8f2e1583c5e",
+    "nsfw-filter/quantize_config.json": "9b60b5877b9a1687b5cddbc06124a974cb7536af9dbf5295279bf73c3823170c",
     # BG1's gate, completed at v1.58.0: every registry file pinned to the
     # SHA-256 of the file actually fetched and hashed, matching the table in
     # .docs/wiki/Licences.md. A download that does not match never lands.

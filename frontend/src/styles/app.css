@@ -1520,3 +1520,10 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .h264-panel small { color: var(--ink-soft); }
 .h264-actions { display: flex; gap: var(--sp-2); }
 .h264-licence { max-height: 240px; overflow: auto; }
+
+/* Krea 2's card: the licence, the filter choice and the statement of responsibility, in the Local models view */
+.krea-card .krea-terms ul { margin: var(--sp-1) 0; padding-left: var(--sp-4); color: var(--ink-soft); }
+.krea-card .krea-filter { border: 1px solid var(--edge); border-radius: var(--radius-s); padding: var(--sp-2) var(--sp-3); display: grid; gap: var(--sp-1); }
+.krea-card .krea-waiver { border-left: 2px solid var(--cue); padding: var(--sp-1) var(--sp-2); color: var(--ink); }
+.krea-card .krea-check { display: flex; gap: var(--sp-2); align-items: flex-start; }
+.krea-card .krea-actions { display: flex; gap: var(--sp-2); }
