@@ -119,7 +119,7 @@ the automation transports.
 - `validation.py` (222L)
 - `video_source.py` (594L)
 - `windows_console.py` (43L)
-- `yuv.py` (222L)
+- `yuv.py` (225L)
 
 ## Reading order for a change
 
