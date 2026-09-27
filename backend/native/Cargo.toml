@@ -18,7 +18,9 @@ rayon = "1.10"
 # The frame path in Rust (R26), behind the `gpu` feature: the engine's own WGSL kernels recorded into one
 # command buffer per frame with no Python between passes; wgpu talks to Metal, Vulkan or DX12 directly.
 # Build with `maturin develop --release --features gpu`; without the feature the crate is the CPU kernels.
-wgpu = { version = "22", default-features = false, features = ["wgsl", "metal", "vulkan", "dx12"], optional = true }
+# wgpu's default features carry WGSL, Metal, DX12 and Vulkan (through wgpu-core); naming "vulkan" as a
+# feature of the top-level crate is not a thing in 22, which the first build on the M5 said.
+wgpu = { version = "22", optional = true }
 pollster = { version = "0.3", optional = true }
 bytemuck = { version = "1.16", optional = true }
 
