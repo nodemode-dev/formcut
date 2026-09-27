@@ -136,3 +136,13 @@ def test_formcut_converts_where_the_device_path_runs(monkeypatch):
     assert not yuv.wanted(True)
     monkeypatch.setenv("FORMCUT_YUV", "1")
     assert yuv.wanted(False)
+
+
+@pytest.mark.parametrize("name, matrix", [("bt709", "bt709"), ("pq2020", "bt2020nc")])
+def test_the_planes_are_one_word_aligned_buffer_the_device_reads_as_it_is(tmp_path, name, matrix):
+    planes = yuv.from_av(_first(_clip(tmp_path, name)), name == "pq2020", matrix, False)
+    packed = planes.raw()
+    assert packed.nbytes % 4 == 0 and all(np.shares_memory(packed, p) for p in (planes.y, planes.u, planes.v))
+    count = planes.y.size + planes.u.size + planes.v.size
+    assert np.array_equal(packed[:count], np.concatenate([planes.y.ravel(), planes.u.ravel(), planes.v.ravel()]))
+    assert np.array_equal(planes.aux(), packed[:count].astype(np.float32))

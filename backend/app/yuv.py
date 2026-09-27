@@ -59,19 +59,24 @@ def matrix(bits: int, full: bool, kr: float, kb: float, grid: float) -> np.ndarr
     return (np.array(rows, np.float64) * grid).astype(np.float32)
 
 
-def _plane(plane, item) -> np.ndarray:
-    """A decoder plane as a contiguous array, its row padding (line size) dropped."""
+def _into(target: np.ndarray, plane, item) -> np.ndarray:
+    """A decoder plane copied once into its place in the frame's one buffer, its row padding (line size) dropped;
+    the place, as a (height, width) view, is returned."""
     size = np.dtype(item).itemsize
-    return np.ascontiguousarray(np.frombuffer(plane, item).reshape(plane.height, plane.line_size // size)[:, : plane.width])
+    view = target.reshape(plane.height, plane.width)
+    view[...] = np.frombuffer(plane, item).reshape(plane.height, plane.line_size // size)[:, : plane.width]
+    return view
 
 
 class PlaneFrame:
     """A decoded frame as its planes, with what converts it: shape and dtype are those of the RGBA it becomes."""
 
-    __slots__ = ("_rgba", "bits", "deep", "full", "kb", "kr", "u", "v", "y")
+    __slots__ = ("_rgba", "bits", "deep", "full", "kb", "kr", "packed", "u", "v", "y")
 
-    def __init__(self, y: np.ndarray, u: np.ndarray, v: np.ndarray, bits: int, full: bool, kr: float, kb: float, deep: bool):
+    def __init__(self, y: np.ndarray, u: np.ndarray, v: np.ndarray, bits: int, full: bool, kr: float, kb: float, deep: bool, packed=None):
         self.y, self.u, self.v = y, u, v
+        # the planes one after another in one buffer, padded to whole 32-bit words: what the device reads as it is
+        self.packed = packed
         self.bits, self.full, self.kr, self.kb, self.deep = bits, full, kr, kb, deep
         self._rgba = None
 
@@ -113,17 +118,37 @@ class PlaneFrame:
         return self._rgba
 
     def aux(self) -> np.ndarray:
-        """The planes one after another as float32 code values, the device pass's aux."""
-        return np.concatenate([self.y.ravel(), self.u.ravel(), self.v.ravel()]).astype(np.float32)
+        """The planes one after another as float32 code values: the aux of an executor that takes only floats."""
+        if self.packed is None:
+            return np.concatenate([self.y.ravel(), self.u.ravel(), self.v.ravel()]).astype(np.float32)
+        return self.packed[: self.y.size + self.u.size + self.v.size].astype(np.float32)
+
+    def raw(self) -> np.ndarray:
+        """The planes' own code values, one buffer in whole 32-bit words: the recorder's aux as it is (RawAux), half
+        the size of floats at ten bits, a quarter at eight, and no conversion on this side."""
+        if self.packed is None:
+            joined = np.concatenate([self.y.ravel(), self.u.ravel(), self.v.ravel()])
+            pad = (-joined.nbytes) % 4 // joined.itemsize
+            self.packed = np.concatenate([joined, np.zeros(pad, joined.dtype)]) if pad else joined
+        return self.packed
 
 
-def yuv_function(frame: PlaneFrame) -> str:
-    """yuv_at(i, x, y, w, h), reading the planes from aux: the device's side of rgba(), the same bilinear chroma, the
-    same affine map with the same float32 coefficients, the same clipping and rounding."""
+def yuv_function(frame: PlaneFrame, raw: bool = False) -> str:
+    """yuv_at(i, x, y, w, h), reading the planes from aux (floats) or, raw, from aux_words (the code values as they
+    came from the decoder, two ten-bit or four eight-bit samples a word): the device's side of rgba(), the same
+    bilinear chroma, the same affine map with the same float32 coefficients, the same clipping and rounding."""
     c = [[f"{float(v)!r}" for v in row] for row in frame.map()]
     grid = f"{frame.grid!r}"
+    if not raw:
+        sample = "fn yuv_sample(k: i32) -> f32 {\n    return aux[k];\n}\n"
+    elif frame.bits > 8:
+        sample = (
+            "fn yuv_sample(k: i32) -> f32 {\n    let u = u32(k);\n    return f32((aux_words[u >> 1u] >> ((u & 1u) * 16u)) & 65535u);\n}\n"
+        )
+    else:
+        sample = "fn yuv_sample(k: i32) -> f32 {\n    let u = u32(k);\n    return f32((aux_words[u >> 2u] >> ((u & 3u) * 8u)) & 255u);\n}\n"
     return (
-        """
+        sample + """
 fn yuv_axis(d: i32, n: i32) -> vec2<f32> {
     // cv2.resize's bilinear source position for a twofold enlargement: the first sample and its weight, edges held
     let fx = (f32(d) + 0.5) * 0.5 - 0.5;
@@ -140,14 +165,14 @@ fn yuv_plane(base: i32, cw: i32, ch: i32, x: i32, y: i32) -> f32 {
     let y0 = i32(ay.x);
     let x1 = min(x0 + 1, cw - 1);
     let y1 = min(y0 + 1, ch - 1);
-    let top = aux[base + y0 * cw + x0] * (1.0 - ax.y) + aux[base + y0 * cw + x1] * ax.y;
-    let bottom = aux[base + y1 * cw + x0] * (1.0 - ax.y) + aux[base + y1 * cw + x1] * ax.y;
+    let top = yuv_sample(base + y0 * cw + x0) * (1.0 - ax.y) + yuv_sample(base + y0 * cw + x1) * ax.y;
+    let bottom = yuv_sample(base + y1 * cw + x0) * (1.0 - ax.y) + yuv_sample(base + y1 * cw + x1) * ax.y;
     return top * (1.0 - ay.y) + bottom * ay.y;
 }
 fn yuv_at(i: i32, x: i32, y: i32, w: i32, h: i32) -> vec4<f32> {
     let cw = (w + 1) / 2;
     let ch = (h + 1) / 2;
-    let luma = aux[i];
+    let luma = yuv_sample(i);
     let cb = yuv_plane(w * h, cw, ch, x, y);
     let cr = yuv_plane(w * h + cw * ch, cw, ch, x, y);
 """
@@ -159,10 +184,11 @@ fn yuv_at(i: i32, x: i32, y: i32, w: i32, h: i32) -> vec4<f32> {
     )
 
 
-def unpack_code(frame: PlaneFrame) -> str:
-    """The device pass that turns the planes in aux into the picture: yuv_at at every pixel."""
+def unpack_code(frame: PlaneFrame, raw: bool = False) -> str:
+    """The device pass that turns the planes in aux (or, raw, aux_words) into the picture: yuv_at at every pixel.
+    Raw, the caller gives it the bindings that name aux_words (gpu_effects.RAW_BINDINGS)."""
     return (
-        yuv_function(frame)
+        yuv_function(frame, raw)
         + """
 @compute @workgroup_size(16, 16)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -185,6 +211,12 @@ def from_av(frame, deep: bool, matrix_name: str, full_range: bool) -> PlaneFrame
         return None
     bits, full = FORMATS[name]
     item = np.uint16 if bits > 8 else np.uint8
-    y, u, v = (_plane(plane, item) for plane in frame.planes[:3])
+    planes = frame.planes[:3]
+    sizes = [plane.width * plane.height for plane in planes]
+    total = sum(sizes)
+    size = np.dtype(item).itemsize
+    packed = np.zeros(total + (-total * size) % 4 // size, item)
+    starts = [0, sizes[0], sizes[0] + sizes[1]]
+    y, u, v = (_into(packed[a : a + n], plane, item) for a, n, plane in zip(starts, sizes, planes, strict=True))
     kr, kb = MATRICES.get(matrix_name) or (MATRICES["bt709"] if y.shape[0] >= 720 else MATRICES["smpte170m"])
-    return PlaneFrame(y, u, v, bits, full or full_range, kr, kb, deep and bits > 8)
+    return PlaneFrame(y, u, v, bits, full or full_range, kr, kb, deep and bits > 8, packed)

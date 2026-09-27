@@ -2754,7 +2754,7 @@ def _fused_source(plan: list) -> str | None:
         + "\n    dst[i] = fz;\n}\n"
     )
     text = "\n".join(helpers) + "\n" + "\n".join(functions) + "\n" + main
-    if unpack is None:
+    if unpack is None and yuv is None:
         return text
     # the picture's words come in aux: this kernel declares its own bindings, the header's helpers after them
     bindings = HEADER.replace("var<storage, read> aux: array<f32>;", "var<storage, read> aux_words: array<u32>;")
@@ -2798,6 +2798,10 @@ _UNPACK_HEAD = {
 }
 
 
+# a kernel that reads its aux as the words it was given (RawAux): the header's bindings, aux named as words
+RAW_BINDINGS = HEADER.replace("var<storage, read> aux: array<f32>;", "var<storage, read> aux_words: array<u32>;")
+
+
 class _Capture:
     """Stands in for a context while a chain is recorded for fusion: run, copy and upload are kept in order,
     the working buffers and the aux size can be read; anything else runs what was kept and hands over."""
@@ -2838,7 +2842,11 @@ def _put(context, target, image) -> None:
 
     h, w = image.shape[:2]
     spare = context.buffers[1] if target is context.buffers[0] else context.buffers[0]
-    context.run(unpack_code(image), spare, target, [w, h], image.aux(), w, h)
+    if getattr(context, "fuses_upload", False):
+        # the recorder reads the decoder's code values as words: no float copy of the planes on this side
+        context.run(RAW_BINDINGS + "\n" + unpack_code(image, raw=True), spare, target, [w, h], RawAux(image.raw()), w, h)
+    else:
+        context.run(unpack_code(image), spare, target, [w, h], image.aux(), w, h)
 
 
 def _fusion_plan(ops: list, real, start: int, w: int, h: int):
@@ -2853,7 +2861,7 @@ def _fusion_plan(ops: list, real, start: int, w: int, h: int):
         if ops[0][1][0] is not current or frame.shape[:2] != (h, w):
             return None
         upload = frame
-        plan.append(("yuv", yuv_function(frame)))
+        plan.append(("yuv", yuv_function(frame, raw=True)))
         ops = ops[1:]
     elif ops and ops[0][0] == "upload":
         # a layer's upload at the head of its chain: the chain's kernel unpacks the bytes itself
@@ -2917,7 +2925,7 @@ def _fused(chain: "_Chain", body) -> None:
         return
     source, params, upload = plan
     out = 1 - start
-    aux = None if upload is None else (upload.aux() if hasattr(upload, "aux") else RawAux(np.ascontiguousarray(upload)))
+    aux = None if upload is None else RawAux(upload.raw() if hasattr(upload, "raw") else np.ascontiguousarray(upload))
     try:
         real.run(source, real.buffers[start], real.buffers[out], params, aux, chain.w, chain.h)
     except RuntimeError as exc:
