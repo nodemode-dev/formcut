@@ -393,7 +393,10 @@ def _hwaccel_for(source: VideoSource):
     device = _device_type()
     if device is None:
         return None
-    key = (source.codec, source.width, source.height, device)
+    # the race runs the conversion the engine will run on this source: sixteen-bit RGBA for a deep HDR source,
+    # eight-bit BGR otherwise; a chip that wins on BGR can lose once the frame has to come back at sixteen bits
+    conversion = "rgba64le" if source.deep and source.hdr else "bgr24"
+    key = (source.codec, source.width, source.height, device, conversion)
     with _hw_lock:
         if key in _hw_choice:
             return _hw_choice[key]
@@ -402,8 +405,8 @@ def _hwaccel_for(source: VideoSource):
             from av.codec.hwaccel import HWAccel
 
             hw = HWAccel(device_type=device, allow_software_fallback=False)
-            fast = _decode_rate(source.path, hw)
-            soft = _decode_rate(source.path, None)
+            fast = _decode_rate(source.path, hw, conversion=conversion)
+            soft = _decode_rate(source.path, None, conversion=conversion)
             if fast and soft and fast > soft:
                 choice = hw
         except Exception:
@@ -412,7 +415,7 @@ def _hwaccel_for(source: VideoSource):
         return choice
 
 
-def _decode_rate(path: str, hwaccel, frames: int = 24) -> float | None:
+def _decode_rate(path: str, hwaccel, frames: int = 24, conversion: str = "bgr24") -> float | None:
     began = time.perf_counter()
     try:
         with av.open(path, hwaccel=hwaccel) as container:
@@ -420,7 +423,7 @@ def _decode_rate(path: str, hwaccel, frames: int = 24) -> float | None:
             stream.thread_type = "AUTO"
             count = 0
             for frame in container.decode(stream):
-                frame.reformat(format="bgr24")
+                frame.reformat(format=conversion)
                 count += 1
                 if count >= frames:
                     break
