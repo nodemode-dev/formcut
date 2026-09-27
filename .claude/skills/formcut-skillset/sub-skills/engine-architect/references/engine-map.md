@@ -43,7 +43,7 @@ The rest is written by hand.
 | media.py | 878 | /api/media | 25 |
 | model_manager.py | 691 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| presets.py | 626 | /api/presets | 9 |
+| presets.py | 625 | /api/presets | 9 |
 | project_packages.py | 312 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 175 | /api/projects | 9 |
@@ -88,7 +88,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (707L)
-- `gpu_effects.py` (3104L)
+- `gpu_effects.py` (3112L)
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (235L)
@@ -119,7 +119,7 @@ the automation transports.
 - `validation.py` (222L)
 - `video_source.py` (594L)
 - `windows_console.py` (43L)
-- `yuv.py` (190L)
+- `yuv.py` (222L)
 
 ## Reading order for a change
 
