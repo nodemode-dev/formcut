@@ -1358,7 +1358,17 @@ class FrameRenderer:
             visual_fade = {**clip, "extendOut": 0}
             alpha = max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
             native = _native()
-            if native is not None and not gpu_effects.active() and _plainly_blended(clip, local, transform):
+            # The Rust warp-and-blend kernel blends in gamma; since R24 every blend is in light, so the kernel is
+            # used only once a build says it blends in light (LINEAR_LIGHT), and never on a deep (sixteen-bit)
+            # frame. The golden frames caught it once formcut_native was installed beside the engine.
+            if (
+                native is not None
+                and getattr(native, "LINEAR_LIGHT", False)
+                and canvas.dtype == np.uint8
+                and image.dtype == np.uint8
+                and not gpu_effects.active()
+                and _plainly_blended(clip, local, transform)
+            ):
                 # Warp and blend in one Rust pass, identical to the Python path below.
                 canvas = self._flush(canvas)
                 canvas = np.ascontiguousarray(canvas)

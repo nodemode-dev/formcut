@@ -59,7 +59,9 @@ impl GpuFrame {
             .into_iter()
             .find_map(|backends| pollster::block_on(wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..Default::default() }).request_adapter(&options)))
             .ok_or_else(|| PyRuntimeError::new_err("no WebGPU adapter"))?;
-        let adapter_name = adapter.get_info().name;
+        let info = adapter.get_info();
+        // the backend in the name, so the engine can tell Metal, Vulkan or DX12 from OpenGL
+        let adapter_name = format!("{} ({:?})", info.name, info.backend);
         // ask for what the adapter has: a fixed request (256 MB bindings) refused the 128 MB of an OpenGL adapter
         let limits = adapter.limits();
         if picture_bytes > limits.max_storage_buffer_binding_size as u64 {

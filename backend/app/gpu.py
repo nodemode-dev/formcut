@@ -336,11 +336,8 @@ def _stack_wanted(state: dict) -> bool:
 
 
 def stack_active() -> bool:
-    from . import gpu_frame
-
-    if gpu_frame.available():
-        # the Rust frame path, unless the composite is pinned to the CPU (the bench's reference, a user's choice)
-        return _stack_fuse is None and os.environ.get("FORMCUT_COMPOSITE", "").lower() != "cpu"
+    # the same policy whichever executor runs the frame (Rust when formcut_native has it, Python otherwise): a
+    # real GPU, or FORMCUT_COMPOSITE=gpu; never a software rasteriser by default, never when pinned to the CPU
     return _stack_fuse is None and _stack_wanted(status())
 
 

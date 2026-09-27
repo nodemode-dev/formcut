@@ -58,7 +58,13 @@ def status() -> dict:
         api = probe.api() if hasattr(probe, "api") else 1
         if api < API:
             raise RuntimeError(f"formcut_native is an older build (api {api}, this engine wants {API}); run setup/build_native_gpu")
-        _status = {"available": True, "adapter": probe.adapter()}
+        name = probe.adapter()
+        if "(Gl)" in name:
+            # On OpenGL the executor's context and the Python device's context are both bound to the thread
+            # through EGL, and the two libraries in one process abort each other (seen on llvmpipe). Metal,
+            # Vulkan and DX12 have no thread-bound context; OpenGL keeps the Python path.
+            raise RuntimeError(f"the Rust executor is not used on OpenGL ({name})")
+        _status = {"available": True, "adapter": name}
     except Exception as exc:  # noqa: BLE001 - any failure means the Python path, with the reason kept
         _unavailable = f"{type(exc).__name__}: {exc}"[:200]
         _status = {"available": False, "reason": _unavailable}
