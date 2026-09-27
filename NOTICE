@@ -9,3 +9,8 @@ timeline glyphs derived from the Lucide icon set (ISC) and, in release builds,
 formcut's LGPL-2.1 build of FFmpeg. The demo media in examples/demo keep their
 own licences (examples/demo/README.md). Every component and its obligations are
 listed in .docs/wiki/Licences.md.
+
+Use of formcut is set out in USE_POLICY.md. As the Apache License, Version 2.0 provides (sections 7 and 8), formcut
+is provided "as is", without warranties or conditions of any kind, and its contributors are not liable for its use
+or misuse. AI models formcut can download at a person's request, such as Krea 2, are not part of formcut, are not
+distributed with it, and remain under their publishers' own licences.

@@ -198,10 +198,10 @@ hash below; a download that does not match its pin is deleted and named.
 | object-cutout | U2NetP (rembg release) | Apache-2.0 | download on demand, and bundled in the engine build as the out-of-the-box cutout (BG2, below) | 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8 |
 | person-cutout | U2Net human segmentation (rembg release) | Apache-2.0 | download on demand | 01eb6a29a5c4d8edb30b56adad9bb3a2a0535338e480724a213e0acfd2d1c73c |
 | ai-upscale | Real-ESRGAN x4plus (ONNX export) | BSD-3-Clause | download on demand | 4851ec156207d271f5328605d0582eeb851e656227da8aca093ced9e60789291 |
-| krea-2-mlx-q8 | Krea 2 Turbo, 8-bit MLX (mflux-community/krea-2-turbo-mflux-q8) | Krea 2 Community License Agreement v.1 | optional; installed only from the Krea 2 card after the licence is accepted and the content filter chosen | each of 19 files pinned in model_manager.PINNED |
+| krea-2-mlx-q8 | Krea 2 Turbo, 8-bit MLX (mflux-community/krea-2-turbo-mflux-q8) | Krea 2 Community License Agreement v.1 | optional; fetched from its publisher only from the Krea 2 card, after the licence is accepted, with the content filter | each of 19 files pinned in model_manager.PINNED |
 | krea-2-mlx-q4 | Krea 2 Turbo, 4-bit MLX (mflux-community/krea-2-turbo-mflux-q4) | Krea 2 Community License Agreement v.1 | as above | each of 16 files pinned |
 | krea-2-sdnq-int8 | Krea 2 Turbo, 8-bit SDNQ (OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit) | Krea 2 Community License Agreement v.1 | as above | each of 14 files pinned |
-| nsfw-filter | Falconsai/nsfw_image_detection (onnx-community ONNX export) | Apache-2.0 | offered with Krea 2 as the content filter its licence requires (section 4.2) | each of 4 files pinned |
+| nsfw-filter | Falconsai/nsfw_image_detection (onnx-community ONNX export) | Apache-2.0 | installed with every Krea 2 build as the content filter its licence requires (section 4.2) | each of 4 files pinned |
 | local-speech | Kokoro v1.0 model / voices | Apache-2.0 | download on demand | beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a / bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d |
 
 On Robust Video Matting: its GPL-3.0 licence is incompatible with shipping the
@@ -252,13 +252,15 @@ Local models names the provider actually in use.
 
 ## Krea 2 (optional)
 
-Krea 2 Turbo is never bundled and never fetched on its own. The Krea 2 card in Studio > Local models shows the
-licence's terms and links the full agreement and Krea's Acceptable Use Policy; nothing downloads until the person
-accepts the agreement and chooses the content filter. Enabling the filter (Falconsai/nsfw_image_detection, named in
-section 4.2) installs it and runs it on every picture, withholding what it flags. Declining it requires accepting a
-statement, stored with a hash of its wording in models/krea-2-consent.json, that the person does not meet the
-licence's filtering requirement by their own choice and is responsible for any violation and misuse, not formcut,
-its developers or NodeMode. A prompt sexualising minors is refused either way. The attribution notice of section
-3.1(c) is written to models/krea-2/NOTICE.txt and returned with every picture. Commercial use under the agreement is
-limited to those with less than $1,000,000 of annual revenue (section 2.3); formcut shows this, and each person is
-responsible for their own standing under it.
+Krea 2 Turbo is neither bundled nor distributed with formcut: its weights are fetched from their publishers on
+Hugging Face, onto the person's own computer, only when that person installs it from the Krea 2 card in Studio >
+Local models. The card shows the licence's terms and links the full agreement and Krea's Acceptable Use Policy;
+nothing downloads until the person accepts the agreement. The content filter section 4.2 requires,
+Falconsai/nsfw_image_detection, is always installed with Krea 2 and runs on every picture, withholding what it flags;
+there is no option to install Krea 2 without it. If the person later removes it (deleting its files, or changing
+their own build), Krea 2 keeps running, the card shows a warning that the filter was knowingly removed and that the
+responsibility is the person's alone, and each picture made without it carries that warning; the acknowledgement and
+the runs without the filter are recorded in models/krea-2-consent.json. A prompt sexualising minors is refused either
+way. The attribution notice of section 3.1(c) is written to models/krea-2/NOTICE.txt and returned with every picture.
+Commercial use under the agreement is limited to those with less than $1,000,000 of annual revenue (section 2.3);
+formcut shows this, and each person is responsible for their own standing under it. See USE_POLICY.md.

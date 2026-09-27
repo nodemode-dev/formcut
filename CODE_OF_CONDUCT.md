@@ -21,6 +21,15 @@ for the project elsewhere.
 - Publishing anyone's private information without their explicit permission.
 - Deliberately derailing discussions, or sustained disruption of any kind.
 
+## Using and changing formcut
+
+This code covers the project's spaces. How formcut itself may be used is set out in
+[Responsible use](USE_POLICY.md): formcut is open-source software under the Apache License, Version 2.0, provided
+"as is"; whoever uses, modifies or builds on it is solely responsible for doing so lawfully, in every jurisdiction
+that applies to them, and for any model they install with it, and formcut, its developers and NodeMode are not
+responsible for its misuse. Contributions that remove or weaken formcut's refusal to generate sexual content
+involving minors will not be accepted.
+
 ## Reporting
 
 Report anything that breaks this code by opening an

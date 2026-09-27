@@ -209,7 +209,7 @@ Bug reports, fixes, features and translations are all welcome: [CONTRIBUTING.md]
 
 ## Licence
 
-Apache 2.0, in [`LICENSE`](LICENSE). Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md).
+Apache 2.0, in [`LICENSE`](LICENSE). How formcut may be used, and who is responsible for that use, is set out in [`USE_POLICY.md`](USE_POLICY.md): whoever uses or modifies formcut is solely responsible for doing so lawfully, and AI models it downloads on request (Krea 2 among them) are not distributed with it and stay under their publishers' licences. Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md).
 
 ## Maintenance
 
