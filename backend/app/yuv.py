@@ -215,7 +215,10 @@ def from_av(frame, deep: bool, matrix_name: str, full_range: bool) -> PlaneFrame
     sizes = [plane.width * plane.height for plane in planes]
     total = sum(sizes)
     size = np.dtype(item).itemsize
-    packed = np.zeros(total + (-total * size) % 4 // size, item)
+    # empty, not zeros: every sample is written by _into below, only the padding to a whole word is zeroed (zeroing
+    # 6.2 MB a 1080p ten-bit frame first was 0.4 ms of the decoder's thread on the M5)
+    packed = np.empty(total + (-total * size) % 4 // size, item)
+    packed[total:] = 0
     starts = [0, sizes[0], sizes[0] + sizes[1]]
     y, u, v = (_into(packed[a : a + n], plane, item) for a, n, plane in zip(starts, sizes, planes, strict=True))
     kr, kb = MATRICES.get(matrix_name) or (MATRICES["bt709"] if y.shape[0] >= 720 else MATRICES["smpte170m"])
