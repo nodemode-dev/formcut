@@ -1443,6 +1443,19 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 # the high threshold: 2 an edge, 0 a candidate, 1 not. CANNY_PROP: a candidate
 # with an edge among its eight neighbours becomes an edge; iterated by the
 # chain until the walk is done.
+# The edge classes the hysteresis settled on the CPU, written back as the map the passes after it read.
+CANNY_FILL_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    dst[i] = vec4<f32>(aux[i], 0.0, 0.0, 0.0);
+}
+"""
 CANNY_GRAD_CODE = """
 fn at(x: i32, y: i32) -> vec4<f32> {
     let w = i32(p[0]);
@@ -1508,8 +1521,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 // cv2 compares strictly against the row above and loosely against the row below
                 is_max = mag > m(x, y - 1) && mag >= m(x, y + 1);
             } else {
+                // on a diagonal cv2 compares strictly on both sides; the loose second test marked the second
+                // pixel of every equal diagonal pair, which was the whole of the recorded residual
                 let sgn = select(1, -1, (xs ^ ys) < 0);
-                is_max = mag > m(x - sgn, y - 1) && mag >= m(x + sgn, y + 1);
+                is_max = mag > m(x - sgn, y - 1) && mag > m(x + sgn, y + 1);
             }
         }
         if (is_max) { cls = select(0.0, 2.0, mag > high); }
@@ -2033,11 +2048,19 @@ class _Chain:
         """cv2.Canny's edges (2 where an edge) from the picture in `source`, using two work buffers; the buffer the result is in comes back."""
         self._pass(CANNY_GRAD_CODE, [mode], source=source, target=work_a)
         self._pass(CANNY_NMS_CODE, [low, high, 0.0], source=work_a, target=work_b)
-        current, other = work_b, work_a
-        for _ in range(walks):
-            self._pass(CANNY_PROP_CODE, [], source=current, target=other)
-            current, other = other, current
-        return current
+        # The hysteresis as cv2 has it: a candidate is an edge when it is joined to an edge through candidates,
+        # however long the chain. The walks (a pixel a pass, 128 of them) stopped short on long chains, which
+        # was the residual the notes recorded (0.015% and 0.34% of pixels); the connected components of the
+        # suppressed map, kept where they hold an edge, are exact, and cheaper than the walks at 1080p.
+        del walks
+        classes = self.c.download(self.c.buffers[work_b], self.h, self.w)[:, :, 0]
+        count, labels = cv2.connectedComponents((classes != 1.0).astype(np.uint8), connectivity=8)
+        seeded = np.zeros(count, bool)
+        seeded[labels[classes == 2.0]] = True
+        seeded[0] = False  # the pixels that are neither edge nor candidate
+        joined = np.where(seeded[labels], 2.0, classes).astype(np.float32)
+        self._pass(CANNY_FILL_CODE, [], joined.ravel(), source=work_b, target=work_a)
+        return work_a
 
     def _multi_remap(self, maps: list, weights: list) -> None:
         """A weighted sum of remaps of the current picture: the source held, each map sampled into scratch and accumulated."""
