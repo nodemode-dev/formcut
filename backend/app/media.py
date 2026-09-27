@@ -38,10 +38,24 @@ except ImportError:
     IMAGE_EXT = IMAGE_EXT - {".heic", ".heif"}
 
 
+_index_cache: tuple[tuple[int, int], list[dict]] | None = None
+
+
 def _read() -> list[dict]:
-    if not INDEX_FILE.exists():
+    """The media index, parsed once for each version of the file (its modification time and size): the renderer
+    looked media up twice a frame, reading and parsing the whole index each time, which the M5 profile showed
+    at about three milliseconds a frame against a library the bench had filled."""
+    global _index_cache
+    try:
+        stat = INDEX_FILE.stat()
+    except OSError:
         return []
-    return json.loads(INDEX_FILE.read_text())
+    stamp = (stat.st_mtime_ns, stat.st_size)
+    if _index_cache is not None and _index_cache[0] == stamp:
+        return [dict(item) for item in _index_cache[1]]
+    items = json.loads(INDEX_FILE.read_text())
+    _index_cache = (stamp, items)
+    return [dict(item) for item in items]
 
 
 def _write(items: list[dict]) -> None:

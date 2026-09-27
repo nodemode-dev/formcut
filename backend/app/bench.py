@@ -46,17 +46,53 @@ def _demo_project() -> dict:
     return (demos or projects)[-1]
 
 
+def _bench_clip(clip, width: int, height: int, seconds: float) -> dict | None:
+    """The bench's PQ clip in the media library: one per size and length, reused run after run. Every run had
+    ingested a new one, so the owner's library filled with bench clips; the ones this bench made before (their
+    source is "bench") are removed, files and records, and the one that fits is kept."""
+    from .media import MEDIA_DIR, _read, _write, ingest_path
+
+    name = f"bench-pq-{width}x{height}-{seconds:g}s.mp4"
+    items = _read()
+    kept, removed = None, 0
+    for item in items:
+        if (item.get("meta") or {}).get("source") != "bench" and item.get("source") != "bench":
+            continue
+        present = [p for p in MEDIA_DIR.glob(f"{item['id']}.*")]
+        if kept is None and item.get("name") == name and present:
+            kept = item
+            continue
+        for path in present:
+            path.unlink(missing_ok=True)
+        removed += 1
+    if removed:
+        _write(
+            [
+                item
+                for item in items
+                if item is kept or ((item.get("meta") or {}).get("source") != "bench" and item.get("source") != "bench")
+            ]
+        )
+        print(f"bench:       removed {removed} earlier bench clips from the media library")
+    if kept is not None or clip is None:
+        if clip is not None:
+            clip.unlink(missing_ok=True)
+        return kept
+    return ingest_path(clip, name, {"source": "bench"})
+
+
 def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) -> dict:
     """A PQ timeline for the HDR scenarios: a ten-bit PQ clip made by ffmpeg once and ingested through the app's
     own media model (a moving gradient with light to full scale), over a lifted title, in a project whose output
     colour is PQ, so the frames run deep, the monitor rolls them off and the export keeps the light."""
-    from .media import MEDIA_DIR, ingest_path
+    from .media import MEDIA_DIR
     from .video_source import _decoder_colours
 
     clip = MEDIA_DIR / "bench-pq.mp4"
-    if clip.is_file() and _decoder_colours(clip).get("color_transfer") != "smpte2084":
+    record = _bench_clip(None, width, height, seconds)  # the clip of this size and length made before, if any
+    if record is None and clip.is_file() and _decoder_colours(clip).get("color_transfer") != "smpte2084":
         clip.unlink()  # an earlier clip without its PQ tags would bench an SDR decode; made again, tagged
-    if not clip.is_file():
+    if record is None and not clip.is_file():
         MEDIA_DIR.mkdir(parents=True, exist_ok=True)
         subprocess.run(
             [
@@ -86,7 +122,8 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
             ],
             check=True,
         )
-    record = ingest_path(clip, "bench-pq.mp4", {"source": "bench"})
+    if record is None:
+        record = _bench_clip(clip, width, height, seconds)
     base = {
         "scale": 100,
         "posX": 0,
@@ -146,6 +183,39 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
             }
         ],
     }
+
+
+def _encoder_alone(frames: list, encoder: str, count: int) -> float:
+    """The encoder's own rate: the export's encoder and quality flags fed ten-bit frames the device path already
+    made (a handful, cycled), with nothing rendered, so an export's rate can be told apart from the encoder's."""
+    import subprocess
+
+    from .encoders import tier_flags
+    from .render_api import _to_planes
+
+    deep = [f for f in frames if getattr(f, "dtype", None) == np.uint16 and f.ndim == 3]
+    if not encoder or not deep:
+        return 0.0
+    h, w = deep[0].shape[:2]
+    if w % 4 or h % 2:
+        return 0.0
+    layout = "p010le" if encoder.endswith("_videotoolbox") else "yuv420p10le"
+    planes = [_to_planes(np.ascontiguousarray(f), layout).tobytes() for f in deep[:8]]
+    command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", layout, "-s", f"{w}x{h}", "-r", "30", "-i", "pipe:0"]
+    command += ["-c:v", encoder, *tier_flags(encoder, "high"), "-pix_fmt", layout, "-f", "null", "-"]
+    total = max(60, count)
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    began = time.perf_counter()
+    try:
+        for n in range(total):
+            process.stdin.write(planes[n % len(planes)])
+        process.stdin.close()
+        process.wait(timeout=300)
+    except (OSError, subprocess.SubprocessError):
+        process.kill()
+        return 0.0
+    took = time.perf_counter() - began
+    return total / took if process.returncode == 0 and took > 0 else 0.0
 
 
 def _describe_sources(doc: dict, width: int) -> None:
@@ -355,8 +425,15 @@ def _run(doc: dict, width: int, frames: int, path: str):
         _warm_frame._frame[1].timings()  # the warm frame compiles kernels; it is not a frame's cost
         if hasattr(_warm_frame._frame[1], "pass_times"):
             _warm_frame._frame[1].pass_times()
+    # a sample of the frames is kept for the parity check, spread over the run, never all of them: 300 frames
+    # of each path at sixteen bits held ten gigabytes on the M5, and the memory pressure slowed everything after
+    keep = set(range(0, len(times), max(1, len(times) // 24)))
     began = time.perf_counter()
-    out = [renderer.frame(t) for t in times]
+    out = []
+    for n, t in enumerate(times):
+        frame = renderer.frame(t)
+        if n in keep:
+            out.append(frame)
     took = time.perf_counter() - began
     resident = renderer.resident_layers
     renderer.close()
@@ -487,11 +564,18 @@ def main(argv: list[str] | None = None) -> int:
         os.environ["FORMCUT_COMPOSITE"] = "gpu"
         os.environ["FORMCUT_EFFECTS"] = "gpu"
         gpu._status = None
+        del cpu_frames  # the export is timed with nothing held that it does not need
         export_fps, encoder = _export_rate(doc, args.width, args.frames)
         readings["export_fps"] = export_fps
         readings["export_encoder"] = encoder
         what = f"the real export, {encoder}" + (", ten-bit PQ with the light written" if args.hdr else "")
         print(f"export:      {export_fps:6.2f} fps   ({what}, render and encode included)")
+        encoder_rate = _encoder_alone(dev_frames, encoder, args.frames)
+        if encoder_rate:
+            readings["encoder_alone_fps"] = encoder_rate
+            print(
+                f"encoder alone: {encoder_rate:6.1f} fps   ({encoder} fed ten-bit frames already made, no rendering: the ceiling an export can reach)"
+            )
         timing = getattr(_export_rate, "timing", {})
         if timing:
             readings["export_steady_fps"] = timing["steadyFps"]

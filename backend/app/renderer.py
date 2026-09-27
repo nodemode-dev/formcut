@@ -695,14 +695,21 @@ class FrameRenderer:
         media_id = clip.get("mediaId")
         if not media_id:
             raise ValueError("Media clip has no source")
-        _find(media_id)
+        # a clip's media record and files are looked up once for this renderer's life, not every frame (a glob of
+        # the media folder and two reads of the index a frame, about three milliseconds on a full library)
+        known = self._media_known.get(media_id) if hasattr(self, "_media_known") else None
+        if known is None:
+            known = (_find(media_id), list(MEDIA_DIR.glob(f"{media_id}.*")))
+            if not hasattr(self, "_media_known"):
+                self._media_known = {}
+            self._media_known[media_id] = known
         if clip.get("reversed"):
             candidate = reversed_path(media_id)
             if not candidate.is_file():
                 raise ValueError("Reversed copy is not prepared yet: " + media_id)
             paths = [candidate]
         else:
-            paths = list(MEDIA_DIR.glob(f"{media_id}.*"))
+            paths = list(known[1])
             # P5: a preview may read a proxy; an export never does, because it
             # builds a renderer with no decode limit and this returns None.
             if paths and PROXIES_ENABLED and self.allow_proxy:
@@ -711,7 +718,7 @@ class FrameRenderer:
                     paths = [stand_in]
         if not paths:
             raise ValueError("Media file is missing: " + media_id)
-        record = _find(media_id)
+        record = known[0]
         native = max(float(record.get("width") or 0), float(record.get("height") or 0))
         if clip["kind"] == "image":
             if media_id not in self.stills:
