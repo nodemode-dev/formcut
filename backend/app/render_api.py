@@ -202,6 +202,20 @@ def _light_table(transfer: str) -> np.ndarray:
     return table
 
 
+def _to_planes(frame: np.ndarray) -> np.ndarray:
+    """A deep RGBA frame as yuv420p10le planes on the CPU, for the frame the device did not pack: the BT.2020
+    matrix in limited range, chroma the mean of each 2x2 block, the same arithmetic as the device's pack."""
+    rgb = frame[:, :, :3].astype(np.float32) / 65535
+    y = 0.2627 * rgb[:, :, 0] + 0.6780 * rgb[:, :, 1] + 0.0593 * rgb[:, :, 2]
+    cb = (rgb[:, :, 2] - y) / 1.8814
+    cr = (rgb[:, :, 0] - y) / 1.4746
+    h, w = y.shape
+    cb2 = cb.reshape(h // 2, 2, w // 2, 2).mean(axis=(1, 3))
+    cr2 = cr.reshape(h // 2, 2, w // 2, 2).mean(axis=(1, 3))
+    code = lambda v, offset, span: np.clip(np.round((offset + span * v) * 4), 0, 1023).astype(np.uint16)  # noqa: E731
+    return np.concatenate([code(y, 16, 219).ravel(), code(cb2, 128, 224).ravel(), code(cr2, 128, 224).ravel()]).view(np.uint8)
+
+
 def _light_of(frame: np.ndarray, transfer: str, stride: int = 2) -> tuple[float, float]:
     """The frame's brightest pixel and its average, in nits, from the deep signal: MaxCLL and MaxFALL's inputs.
     The transfer is monotonic, so the brightest channel's code is the brightest channel's light, and one table
@@ -654,6 +668,10 @@ def export_media(
                     "renderPath": "layered",
                 }
             )
+        # A deep frame comes off the device as ten-bit 4:2:0 planes with the light measured there, so the
+        # pipe carries three bytes a pixel instead of eight and ffmpeg converts nothing; the M5 export sat
+        # at 18 fps against a 41 fps render with the conversion in ffmpeg's single thread.
+        planar = bool(renderer.deep and gpu.stack_active() and out_w % 4 == 0 and out_h % 2 == 0)
         command = [
             program,
             "-v",
@@ -663,7 +681,7 @@ def export_media(
             "-f",
             "rawvideo",
             "-pix_fmt",
-            "rgba64le" if renderer.deep else "rgba",
+            ("yuv420p10le" if planar else "rgba64le") if renderer.deep else "rgba",
             "-s",
             f"{renderer.width}x{renderer.height}",
             "-r",
@@ -680,7 +698,7 @@ def export_media(
             "1:a",
             "-vf",
             f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2"
-            + (f",{hdr_filter}" if hdr_filter else "")
+            + (f",{hdr_filter}" if hdr_filter and not planar else "")
             + (f",{upload}" if upload else ""),
             "-r",
             out_rate,
@@ -726,8 +744,15 @@ def export_media(
                 max_cll, max_fall = 0.0, 0.0
 
                 def produce(i: int):
+                    if planar:
+                        got = renderer.frame_planes(i / fps)
+                        if got is not None:
+                            return got
                     picture = np.ascontiguousarray(renderer.frame(i / fps))
-                    light = _light_of(picture, renderer.transfer) if renderer.deep else None
+                    if planar:
+                        # the device did not pack this frame (nothing on screen, say): converted here as ffmpeg would
+                        picture = _to_planes(picture)
+                    light = _light_of(picture, renderer.transfer) if renderer.deep and not planar else None
                     return picture, light
 
                 with ThreadPoolExecutor(max_workers=1) as ahead:

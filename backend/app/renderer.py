@@ -480,6 +480,10 @@ class FrameRenderer:
         self.shader_sources: dict[str, str] = {}
         # R8: static titles rasterised once, by style and frame size.
         self.text_cache: dict = {}
+        # The export's planar frame: when set, a deep frame comes back from the device as yuv420p10le planes
+        # (bytes) with the light measured there, and nothing is packed as RGBA16 or converted by ffmpeg.
+        self._want_planes = False
+        self._final_flush = False
         self.closed = False
 
     def close(self):
@@ -624,6 +628,24 @@ class FrameRenderer:
                 return None
             renderer = self.nested[key] = FrameRenderer(document, self.width)
         return renderer.frame(max(0.0, min(time, renderer.project["duration"])))
+
+    def frame_planes(self, time: float):
+        """A deep frame for the encoder as yuv420p10le planes packed on the device, with (MaxCLL nits, MaxFALL
+        nits) measured there; None when the device stack is not active or the frame is not deep, in which
+        case the caller takes frame() and converts as before."""
+        if not (self.deep and gpu.stack_active()) or self.width % 4 or self.height % 2:
+            return None
+        self._want_planes = True
+        try:
+            out = self.frame(time)
+        finally:
+            self._want_planes = False
+        if out.ndim != 1:
+            return None  # the frame did not go through the device compositor (nothing on screen, say)
+        code, mean_nits = gpu.stack_light()
+        from .render_api import _light_table
+
+        return out, (float(_light_table(self.transfer)[code]), mean_nits)
 
     def as_working(self, frame: np.ndarray) -> np.ndarray:
         """A decoded frame as the working picture: RGBA bytes for an SDR project; for a deep project, a
@@ -1171,7 +1193,7 @@ class FrameRenderer:
 
     def _flush(self, canvas: np.ndarray) -> np.ndarray:
         if self.pending_layers:
-            canvas = gpu.composite_stack(canvas, self.pending_layers, transfer=self.transfer)
+            canvas = gpu.composite_stack(canvas, self.pending_layers, transfer=self.transfer, yuv=self._want_planes and self._final_flush)
             self.pending_layers = []
         return canvas
 
@@ -1353,4 +1375,8 @@ class FrameRenderer:
                 shift = self.height * min(1, (local - clip["duration"]) / clip["pushOut"])
                 layer = cv2.warpAffine(layer, np.float32([[1, 0, 0], [0, 1, -shift]]), (self.width, self.height))
             canvas = self._blend(canvas, layer, str(transform["blendMode"]))
-        return self._flush(canvas)
+        self._final_flush = True
+        try:
+            return self._flush(canvas)
+        finally:
+            self._final_flush = False

@@ -144,6 +144,77 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 """
 
+# The frame as ten-bit 4:2:0 planes for the encoder, packed on the device: the
+# BT.2020 non-constant-luminance matrix in limited range, chroma the mean of
+# each 2x2 block, one invocation per 4x2 block so every u32 word of every
+# plane has one writer. Y plane first (w x h words of u16 pairs), then U, then
+# V (w/2 x h/2 each), which is yuv420p10le as ffmpeg reads it: the pipe carries
+# three bytes a pixel instead of eight and ffmpeg converts nothing.
+PACK_YUV_CODE = """
+@group(0) @binding(0) var<storage, read> source: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> packed: array<u32>;
+@group(0) @binding(2) var<storage, read_write> dims: array<atomic<u32>>;
+fn luma(c: vec3<f32>) -> f32 { return 0.2627 * c.r + 0.6780 * c.g + 0.0593 * c.b; }
+fn nits_pq(v: f32) -> f32 {
+    let m1 = 0.1593017578125;
+    let m2 = 78.84375;
+    let c1 = 0.8359375;
+    let c2 = 18.8515625;
+    let c3 = 18.6875;
+    let e = pow(clamp(v, 0.0, 1.0), 1.0 / m2);
+    return pow(max(e - c1, 0.0) / (c2 - c3 * e), 1.0 / m1) * 10000.0;
+}
+fn nits_hlg(v: f32) -> f32 {
+    let a = 0.17883277;
+    let b = 0.28466892;
+    let c = 0.55991073;
+    let l = select((exp((v - c) / a) + b) / 12.0, v * v / 3.0, v <= 0.5);
+    return l * 1000.0;
+}
+fn code(v: f32, offset: f32, span: f32) -> u32 { return u32(clamp(round((offset + span * v) * 4.0), 0.0, 1023.0)); }
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = atomicLoad(&dims[0]);
+    let h = atomicLoad(&dims[1]);
+    let bx = id.x * 4u;
+    let by = id.y * 2u;
+    if (bx >= w || by >= h) { return; }
+    let cw = w / 2u;
+    let ch = h / 2u;
+    var cb = vec2<f32>(0.0);
+    var cr = vec2<f32>(0.0);
+    // the light, for MaxCLL and MaxFALL: the block's brightest channel code (exact, the table on the CPU
+    // turns it into nits) and the block's mean light in units of four nits (a u32 holds a 4K frame's sum)
+    var brightest = 0.0;
+    var light = 0.0;
+    let transfer = atomicLoad(&dims[4]);
+    for (var row = 0u; row < 2u; row = row + 1u) {
+        let y = by + row;
+        for (var pair = 0u; pair < 2u; pair = pair + 1u) {
+            let x0 = bx + pair * 2u;
+            let c0 = clamp(source[y * w + x0].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+            let c1 = clamp(source[y * w + x0 + 1u].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+            let y0 = luma(c0);
+            let y1 = luma(c1);
+            packed[(y * w + x0) / 2u] = code(y0, 16.0, 219.0) | (code(y1, 16.0, 219.0) << 16u);
+            let m0 = max(c0.r, max(c0.g, c0.b));
+            let m1 = max(c1.r, max(c1.g, c1.b));
+            brightest = max(brightest, max(m0, m1));
+            if (transfer == 2u) { light = light + nits_hlg(m0) + nits_hlg(m1); } else { light = light + nits_pq(m0) + nits_pq(m1); }
+            cb[pair] = cb[pair] + ((c0.b - y0) / 1.8814 + (c1.b - y1) / 1.8814) * 0.25;
+            cr[pair] = cr[pair] + ((c0.r - y0) / 1.4746 + (c1.r - y1) / 1.4746) * 0.25;
+        }
+    }
+    let y_words = (w * h) / 2u;
+    let u_words = (cw * ch) / 2u;
+    let cindex = (by / 2u) * cw + bx / 2u;
+    packed[y_words + cindex / 2u] = code(cb[0], 128.0, 224.0) | (code(cb[1], 128.0, 224.0) << 16u);
+    packed[y_words + u_words + cindex / 2u] = code(cr[0], 128.0, 224.0) | (code(cr[1], 128.0, 224.0) << 16u);
+    atomicMax(&dims[2], u32(round(brightest * 65535.0)));
+    atomicAdd(&dims[3], u32(round(light / 8.0 / 4.0)));
+}
+"""
+
 PACK_CODE = """
 @group(0) @binding(0) var<storage, read> source: array<vec4<f32>>;
 @group(0) @binding(1) var<storage, read_write> packed: array<u32>;
@@ -317,6 +388,24 @@ class _StackCompositor:
         self.unpack16 = self.device.create_compute_pipeline(layout="auto", compute={"module": unpack16, "entry_point": "main"})
         pack16 = self.device.create_shader_module(code=PACK16_CODE)
         self.pack16 = self.device.create_compute_pipeline(layout="auto", compute={"module": pack16, "entry_point": "main"})
+        pack_yuv = self.device.create_shader_module(code=PACK_YUV_CODE)
+        self.pack_yuv = self.device.create_compute_pipeline(layout="auto", compute={"module": pack_yuv, "entry_point": "main"})
+        self.dims = self.device.create_buffer(
+            size=32, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
+        )
+        self.light = (0, 0.0)  # after a yuv run: the brightest sixteen-bit code and the mean light in nits
+        self.pack_yuv_groups = {
+            id(source): self.device.create_bind_group(
+                layout=self.pack_yuv.get_bind_group_layout(0),
+                entries=[
+                    {"binding": 0, "resource": {"buffer": source, "offset": 0, "size": size}},
+                    {"binding": 1, "resource": {"buffer": self.packed_out, "offset": 0, "size": self.count * 8}},
+                    {"binding": 2, "resource": {"buffer": self.dims, "offset": 0, "size": 32}},
+                ],
+            )
+            for source in (self.a, self.b)
+        }
+        self.yuv = False
         self.unpack16_groups = {
             id(target): self.device.create_bind_group(
                 layout=self.unpack16.get_bind_group_layout(0),
@@ -443,8 +532,27 @@ class _StackCompositor:
         self.staged = 0
         final = self.a if source_is_a else self.b
         deep = canvas.dtype == np.uint16
+        height, width = canvas.shape[:2]
         encoder = self.device.create_command_encoder()
         step = encoder.begin_compute_pass()
+        if self.yuv and deep and width % 4 == 0 and height % 2 == 0:
+            queue.write_buffer(self.dims, 0, np.array([width, height, 0, 0, self.transfer, 0, 0, 0], np.uint32))
+            step.set_pipeline(self.pack_yuv)
+            step.set_bind_group(0, self.pack_yuv_groups[id(final)])
+            step.dispatch_workgroups((width // 4 + 15) // 16, (height // 2 + 15) // 16)
+            step.end()
+            planes = width * height * 2 + 2 * (width // 2) * (height // 2) * 2
+            encoder.copy_buffer_to_buffer(self.packed_out, 0, self.read, 0, planes)
+            encoder.copy_buffer_to_buffer(self.dims, 0, self.read, planes, 32)
+            queue.submit([encoder.finish()])
+            self.read.map_sync(wgpu.MapMode.READ)
+            raw = self.read.read_mapped()
+            data = np.frombuffer(raw, np.uint8)[:planes].copy()
+            words = np.frombuffer(raw, np.uint32, count=8, offset=planes)
+            blocks = (width // 4) * (height // 2)
+            self.light = (int(words[2]), float(words[3]) * 4.0 / max(1, blocks))
+            self.read.unmap()
+            return data
         step.set_pipeline(self.pack16 if deep else self.pack)
         step.set_bind_group(0, (self.pack16_groups if deep else self.pack_groups)[id(final)])
         step.dispatch_workgroups((self.count + 63) // 64)
@@ -476,7 +584,7 @@ def stage_layer(layer: DeviceLayer, height: int, width: int) -> int | None:
 TRANSFERS = {"srgb": 0, "bt709": 0, "pq": 1, "smpte2084": 1, "hlg": 2, "arib-std-b67": 2}
 
 
-def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb") -> np.ndarray:
+def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False) -> np.ndarray:
     """Blend a run of (layer, mode) onto the canvas in one device pass.
 
     Falls back layer by layer through composite() if the device path fails,
@@ -496,7 +604,12 @@ def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb") ->
                 while len(_compositors) > 3:
                     _compositors.pop(next(iter(_compositors)))
             _compositors[key].transfer = TRANSFERS.get(transfer.lower(), 0)
-            return _compositors[key].run(canvas, layers)
+            _compositors[key].yuv = yuv
+            out = _compositors[key].run(canvas, layers)
+            if yuv:
+                global _last_light
+                _last_light = _compositors[key].light
+            return out
     except Exception as exc:
         if any(isinstance(layer, int) for layer, _ in layers):
             _stack_fuse = f"{type(exc).__name__}: {exc}"[:200]
@@ -508,6 +621,12 @@ def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb") ->
 
 
 _stack_fuse: str | None = None
+_last_light: tuple[int, float] = (0, 0.0)
+
+
+def stack_light() -> tuple[int, float]:
+    """After a planar (yuv) run: the frame's brightest sixteen-bit code and its mean light in nits."""
+    return _last_light
 
 
 def stack_fault() -> str | None:
