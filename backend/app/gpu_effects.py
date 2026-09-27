@@ -73,6 +73,20 @@ SUPPORTED = frozenset(
         "dehaze",
         "cartoon",
         "neon-edges",
+        # revision 8's last eleven, the seven with a pass: the rest are temporal repairs and paint-wash
+        "edge",
+        "emboss",
+        "thermal",
+        "infrared",
+        "pop-art-grid",
+        "rain",
+        "dust",
+        # and the other four: a frame statistic read back once (deflicker, colour-match), the device's bilateral
+        # (denoise-picture), paint-wash's own filter on the frame read back; the layer stays resident for all
+        "deflicker",
+        "colour-match",
+        "denoise-picture",
+        "paint-wash",
         "led-wall",
         "crt-screen",
         "gaussian",
@@ -1443,6 +1457,172 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 # the high threshold: 2 an edge, 0 a candidate, 1 not. CANNY_PROP: a candidate
 # with an edge among its eight neighbours becomes an edge; iterated by the
 # chain until the walk is done.
+# edge: Canny's edges (cv2's, 70 and 150, the colour picture truncated to bytes) as white on black, the
+# picture's alpha kept from the hold.
+EDGE_MAP_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let v = select(0.0, 1.0, src[i].r == 2.0);
+    dst[i] = vec4<f32>(v, v, v, held[i].a);
+}
+"""
+# emboss: cv2.filter2D's correlation with [[-2,-1,0],[-1,1,1],[0,1,2]] over reflected borders, plus 0.5.
+EMBOSS_CODE = """
+fn emb_at(x: i32, y: i32) -> vec3<f32> {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    return src[reflect101(y, h) * w + reflect101(x, w)].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let v = -2.0 * emb_at(x - 1, y - 1) - emb_at(x, y - 1) - emb_at(x - 1, y) + emb_at(x, y) + emb_at(x + 1, y) + emb_at(x, y + 1) + 2.0 * emb_at(x + 1, y + 1);
+    dst[i] = vec4<f32>(v + vec3<f32>(0.5), src[i].a);
+}
+"""
+# thermal: the grey as cv2 weighs it, rounded to a byte, looked up in cv2's inferno map (aux, 256 x 3).
+THERMAL_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let k = u32(round(clamp(s.r * 0.299 + s.g * 0.587 + s.b * 0.114, 0.0, 1.0) * 255.0)) * 3u;
+    dst[i] = vec4<f32>(aux[k], aux[k + 1u], aux[k + 2u], s.a);
+}
+"""
+# infrared: the false-colour mix, then its saturation raised a fifth about its (clipped) grey. Pointwise.
+INFRARED_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let mixed = vec3<f32>(s.g * 1.15 + s.r * 0.1, s.r * 0.75 + s.b * 0.1, s.b * 0.9 + s.g * 0.1);
+    let c = clamp(mixed, vec3<f32>(0.0), vec3<f32>(1.0));
+    let gray = c.r * 0.299 + c.g * 0.587 + c.b * 0.114;
+    dst[i] = vec4<f32>(gray + (mixed - gray) * 1.2, s.a);
+}
+"""
+# pop-art-grid: the picture halved by area (a 2x2 mean on an even frame), its grey in three levels, each
+# quadrant in its own palette (aux, 4 x 3 x 3), the grid shown at the frame's size by nearest neighbour.
+POP_ART_CODE = """
+fn pa_at(x: i32, y: i32) -> vec3<f32> {
+    return src[y * i32(p[0]) + x].rgb;
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let hw = max(1, w / 2);
+    let hh = max(1, h / 2);
+    let gx = min((x * 2 * hw) / w, 2 * hw - 1);
+    let gy = min((y * 2 * hh) / h, 2 * hh - 1);
+    let right = gx >= hw;
+    let lower = gy >= hh;
+    let ax = (gx - select(0, hw, right)) * 2;
+    let ay = (gy - select(0, hh, lower)) * 2;
+    let c = (((pa_at(ax, ay) + pa_at(ax + 1, ay)) + pa_at(ax, ay + 1)) + pa_at(ax + 1, ay + 1)) * 0.25;
+    let gray = c.r * 0.299 + c.g * 0.587 + c.b * 0.114;
+    let level = u32(clamp(floor(gray * 3.0), 0.0, 2.0));
+    let quadrant = select(0u, 1u, right) + select(0u, 2u, lower);
+    let k = (quadrant * 3u + level) * 3u;
+    dst[i] = vec4<f32>(aux[k], aux[k + 1u], aux[k + 2u], src[i].a);
+}
+"""
+# denoise-picture's mix: the bilateral (src) with some of the removed detail (held, the picture) put back.
+DENOISE_MIX_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let o = held[i];
+    dst[i] = vec4<f32>(clamp(s.rgb + (o.rgb - s.rgb) * p[2], vec3<f32>(0.0), vec3<f32>(1.0)), o.a);
+}
+"""
+# deflicker's gain, measured from the frame's mean luma on the CPU, applied here and clipped. Pointwise.
+GAIN_CLIP_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    dst[i] = vec4<f32>(clamp(src[i].rgb * p[2], vec3<f32>(0.0), vec3<f32>(1.0)), src[i].a);
+}
+"""
+# colour-match: each channel moved from its measured mean and spread to the reference's, in proportion to the
+# strength (p[2]); p[3..5] the frame's means, p[6..8] the scales, p[9..11] the reference's means. Pointwise.
+COLOUR_MATCH_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let moved = (s.rgb - vec3<f32>(p[3], p[4], p[5])) * vec3<f32>(p[6], p[7], p[8]) + vec3<f32>(p[9], p[10], p[11]);
+    dst[i] = vec4<f32>(clamp(s.rgb * (1.0 - p[2]) + moved * p[2], vec3<f32>(0.0), vec3<f32>(1.0)), s.a);
+}
+"""
+# The picture's colour set from aux (three floats a pixel), its alpha kept.
+REPLACE_CODE = """
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let b = u32(i) * 3u;
+    dst[i] = vec4<f32>(aux[b], aux[b + 1u], aux[b + 2u], src[i].a);
+}
+"""
+_inferno: np.ndarray | None = None
+
+
+def _inferno_map() -> np.ndarray:
+    """cv2's inferno colour map as 256 RGB floats, as thermal's CPU path reads it."""
+    global _inferno
+    if _inferno is None:
+        ramp = np.arange(256, dtype=np.uint8)[:, None]
+        _inferno = (cv2.cvtColor(cv2.applyColorMap(ramp, cv2.COLORMAP_INFERNO), cv2.COLOR_BGR2RGB).astype(np.float32) / 255).reshape(-1)
+    return _inferno
+
+
 # The edge classes the hysteresis settled on the CPU, written back as the map the passes after it read.
 CANNY_FILL_CODE = """
 @compute @workgroup_size(16, 16)
@@ -2092,6 +2272,10 @@ class _Chain:
             if mode == 2:
                 self._pass(FIELD_CODE, [3], np.ascontiguousarray(add))
                 return
+            if mode == 4:
+                # rain and dust: the drawn streaks or specks cover the picture where the field holds them
+                self._pass(FIELD_CODE, [4], np.ascontiguousarray(add))
+                return
             if mode == 3:
                 # snowfall: rgb * 0.88 + 0.07, then the flakes cover where the field is drawn
                 self._pass(FIELD_CODE, [1], np.ascontiguousarray(mul))
@@ -2219,6 +2403,72 @@ class _Chain:
             self._pass(CARTOON_CODE, [float(max(2, int(params.get("levels", 5))))], source=smooth, target=pixels)
             self._restore()
             self.current = pixels
+            return
+        if effect == "edge":
+            pixels = self.current
+            self._hold()
+            self._keep()
+            other = (pixels + 1) % 2
+            edges = self._canny(pixels, other, 4, 0, 70.0, 150.0)
+            self._pass(EDGE_MAP_CODE, [], source=edges, target=pixels)
+            self._restore()
+            self.current = pixels
+            return
+        if effect == "emboss":
+            self._pass(EMBOSS_CODE, [])
+            return
+        if effect == "denoise-picture":
+            strength = max(0.0, min(1.0, float(params.get("strength", 0.5))))
+            if strength <= 0:
+                return
+            radius = int(5 + 6 * strength)
+            pixels = self.current
+            other = (pixels + 1) % 2
+            self._hold()
+            self._pass(BILATERAL_CODE, [radius, 0.06 + 0.30 * strength, radius], source=pixels, target=other)
+            self._pass(DENOISE_MIX_CODE, [max(0.0, min(1.0, float(params.get("detail", 0.25))))], source=other, target=pixels)
+            self.current = pixels
+            return
+        if effect in ("deflicker", "colour-match", "paint-wash"):
+            # the frame's statistic, or paint-wash's whole filter, from the picture read back as the CPU would see it
+            from . import pixel_effects
+
+            picture = np.asarray(self.c.download(self.c.buffers[self.current], self.h, self.w))
+            rgb = np.ascontiguousarray(picture[:, :, :3])
+            if effect == "deflicker":
+                strength = max(0.0, min(1.0, float(params.get("strength", 0.8))))
+                target = max(0.05, min(0.95, float(params.get("level", 0.45))))
+                mean = float(pixel_effects._luma(rgb).mean()) if strength > 0 else 0.0
+                if strength > 0 and mean > 1e-4:
+                    self._pass(GAIN_CLIP_CODE, [1.0 + (target / mean - 1.0) * strength])
+                return
+            if effect == "colour-match":
+                strength = max(0.0, min(1.0, float(params.get("strength", 1.0))))
+                means, deviations = params.get("refMean"), params.get("refStd")
+                if strength <= 0 or not means or not deviations:
+                    return
+                source = [float(rgb[:, :, c].mean()) for c in range(3)]
+                scales = [float(deviations[c]) / (float(rgb[:, :, c].std()) or 1e-4) for c in range(3)]
+                self._pass(COLOUR_MATCH_CODE, [strength, *source, *scales, *[float(means[c]) for c in range(3)]])
+                return
+            washed = pixel_effects.process(rgb, effect, local, params).astype(np.float32)
+            # set as it came, out of range and all: the CPU blends the effect's own values by the amount and
+            # clips after, so a clamp here (or the cover field's sign test) moved the pixels it pushed below zero
+            self._pass(REPLACE_CODE, [], np.ascontiguousarray(washed))
+            return
+        if effect == "thermal":
+            self._pass(THERMAL_CODE, [], _inferno_map())
+            return
+        if effect == "infrared":
+            self._pass(INFRARED_CODE, [])
+            return
+        if effect == "pop-art-grid":
+            if self.w % 2 or self.h % 2:
+                # cv2's area resize is fractional on an odd frame; the layer takes the CPU path instead
+                raise ValueError("pop-art-grid on the device needs an even frame")
+            from .pixel_effects import POP_ART_PALETTES
+
+            self._pass(POP_ART_CODE, [], POP_ART_PALETTES.reshape(-1))
             return
         if effect == "neon-edges":
             pixels = self.current

@@ -143,7 +143,20 @@ def remap_maps(effect: str, h: int, w: int, local: float, params: dict) -> tuple
     return None
 
 
+# pop-art-grid's four palettes (quadrant by quadrant, dark to light), shared with its device pass
+POP_ART_PALETTES = np.array(
+    [
+        [[0.10, 0.05, 0.35], [0.95, 0.20, 0.55], [1.00, 0.90, 0.20]],
+        [[0.05, 0.25, 0.30], [0.10, 0.75, 0.70], [1.00, 0.60, 0.15]],
+        [[0.30, 0.02, 0.05], [0.95, 0.35, 0.10], [0.98, 0.95, 0.60]],
+        [[0.02, 0.10, 0.30], [0.35, 0.45, 0.95], [0.70, 1.00, 0.40]],
+    ],
+    np.float32,
+)
+
 FIELD_EFFECTS = (
+    "rain",
+    "dust",
     "light-leak",
     "lens-flare",
     "aperture-grille",
@@ -222,6 +235,19 @@ def field_for(effect: str, h: int, w: int, local: float, params: dict) -> tuple[
             cv2.line(sky, (centre[0], centre[1] - reach), (centre[0], centre[1] + reach), colour, 1, cv2.LINE_AA)
         sky = sky + cv2.GaussianBlur(sky, (0, 0), max(1.5, w / 300)) * 2
         return ones, np.clip(sky, 0, 1).astype(np.float32), 2
+    if effect in ("rain", "dust"):
+        # mode 4: the streaks or specks cover the picture where they are drawn, the same primitives from the same
+        # stream as process() draws them, into a field that is -1 where nothing is drawn
+        cover = np.full((h, w, 3), -1.0, np.float32)
+        rng = np.random.default_rng(712)
+        for px, py, rate in rng.random((80, 3)):
+            a = int((px + (local * 0.02 if effect == "rain" else 0)) % 1 * w)
+            b = int((py + local * (rate + 0.2) * 0.25) % 1 * h)
+            if effect == "rain":
+                cv2.line(cover, (a, b), (a - 3, b + max(4, h // 50)), (0.7, 0.8, 0.9), 1)
+            else:
+                cv2.circle(cover, (a, b), max(1, w // 400), (0.8, 0.75, 0.6), -1)
+        return ones, cover, 4
     if effect == "snowfall":
         # mode 3: rgb * 0.88 + 0.07, then the flakes cover; the cover field is -1 where nothing is drawn
         cover = np.full((h, w, 3), -1.0, np.float32)
@@ -550,15 +576,7 @@ def process(rgb: np.ndarray, effect: str, local: float, params: dict) -> np.ndar
     if effect == "pop-art-grid":
         half = cv2.resize(rgb.astype(np.float32), (max(1, w // 2), max(1, h // 2)), interpolation=cv2.INTER_AREA)
         level = np.clip(np.floor(cv2.cvtColor(half, cv2.COLOR_RGB2GRAY) * 3), 0, 2).astype(np.int64)
-        palettes = np.array(
-            [
-                [[0.10, 0.05, 0.35], [0.95, 0.20, 0.55], [1.00, 0.90, 0.20]],
-                [[0.05, 0.25, 0.30], [0.10, 0.75, 0.70], [1.00, 0.60, 0.15]],
-                [[0.30, 0.02, 0.05], [0.95, 0.35, 0.10], [0.98, 0.95, 0.60]],
-                [[0.02, 0.10, 0.30], [0.35, 0.45, 0.95], [0.70, 1.00, 0.40]],
-            ],
-            np.float32,
-        )
+        palettes = POP_ART_PALETTES
         grid = np.vstack([np.hstack([palettes[0][level], palettes[1][level]]), np.hstack([palettes[2][level], palettes[3][level]])])
         return cv2.resize(grid, (w, h), interpolation=cv2.INTER_NEAREST)
     if effect == "stained-glass":
@@ -758,6 +776,10 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
         # while their sliders showed 9, 14, 10 and 8).
         settings = {**EFFECT_DEFAULTS.get(entry["id"], {}), **(entry.get("params") or {})}
         changed = process(result[:, :, :3], entry["id"], local, clamp_params(settings))
+        if np.shares_memory(changed, result):
+            # an effect with nothing to do hands its input back; blended in place below it would scale the
+            # picture by amount * (2 - amount), 16 percent darker at 0.6, where the device leaves it as it was
+            changed = changed.copy()
         if amount >= 1:
             # The common case. The blend below reduces to `changed` here, but
             # spent two full-frame multiplies and an add to arrive at it.

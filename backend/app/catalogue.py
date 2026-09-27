@@ -1,3 +1,4 @@
+import contextlib
 import hashlib
 import json
 import sys
@@ -568,6 +569,12 @@ def clamp_params(params: dict) -> dict:
     """Incoming parameter values held to their declared ranges; unknown keys dropped."""
     out = {}
     for key, value in (params or {}).items():
+        if key in ("refMean", "refStd") and isinstance(value, (list, tuple)) and len(value) == 3:
+            # colour-match's reference, three numbers a channel measured from the frame the user picked; dropped
+            # as "not a number" it left the effect doing nothing on either path
+            with contextlib.suppress(TypeError, ValueError):
+                out[key] = [min(1.0, max(0.0, float(v))) for v in value]
+            continue
         spec = PARAM_SPECS.get(key)
         if spec is None or not isinstance(value, (int, float)):
             continue
