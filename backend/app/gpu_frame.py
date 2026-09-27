@@ -75,6 +75,14 @@ def status() -> dict:
             # the reference executor in Python, the Rust one's semantics exactly: for verifying the recorder
             _status = {"available": True, "adapter": PyFrame(4 * 4 * 16, 2).adapter() + " (python reference executor)"}
             return _status
+        if os.environ.get("FORMCUT_FRAME_GL") != "1":
+            # On OpenGL even opening the executor's device beside the Python one can abort the process at exit
+            # (seen on llvmpipe), so an OpenGL machine is told apart by the Python device's own adapter first.
+            from . import gpu
+
+            described = str(gpu.status().get("adapter", {})).lower()
+            if "opengl" in described or "'gl'" in described:
+                raise RuntimeError("the Rust executor is not used on OpenGL")
         import formcut_native
 
         probe = formcut_native.GpuFrame(4 * 4 * 16, 2)
@@ -223,14 +231,15 @@ class Recorder:
     def download16(self, buffer, height: int, width: int) -> np.ndarray:
         return np.round(np.clip(self.download(buffer, height, width), 0, 1) * 65535).astype(np.uint16)
 
-    def compose(self, canvas: np.ndarray, layers: list, transfer: int, yuv: bool) -> np.ndarray:
+    def compose(self, canvas: np.ndarray, layers: list, transfer: int, yuv: bool, blank: bool = False) -> np.ndarray:
         """Blend the staged layers over the canvas, in light, and pack the frame: the compositor's job."""
         from .gpu import MODES
 
         h, w = canvas.shape[:2]
         deep = canvas.dtype == np.uint16
         # a blank canvas is neither uploaded nor cleared: the first blend is told the base is zero and reads nothing
-        blank = not canvas.any()
+        # the renderer knows a canvas it has not painted (its colour is zero, whatever its alpha); otherwise look
+        blank = blank or not canvas.any()
         if not blank:
             self.upload(CANVAS_A, canvas)
         elif not layers:

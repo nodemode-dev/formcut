@@ -12,6 +12,7 @@ compositor (gpu.stack_active), so a software adapter never carries it.
 
 import math
 import os
+import re
 import threading
 
 import cv2
@@ -105,7 +106,7 @@ POINT_MODES = {
     "anaglyph": 12,
     "fog": 13,
 }
-PARAM_FLOATS = 32
+PARAM_FLOATS = 128  # room for a fused chain's parameters, each pass's block after the last
 
 HEADER = """
 @group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
@@ -2389,6 +2390,175 @@ class _Chain:
             self._pass(POINT_CODE, [POINT_MODES[effect]])
 
 
+# Fusion (R27). A layer's effect chain is a run of passes, each reading and writing a whole frame; most of
+# the common ones (a grade, the amount's mix, the rounding) read and write only their own pixel. A chain
+# whose every step is such a pass (or the hold the amount's mix needs) runs as one kernel: each pass becomes
+# a function of the pixel, called in order, with the same float arithmetic, so the result is the same to the
+# bit and the frame is read and written once instead of once a pass. Anything else runs as it did.
+_PROLOGUE = [
+    "let w = i32(p[0]);",
+    "let h = i32(p[1]);",
+    "let x = i32(id.x);",
+    "let y = i32(id.y);",
+    "if (x >= w || y >= h) { return; }",
+    "let i = y * w + x;",
+]
+_pointwise_seen: dict = {}
+
+
+def _pointwise(code: str):
+    """A kernel as (helpers, body, final value, highest parameter index) when it touches only its own pixel."""
+    if code in _pointwise_seen:
+        return _pointwise_seen[code]
+    parsed = None
+    if not code.lstrip().startswith("@group") and code.count("fn main(") == 1:
+        head, rest = code.split("fn main(", 1)
+        head = re.sub(r"@compute\s*@workgroup_size\([^)]*\)", "", head).strip()
+        body = rest[rest.index("{") + 1 : rest.rstrip().rfind("}")]
+        lines = [line.strip() for line in body.strip().splitlines() if line.strip()]
+        if len(lines) > 6 and lines[:6] == _PROLOGUE and lines[-1].startswith("dst[i] = ") and lines[-1].endswith(";"):
+            middle, final = "\n".join(lines[6:-1]), lines[-1][len("dst[i] = ") : -1]
+            text = middle + "\n" + final
+            rest_text = text.replace("src[i]", "").replace("held[i]", "")
+            banned = ("src[", "held[", "dst[", "aux[", "return", "workgroup", "atomic", "arrayLength")
+            head_banned = ("src[", "held[", "dst[", "aux[", "p[", "workgroup", "atomic")
+            indices = [int(n) for n in re.findall(r"\bp\[(\d+)\]", text)]
+            loose_p = "p[" in re.sub(r"\bp\[\d+\]", "", text)
+            if not any(b in rest_text for b in banned) and not any(b in head for b in head_banned) and not loose_p:
+                parsed = (head, middle, final, max(indices, default=1))
+    _pointwise_seen[code] = parsed
+    return parsed
+
+
+def _fused_source(plan: list) -> str | None:
+    """One kernel for a plan of ("hold",) and ("pass", code, block) steps."""
+    helpers: list[str] = []
+    names: dict[str, str] = {}
+    functions: list[str] = []
+    calls: list[str] = []
+    base, held_set, needs_held = 2, False, False
+    for k, step in enumerate(plan):
+        if step[0] == "hold":
+            calls.append("fz_held = fz;")
+            held_set = True
+            continue
+        head, middle, final, _top = _pointwise(step[1])
+        if head and head not in helpers:
+            for name in re.findall(r"\bfn\s+(\w+)\s*\(", head):
+                if names.setdefault(name, head) != head:
+                    return None  # two kernels define the same helper differently
+            helpers.append(head)
+
+        def rebase(match, base=base):
+            n = int(match.group(1))
+            return f"p[{n}]" if n < 2 else f"p[{base + n - 2}]"
+
+        middle_k = re.sub(r"\bp\[(\d+)\]", rebase, middle).replace("src[i]", "fz_in").replace("held[i]", "fz_held")
+        final_k = re.sub(r"\bp\[(\d+)\]", rebase, final).replace("src[i]", "fz_in").replace("held[i]", "fz_held")
+        if "held[i]" in middle or "held[i]" in final:
+            needs_held = needs_held or not held_set
+        functions.append(
+            f"fn fz_step{k}(fz_in: vec4<f32>, fz_held: vec4<f32>, w: i32, h: i32, x: i32, y: i32, i: i32) -> vec4<f32> {{\n"
+            f"{middle_k}\nreturn {final_k};\n}}"
+        )
+        calls.append(f"fz = fz_step{k}(fz, fz_held, w, h, x, y, i);")
+        base += step[2]
+    main = (
+        "@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) {\n    "
+        + "\n    ".join(_PROLOGUE)
+        + "\n    var fz = src[i];\n    var fz_held = "
+        + ("held[i]" if needs_held else "vec4<f32>(0.0)")
+        + ";\n    "
+        + "\n    ".join(calls)
+        + "\n    dst[i] = fz;\n}\n"
+    )
+    return "\n".join(helpers) + "\n" + "\n".join(functions) + "\n" + main
+
+
+class _Capture:
+    """Stands in for a context while a chain is recorded for fusion: run, copy and upload are kept in order,
+    the working buffers and the aux size can be read; anything else runs what was kept and hands over."""
+
+    SAFE = ("buffers", "aux_size", "width", "height", "count", "header")
+
+    def __init__(self, real):
+        self.__dict__.update(real=real, ops=[], live=False)
+
+    def __getattr__(self, name):
+        real = self.__dict__["real"]
+        if self.__dict__["live"] or name in _Capture.SAFE:
+            return getattr(real, name)
+        if name in ("run", "copy", "upload"):
+            ops = self.__dict__["ops"]
+            return lambda *a, **k: ops.append((name, a, k))
+        self.replay()
+        self.__dict__["live"] = True
+        return getattr(real, name)
+
+    def replay(self):
+        real = self.__dict__["real"]
+        for name, a, k in self.__dict__["ops"]:
+            getattr(real, name)(*a, **k)
+        self.__dict__["ops"] = []
+
+
+def _fusion_plan(ops: list, real, start: int, w: int, h: int):
+    buffers = list(real.buffers)
+    current, plan, params = buffers[start], [], [w, h]
+    for name, a, k in ops:
+        if name == "copy":
+            if a[0] is current and a[1] is buffers[2]:
+                plan.append(("hold",))
+                continue
+            return None
+        if name != "run":
+            return None
+        code, src, dst, given = a[0], a[1], a[2], list(a[3])
+        aux = a[4] if len(a) > 4 else k.get("aux")
+        size = (a[5] if len(a) > 5 else k.get("width"), a[6] if len(a) > 6 else k.get("height"))
+        if aux is not None or src is not current or dst is src or not (dst is buffers[0] or dst is buffers[1]) or size != (w, h):
+            return None
+        parsed = _pointwise(code)
+        if parsed is None:
+            return None
+        block = max(len(given) - 2, parsed[3] - 1)
+        params += given[2:] + [0.0] * (block - (len(given) - 2))
+        plan.append(("pass", code, block))
+        current = dst
+    if sum(1 for step in plan if step[0] == "pass") < 2 or len(params) > PARAM_FLOATS:
+        return None
+    source = _fused_source(plan)
+    return None if source is None else (source, params)
+
+
+def _fused(chain: "_Chain", body) -> None:
+    """Run body's passes on the chain as one kernel when they are all pointwise; otherwise as they came."""
+    if os.environ.get("FORMCUT_FUSE") == "0" or chain.current not in (0, 1):
+        body()
+        return
+    real, start = chain.c, chain.current
+    capture = _Capture(real)
+    chain.c = capture
+    try:
+        body()
+    finally:
+        chain.c = real
+    if capture.live:
+        return  # something needed the device mid-chain; everything already ran in order
+    plan = _fusion_plan(capture.ops, real, start, chain.w, chain.h)
+    if plan is None:
+        capture.replay()  # the chain's own bookkeeping already follows the passes as they came
+        return
+    source, params = plan
+    out = 1 - start
+    real.run(source, real.buffers[start], real.buffers[out], params, None, chain.w, chain.h)
+    chain.current = out
+    FUSED[0] += 1
+
+
+FUSED = [0]  # chains run as one kernel, for the tests and the bench
+
+
 def _run_chain(chain: _Chain, effects: list[dict], local: float) -> None:
     for entry in effects:
         amount = max(0.0, min(1.0, float(entry.get("amount", 1))))
@@ -2455,9 +2625,13 @@ def effects_and_warp(
             chain = _Chain(context, h, w)
             context.upload(context.buffers[0], image)
             if effects:
-                _run_chain(chain, effects, local)
-                # The CPU rounds to uint8 here; so does the device.
-                chain._pass(QUANTISE_CODE, [])
+
+                def chain_and_round():
+                    _run_chain(chain, effects, local)
+                    # The CPU rounds to uint8 here; so does the device.
+                    chain._pass(QUANTISE_CODE, [])
+
+                _fused(chain, chain_and_round)
             if lut is not None:
                 table, low, high, intensity = lut
                 n = len(table)

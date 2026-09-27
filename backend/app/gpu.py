@@ -591,7 +591,7 @@ def stage_layer(layer: DeviceLayer, height: int, width: int) -> int | None:
 TRANSFERS = {"srgb": 0, "bt709": 0, "pq": 1, "smpte2084": 1, "hlg": 2, "arib-std-b67": 2}
 
 
-def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False) -> np.ndarray:
+def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False, blank: bool = False) -> np.ndarray:
     global _last_light, _stack_fuse
     from . import gpu_frame
 
@@ -601,7 +601,7 @@ def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yu
 
         try:
             recorder = _context(canvas.shape[0], canvas.shape[1])
-            out = recorder.compose(canvas, layers, TRANSFERS.get(transfer.lower(), 0), yuv)
+            out = recorder.compose(canvas, layers, TRANSFERS.get(transfer.lower(), 0), yuv, blank)
             if yuv:
                 _last_light = (int(recorder.light[0]), float(recorder.light[1]))
             return out

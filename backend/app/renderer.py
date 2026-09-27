@@ -1206,7 +1206,11 @@ class FrameRenderer:
     def _flush(self, canvas: np.ndarray) -> np.ndarray:
         if self.pending_layers:
             canvas = gpu.composite_stack(
-                canvas, self.pending_layers, transfer=self.transfer, yuv=self._want_planes if self._final_flush else False
+                canvas,
+                self.pending_layers,
+                transfer=self.transfer,
+                yuv=self._want_planes if self._final_flush else False,
+                blank=canvas is getattr(self, "_fresh_canvas", None),
             )
             self.pending_layers = []
         return canvas
@@ -1217,6 +1221,8 @@ class FrameRenderer:
         # T3: what shows behind footage that does not fill the frame. Black is
         # the default, so a project without a background renders as before.
         canvas = self.paint_background(canvas, time)
+        # nothing painted: the compositor may take the base as zero light without reading it
+        self._fresh_canvas = canvas if not self.project.get("background") else None
         for clip in sorted(self.clips, key=lambda c: (-c["trackIndex"], c["start"])):
             local = time - clip["start"]
             if clip.get("trackHidden") or clip["kind"] == "audio" or local < 0 or local >= clip["duration"] + clip.get("extendOut", 0):

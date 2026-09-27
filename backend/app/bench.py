@@ -319,6 +319,10 @@ def _run(doc: dict, width: int, frames: int, path: str):
     start = min(max(1.0, first), max(0.0, doc["duration"] - frames / fps))
     times = [start + i / fps for i in range(frames)]
     renderer.frame(times[0])  # warm: sessions, decoders, pipelines
+    from . import gpu_frame as _warm_frame
+
+    if _warm_frame._frame is not None and hasattr(_warm_frame._frame[1], "timings"):
+        _warm_frame._frame[1].timings()  # the warm frame compiles kernels; it is not a frame's cost
     began = time.perf_counter()
     out = [renderer.frame(t) for t in times]
     took = time.perf_counter() - began
