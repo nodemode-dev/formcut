@@ -29,10 +29,27 @@ CANVAS_A = WORKING + POOL
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
 # The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
-API = 2
+API = 3
 # Shared by every Recorder: one executor, its kernels by source, the pool of staged layers, the steps pending
 _kernels: dict[str, int] = {}
-_shared = {"pool": 0, "pending": 0}
+_shared = {"pending": 0}
+# The working pictures by slot (the engine's context.buffers[0..4]) and the free pictures. Staging a layer
+# renames its picture out of the working set and gives the slot a free one, so a finished layer is never
+# copied; the staged pictures come back to the free list when the frame is composed.
+_working: list[int] = list(range(WORKING))
+_free: list[int] = list(range(WORKING, WORKING + POOL))
+_staged: list[int] = []
+
+
+def _reset_pictures() -> None:
+    _working[:] = list(range(WORKING))
+    _free[:] = list(range(WORKING, WORKING + POOL))
+    _staged.clear()
+
+
+def _u8(array: np.ndarray) -> np.ndarray:
+    """A picture or a field as the contiguous uint8 view the executor reads in place."""
+    return np.ascontiguousarray(array).view(np.uint8).reshape(-1)
 
 
 def available() -> bool:
@@ -59,7 +76,7 @@ def status() -> dict:
         if api < API:
             raise RuntimeError(f"formcut_native is an older build (api {api}, this engine wants {API}); run setup/build_native_gpu")
         name = probe.adapter()
-        if "(Gl)" in name:
+        if "(Gl)" in name and os.environ.get("FORMCUT_FRAME_GL") != "1":
             # On OpenGL the executor's context and the Python device's context are both bound to the thread
             # through EGL, and the two libraries in one process abort each other (seen on llvmpipe). Metal,
             # Vulkan and DX12 have no thread-bound context; OpenGL keeps the Python path.
@@ -87,7 +104,7 @@ def executor(height: int, width: int):
             made = formcut_native.GpuFrame(need, PICTURES)
         _frame = (need, made)
         _kernels.clear()
-        _shared["pool"] = 0
+        _reset_pictures()
     return _frame[1]
 
 
@@ -101,13 +118,16 @@ class Recorder:
         self.h, self.w = height, width
         self.header = HEADER
         executor(height, width)
-        self.buffers = list(range(WORKING))
         self.aux_size = 1 << 40  # anything fits: each pass carries its own aux buffer
         self.light = (0, 0.0)  # after a planar compose: the brightest sixteen-bit code and the mean light in nits
 
     @property
     def frame(self):
         return _frame[1]
+
+    @property
+    def buffers(self) -> list[int]:
+        return _working
 
     def kernel(self, code: str) -> int:
         full = code if code.lstrip().startswith("@group") else self.header + code
@@ -131,8 +151,8 @@ class Recorder:
     def run(self, code: str, src, dst, params: list, aux: np.ndarray | None = None, width: int | None = None, height: int | None = None):
         w, h = int(width or self.w), int(height or self.h)
         # every run in the engine passes [w, h, ...] with w and h the dispatch size; the executor prepends them
-        aux_bytes = None if aux is None else np.ascontiguousarray(np.asarray(aux, dtype=np.float32)).tobytes()
-        self._step(self.kernel(code), int(src), int(dst), 2, w, h, [float(v) for v in params[2:]], aux_bytes)
+        field = None if aux is None else _u8(np.asarray(aux, dtype=np.float32))
+        self._step(self.kernel(code), int(src), int(dst), _working[2], w, h, [float(v) for v in params[2:]], field)
 
     def upload(self, buffer, image: np.ndarray):
         image = np.asarray(image)
@@ -145,7 +165,7 @@ class Recorder:
         if image.shape[2] == 3:
             full = 65535 if image.dtype == np.uint16 else 255
             image = np.concatenate([image, np.full((h, w, 1), full, image.dtype)], axis=2)
-        self.frame.upload(int(buffer), int(w), int(h), image.dtype == np.uint16, np.ascontiguousarray(image).tobytes())
+        self.frame.upload(int(buffer), int(w), int(h), image.dtype == np.uint16, _u8(image))
         _shared["pending"] += 1
 
     def copy(self, source, target, height: int, width: int):
@@ -153,13 +173,14 @@ class Recorder:
         _shared["pending"] += 1
 
     def stage(self, picture: int, height: int, width: int) -> int | None:
-        """A finished layer copied into the pool; its pool index is the layer's handle for the blend."""
-        if _shared["pool"] >= POOL:
+        """A finished layer handed to the blend by renaming: its picture leaves the working set and the slot takes
+        a free one, so nothing is copied; the picture is the layer's handle until the frame is composed."""
+        picture = int(picture)
+        if not _free or picture not in _working:
             return None
-        index = WORKING + _shared["pool"]
-        _shared["pool"] += 1
-        self.copy(picture, index, height, width)
-        return index
+        _working[_working.index(picture)] = _free.pop()
+        _staged.append(picture)
+        return picture
 
     def download(self, buffer, height: int, width: int) -> np.ndarray:
         """A working picture's floats, exactly (a CPU-only effect mid-chain): runs what is recorded so far."""
@@ -175,15 +196,18 @@ class Recorder:
 
         h, w = canvas.shape[:2]
         deep = canvas.dtype == np.uint16
-        self.upload(CANVAS_A, canvas)
+        if canvas.any():
+            self.upload(CANVAS_A, canvas)
+        else:
+            self.frame.clear(CANVAS_A, w * h * 16)  # a blank canvas: zeros on the device instead of zeros uploaded
         base, other = CANVAS_A, CANVAS_B
         blend = self.kernel(BLEND_FRAME_CODE)
         for layer, mode in layers:
             if isinstance(layer, (int, np.integer)):
                 front = int(layer)
             else:
-                self.upload(0, layer)
-                front = 0
+                self.upload(_working[0], layer)
+                front = _working[0]
             index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
             self._step(blend, base, other, front, w, h, [float(index), float(transfer)], None)
             base, other = other, base
@@ -196,7 +220,8 @@ class Recorder:
         else:
             self.frame.download(base, self.kernel(PACK16_FRAME_CODE if deep else PACK_FRAME_CODE), w, h, w * h * (8 if deep else 4))
         data = self._run()
-        _shared["pool"] = 0
+        _free.extend(_staged)
+        _staged.clear()
         if planar:
             # the light the pack measured, one (brightest code, light sum) pair a workgroup
             tail = np.frombuffer(data, np.uint32, offset=planes, count=groups * 2).reshape(groups, 2)
@@ -429,6 +454,12 @@ class PyFrame:
     def copy(self, source, target, width, height):
         self.steps.append(("copy", source, target, width, height))
 
+    def clear(self, picture, nbytes):
+        self.steps.append(("clear", picture, nbytes))
+
+    def timings(self):
+        return (0.0, 0.0, 0.0)
+
     def download(self, picture, code, width, height, out_bytes):
         self.steps.append(("download", picture, code, width, height, out_bytes))
 
@@ -467,15 +498,18 @@ class PyFrame:
             kind = item[0]
             if kind == "upload":
                 _, picture, width, height, deep, data = item
-                other = (picture + 1) % len(self.pictures)
+                other = 1 if picture == 0 else 0
                 staging = self._buffer(data)
                 bindings = [self.pictures[other], self.pictures[picture], self._params([width, height]), staging, self.pictures[other]]
                 self._dispatch(encoder, unpack16_code if deep else unpack_code, bindings, width, height)
             elif kind == "pass":
                 _, code, src, dst, held, width, height, params, aux = item
-                aux_buffer = self._buffer(aux or bytes(16))
+                aux_buffer = self._buffer(bytes(aux) if aux is not None else bytes(16))
                 bindings = [self.pictures[src], self.pictures[dst], self._params([width, height, *params]), aux_buffer, self.pictures[held]]
                 self._dispatch(encoder, code, bindings, width, height)
+            elif kind == "clear":
+                _, picture, nbytes = item
+                encoder.clear_buffer(self.pictures[picture], 0, (nbytes + 3) // 4 * 4)
             elif kind == "copy":
                 _, source, target, width, height = item
                 encoder.copy_buffer_to_buffer(self.pictures[source], 0, self.pictures[target], 0, width * height * 16)

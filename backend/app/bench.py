@@ -384,6 +384,11 @@ def main(argv: list[str] | None = None) -> int:
     dev_fps, dev_frames, resident = _run(doc, args.width, args.frames, "gpu")
     if args.profile:
         profiler.disable()
+        from . import gpu_frame as _frame_path
+
+        if _frame_path.available() and _frame_path._frame is not None:
+            record, wait, copy_out = _frame_path._frame[1].timings()
+            print(f"executor a frame: record and submit {record:.2f} ms, device {wait:.2f} ms, copy out {copy_out:.2f} ms")
         # what the sources really were: the decoder class, whether it ran deep and what dtype its frames had
         from .video_source import _hw_choice
 

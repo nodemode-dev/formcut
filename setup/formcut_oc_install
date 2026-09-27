@@ -21,6 +21,29 @@ echo ">> Setting up the engine..."
 chmod +x backend/oc_install backend/boot_backend 2>/dev/null || true
 (cd backend && ./oc_install)
 
+# The Rust frame path (formcut_native with the gpu feature): built into backend/venv when a Rust toolchain
+# is here, and rebuilt only when its sources change (a checksum of them, kept in the venv). Without cargo the
+# engine runs its Python frame path, which is the same picture, slower.
+NATIVE_SUM="$(cat backend/native/Cargo.toml backend/native/Cargo.lock backend/native/src/*.rs 2>/dev/null | cksum | cut -d' ' -f1)"
+NATIVE_STAMP="backend/venv/.formcut_native_stamp"
+if command -v cargo >/dev/null 2>&1 || [ -x "$HOME/.cargo/bin/cargo" ]; then
+  PATH="$HOME/.cargo/bin:$PATH"
+  export PATH
+  if [ "$(cat "$NATIVE_STAMP" 2>/dev/null)" != "$NATIVE_SUM" ]; then
+    echo ""
+    echo ">> Building the Rust frame path (formcut_native)..."
+    chmod +x setup/build_native_gpu 2>/dev/null || true
+    if setup/build_native_gpu; then
+      echo "$NATIVE_SUM" > "$NATIVE_STAMP"
+    else
+      echo ">> The Rust frame path did not build; the engine runs its Python frame path. Output above."
+    fi
+  fi
+else
+  echo ""
+  echo ">> No Rust toolchain (https://rustup.rs): the engine runs its Python frame path."
+fi
+
 echo ""
 echo ">> Setting up the interface..."
 chmod +x frontend/oc_install frontend/boot_frontend 2>/dev/null || true

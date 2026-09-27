@@ -16,21 +16,50 @@
 //! with a GPU (`maturin develop --release --features gpu` in backend/native), and the parity check that
 //! follows it is the one every pass has passed: the device against the CPU, within a count.
 
+use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use std::collections::HashMap;
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 // The executor's API as the engine checks it: 2 takes bytes and returns bytes, and stages uploads and aux on
 // the device as they are recorded (1, the first build, moved every byte through a Python list).
-const API: u32 = 2;
+// 3: buffers come from pools that live across frames (the M5 showed per-frame allocation costing more than
+// the passes), pictures can be cleared on the device, input is read from the caller's memory (numpy or
+// bytes) without a copy on the Python side, and each run's time is split for the bench.
+const API: u32 = 3;
+
+/// Storage buffers by size class, reused frame after frame: taken for a run, given back when it ends.
+struct Pool {
+    free: HashMap<u64, Vec<wgpu::Buffer>>,
+}
+
+impl Pool {
+    fn take(&mut self, device: &wgpu::Device, size: u64) -> wgpu::Buffer {
+        let class = size.max(256).next_power_of_two();
+        if let Some(buffer) = self.free.get_mut(&class).and_then(|list| list.pop()) {
+            return buffer;
+        }
+        device.create_buffer(&wgpu::BufferDescriptor { label: Some("pooled"), size: class, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false })
+    }
+
+    fn give(&mut self, buffer: wgpu::Buffer) {
+        self.free.entry(buffer.size()).or_default().push(buffer);
+    }
+}
+
+/// The caller's memory as bytes, read in place: a contiguous one-dimensional uint8 numpy array (the engine
+/// passes its pictures as uint8 views). The buffer protocol is not in the abi3 API this module is built for.
+fn bytes_of<'a>(array: &'a PyReadonlyArray1<'_, u8>) -> PyResult<&'a [u8]> {
+    array.as_slice().map_err(|_| PyRuntimeError::new_err("the array must be contiguous"))
+}
 
 enum Step {
     Upload { picture: usize, width: u32, height: u32, deep: bool, staging: wgpu::Buffer },
     Pass { code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<wgpu::Buffer> },
     Copy { from: usize, to: usize, width: u32, height: u32 },
+    Clear { picture: usize, bytes: u64 },
     Download { picture: usize, code: usize, width: u32, height: u32, out_bytes: u64 },
 }
 
@@ -46,6 +75,13 @@ pub struct GpuFrame {
     pictures: Vec<wgpu::Buffer>,
     steps: Vec<Step>,
     adapter_name: String,
+    pool: Pool,
+    // the readback pair, kept and grown rather than made every frame
+    packed: Option<wgpu::Buffer>,
+    read: Option<wgpu::Buffer>,
+    // milliseconds summed over runs: recording and submitting, waiting for the device, copying the frame out
+    spent: [f64; 3],
+    runs: u32,
 }
 
 #[pymethods]
@@ -91,7 +127,21 @@ impl GpuFrame {
         let pictures = (0..pictures)
             .map(|i| device.create_buffer(&wgpu::BufferDescriptor { label: Some(&format!("picture {i}")), size: picture_bytes, usage, mapped_at_creation: false }))
             .collect();
-        Ok(Self { device, queue, layout, pipelines: HashMap::new(), sources: Vec::new(), pictures, steps: Vec::new(), adapter_name })
+        Ok(Self {
+            device,
+            queue,
+            layout,
+            pipelines: HashMap::new(),
+            sources: Vec::new(),
+            pictures,
+            steps: Vec::new(),
+            adapter_name,
+            pool: Pool { free: HashMap::new() },
+            packed: None,
+            read: None,
+            spent: [0.0; 3],
+            runs: 0,
+        })
     }
 
     fn adapter(&self) -> String {
@@ -111,18 +161,44 @@ impl GpuFrame {
         self.sources.len() - 1
     }
 
+    /// Averages since the last call, in milliseconds: (recording and submitting, waiting for the device, the copy out).
+    fn timings(&mut self) -> (f64, f64, f64) {
+        let n = self.runs.max(1) as f64;
+        let out = (self.spent[0] / n, self.spent[1] / n, self.spent[2] / n);
+        self.spent = [0.0; 3];
+        self.runs = 0;
+        out
+    }
+
     /// Stage a picture's bytes (RGBA8, or RGBA16 when `deep`) on the device now; the unpack runs with the frame.
-    fn upload(&mut self, picture: usize, width: u32, height: u32, deep: bool, bytes: &[u8]) {
-        let staging = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("upload"), contents: bytes, usage: wgpu::BufferUsages::STORAGE });
+    fn upload(&mut self, picture: usize, width: u32, height: u32, deep: bool, data: PyReadonlyArray1<'_, u8>) -> PyResult<()> {
+        let bytes = bytes_of(&data)?;
+        let staging = self.pool.take(&self.device, bytes.len() as u64);
+        self.queue.write_buffer(&staging, 0, &bytes[..bytes.len() / 4 * 4]);
         self.steps.push(Step::Upload { picture, width, height, deep, staging });
+        Ok(())
+    }
+
+    /// Fill a picture with zeros on the device (a blank canvas), instead of uploading zeros.
+    fn clear(&mut self, picture: usize, bytes: u64) {
+        self.steps.push(Step::Clear { picture, bytes });
     }
 
     /// One pass: `pass` is a Python keyword, so the method is `step` on the Python side.
     #[pyo3(name = "step", signature = (code, src, dst, held, width, height, params, aux=None))]
     #[allow(clippy::too_many_arguments)]
-    fn pass(&mut self, code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<&[u8]>) {
-        let aux = aux.map(|bytes| self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("aux"), contents: bytes, usage: wgpu::BufferUsages::STORAGE }));
+    fn pass(&mut self, code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<PyReadonlyArray1<'_, u8>>) -> PyResult<()> {
+        let aux = match aux {
+            Some(data) => {
+                let bytes = bytes_of(&data)?;
+                let buffer = self.pool.take(&self.device, bytes.len().max(16) as u64);
+                self.queue.write_buffer(&buffer, 0, &bytes[..bytes.len() / 4 * 4]);
+                Some(buffer)
+            }
+            None => None,
+        };
         self.steps.push(Step::Pass { code, src, dst, held, width, height, params, aux });
+        Ok(())
     }
 
     fn copy(&mut self, from: usize, to: usize, width: u32, height: u32) {
@@ -135,44 +211,51 @@ impl GpuFrame {
 
     /// Record every step into one command buffer, submit once, read the frame back once.
     fn run(&mut self, py: Python<'_>, unpack_code: usize, unpack16_code: usize) -> PyResult<Py<PyBytes>> {
+        let started = std::time::Instant::now();
         let steps = std::mem::take(&mut self.steps);
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("formcut frame") });
-        let mut readback: Option<(wgpu::Buffer, u64)> = None;
-        // every pass gets its own parameter and aux buffers for this frame, so nothing is overwritten before the device reads it
-        let mut scratch: Vec<wgpu::Buffer> = Vec::new();
+        let mut readback: Option<u64> = None;
+        // pooled buffers this frame used, given back once the device is done with them
+        let mut used: Vec<wgpu::Buffer> = Vec::new();
         for step in steps {
             match step {
                 Step::Upload { picture, width, height, deep, staging } => {
                     let params = self.params_buffer(&[width as f32, height as f32]);
-                    let other = (picture + 1) % self.pictures.len();
+                    let other = if picture == 0 { 1 } else { 0 };
                     let pipeline = self.pipeline(if deep { unpack16_code } else { unpack_code })?;
                     let group = self.group(other, picture, &params, &staging, other);
                     self.dispatch(&mut encoder, &pipeline, &group, width, height);
-                    scratch.push(staging);
-                    scratch.push(params);
+                    used.push(staging);
+                    used.push(params);
                 }
                 Step::Pass { code, src, dst, held, width, height, params, aux } => {
                     let mut p = vec![width as f32, height as f32];
                     p.extend(params);
                     let params = self.params_buffer(&p);
-                    let aux = match aux {
-                        Some(buffer) => buffer,
-                        None => self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("aux"), contents: &[0u8; 16], usage: wgpu::BufferUsages::STORAGE }),
-                    };
+                    // no aux given: any pooled buffer serves, as the Python context's aux holds whatever it last held
+                    let aux = aux.unwrap_or_else(|| self.pool.take(&self.device, 256));
                     let pipeline = self.pipeline(code)?;
                     let group = self.group(src, dst, &params, &aux, held);
                     self.dispatch(&mut encoder, &pipeline, &group, width, height);
-                    scratch.push(params);
-                    scratch.push(aux);
+                    used.push(params);
+                    used.push(aux);
                 }
                 Step::Copy { from, to, width, height } => {
                     encoder.copy_buffer_to_buffer(&self.pictures[from], 0, &self.pictures[to], 0, (width as u64) * (height as u64) * 16);
                 }
+                Step::Clear { picture, bytes } => {
+                    encoder.clear_buffer(&self.pictures[picture], 0, Some(bytes.div_ceil(4) * 4));
+                }
                 Step::Download { picture, code, width, height, out_bytes } => {
                     let size = out_bytes.max(16).div_ceil(4) * 4;
-                    let packed = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("packed"), size, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
+                    if self.packed.as_ref().map_or(true, |b| b.size() < size) {
+                        let grown = size.next_power_of_two();
+                        self.packed = Some(self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("packed"), size: grown, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false }));
+                        self.read = Some(self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("read"), size: grown, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false }));
+                    }
                     let params = self.params_buffer(&[width as f32, height as f32]);
                     let pipeline = self.pipeline(code)?;
+                    let packed = self.packed.as_ref().expect("packed");
                     let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: None,
                         layout: &self.layout,
@@ -185,44 +268,64 @@ impl GpuFrame {
                         ],
                     });
                     self.dispatch(&mut encoder, &pipeline, &group, width, height);
-                    let read = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("read"), size, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
-                    encoder.copy_buffer_to_buffer(&packed, 0, &read, 0, size);
-                    readback = Some((read, out_bytes));
-                    scratch.push(packed);
-                    scratch.push(params);
+                    encoder.copy_buffer_to_buffer(packed, 0, self.read.as_ref().expect("read"), 0, size);
+                    readback = Some(out_bytes);
+                    used.push(params);
                 }
             }
         }
         self.queue.submit(Some(encoder.finish()));
-        let Some((read, out_bytes)) = readback else { return Ok(PyBytes::new_bound(py, &[]).unbind()) };
-        let slice = read.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
-            let _ = tx.send(r);
-        });
+        let submitted = std::time::Instant::now();
         // the wait for the device lets other Python threads run (the export's pipe writer, the decoder's read-ahead)
         let device = &self.device;
-        py.allow_threads(|| {
-            device.poll(wgpu::Maintain::Wait);
-        });
-        rx.recv().map_err(|_| PyRuntimeError::new_err("readback lost"))?.map_err(|e| PyRuntimeError::new_err(format!("readback: {e:?}")))?;
-        let out = {
-            let mapped = slice.get_mapped_range();
-            PyBytes::new_bound(py, &mapped[..out_bytes as usize]).unbind()
+        let out = match readback {
+            None => {
+                py.allow_threads(|| {
+                    device.poll(wgpu::Maintain::Wait);
+                });
+                PyBytes::new_bound(py, &[]).unbind()
+            }
+            Some(out_bytes) => {
+                let read = self.read.as_ref().expect("read");
+                let slice = read.slice(..);
+                let (tx, rx) = std::sync::mpsc::channel();
+                slice.map_async(wgpu::MapMode::Read, move |r| {
+                    let _ = tx.send(r);
+                });
+                py.allow_threads(|| {
+                    device.poll(wgpu::Maintain::Wait);
+                });
+                rx.recv().map_err(|_| PyRuntimeError::new_err("readback lost"))?.map_err(|e| PyRuntimeError::new_err(format!("readback: {e:?}")))?;
+                let bytes = {
+                    let mapped = slice.get_mapped_range();
+                    PyBytes::new_bound(py, &mapped[..out_bytes as usize]).unbind()
+                };
+                read.unmap();
+                bytes
+            }
         };
-        read.unmap();
-        drop(scratch);
+        let waited = std::time::Instant::now();
+        for buffer in used {
+            self.pool.give(buffer);
+        }
+        let done = std::time::Instant::now();
+        self.spent[0] += (submitted - started).as_secs_f64() * 1000.0;
+        self.spent[1] += (waited - submitted).as_secs_f64() * 1000.0;
+        self.spent[2] += (done - waited).as_secs_f64() * 1000.0;
+        self.runs += 1;
         Ok(out)
     }
 }
 
 impl GpuFrame {
-    fn params_buffer(&self, values: &[f32]) -> wgpu::Buffer {
+    fn params_buffer(&mut self, values: &[f32]) -> wgpu::Buffer {
         let mut padded = values.to_vec();
         while padded.len() < 32 {
             padded.push(0.0);
         }
-        self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("params"), contents: bytemuck::cast_slice(&padded), usage: wgpu::BufferUsages::STORAGE })
+        let buffer = self.pool.take(&self.device, (padded.len() * 4) as u64);
+        self.queue.write_buffer(&buffer, 0, bytemuck::cast_slice(&padded));
+        buffer
     }
 
     fn pipeline(&mut self, code: usize) -> PyResult<Arc<wgpu::ComputePipeline>> {
