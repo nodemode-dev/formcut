@@ -30,7 +30,7 @@ CANVAS_A = WORKING + POOL + CACHE
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
 # The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
-API = 4
+API = 5
 # Shared by every Recorder: one executor, its kernels by source, the pool of staged layers, the steps pending
 _kernels: dict[str, int] = {}
 _shared = {"pending": 0}
@@ -326,6 +326,30 @@ def _blended(pack: str) -> str:
     return code
 
 
+def kernel_name(code: int) -> str:
+    """A kernel id as the bench prints it: what the kernel does, from its source."""
+    from . import gpu_effects
+
+    source = next((src for src, known in _kernels.items() if known == code), "")
+    if "fz_step" in source:
+        steps = source.count("fz = fz_step")
+        head = "a layer's upload, " if "aux_words" in source else ""
+        return f"{head}fused chain ({steps} steps)"
+    if "blend_at(" in source:
+        return "the last blend and the pack" + (" (ten-bit planes)" if "brightest_of" in source else "")
+    for module in (gpu_effects, globals_module()):
+        for name, value in vars(module).items():
+            if name.endswith("_CODE") and isinstance(value, str) and value.strip() and value.strip() in source:
+                return name.removesuffix("_CODE").lower().replace("_", " ")
+    return f"kernel {code}"
+
+
+def globals_module():
+    import sys
+
+    return sys.modules[__name__]
+
+
 def _blend_functions() -> str:
     from .gpu import BLEND_CODE
 
@@ -565,6 +589,9 @@ class PyFrame:
 
     def timings(self):
         return (0.0, 0.0, 0.0)
+
+    def pass_times(self):
+        return []
 
     def download(self, picture, code, width, height, out_bytes, held=None, params=None):
         self.steps.append(("download", picture, code, width, height, out_bytes, picture if held is None else held, list(params or [])))

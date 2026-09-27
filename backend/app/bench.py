@@ -327,6 +327,8 @@ def _run(doc: dict, width: int, frames: int, path: str):
 
     if _warm_frame._frame is not None and hasattr(_warm_frame._frame[1], "timings"):
         _warm_frame._frame[1].timings()  # the warm frame compiles kernels; it is not a frame's cost
+        if hasattr(_warm_frame._frame[1], "pass_times"):
+            _warm_frame._frame[1].pass_times()
     began = time.perf_counter()
     out = [renderer.frame(t) for t in times]
     took = time.perf_counter() - began
@@ -359,6 +361,8 @@ def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("FORMCUT_NO_WARM", "1")
     from . import gpu
 
+    if args.profile:
+        os.environ["FORMCUT_GPU_TIMINGS"] = "1"  # the executor times each pass on the device (read at its creation)
     doc = _hdr_project(args.width, round(args.width * 9 / 16 / 2) * 2) if args.hdr else _load(args.project)
     status = gpu.status()
     from . import gpu_frame
@@ -397,6 +401,13 @@ def main(argv: list[str] | None = None) -> int:
         if _frame_path.available() and _frame_path._frame is not None:
             record, wait, copy_out = _frame_path._frame[1].timings()
             print(f"executor a frame: record and submit {record:.2f} ms, device {wait:.2f} ms, copy out {copy_out:.2f} ms")
+            passes = _frame_path._frame[1].pass_times() if hasattr(_frame_path._frame[1], "pass_times") else []
+            if passes:
+                frames = max(1, args.frames)
+                listed = ", ".join(f"{_frame_path.kernel_name(code)} {ms / frames:.2f} ms" for code, ms, _n in passes[:6])
+                print(f"device time a frame by kernel: {listed}")
+            else:
+                print("device time by kernel: not available (no timestamps on this adapter)")
         # what the sources really were: the decoder class, whether it ran deep and what dtype its frames had
         from .video_source import _hw_choice
 

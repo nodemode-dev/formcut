@@ -21,7 +21,7 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 // The executor's API as the engine checks it: 2 takes bytes and returns bytes, and stages uploads and aux on
 // the device as they are recorded (1, the first build, moved every byte through a Python list).
@@ -30,7 +30,11 @@ use std::sync::Arc;
 // bytes) without a copy on the Python side, and each run's time is split for the bench.
 // 4: a download may bind a second picture as held and carry parameters, so the frame's last blend and its
 // pack run as one kernel.
-const API: u32 = 4;
+// 5: a validation error is kept and returned by the run that met it (it had aborted the process), and with
+// FORMCUT_GPU_TIMINGS=1 each pass is timed on the device (pass_times), so the bench can say which kernel
+// the frame's device time goes to.
+const API: u32 = 5;
+const TIMED_PASSES: u32 = 128;
 
 /// Storage buffers by size class, reused frame after frame: taken for a run, given back when it ends.
 struct Pool {
@@ -84,6 +88,14 @@ pub struct GpuFrame {
     // milliseconds summed over runs: recording and submitting, waiting for the device, copying the frame out
     spent: [f64; 3],
     runs: u32,
+    // device errors kept for the run that met them, instead of wgpu's default handler aborting the process
+    errors: Arc<Mutex<Option<String>>>,
+    // timestamps a pass, when the adapter has them and FORMCUT_GPU_TIMINGS=1: the query set, where it is
+    // resolved and read, the code each timed pass ran this run, and the milliseconds summed per code
+    timing: Option<(wgpu::QuerySet, wgpu::Buffer, wgpu::Buffer, f32)>,
+    timed: Vec<usize>,
+    per_code: HashMap<usize, (f64, u32)>,
+    current_code: usize,
 }
 
 #[pymethods]
@@ -108,7 +120,7 @@ impl GpuFrame {
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label: Some("formcut frame"),
-                required_features: wgpu::Features::empty(),
+                required_features: adapter.features() & wgpu::Features::TIMESTAMP_QUERY,
                 required_limits: limits,
                 memory_hints: Default::default(),
             },
@@ -143,6 +155,29 @@ impl GpuFrame {
             read: None,
             spent: [0.0; 3],
             runs: 0,
+            errors: Arc::new(Mutex::new(None)),
+            timing: None,
+            timed: Vec::new(),
+            per_code: HashMap::new(),
+            current_code: 0,
+        })
+        .map(|mut frame| {
+            let kept = Arc::clone(&frame.errors);
+            frame.device.on_uncaptured_error(Box::new(move |error| {
+                if let Ok(mut slot) = kept.lock() {
+                    slot.get_or_insert_with(|| error.to_string());
+                }
+            }));
+            let wanted = std::env::var("FORMCUT_GPU_TIMINGS").map(|v| v == "1").unwrap_or(false);
+            if wanted && frame.device.features().contains(wgpu::Features::TIMESTAMP_QUERY) {
+                let count = TIMED_PASSES * 2;
+                let set = frame.device.create_query_set(&wgpu::QuerySetDescriptor { label: Some("pass times"), ty: wgpu::QueryType::Timestamp, count });
+                let resolve = frame.device.create_buffer(&wgpu::BufferDescriptor { label: Some("pass times"), size: count as u64 * 8, usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
+                let read = frame.device.create_buffer(&wgpu::BufferDescriptor { label: Some("pass times read"), size: count as u64 * 8, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+                let period = frame.queue.get_timestamp_period();
+                frame.timing = Some((set, resolve, read, period));
+            }
+            frame
         })
     }
 
@@ -164,6 +199,14 @@ impl GpuFrame {
     }
 
     /// Averages since the last call, in milliseconds: (recording and submitting, waiting for the device, the copy out).
+    /// Device milliseconds a pass, summed per kernel since the last call, as (kernel id, milliseconds, passes);
+    /// empty when the adapter has no timestamps or FORMCUT_GPU_TIMINGS is not 1.
+    fn pass_times(&mut self) -> Vec<(usize, f64, u32)> {
+        let mut out: Vec<(usize, f64, u32)> = self.per_code.drain().map(|(code, (ms, n))| (code, ms, n)).collect();
+        out.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        out
+    }
+
     fn timings(&mut self) -> (f64, f64, f64) {
         let n = self.runs.max(1) as f64;
         let out = (self.spent[0] / n, self.spent[1] / n, self.spent[2] / n);
@@ -217,6 +260,7 @@ impl GpuFrame {
     fn run(&mut self, py: Python<'_>, unpack_code: usize, unpack16_code: usize) -> PyResult<Py<PyBytes>> {
         let started = std::time::Instant::now();
         let steps = std::mem::take(&mut self.steps);
+        self.timed.clear();
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("formcut frame") });
         let mut readback: Option<u64> = None;
         // pooled buffers this frame used, given back once the device is done with them
@@ -261,23 +305,30 @@ impl GpuFrame {
                     p.extend(params);
                     let params = self.params_buffer(&p);
                     let pipeline = self.pipeline(code)?;
-                    let packed = self.packed.as_ref().expect("packed");
                     let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: None,
                         layout: &self.layout,
                         entries: &[
                             wgpu::BindGroupEntry { binding: 0, resource: self.pictures[picture].as_entire_binding() },
-                            wgpu::BindGroupEntry { binding: 1, resource: packed.as_entire_binding() },
+                            wgpu::BindGroupEntry { binding: 1, resource: self.packed.as_ref().expect("packed").as_entire_binding() },
                             wgpu::BindGroupEntry { binding: 2, resource: params.as_entire_binding() },
                             wgpu::BindGroupEntry { binding: 3, resource: params.as_entire_binding() },
                             wgpu::BindGroupEntry { binding: 4, resource: self.pictures[held].as_entire_binding() },
                         ],
                     });
                     self.dispatch(&mut encoder, &pipeline, &group, width, height);
+                    let packed = self.packed.as_ref().expect("packed");
                     encoder.copy_buffer_to_buffer(packed, 0, self.read.as_ref().expect("read"), 0, size);
                     readback = Some(out_bytes);
                     used.push(params);
                 }
+            }
+        }
+        let timed = self.timed.len() as u32;
+        if let Some((set, resolve, read, _)) = &self.timing {
+            if timed > 0 {
+                encoder.resolve_query_set(set, 0..timed * 2, resolve, 0);
+                encoder.copy_buffer_to_buffer(resolve, 0, read, 0, timed as u64 * 16);
             }
         }
         self.queue.submit(Some(encoder.finish()));
@@ -311,6 +362,37 @@ impl GpuFrame {
             }
         };
         let waited = std::time::Instant::now();
+        if let Some(message) = self.errors.lock().ok().and_then(|mut slot| slot.take()) {
+            for buffer in used {
+                self.pool.give(buffer);
+            }
+            return Err(PyRuntimeError::new_err(format!("device: {message}")));
+        }
+        if timed > 0 {
+            if let Some((_, _, read, period)) = &self.timing {
+                let slice = read.slice(0..timed as u64 * 16);
+                let (tx, rx) = std::sync::mpsc::channel();
+                slice.map_async(wgpu::MapMode::Read, move |r| {
+                    let _ = tx.send(r);
+                });
+                self.device.poll(wgpu::Maintain::Wait);
+                if let Ok(Ok(())) = rx.recv() {
+                    let ticks: Vec<u64> = {
+                        let mapped = slice.get_mapped_range();
+                        bytemuck::cast_slice::<u8, u64>(&mapped).to_vec()
+                    };
+                    read.unmap();
+                    let period = *period as f64;
+                    for (k, code) in self.timed.iter().enumerate() {
+                        let (begin, end) = (ticks[k * 2], ticks[k * 2 + 1]);
+                        let ms = end.saturating_sub(begin) as f64 * period / 1.0e6;
+                        let entry = self.per_code.entry(*code).or_insert((0.0, 0));
+                        entry.0 += ms;
+                        entry.1 += 1;
+                    }
+                }
+            }
+        }
         for buffer in used {
             self.pool.give(buffer);
         }
@@ -335,6 +417,7 @@ impl GpuFrame {
     }
 
     fn pipeline(&mut self, code: usize) -> PyResult<Arc<wgpu::ComputePipeline>> {
+        self.current_code = code;
         if let Some(p) = self.pipelines.get(&code) {
             return Ok(Arc::clone(p));
         }
@@ -368,8 +451,16 @@ impl GpuFrame {
         })
     }
 
-    fn dispatch(&self, encoder: &mut wgpu::CommandEncoder, pipeline: &wgpu::ComputePipeline, group: &wgpu::BindGroup, width: u32, height: u32) {
-        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
+    fn dispatch(&mut self, encoder: &mut wgpu::CommandEncoder, pipeline: &wgpu::ComputePipeline, group: &wgpu::BindGroup, width: u32, height: u32) {
+        let slot = self.timed.len() as u32;
+        let writes = match &self.timing {
+            Some((set, _, _, _)) if slot < TIMED_PASSES => Some(wgpu::ComputePassTimestampWrites { query_set: set, beginning_of_pass_write_index: Some(slot * 2), end_of_pass_write_index: Some(slot * 2 + 1) }),
+            _ => None,
+        };
+        if writes.is_some() {
+            self.timed.push(self.current_code);
+        }
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: writes });
         pass.set_pipeline(pipeline);
         pass.set_bind_group(0, group, &[]);
         pass.dispatch_workgroups(width.div_ceil(16), height.div_ceil(16), 1);
