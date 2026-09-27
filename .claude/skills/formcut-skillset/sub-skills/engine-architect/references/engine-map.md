@@ -72,7 +72,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
-- `bench.py` (534L)
+- `bench.py` (537L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
