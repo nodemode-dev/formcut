@@ -205,6 +205,11 @@ class Recorder:
         _staged.append(picture)
         return picture
 
+    def stage_base(self, picture, height: int, width: int) -> int | None:
+        """The frame's first layer, already blended over the blank canvas by its own kernel: it becomes the canvas."""
+        handle = self.stage(picture, height, width)
+        return None if handle is None else BaseLayer(handle)
+
     def cached(self, key) -> int | None:
         """The picture that holds a static layer finished in an earlier frame, or None."""
         picture = _cache.pop(key, None)
@@ -249,11 +254,15 @@ class Recorder:
         # a blank canvas is neither uploaded nor cleared: the first blend is told the base is zero and reads nothing
         # the renderer knows a canvas it has not painted (its colour is zero, whatever its alpha); otherwise look
         blank = blank or not canvas.any()
-        if not blank:
+        base, other = CANVAS_A, CANVAS_B
+        if layers and isinstance(layers[0][0], BaseLayer):
+            # the first layer blended itself over the blank canvas in its own kernel: its picture is the canvas
+            base, other, blank = int(layers[0][0]), CANVAS_A, False
+            layers = layers[1:]
+        elif not blank:
             self.upload(CANVAS_A, canvas)
         elif not layers:
             self.frame.clear(CANVAS_A, w * h * 16)
-        base, other = CANVAS_A, CANVAS_B
         blend = self.kernel(BLEND_FRAME_CODE)
         last = None  # the last layer is blended inside the pack: the frame is written once, not written and read
         for n, (layer, mode) in enumerate(layers):
@@ -295,6 +304,10 @@ class Recorder:
             self.light = (int(tail[:, 0].max()), total / (w * h))
             return np.frombuffer(data, np.uint8, count=planes).copy()
         return np.frombuffer(data, np.uint16 if deep else np.uint8).reshape(h, w, 4).copy()
+
+
+class BaseLayer(int):
+    """A staged layer that is already the canvas (blended over blank by its own kernel)."""
 
 
 def _blended(pack: str) -> str:

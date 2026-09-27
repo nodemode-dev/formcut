@@ -8,6 +8,9 @@ before it is offered, the same lesson the decode probe learned.
 
 from __future__ import annotations
 
+import contextlib
+import json
+import os
 import subprocess
 import threading
 
@@ -131,17 +134,50 @@ def _works(encoder: str) -> bool:
         return False
 
 
+def _ffmpeg_identity() -> str:
+    """What the probes' answers depend on: the ffmpeg binary (where, how big, when written) and the machine."""
+    import platform
+    import shutil
+
+    found = shutil.which("ffmpeg") or "ffmpeg"
+    try:
+        stat = os.stat(found)
+        return f"{os.path.realpath(found)}|{stat.st_size}|{int(stat.st_mtime)}|{platform.platform()}|{platform.machine()}"
+    except OSError:
+        return f"{found}|{platform.platform()}"
+
+
 def detect(refresh: bool = False) -> dict[str, list[str]]:
-    """Working encoders per codec, in preference order. Probed once."""
+    """Working encoders per codec, in preference order. Probed once a machine: the probes run side by side (they
+    were one after another, about two seconds of every first export's start-up) and the answer is kept in the
+    data folder beside the ffmpeg it was measured on, so a later start reads it instead of probing again."""
     global _detected
     with _lock:
         if _detected is not None and not refresh:
             return _detected
+        from .paths import DATA_DIR
+
+        record = DATA_DIR / "encoders.json"
+        identity = _ffmpeg_identity()
+        if not refresh:
+            try:
+                kept = json.loads(record.read_text(encoding="utf-8"))
+                if kept.get("identity") == identity and isinstance(kept.get("found"), dict):
+                    _detected = {codec: list(names) for codec, names in kept["found"].items()}
+                    return _detected
+            except (OSError, ValueError):
+                pass
         listed = _listed()
-        found: dict[str, list[str]] = {}
-        for codec, options in CANDIDATES.items():
-            found[codec] = [name for name in options if name in listed and _works(name)]
+        wanted = sorted({name for options in CANDIDATES.values() for name in options if name in listed})
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=max(1, min(8, len(wanted)))) as pool:
+            works = dict(zip(wanted, pool.map(_works, wanted), strict=True))
+        found: dict[str, list[str]] = {codec: [name for name in options if works.get(name)] for codec, options in CANDIDATES.items()}
         _detected = found
+        with contextlib.suppress(OSError):
+            record.parent.mkdir(parents=True, exist_ok=True)
+            record.write_text(json.dumps({"identity": identity, "found": found}, indent=1), encoding="utf-8")
         return found
 
 

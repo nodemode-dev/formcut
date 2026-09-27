@@ -648,6 +648,14 @@ class FrameRenderer:
 
         return out, (float(_light_table(self.transfer)[code]), mean_nits)
 
+    def _base_for(self, canvas: np.ndarray, transform: dict) -> tuple[int, int] | None:
+        """(blend mode, transfer) when this layer is the frame's first over a canvas nothing has painted: its own
+        kernel may then blend it over the blank canvas and hand the result over as the canvas."""
+        if self.pending_layers or canvas is not getattr(self, "_fresh_canvas", None):
+            return None
+        mode = str(transform.get("blendMode", "Normal")).lower()
+        return (gpu.MODES.index(mode) if mode in gpu.MODES else 0, gpu.TRANSFERS.get(self.transfer, 0) if self.deep else 0)
+
     def _blank_canvas(self) -> np.ndarray:
         kind = np.uint16 if self.deep else np.uint8
         blank = getattr(self, "_blank", None)
@@ -794,12 +802,15 @@ class FrameRenderer:
             self._last_text_key = ("text", key)
             cached = self.text_cache.get(key)
             if cached is not None:
-                return cached.copy()
+                # lent read-only, not copied (8 MB a 1080p frame): a layer served from the device's cache never
+                # reads it, and the few places that write a layer in place take their own copy first
+                return cached
             drawn = self._draw_text(clip, text, local)
             if len(self.text_cache) > 24:
                 self.text_cache.clear()
+            drawn.flags.writeable = False
             self.text_cache[key] = drawn
-            return drawn.copy()
+            return drawn
         self._last_text_key = None
         return self._draw_text(clip, text, local)
 
@@ -1037,6 +1048,8 @@ class FrameRenderer:
         return out
 
     def transition(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
+        if not image.flags.writeable:
+            image = image.copy()
         length = clip.get("transitionLength", 0)
         if not length or local >= length:
             return image
@@ -1085,6 +1098,8 @@ class FrameRenderer:
         return image
 
     def transition_out(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
+        if not image.flags.writeable:
+            image = image.copy()
         """The outgoing half of a transition (T1).
 
         The incoming clip is revealed by `transition`; this moves or hides the
@@ -1314,6 +1329,7 @@ class FrameRenderer:
                         (self.width, self.height),
                         resident=True,
                         lift=self.transfer if self.deep else None,
+                        base=self._base_for(canvas, transform),
                         device_key=self._device_key(clip, ("still", key), image, placed, alpha, fields),
                         **fields,
                     )
@@ -1365,6 +1381,7 @@ class FrameRenderer:
                         lut=lut,
                         shader=shader,
                         lift=self.transfer if self.deep else None,
+                        base=self._base_for(canvas, transform),
                         device_key=self._device_key(clip, self._last_text_key, image, placed, alpha, fields) if still_title else None,
                         **fields,
                     )
@@ -1420,6 +1437,7 @@ class FrameRenderer:
             # R3: the transform as a device pass, the alpha scaled inside it; cv2 stays the reference.
             layer = gpu_effects.warp(image, matrix, alpha, (self.width, self.height))
             if layer is None:
+                image = image if image.flags.writeable else image.copy()
                 image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(image.dtype)
                 layer = cv2.warpAffine(image, matrix, (self.width, self.height), flags=cv2.INTER_LINEAR)
             layer = self.transition(layer, clip, local)

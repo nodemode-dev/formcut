@@ -190,6 +190,19 @@ def export_workers() -> int:
 _LIGHT_TABLES: dict[str, np.ndarray] = {}
 
 
+def _timing(stamps: dict, count: int) -> dict:
+    """The export in parts, milliseconds: until the first frame reached the encoder, the frames after it (and
+    their steady rate), the encoder's finish. A short export is mostly start-up; the steady rate is the one
+    that decides a long one."""
+    if "first" not in stamps:
+        return {}
+    first = (stamps["first"] - stamps["began"]) * 1000
+    frames = (stamps.get("last", stamps["first"]) - stamps["first"]) * 1000
+    finish = (stamps.get("done", stamps.get("last", stamps["first"])) - stamps.get("last", stamps["first"])) * 1000
+    steady = (count - 1) / (frames / 1000) if count > 1 and frames > 0 else 0.0
+    return {"startupMs": round(first, 1), "framesMs": round(frames, 1), "finishMs": round(finish, 1), "steadyFps": round(steady, 2)}
+
+
 def _light_table(transfer: str) -> np.ndarray:
     """Nits for every sixteen-bit code value of the transfer, once."""
     table = _LIGHT_TABLES.get(transfer)
@@ -288,6 +301,7 @@ def export_media(
     exact: bool = False,
 ) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
+    stamps = {"began": time.perf_counter()}  # the export timed in parts: start-up, the frames, the finish
     path = OUTPUTS / (job_id + "." + format)
     audio = OUTPUTS / (job_id + ".wav")
     log = OUTPUTS / (job_id + ".log")
@@ -763,6 +777,7 @@ def export_media(
                     light = _light_of(picture, renderer.transfer) if renderer.deep and not planar else None
                     return picture, light
 
+                stamps["loop"] = time.perf_counter()
                 with ThreadPoolExecutor(max_workers=1) as ahead:
                     pending = ahead.submit(produce, 0) if count else None
                     for i in range(count):
@@ -776,9 +791,12 @@ def export_media(
                         # The pipe takes the array's own memory, the bytes tobytes()
                         # made a copy of, in the same order: 5 ms a 1080p frame saved.
                         process.stdin.write(written)
+                        stamps.setdefault("first", time.perf_counter())
+                        stamps["last"] = time.perf_counter()
                         report(0.1 + 0.85 * (i + 1) / count)
             process.stdin.close()
             process.wait(timeout=600)
+            stamps["done"] = time.perf_counter()
         if process.returncode:
             raise ValueError(log.read_text(errors="replace")[-2000:])
         return finish(
@@ -794,6 +812,7 @@ def export_media(
                 "pixelFormat": pix,
                 "rate": out_rate,
                 "renderPath": "frames",
+                "timing": _timing(stamps, count),
                 "workingSpace": renderer.transfer if renderer.deep else "bt709",
                 "maxCll": round(max_cll) if renderer.deep else None,
                 "maxFall": round(max_fall) if renderer.deep else None,

@@ -2483,6 +2483,25 @@ def _fused_source(plan: list) -> str | None:
     return bindings + "\n" + text
 
 
+def blend_over_blank(transfer: int) -> str:
+    """The compositor's blend of a layer (src) over a blank canvas, as a pointwise kernel of its own: the same
+    arithmetic as the compositor's blend with its base taken as zero light, the transfer fixed so the helpers
+    read no parameters, the blend mode in p[2]."""
+    from .gpu_frame import _blend_body, _blend_functions
+
+    functions = _blend_functions().replace("p[3]", f"{float(transfer)}")
+    body = _blend_body()
+    body = body.replace("var b = vec3<f32>(0.0);\n    if (p[4] < 0.5) { b = lin(src[i].rgb); }", "var b = vec3<f32>(0.0);")
+    body = body.replace("held[i]", "src[i]").replace("p[3]", f"{float(transfer)}")
+    return (
+        functions
+        + "@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) {\n    "
+        + "\n    ".join(_PROLOGUE)
+        + "\n    "
+        + body
+    )
+
+
 class RawAux:
     """A picture's own bytes as a pass's aux, read by the kernel as words rather than converted to floats."""
 
@@ -2649,6 +2668,7 @@ def effects_and_warp(
     shader: tuple[str, float, list | None] | None = None,
     lift: str | None = None,
     device_key: object = None,
+    base: tuple[int, int] | None = None,
 ):
     """The chain, a LUT, a key, a mask, a cutout matte and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
     if not active() or (effects and not supported(effects)):
@@ -2665,19 +2685,44 @@ def effects_and_warp(
                     return hit
             chain = _Chain(context, h, w)
             # on an executor that can, a layer with effects has its upload unpacked inside the chain's fused kernel
-            joins = bool(effects) and getattr(context, "fuses_upload", False)
+            # The frame's first layer over a canvas nothing has painted, full-frame and unmoved, with nothing
+            # between its chain and the blend: its kernel blends it over the blank canvas itself and its
+            # picture becomes the canvas, so the compositor neither blends it nor reads a canvas for it.
+            frame_w, frame_h = size
+            unmoved = (
+                (h, w) == (frame_h, frame_w) and float(alpha) == 1.0 and np.array_equal(np.float64(matrix)[:2], [[1, 0, 0], [0, 1, 0]])
+            )
+            as_base = (
+                base is not None
+                and resident
+                and unmoved
+                and hasattr(context, "stage_base")
+                and lut is None
+                and shader is None
+                and key is None
+                and mask is None
+                and matte is None
+                and device_key is None
+                and not (lift and image.dtype == np.uint8)
+            )
+            joins = (bool(effects) or as_base) and getattr(context, "fuses_upload", False)
             if not joins:
                 context.upload(context.buffers[0], image)
-            if effects:
+            if effects or as_base:
 
                 def chain_and_round():
                     if joins:
                         chain.c.upload(chain.c.buffers[0], image)
-                    _run_chain(chain, effects, local)
-                    # The CPU rounds to uint8 here; so does the device.
-                    chain._pass(QUANTISE_CODE, [])
+                    if effects:
+                        _run_chain(chain, effects, local)
+                        # The CPU rounds to uint8 here; so does the device.
+                        chain._pass(QUANTISE_CODE, [])
+                    if as_base:
+                        chain._pass(blend_over_blank(base[1]), [base[0]])
 
                 _fused(chain, chain_and_round)
+            if as_base:
+                return context.stage_base(context.buffers[chain.current], frame_h, frame_w)
             if lut is not None:
                 table, low, high, intensity = lut
                 n = len(table)

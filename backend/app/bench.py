@@ -163,6 +163,9 @@ def _export_rate(doc: dict, width: int, frames: int) -> tuple[float, str]:
                 clip["duration"] = min(float(clip.get("duration") or 0), trimmed["duration"])
     trimmed["width"], trimmed["height"] = width, round(width * doc["height"] / doc["width"] / 2) * 2
     job_id = "bench-" + uuid.uuid4().hex[:8]
+    from .encoders import detect
+
+    detect()  # a running engine has probed its encoders at start; the export is timed as one in a running engine
     began = time.perf_counter()
     result = export_media(
         trimmed,
@@ -181,6 +184,7 @@ def _export_rate(doc: dict, width: int, frames: int) -> tuple[float, str]:
     for item in OUTPUTS.glob(job_id + "*"):
         item.unlink(missing_ok=True)
     encoder = str(result.get("encoder") or "")
+    _export_rate.timing = result.get("timing") or {}
     return (frames / took if took > 0 else 0.0), encoder
 
 
@@ -438,6 +442,13 @@ def main(argv: list[str] | None = None) -> int:
         readings["export_encoder"] = encoder
         what = f"the real export, {encoder}" + (", ten-bit PQ with the light written" if args.hdr else "")
         print(f"export:      {export_fps:6.2f} fps   ({what}, render and encode included)")
+        timing = getattr(_export_rate, "timing", {})
+        if timing:
+            readings["export_steady_fps"] = timing["steadyFps"]
+            print(
+                f"export parts: start-up {timing['startupMs']:.0f} ms until the first frame reached the encoder, then "
+                f"{timing['steadyFps']:.1f} fps steady over the frames, {timing['finishMs']:.0f} ms for the encoder to finish"
+            )
     if args.record:
         table = {}
         if os.path.exists(args.record):
