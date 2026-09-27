@@ -39,7 +39,7 @@ The rest is written by hand.
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | main.py | 410 | /api/health | 13 |
-| media.py | 864 | /api/media | 25 |
+| media.py | 878 | /api/media | 25 |
 | model_manager.py | 528 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 465 | /api/presets | 8 |
@@ -72,7 +72,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
-- `bench.py` (537L)
+- `bench.py` (621L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
@@ -100,7 +100,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1453L)
+- `renderer.py` (1460L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
