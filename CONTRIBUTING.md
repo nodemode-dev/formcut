@@ -13,9 +13,9 @@ contributions.
 - **Translations** are welcome: formcut ships in sixteen languages, and every
   new string needs all sixteen.
 - **Caption looks** need no code. Style a caption track, choose **Share this look**
-  in the Captions panel, and add the file it saves to
-  [`backend/app/community_looks/`](backend/app/community_looks/README.md): it ships
-  with formcut, listed with your name.
+  in the Captions panel, and list the zip it saves in the
+  [community registry](.docs/registry/README.md) with `setup/registry_entry.py`:
+  anyone can then install it from the effects browser's Community packages.
 
 ## Setting up
 

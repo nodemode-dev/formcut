@@ -1,7 +1,7 @@
 """Caption looks that move, and the community's looks: the two animated word modes (reveal, rise) draw as they
-should at the start and the end of a word's ease; the shipped looks all draw a card; the community registry takes a
-folder only when it loads as a package, names its author and keeps its own id; Share this look writes a file the
-package installer takes and the registry takes."""
+should at the start and the end of a word's ease; the shipped looks all draw a card; every word style keeps moving
+through one renderer; Share this look saves a zip made as the community registry's packages are, which the installer
+and setup/registry_entry.py take; every package the registry lists matches its hash and installs."""
 
 from __future__ import annotations
 
@@ -89,49 +89,58 @@ def _look(folder, look_id: str, author: str = "someone", mode: str = "rise") -> 
     (folder / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
 
-def test_the_registry_lists_community_looks_after_formcuts_with_their_authors(tmp_path, monkeypatch):
-    monkeypatch.setattr(presets, "COMMUNITY", tmp_path)
-    _look(tmp_path / "night-bus-by-ana", "night-bus-by-ana", "ana")
-    _look(tmp_path / "rise", "rise")  # an id formcut's own look has: left out
-    (tmp_path / "broken").mkdir()
-    (tmp_path / "broken" / "manifest.json").write_text('{"id": "broken", "name": "B", "kind": "captions", "style": {"weird": 1}}')
-    listed = presets.list_caption_styles()
-    community = [look for look in listed if look.get("community")]
-    assert [(look["id"], look["author"]) for look in community] == [("night-bus-by-ana", "ana")]
-    assert listed.index(community[0]) == len(presets.CAPTION_STYLES)
-    assert presets.caption_style("night-bus-by-ana")["style"]["wordStyle"]["mode"] == "rise"
+def test_share_saves_a_zip_the_installer_and_the_registry_take(tmp_path):
+    import hashlib
+    import io
+    import sys
+    import zipfile
+    from pathlib import Path
 
-
-def test_the_shipped_registry_is_sound():
-    """Every folder in backend/app/community_looks loads, has an author, and keeps an id of its own."""
-    folders = [p for p in presets.COMMUNITY.iterdir() if p.is_dir()] if presets.COMMUNITY.is_dir() else []
-    seen = set(presets.CAPTION_STYLE_IDS)
-    for folder in folders:
-        entry = effect_packages.load_package(folder)
-        manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
-        assert entry["kind"] == "captions" and manifest.get("author"), folder.name
-        assert entry["id"] == folder.name and entry["id"] not in seen, folder.name
-        seen.add(entry["id"])
-    assert (presets.COMMUNITY / "README.md").exists()
-
-
-def test_share_writes_a_package_the_installer_and_the_registry_take(tmp_path, monkeypatch):
     client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
     style = {"size": 6.5, "color": "#fff4e8", "bold": True, "wordStyle": {"mode": "reveal", "colour": "#ff8a3d"}}
     shared = client.post("/api/presets/captions/share", json={"name": "Night bus!", "author": "@Ana_B", "style": style})
-    assert shared.status_code == 200
-    assert 'filename="night-bus-by-ana-b.json"' in shared.headers["content-disposition"]
-    manifest = shared.json()
+    assert shared.status_code == 200 and shared.headers["content-type"] == "application/zip"
+    assert 'filename="night-bus-by-ana-b.zip"' in shared.headers["content-disposition"]
+    assert shared.headers["x-formcut-sha256"] == hashlib.sha256(shared.content).hexdigest()
+    with zipfile.ZipFile(io.BytesIO(shared.content)) as archive:
+        assert archive.namelist() == ["manifest.json"]
+        manifest = json.loads(archive.read("manifest.json"))
     assert manifest["id"] == "night-bus-by-ana-b" and manifest["author"] == "Ana_B" and manifest["style"] == style
-    # the registry takes the file as it is
-    monkeypatch.setattr(presets, "COMMUNITY", tmp_path)
-    (tmp_path / manifest["id"]).mkdir()
-    (tmp_path / manifest["id"] / "manifest.json").write_bytes(shared.content)
-    assert [look["id"] for look in presets.community_looks()] == ["night-bus-by-ana-b"]
+    # the same look makes the same bytes, so its hash in the registry holds
+    again = client.post("/api/presets/captions/share", json={"name": "Night bus!", "author": "@Ana_B", "style": style})
+    assert again.content == shared.content
+    # the registry tool takes it as it is
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "setup"))
+    import registry_entry
+
+    entry = registry_entry.entry_for(shared.content, "Warm words, the new one fading in.")
+    assert entry["id"] == "night-bus-by-ana-b" and entry["author"] == "Ana_B" and entry["kind"] == "captions"
+    assert entry["sha256"] == shared.headers["x-formcut-sha256"] and entry["url"].endswith("/packages/night-bus-by-ana-b.zip")
     # a name formcut's own look has is kept apart; a key the caption track does not take is refused
-    assert client.post("/api/presets/captions/share", json={"name": "Rise", "style": style}).json()["id"] == "rise-look"
+    renamed = client.post("/api/presets/captions/share", json={"name": "Rise", "style": style})
+    assert 'filename="rise-look.zip"' in renamed.headers["content-disposition"]
     refused = client.post("/api/presets/captions/share", json={"name": "x", "style": {"weird": 1}})
     assert refused.status_code == 400 and "does not take" in refused.json()["detail"]
+
+
+def test_every_registry_package_matches_its_hash_and_installs(tmp_path):
+    import hashlib
+    from pathlib import Path
+
+    registry = Path(__file__).resolve().parents[1] / ".docs" / "registry"
+    index = json.loads((registry / "effects-registry.json").read_text(encoding="utf-8"))
+    ids = [entry["id"] for entry in index["packages"]]
+    assert len(ids) == len(set(ids))
+    for entry in index["packages"]:
+        data = (registry / "packages" / entry["url"].rsplit("/", 1)[-1]).read_bytes()
+        assert hashlib.sha256(data).hexdigest() == entry["sha256"], entry["id"]
+        folder = tmp_path / entry["id"]
+        folder.mkdir()
+        # the files as the installer takes them from a zip (a package's folder may be the zip's top level)
+        for name, content in effect_packages._files_from(data, f"{entry['id']}.zip").items():
+            (folder / name).write_bytes(content)
+        loaded = effect_packages.load_package(folder)
+        assert loaded["id"] == entry["id"] and loaded["kind"] == entry["kind"], entry["id"]
 
 
 @pytest.mark.parametrize("mode", ["reveal", "rise"])

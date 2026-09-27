@@ -900,8 +900,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     capSay(`${t("cap.exported")}: ${cues.length}`);
   };
   el.querySelector('[data-ref="cap-export-srt"]')!.addEventListener("click", () => void exportCaptions("srt"));
-  // Share this look: the panel's look as a captions package file, which any formcut installs as it is and which the
-  // community looks take (backend/app/community_looks/README.md)
+  // Share this look: the panel's look as a captions package zip, which any formcut installs as it is and which the
+  // community registry lists (.docs/registry/README.md)
   el.querySelector('[data-ref="cap-share"]')!.addEventListener("click", () => void (async () => {
     const name = el.querySelector<HTMLInputElement>('[data-ref="cap-share-name"]')!.value.trim();
     const author = el.querySelector<HTMLInputElement>('[data-ref="cap-share-author"]')!.value.trim();
@@ -915,7 +915,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       capSay(`${t("cap.share.failed")}: ${detail.detail ?? res.status}`);
       return;
     }
-    const file = res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "caption-look.json";
+    const file = res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "caption-look.zip";
     const link = document.createElement("a");
     link.href = URL.createObjectURL(await res.blob());
     link.download = file;
@@ -1077,8 +1077,8 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   // or to every caption of the chosen track, and keeps it for the next
   // transcription (the word style and colour controls follow it).
   const captionGrid = el.querySelector<HTMLElement>('[data-ref="caption-grid"]')!;
-  let captionLooks: Array<{ id: string; name: string; style: Record<string, unknown>; community?: boolean; author?: string }> = [];
-  // The looks: the ones the engine ships, the community's (each with its author) and every installed captions
+  let captionLooks: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
+  // The looks: the ones the engine ships and every installed captions (the community registry's among them)
   // package; the grid is patched in place, and rebuilt from the engine when
   // the packages change (an install or a removal dispatches the event).
   const loadCaptionLooks = () => fetch("/api/presets/captions")
@@ -1091,9 +1091,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       captionGrid.insertAdjacentHTML("beforeend", looks.filter((entry) => !present.has(entry.id)).map((entry) =>
         `<div class="effect-card title-card" data-caption-look="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-label="${escapeHtml(entry.name)}">` +
         `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/caption/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
-        `<div class="effect-name">${escapeHtml(entry.name)}</div>` +
-        (entry.community ? `<div class="effect-by">${escapeHtml(t("cap.looks.by"))} ${escapeHtml(entry.author ?? "")}</div>` : "") +
-        `</div>`).join(""));
+        `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
     })
     .catch(() => { /* the gallery is optional if the engine is offline */ });
   void loadCaptionLooks();

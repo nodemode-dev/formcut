@@ -7,12 +7,15 @@ the store never interprets it beyond size and shape guards."""
 from __future__ import annotations
 
 import base64
+import hashlib
+import io
 import json
 import re
 import tempfile
 import threading
 import time
 import uuid
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -534,32 +537,10 @@ CAPTION_STYLES: list[dict] = [
 ]
 CAPTION_STYLE_IDS = {entry["id"] for entry in CAPTION_STYLES}
 
-# The community's caption looks: each folder under community_looks/ is a captions package (its manifest.json, with
-# an "author"), added by pull request and checked exactly as an installed package is (effect_packages.load_package);
-# the tests fail on one that does not load, or reuses an id. They ship with formcut and are listed after its own.
-COMMUNITY = Path(__file__).resolve().parent / "community_looks"
-
-
-def community_looks() -> list[dict]:
-    from .effect_packages import load_package
-
-    looks: list[dict] = []
-    if not COMMUNITY.is_dir():
-        return looks
-    for folder in sorted(p for p in COMMUNITY.iterdir() if p.is_dir()):
-        try:
-            entry = load_package(folder)
-            author = str(json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get("author") or "")[:60]
-        except (ValueError, OSError):
-            continue
-        if entry["kind"] == "captions" and entry["id"] not in CAPTION_STYLE_IDS:
-            looks.append({"id": entry["id"], "name": entry["name"], "style": entry["style"], "community": True, "author": author})
-    return looks
-
 
 def caption_style(look_id: str) -> dict | None:
-    """A shipped look, a community one or a packaged one, by id."""
-    found = next((e for e in [*CAPTION_STYLES, *community_looks()] if e["id"] == look_id), None)
+    """A shipped look or a packaged one, by id."""
+    found = next((e for e in CAPTION_STYLES if e["id"] == look_id), None)
     if found is not None:
         return found
     from .effect_packages import entries
@@ -577,12 +558,12 @@ def list_caption_styles() -> list[dict]:
     """The shipped looks, then every installed captions package as a look of its own."""
     from .effect_packages import entries
 
-    community = community_looks()
-    taken = CAPTION_STYLE_IDS | {look["id"] for look in community}
     packaged = [
-        {"id": e["id"], "name": e["name"], "style": e["style"], "package": True} for e in entries("captions") if e["id"] not in taken
+        {"id": e["id"], "name": e["name"], "style": e["style"], "package": True}
+        for e in entries("captions")
+        if e["id"] not in CAPTION_STYLE_IDS
     ]
-    return [*CAPTION_STYLES, *community, *packaged]
+    return [*CAPTION_STYLES, *packaged]
 
 
 class ShareBody(BaseModel):
@@ -593,8 +574,10 @@ class ShareBody(BaseModel):
 
 @router.post("/captions/share")
 def share_caption_look(body: ShareBody) -> Response:
-    """A caption look as a captions package, its manifest.json: the file the package installer takes, and the file a
-    contributor adds to the community looks (community_looks/<id>/manifest.json). Checked as both check it."""
+    """A caption look as a captions package: a zip of its manifest.json, made the way the community registry's own
+    packages are (stored, one fixed date, the manifest's keys sorted), checked as the installer checks a package.
+    Any formcut installs it as it is; listed in the registry (.docs/registry/README.md), anyone installs it from the
+    effects browser's Community packages. The zip's SHA-256 comes back in X-Formcut-Sha256, for the registry entry."""
     from .effect_packages import load_package
 
     name = _clean_name(body.name) if body.name.strip() else "My caption look"
@@ -611,11 +594,27 @@ def share_caption_look(body: ShareBody) -> Response:
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
     manifest["style"] = entry["style"]
+    data = package_zip(manifest)
     return Response(
-        json.dumps(manifest, indent=2).encode(),
-        media_type="application/json",
-        headers={"content-disposition": f'attachment; filename="{look_id}.json"'},
+        data,
+        media_type="application/zip",
+        headers={
+            "content-disposition": f'attachment; filename="{look_id}.zip"',
+            "x-formcut-sha256": hashlib.sha256(data).hexdigest(),
+            "access-control-expose-headers": "content-disposition, x-formcut-sha256",
+        },
     )
+
+
+def package_zip(manifest: dict) -> bytes:
+    """A package's zip as the registry's packages are made: manifest.json alone, stored, dated 2026-09-26, the
+    keys sorted, so the same look always makes the same bytes and the same hash."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+        info = zipfile.ZipInfo("manifest.json", date_time=(2026, 9, 26, 0, 0, 0))
+        info.external_attr = 0o644 << 16
+        archive.writestr(info, json.dumps(manifest, indent=1, sort_keys=True) + "\n")
+    return buffer.getvalue()
 
 
 @router.get("/texttemplates")

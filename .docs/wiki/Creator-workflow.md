@@ -44,11 +44,12 @@ caption span it creates a Captions track instead, so nothing is written over.
 
 Caption looks: fourteen ship with formcut, six of them animated, the spoken word
 fading in as the words arrive (reveal) or rising into place (rise) over its first
-0.15 s. After them come the community's looks, each with its author, from
-`backend/app/community_looks/`, then any installed captions package. **Share this
-look** in the Captions panel saves the panel's look as a captions package file,
-which any formcut installs as it is and which the community looks take by pull
-request.
+0.15 s. After them comes every installed captions package, among them the ones
+installed from the community registry (the effects browser's Community packages).
+**Share this look** in the Captions panel saves the panel's look as a captions
+package zip, made the way the registry's own packages are, which any formcut
+installs as it is and which `setup/registry_entry.py` lists in the registry
+(`.docs/registry/README.md`).
 
 ## Appearance and layout
 
