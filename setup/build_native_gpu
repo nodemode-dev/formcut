@@ -1,14 +1,21 @@
 #!/bin/sh
-# Build formcut's native crate with the Rust frame path (R26) into the engine's own environment.
-# Run from anywhere; it finds the repository from its own location, installs maturin into the venv
-# it finds (or the current Python) and builds with the gpu feature.
+# Build formcut's native crate with the Rust frame path (R26) into the engine's own Python.
+# Run it from anywhere: it finds the repository from its own location. The Python it builds
+# into is, in order: an activated virtual environment ($VIRTUAL_ENV), backend/venv,
+# backend/.venv, then python3. Every path is absolute, so the build's own cd cannot lose it.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT/backend"
-PY=python3
-[ -x venv/bin/python ] && PY=venv/bin/python
-[ -x .venv/bin/python ] && PY=.venv/bin/python
+if [ -n "${VIRTUAL_ENV:-}" ] && [ -x "$VIRTUAL_ENV/bin/python" ]; then
+  PY="$VIRTUAL_ENV/bin/python"
+elif [ -x "$ROOT/backend/venv/bin/python" ]; then
+  PY="$ROOT/backend/venv/bin/python"
+elif [ -x "$ROOT/backend/.venv/bin/python" ]; then
+  PY="$ROOT/backend/.venv/bin/python"
+else
+  PY="$(command -v python3)"
+fi
+echo "building with $PY"
 "$PY" -m pip install -q "maturin==1.15.0"
-cd native
+cd "$ROOT/backend/native"
 "$PY" -m maturin develop --release --features gpu
 "$PY" -c "import formcut_native as n; f = n.GpuFrame(1920 * 1080 * 16, 5); print('GpuFrame on', f.adapter())"
