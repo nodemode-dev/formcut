@@ -87,6 +87,11 @@ class VideoSource:
         )
         self.hdr = stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
         self.transfer = str(stream.get("color_transfer") or "")
+        # what formcut's own conversion (yuv.py) needs of the stream, and whether the renderer takes planes from it
+        self.matrix = str(stream.get("color_space") or "")
+        self.full_range = stream.get("color_range") == "pc"
+        self.want_planes = False
+        self.own_conversion = False  # the renderer sets it (yuv.wanted)
         if self.deep and self.hdr:
             self.tonemap = ""  # the signal stays in its own transfer; nothing is rolled off
         rotation = float(stream.get("tags", {}).get("rotate", 0))
@@ -350,6 +355,14 @@ class NativeSource(VideoSource):
             self.pending = (index, frame)
 
     def _as_bgr(self, frame):
+        # A planar 4:2:0 frame at its own size is converted by formcut, not swscale: kept as its planes when the
+        # renderer sends this clip to the device (which converts it in its first pass), converted here otherwise.
+        if self.own_conversion and frame.width == self.width and frame.height == self.height:
+            from .yuv import from_av
+
+            planes = from_av(frame, self.deep and self.hdr, self.matrix, self.full_range)
+            if planes is not None:
+                return planes if self.want_planes else planes.rgba()
         if self.deep and self.hdr:
             # RGBA64 straight from swscale: the alpha is full already, so the renderer adds no channel (a 16 MB
             # copy a 1080p frame that the M5 profile showed)

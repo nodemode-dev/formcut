@@ -513,6 +513,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--budget-fraction", type=float, default=0.7, help="how much of the recorded rate a scenario must still reach")
     args = parser.parse_args(argv)
+    # both paths convert decoded frames with formcut's own conversion (yuv.py), so they are compared like with like
+    os.environ.setdefault("FORMCUT_YUV", "1")
     os.environ.setdefault("FORMCUT_NO_WARM", "1")
     from . import gpu
 

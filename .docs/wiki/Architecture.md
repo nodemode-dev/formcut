@@ -38,6 +38,22 @@ frame it needs. Stills are bounded to preview size, and a still whose effect
 stack is only colour grades is prepared once per renderer rather than every
 frame.
 
+Where the device path runs, formcut converts decoded frames to RGB itself
+(`backend/app/yuv.py`) rather than through swscale. A planar 4:2:0 frame at its
+own size (8-bit, full-range 8-bit, or 10-bit) goes up to the device as its
+planes when its layer goes straight there, and the first pass converts it; in
+a fused chain, the conversion is the chain kernel's head, so a layer's upload,
+conversion, effects and first blend are one dispatch. A frame this side needs
+(for a colour panel, a grade, stabilisation, a crop, or a CPU-only effect) is
+converted on the decoder's read-ahead thread by the same map through cv2, and
+the two agree to a code. The map is bilinear chroma, the stream's own matrix
+and range, clipped and rounded half up. Against swscale the difference is the
+chroma filter, about a byte count on average at chroma edges. Without a device,
+swscale converts as before, so the frame path's exports stay the pictures of the
+native-cuts and layered paths, which convert with swscale too. `FORMCUT_YUV=0`
+turns formcut's conversion off; `=1` turns it on everywhere, as the bench does
+so that it compares the two paths like with like.
+
 ## Secrets and environment
 
 Keys are read from the environment by the engine, never from the interface or a

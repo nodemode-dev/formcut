@@ -694,6 +694,12 @@ class FrameRenderer:
         return blank
 
     def as_working(self, frame: np.ndarray) -> np.ndarray:
+        from .yuv import PlaneFrame
+
+        if isinstance(frame, PlaneFrame):
+            return frame.rgba()
+        if frame.dtype == np.uint8 and frame.ndim == 3 and frame.shape[2] == 4:
+            return frame  # RGBA from formcut's own conversion (yuv.py)
         """A decoded frame as the working picture: RGBA bytes for an SDR project; for a deep project, a
         deep HDR frame (uint16 RGB in the transfer) gets its alpha, and a byte frame is lifted."""
         if frame.dtype == np.uint16:
@@ -718,7 +724,9 @@ class FrameRenderer:
         out[:, :, 3] = rgba[:, :, 3].astype(np.uint16) * 257
         return out
 
-    def media_frame(self, clip: dict, time: float) -> np.ndarray:
+    def media_frame(self, clip: dict, time: float, planes: bool = False) -> np.ndarray:
+        """The clip's frame at a time; with planes, a planar frame comes back as its planes (yuv.PlaneFrame) for the
+        device to convert in its first pass, when nothing on this side needs its pixels first."""
         media_id = clip.get("mediaId")
         if not media_id:
             raise ValueError("Media clip has no source")
@@ -760,6 +768,11 @@ class FrameRenderer:
             return apply_crop(still.copy(), clip)
         cursor = self._cursor(media_id, time, paths[0])
         capture = self.sources[cursor]
+        from . import yuv
+
+        capture.own_conversion = yuv.wanted(gpu.stack_active())
+        capture.want_planes = planes and capture.own_conversion  # planes kept, or converted on the read-ahead's thread
+        keep_planes = planes and not crop_box(clip)
         rate = capture.fps
         count = capture.frame_count
         wanted = max(0, int(time * rate + 1e-7))
@@ -781,6 +794,8 @@ class FrameRenderer:
             # The cache holds the decoded frame, which nothing writes to; each use
             # converts it afresh, so what a caller receives is its own to change,
             # without copying every frame to protect the cache.
+            if keep_planes and hasattr(self.frames[cursor], "aux"):
+                return self.frames[cursor]
             return apply_crop(self.as_working(self.frames[cursor]), clip)
         if wanted != current + 1:
             capture.seek(wanted)
@@ -800,12 +815,12 @@ class FrameRenderer:
                 frame = frame if ok else None
             if frame is None:
                 raise ValueError("Could not decode source frame")
-        result = self.as_working(frame)
+        result = frame if keep_planes and hasattr(frame, "aux") else self.as_working(frame)
         self.frame_numbers[cursor] = wanted
         self.frames[cursor] = frame
         if native:
             self.decode_scale[media_id] = max(result.shape[0], result.shape[1]) / native
-        return apply_crop(result, clip)
+        return result if result is frame else apply_crop(result, clip)
 
     def scaled_effects(self, effects: list[dict], clip: dict) -> list[dict]:
         """Pixel-measured parameters follow the resolution actually decoded.
@@ -1386,14 +1401,36 @@ class FrameRenderer:
                         continue
                     image = nested_image
                 else:
-                    image = self.text_frame(clip, local) if clip["kind"] == "text" else self.media_frame(clip, source_time(clip, local))
-                image = apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
+                    # A video layer that goes straight to the device, with nothing on this side needing its pixels
+                    # first, takes its frame as planes, and the device converts it (yuv.py)
+                    early = self.scaled_effects(effects, clip) if clip["kind"] == "video" else []
+                    straight = (
+                        clip["kind"] == "video"
+                        and gpu.stack_active()
+                        and not clip.get("colour")
+                        and not clip.get("colorGrade")
+                        and not clip.get("stabilise")
+                        and not clip.get("smoothSlow")
+                        and (not early or gpu_effects.supported(early))
+                        and self._device_resident(clip, early, local)
+                    )
+                    image = (
+                        self.text_frame(clip, local)
+                        if clip["kind"] == "text"
+                        else self.media_frame(clip, source_time(clip, local), planes=straight)
+                    )
+                if hasattr(image, "aux"):
+                    pass  # planes for the device: no colour, grade or stabilisation to apply on this side
+                else:
+                    image = apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
                 # Stabilisation needs the clip's place in time, which an effect
                 # never sees, so it is applied here from the measured path.
                 steady = clip.get("stabilise")
                 if steady and clip.get("mediaId"):
                     image = stabilise_frame(image, str(clip["mediaId"]), int(source_time(clip, local) * self.project["fps"]), steady)
                 scaled = self.scaled_effects(effects, clip)
+                if hasattr(image, "aux") and not (gpu.stack_active() and self._device_resident(clip, scaled, local)):
+                    image = image.rgba()  # planes only go on to the device's path; anything else needs the pixels
                 # R4: a layer with nothing between its effects and the blend
                 # that needs bytes on this side (no LUT, shader, mask, key,
                 # cutout, transition or push) stays on the device from its one
@@ -1431,6 +1468,8 @@ class FrameRenderer:
                         self.pending_layers.append((staged, str(transform["blendMode"])))
                         self.resident_layers += 1
                         continue
+                    if hasattr(image, "aux"):
+                        image = image.rgba()  # the device did not take the planes: this side converts them after all
                     if staged is not None:
                         image = staged  # the compositor could not take it; the bytes came back placed, blend as a layer
                         layer = self.transition(image, clip, local)

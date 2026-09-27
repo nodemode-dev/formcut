@@ -73,7 +73,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
-- `bench.py` (711L)
+- `bench.py` (713L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
@@ -88,7 +88,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (707L)
-- `gpu_effects.py` (3073L)
+- `gpu_effects.py` (3104L)
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (235L)
@@ -102,7 +102,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1497L)
+- `renderer.py` (1536L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
@@ -117,8 +117,9 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (271L)
 - `validation.py` (222L)
-- `video_source.py` (581L)
+- `video_source.py` (594L)
 - `windows_console.py` (43L)
+- `yuv.py` (190L)
 
 ## Reading order for a change
 

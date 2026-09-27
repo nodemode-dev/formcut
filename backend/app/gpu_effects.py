@@ -2706,8 +2706,9 @@ def _pointwise(code: str):
 def _fused_source(plan: list) -> str | None:
     """One kernel for a plan of ("unpack", deep), ("hold",) and ("pass", code, block) steps."""
     unpack = plan[0][1] if plan and plan[0][0] == "unpack" else None
-    plan = plan[1:] if unpack is not None else plan
-    helpers: list[str] = []
+    yuv = plan[0][1] if plan and plan[0][0] == "yuv" else None
+    plan = plan[1:] if unpack is not None or yuv is not None else plan
+    helpers: list[str] = [yuv] if yuv is not None else []
     names: dict[str, str] = {}
     functions: list[str] = []
     calls: list[str] = []
@@ -2741,7 +2742,11 @@ def _fused_source(plan: list) -> str | None:
     main = (
         "@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) {\n    "
         + "\n    ".join(_PROLOGUE)
-        + ("\n    var fz = src[i];" if unpack is None else "\n    " + _UNPACK_HEAD[unpack])
+        + (
+            "\n    var fz = yuv_at(i, x, y, w, h);"
+            if yuv is not None
+            else ("\n    var fz = src[i];" if unpack is None else "\n    " + _UNPACK_HEAD[unpack])
+        )
         + "\n    var fz_held = "
         + ("held[i]" if needs_held else "vec4<f32>(0.0)")
         + ";\n    "
@@ -2816,15 +2821,41 @@ class _Capture:
     def replay(self):
         real = self.__dict__["real"]
         for name, a, k in self.__dict__["ops"]:
-            getattr(real, name)(*a, **k)
+            if name == "upload":
+                _put(real, *a)
+            else:
+                getattr(real, name)(*a, **k)
         self.__dict__["ops"] = []
+
+
+def _put(context, target, image) -> None:
+    """A layer's picture into a buffer: its bytes uploaded, or, for a decoded frame kept as its planes
+    (yuv.PlaneFrame), the planes uploaded and converted by the device in one pass, formcut's conversion."""
+    if not hasattr(image, "aux"):
+        context.upload(target, image)
+        return
+    from .yuv import unpack_code
+
+    h, w = image.shape[:2]
+    spare = context.buffers[1] if target is context.buffers[0] else context.buffers[0]
+    context.run(unpack_code(image), spare, target, [w, h], image.aux(), w, h)
 
 
 def _fusion_plan(ops: list, real, start: int, w: int, h: int):
     buffers = list(real.buffers)
     current, plan, params = buffers[start], [], [w, h]
     upload = None
-    if ops and ops[0][0] == "upload":
+    if ops and ops[0][0] == "upload" and hasattr(ops[0][1][1], "aux"):
+        # a decoded frame's planes at the head of its chain: the chain's kernel converts them itself (yuv_at)
+        from .yuv import yuv_function
+
+        frame = ops[0][1][1]
+        if ops[0][1][0] is not current or frame.shape[:2] != (h, w):
+            return None
+        upload = frame
+        plan.append(("yuv", yuv_function(frame)))
+        ops = ops[1:]
+    elif ops and ops[0][0] == "upload":
         # a layer's upload at the head of its chain: the chain's kernel unpacks the bytes itself
         target, image = ops[0][1][0], np.asarray(ops[0][1][1])
         if (
@@ -2886,7 +2917,7 @@ def _fused(chain: "_Chain", body) -> None:
         return
     source, params, upload = plan
     out = 1 - start
-    aux = None if upload is None else RawAux(np.ascontiguousarray(upload))
+    aux = None if upload is None else (upload.aux() if hasattr(upload, "aux") else RawAux(np.ascontiguousarray(upload)))
     try:
         real.run(source, real.buffers[start], real.buffers[out], params, aux, chain.w, chain.h)
     except RuntimeError as exc:
@@ -2991,7 +3022,7 @@ def effects_and_warp(
             )
             joins = (bool(effects) or as_base) and getattr(context, "fuses_upload", False)
             if not joins:
-                context.upload(context.buffers[0], image)
+                _put(context, context.buffers[0], image)
             if effects or as_base:
 
                 def chain_and_round():
