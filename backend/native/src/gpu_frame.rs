@@ -102,7 +102,8 @@ impl GpuFrame {
         self.steps.push(Step::Upload { picture, width, height, deep, bytes });
     }
 
-    #[pyo3(signature = (code, src, dst, held, width, height, params, aux=None))]
+    /// One pass: `pass` is a Python keyword, so the method is `step` on the Python side.
+    #[pyo3(name = "step", signature = (code, src, dst, held, width, height, params, aux=None))]
     #[allow(clippy::too_many_arguments)]
     fn pass(&mut self, code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<Vec<u8>>) {
         self.steps.push(Step::Pass { code, src, dst, held, width, height, params, aux });

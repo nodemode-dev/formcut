@@ -353,6 +353,12 @@ def main(argv: list[str] | None = None) -> int:
 
     doc = _hdr_project(args.width, round(args.width * 9 / 16 / 2) * 2) if args.hdr else _load(args.project)
     status = gpu.status()
+    from . import gpu_frame
+
+    frame_path = gpu_frame.status()
+    print(
+        f"frame path:  {'rust, one command buffer a frame, on ' + frame_path['adapter'] if frame_path['available'] else 'python, one submit a pass (' + frame_path['reason'] + ')'}"
+    )
     if not status.get("available"):
         print("no WebGPU adapter in this interpreter: " + str(status.get("reason", "wgpu is not importable")))
         print("this is not a reading. Run the bench with the engine's own Python, the one that has wgpu installed:")

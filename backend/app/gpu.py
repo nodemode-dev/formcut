@@ -336,6 +336,10 @@ def _stack_wanted(state: dict) -> bool:
 
 
 def stack_active() -> bool:
+    from . import gpu_frame
+
+    if gpu_frame.available():
+        return _stack_fuse is None
     return _stack_fuse is None and _stack_wanted(status())
 
 
@@ -569,6 +573,11 @@ class _StackCompositor:
 
 def stage_layer(layer: DeviceLayer, height: int, width: int) -> int | None:
     """Hand a device layer to the frame's compositor without a readback; None when the stack is not active."""
+    if isinstance(layer.buffer, int):
+        # R26: a recorder's working picture; the recorder stages it into its own pool
+        from .gpu_effects import _context
+
+        return _context(height, width).stage(layer.buffer, height, width)
     try:
         with _lock:
             key = (height, width)
@@ -585,6 +594,26 @@ TRANSFERS = {"srgb": 0, "bt709": 0, "pq": 1, "smpte2084": 1, "hlg": 2, "arib-std
 
 
 def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False) -> np.ndarray:
+    global _last_light, _stack_fuse
+    from . import gpu_frame
+
+    if gpu_frame.available() and _stack_fuse is None:
+        # R26: the whole frame recorded so far, the blends and the pack, run as one command buffer
+        from .gpu_effects import _context
+
+        try:
+            recorder = _context(canvas.shape[0], canvas.shape[1])
+            out = recorder.compose(canvas, layers, TRANSFERS.get(transfer.lower(), 0), yuv)
+            if yuv:
+                _last_light = (int(recorder.light[0]), float(recorder.light[1]))
+            return out
+        except Exception as exc:
+            _stack_fuse = f"{type(exc).__name__}: {exc}"[:200]
+            raise
+    return _composite_stack_python(canvas, layers, transfer, yuv)
+
+
+def _composite_stack_python(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False) -> np.ndarray:
     """Blend a run of (layer, mode) onto the canvas in one device pass.
 
     Falls back layer by layer through composite() if the device path fails,

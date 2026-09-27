@@ -1926,7 +1926,13 @@ class _Context:
 def _context(height: int, width: int) -> _Context:
     key = (height, width)
     if key not in _contexts:
-        _contexts[key] = _Context(height, width)
+        # R26: with the Rust executor present the context records the frame instead of running it pass by pass
+        from . import gpu_frame
+
+        if gpu_frame.available():
+            _contexts[key] = gpu_frame.Recorder(height, width)
+        else:
+            _contexts[key] = _Context(height, width)
         while len(_contexts) > 3:
             _contexts.pop(next(iter(_contexts)))
     return _contexts[key]
