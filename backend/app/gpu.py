@@ -97,7 +97,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     if (mode == 9u) { color = (1.0-2.0*f)*b*b+2.0*f*b; }
     // rounded to the byte grid after every blend, as the CPU reference rounds each composite, so a stack of
     // layers lands where the sequential reference lands rather than drifting in the darks
-    let grid = select(255.0, 65535.0, u32(options[1]) > 0u);
+    let grid = select(255.0, 65535.0, u32(options[1]) > 0u || options[2] > 0.5);
     result[i] = vec4<f32>(round(enc(mix(b, color, alpha)) * grid) / grid, 1.0);
 }
 """
@@ -257,7 +257,7 @@ def composite(base: np.ndarray, front: np.ndarray, mode: str, transfer: str = "s
 
         with _lock:
             out = compute_with_buffers(
-                {0: b, 1: f, 2: np.array([index, TRANSFERS.get(transfer.lower(), 0), 0, 0], np.float32)},
+                {0: b, 1: f, 2: np.array([index, TRANSFERS.get(transfer.lower(), 0), 1.0 if deep else 0.0, 0], np.float32)},
                 {3: (b.size, "f")},
                 BLEND_CODE,
                 n=(b.shape[0] * b.shape[1] + 63) // 64,
@@ -508,7 +508,7 @@ class _StackCompositor:
         self.staged += 1
         return index
 
-    def run(self, canvas: np.ndarray, layers: list) -> np.ndarray:
+    def run(self, canvas: np.ndarray, layers: list, as_bytes: bool = False) -> np.ndarray:
         import wgpu
 
         queue = self.device.queue
@@ -522,7 +522,7 @@ class _StackCompositor:
             else:
                 self._upload(layer, self.front)
                 group = self.ab if source_is_a else self.ba
-            queue.write_buffer(self.opts, 0, np.array([index, self.transfer, 0, 0], np.float32))
+            queue.write_buffer(self.opts, 0, np.array([index, self.transfer, 1.0 if canvas.dtype == np.uint16 else 0.0, 0], np.float32))
             encoder = self.device.create_command_encoder()
             step = encoder.begin_compute_pass()
             step.set_pipeline(self.pipeline)
@@ -555,15 +555,17 @@ class _StackCompositor:
             self.light = (int(words[2]), float(words[3]) * 4.0 / max(1, blocks))
             self.read.unmap()
             return data
-        step.set_pipeline(self.pack16 if deep else self.pack)
-        step.set_bind_group(0, (self.pack16_groups if deep else self.pack_groups)[id(final)])
+        # a sixteen-bit SDR canvas leaves as bytes when asked: the pack rounds the finished value once
+        wide = deep and not as_bytes
+        step.set_pipeline(self.pack16 if wide else self.pack)
+        step.set_bind_group(0, (self.pack16_groups if wide else self.pack_groups)[id(final)])
         step.dispatch_workgroups((self.count + 63) // 64)
         step.end()
-        encoder.copy_buffer_to_buffer(self.packed_out, 0, self.read, 0, self.count * (8 if deep else 4))
+        encoder.copy_buffer_to_buffer(self.packed_out, 0, self.read, 0, self.count * (8 if wide else 4))
         queue.submit([encoder.finish()])
         self.read.map_sync(wgpu.MapMode.READ)
         raw = self.read.read_mapped()
-        kind = np.uint16 if deep else np.uint8
+        kind = np.uint16 if wide else np.uint8
         data = np.frombuffer(raw, kind)[: self.count * 4].reshape(canvas.shape[0], canvas.shape[1], 4).copy()
         self.read.unmap()
         return data
@@ -591,7 +593,9 @@ def stage_layer(layer: DeviceLayer, height: int, width: int) -> int | None:
 TRANSFERS = {"srgb": 0, "bt709": 0, "pq": 1, "smpte2084": 1, "hlg": 2, "arib-std-b67": 2}
 
 
-def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False, blank: bool = False) -> np.ndarray:
+def composite_stack(
+    canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False, blank: bool = False, as_bytes: bool = False
+) -> np.ndarray:
     global _last_light, _stack_fuse
     from . import gpu_frame
 
@@ -601,7 +605,7 @@ def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yu
 
         try:
             recorder = _context(canvas.shape[0], canvas.shape[1])
-            out = recorder.compose(canvas, layers, TRANSFERS.get(transfer.lower(), 0), yuv, blank)
+            out = recorder.compose(canvas, layers, TRANSFERS.get(transfer.lower(), 0), yuv, blank, as_bytes)
             if yuv:
                 _last_light = (int(recorder.light[0]), float(recorder.light[1]))
             return out
@@ -613,10 +617,12 @@ def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yu
                 if not isinstance(layer, (int, np.integer)):
                     canvas = composite(canvas, layer, mode, transfer)
             return canvas
-    return _composite_stack_python(canvas, layers, transfer, yuv)
+    return _composite_stack_python(canvas, layers, transfer, yuv, as_bytes)
 
 
-def _composite_stack_python(canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False) -> np.ndarray:
+def _composite_stack_python(
+    canvas: np.ndarray, layers: list, transfer: str = "srgb", yuv: bool = False, as_bytes: bool = False
+) -> np.ndarray:
     """Blend a run of (layer, mode) onto the canvas in one device pass.
 
     Falls back layer by layer through composite() if the device path fails,
@@ -637,7 +643,7 @@ def _composite_stack_python(canvas: np.ndarray, layers: list, transfer: str = "s
                     _compositors.pop(next(iter(_compositors)))
             _compositors[key].transfer = TRANSFERS.get(transfer.lower(), 0)
             _compositors[key].yuv = yuv
-            out = _compositors[key].run(canvas, layers)
+            out = _compositors[key].run(canvas, layers, as_bytes and not yuv)
             if yuv:
                 global _last_light
                 _last_light = _compositors[key].light

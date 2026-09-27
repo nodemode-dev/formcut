@@ -1,5 +1,6 @@
 import json
 import math
+import os
 
 import cv2
 import numpy as np
@@ -410,6 +411,11 @@ def _encode_transfer(light: np.ndarray, transfer: str) -> np.ndarray:
     return _to_display(light.astype(np.float32), transfer)
 
 
+def _to_bytes(frame: np.ndarray) -> np.ndarray:
+    """A sixteen-bit SDR frame rounded to bytes once: v / 257 to the nearest (never a tie, 257 being odd)."""
+    return cv2.convertScaleAbs(frame, alpha=1.0 / 257.0)
+
+
 def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
     """A deep frame for an SDR monitor: the transfer decoded to light, rolled off above SDR white with a
     soft knee (BT.2390's shape at a 1000-nit source), encoded through sRGB to bytes. A byte frame passes."""
@@ -455,6 +461,9 @@ class FrameRenderer:
         # monitor rolls it off (rolloff_for_display). An SDR project is bytes, as before.
         self.transfer = str(project.get("outputColour") or "bt709").lower()
         self.deep = self.transfer in ("hlg", "pq")
+        # An SDR project keeps its canvas at sixteen bits between blends, as an HDR one does, and rounds to bytes
+        # once when the frame is done: rounded after every blend, a stack of soft layers built bands.
+        self.fine = not self.deep and os.environ.get("FORMCUT_SDR_FINE", "1") != "0"
         self._lift = _lift_table(self.transfer) if self.deep else None
         self.prepared = {}
         self.nested: dict[str, FrameRenderer] = {}
@@ -511,15 +520,19 @@ class FrameRenderer:
         kind = str(fill.get("type") or "colour")
         try:
             if kind == "colour":
-                canvas[:, :, :3] = np.array(ImageColor.getrgb(str(fill.get("colour", "#000000"))), np.uint8)
+                colour = np.broadcast_to(
+                    np.array(ImageColor.getrgb(str(fill.get("colour", "#000000"))), np.uint8), (self.height, self.width, 3)
+                )
+                canvas[:, :, :3] = self._canvas_rgb(canvas, np.ascontiguousarray(colour))
             elif kind == "gradient":
                 top = np.array(ImageColor.getrgb(str(fill.get("from", "#000000"))), np.float32)
                 bottom = np.array(ImageColor.getrgb(str(fill.get("to", "#ffffff"))), np.float32)
                 ramp = np.linspace(0.0, 1.0, self.height, dtype=np.float32)[:, None, None]
-                canvas[:, :, :3] = np.clip(top + (bottom - top) * ramp, 0, 255).astype(np.uint8)
+                ramped = np.broadcast_to(np.clip(top + (bottom - top) * ramp, 0, 255).astype(np.uint8), (self.height, self.width, 3))
+                canvas[:, :, :3] = self._canvas_rgb(canvas, np.ascontiguousarray(ramped))
             elif kind == "image" and fill.get("mediaId"):
                 still = self.media_frame({"kind": "image", "mediaId": str(fill["mediaId"])}, 0)
-                canvas[:, :, :3] = self._cover(still[:, :, :3])
+                canvas[:, :, :3] = self._canvas_rgb(canvas, self._cover(still[:, :, :3]))
             elif kind == "blur":
                 source = next(
                     (
@@ -535,7 +548,7 @@ class FrameRenderer:
                     still = self.media_frame(source, source_time(source, time - source["start"]))
                     covered = self._cover(still[:, :, :3])
                     amount = max(1, int(float(fill.get("amount", 40))))
-                    canvas[:, :, :3] = cv2.GaussianBlur(covered, (0, 0), amount)
+                    canvas[:, :, :3] = self._canvas_rgb(canvas, cv2.GaussianBlur(covered, (0, 0), amount))
         except Exception:
             # A background that cannot be drawn must never stop the frame.
             pass
@@ -654,14 +667,28 @@ class FrameRenderer:
         if self.pending_layers or canvas is not getattr(self, "_fresh_canvas", None):
             return None
         mode = str(transform.get("blendMode", "Normal")).lower()
-        return (gpu.MODES.index(mode) if mode in gpu.MODES else 0, gpu.TRANSFERS.get(self.transfer, 0) if self.deep else 0)
+        return (
+            gpu.MODES.index(mode) if mode in gpu.MODES else 0,
+            gpu.TRANSFERS.get(self.transfer, 0) if self.deep else 0,
+            1 if self.deep or self.fine else 0,
+        )
+
+    def _canvas_rgb(self, canvas: np.ndarray, rgb: np.ndarray) -> np.ndarray:
+        """Painted colour (bytes, or sixteen bits from a deep source) at the canvas's own depth: bytes lifted into an
+        HDR timeline's transfer, or widened to the same signal on an SDR one's sixteen-bit canvas."""
+        if canvas.dtype != np.uint16 or rgb.dtype == np.uint16:
+            return rgb
+        if self.deep:
+            rgba = np.concatenate([rgb, np.full((*rgb.shape[:2], 1), 255, np.uint8)], axis=2)
+            return self.lift(rgba)[:, :, :3]
+        return rgb.astype(np.uint16) * np.uint16(257)
 
     def _blank_canvas(self) -> np.ndarray:
-        kind = np.uint16 if self.deep else np.uint8
+        kind = np.uint16 if self.deep or self.fine else np.uint8
         blank = getattr(self, "_blank", None)
         if blank is None or blank.shape[:2] != (self.height, self.width) or blank.dtype != kind:
             blank = np.zeros((self.height, self.width, 4), kind)
-            blank[:, :, 3] = 255
+            blank[:, :, 3] = 65535 if self.fine else 255
             blank.flags.writeable = False
             self._blank = blank
         return blank
@@ -1232,6 +1259,8 @@ class FrameRenderer:
         """
         if self.deep and layer.dtype == np.uint8:
             layer = self.lift(layer)  # a byte layer that reached the blend on the CPU path
+        elif self.fine and layer.dtype == np.uint8:
+            layer = layer.astype(np.uint16) * np.uint16(257)  # the same signal on the sixteen-bit canvas
         if gpu.stack_active():
             self.pending_layers.append((layer, mode))
             return canvas
@@ -1245,14 +1274,15 @@ class FrameRenderer:
                 transfer=self.transfer,
                 yuv=self._want_planes if self._final_flush else False,
                 blank=canvas is getattr(self, "_fresh_canvas", None),
+                as_bytes=self.fine and self._final_flush,
             )
             self.pending_layers = []
         return canvas
 
     def frame(self, time: float) -> np.ndarray:
         if self.project.get("background"):
-            canvas = np.zeros((self.height, self.width, 4), np.uint16 if self.deep else np.uint8)
-            canvas[:, :, 3] = 255
+            canvas = np.zeros((self.height, self.width, 4), np.uint16 if self.deep or self.fine else np.uint8)
+            canvas[:, :, 3] = 65535 if self.fine else 255
         else:
             # nothing will be painted before the layers: one read-only blank canvas serves every frame (the M5
             # profile showed a 16 MB zeros a frame); anything that would write into it gets its own copy
@@ -1298,6 +1328,9 @@ class FrameRenderer:
             if clip["kind"] == "filter":
                 canvas = self._flush(canvas)
                 self.decode_scale.setdefault("canvas", self.width / self.project["width"])
+                fine_canvas = self.fine and canvas.dtype == np.uint16
+                if fine_canvas:
+                    canvas = _to_bytes(canvas)  # an adjustment clip grades bytes, as it always has
                 canvas = apply_color_grade(apply_colour_panel(canvas, clip.get("colour")), clip.get("colorGrade"))
                 if effects:
                     scaled = self.scaled_effects(effects, {"mediaId": "canvas"})
@@ -1305,6 +1338,8 @@ class FrameRenderer:
                     canvas = on_device if on_device is not None else apply_effects(canvas, scaled, local)
                 if clip.get("lutId"):
                     canvas = apply_lut(canvas, clip["lutId"], float(clip.get("lutIntensity", 1)))
+                if fine_canvas:
+                    canvas = canvas.astype(np.uint16) * np.uint16(257)
                 continue
             if clip["kind"] == "image" and not clip.get("shaderId") and all(entry["id"] in GRADES for entry in effects):
                 key = (
@@ -1455,6 +1490,8 @@ class FrameRenderer:
             canvas = self._blend(canvas, layer, str(transform["blendMode"]))
         self._final_flush = True
         try:
-            return self._flush(canvas)
+            done = self._flush(canvas)
+            # a sixteen-bit SDR canvas leaves as bytes (the device packs them itself; otherwise converted here)
+            return _to_bytes(done) if self.fine and done.dtype == np.uint16 else done
         finally:
             self._final_flush = False

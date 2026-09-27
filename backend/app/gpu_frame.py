@@ -245,7 +245,9 @@ class Recorder:
     def download16(self, buffer, height: int, width: int) -> np.ndarray:
         return np.round(np.clip(self.download(buffer, height, width), 0, 1) * 65535).astype(np.uint16)
 
-    def compose(self, canvas: np.ndarray, layers: list, transfer: int, yuv: bool, blank: bool = False) -> np.ndarray:
+    def compose(
+        self, canvas: np.ndarray, layers: list, transfer: int, yuv: bool, blank: bool = False, as_bytes: bool = False
+    ) -> np.ndarray:
         """Blend the staged layers over the canvas, in light, and pack the frame: the compositor's job."""
         from .gpu import MODES
 
@@ -272,7 +274,8 @@ class Recorder:
                 self.upload(_working[0] if n < len(layers) - 1 else _working[1], layer)
                 front = _working[0] if n < len(layers) - 1 else _working[1]
             index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
-            settings = [float(index), float(transfer), 1.0 if blank else 0.0]
+            # p[5]: the canvas is sixteen-bit (an HDR one, or an SDR one kept off the byte grid between blends)
+            settings = [float(index), float(transfer), 1.0 if blank else 0.0, 1.0 if deep else 0.0]
             if n == len(layers) - 1:
                 last = (front, settings)
                 break
@@ -290,9 +293,12 @@ class Recorder:
             code = _blended(code) if last else code
             self.frame.download(base, self.kernel(code), w, h, planes + groups * 8, held, settings)
         else:
-            code = PACK16_FRAME_CODE if deep else PACK_FRAME_CODE
+            # a sixteen-bit SDR canvas leaves as bytes when the frame is done: the pack rounds the finished
+            # value once, where it had been rounded after every blend
+            wide = deep and not as_bytes
+            code = PACK16_FRAME_CODE if wide else PACK_FRAME_CODE
             code = _blended(code) if last else code
-            self.frame.download(base, self.kernel(code), w, h, w * h * (8 if deep else 4), held, settings)
+            self.frame.download(base, self.kernel(code), w, h, w * h * (8 if wide else 4), held, settings)
         data = self._run()
         _free.extend(_staged)
         _staged.clear()
@@ -305,7 +311,7 @@ class Recorder:
             return np.frombuffer(data, np.uint8, count=planes)
         # the frame as a read-only view of the bytes the executor returned: a copy of it was 16.6 MB and 3 ms a
         # 1080p sixteen-bit frame on the M5, and nothing writes into a rendered frame
-        return np.frombuffer(data, np.uint16 if deep else np.uint8).reshape(h, w, 4)
+        return np.frombuffer(data, np.uint16 if deep and not as_bytes else np.uint8).reshape(h, w, 4)
 
 
 class BaseLayer(int):
@@ -369,7 +375,7 @@ def _blend_body() -> str:
     head_end = body.index("let b = lin(")
     body = body[head_end:]
     body = body.replace("background[i]", "src[i]").replace("foreground[i]", "held[i]").replace("result[i]", "dst[i]")
-    body = body.replace("options[0]", "p[2]").replace("options[1]", "p[3]")
+    body = body.replace("options[0]", "p[2]").replace("options[1]", "p[3]").replace("options[2]", "p[5]")
     # p[4] = 1: the base is a blank canvas, so it is zero light and is not read (lin(0) is 0 in every transfer)
     old = "let b = lin(src[i].rgb);"
     if body.count(old) != 1:

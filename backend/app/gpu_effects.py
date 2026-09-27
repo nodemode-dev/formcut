@@ -2756,16 +2756,17 @@ def _fused_source(plan: list) -> str | None:
     return bindings + "\n" + text
 
 
-def blend_over_blank(transfer: int) -> str:
+def blend_over_blank(transfer: int, sixteen: bool = False) -> str:
     """The compositor's blend of a layer (src) over a blank canvas, as a pointwise kernel of its own: the same
     arithmetic as the compositor's blend with its base taken as zero light, the transfer fixed so the helpers
     read no parameters, the blend mode in p[2]."""
     from .gpu_frame import _blend_body, _blend_functions
 
     functions = _blend_functions().replace("p[3]", f"f32({float(transfer)})")
+    wide = f"f32({1.0 if sixteen else 0.0})"
     body = _blend_body()
     body = body.replace("var b = vec3<f32>(0.0);\n    if (p[4] < 0.5) { b = lin(src[i].rgb); }", "var b = vec3<f32>(0.0);")
-    body = body.replace("held[i]", "src[i]").replace("p[3]", f"f32({float(transfer)})")
+    body = body.replace("held[i]", "src[i]").replace("p[3]", f"f32({float(transfer)})").replace("p[5]", wide)
     return (
         functions
         + "@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) {\n    "
@@ -3001,7 +3002,7 @@ def effects_and_warp(
                         # The CPU rounds to uint8 here; so does the device.
                         chain._pass(QUANTISE_CODE, [])
                     if as_base:
-                        chain._pass(blend_over_blank(base[1]), [base[0]])
+                        chain._pass(blend_over_blank(base[1], bool(base[2]) if len(base) > 2 else base[1] > 0), [base[0]])
 
                 _fused(chain, chain_and_round)
             if as_base:
