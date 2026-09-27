@@ -583,6 +583,11 @@ def main(argv: list[str] | None = None) -> int:
                 f"export parts: start-up {timing['startupMs']:.0f} ms until the first frame reached the encoder, then "
                 f"{timing['steadyFps']:.1f} fps steady over the frames, {timing['finishMs']:.0f} ms for the encoder to finish"
             )
+            if "renderWaitMs" in timing:
+                print(
+                    f"export loop:  a frame waited {timing['renderWaitMs']:.2f} ms on the renderer and {timing['writeMs']:.2f} ms "
+                    "writing to the encoder (the larger is what holds the export back)"
+                )
     if args.record:
         table = {}
         if os.path.exists(args.record):

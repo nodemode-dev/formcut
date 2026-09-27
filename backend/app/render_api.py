@@ -200,7 +200,16 @@ def _timing(stamps: dict, count: int) -> dict:
     frames = (stamps.get("last", stamps["first"]) - stamps["first"]) * 1000
     finish = (stamps.get("done", stamps.get("last", stamps["first"])) - stamps.get("last", stamps["first"])) * 1000
     steady = (count - 1) / (frames / 1000) if count > 1 and frames > 0 else 0.0
-    return {"startupMs": round(first, 1), "framesMs": round(frames, 1), "finishMs": round(finish, 1), "steadyFps": round(steady, 2)}
+    each = max(1, count)
+    return {
+        "startupMs": round(first, 1),
+        "framesMs": round(frames, 1),
+        "finishMs": round(finish, 1),
+        "steadyFps": round(steady, 2),
+        # a frame's wait on each side of the loop: on the renderer for the next frame, on the pipe to the encoder
+        "renderWaitMs": round(stamps.get("render_wait", 0.0) * 1000 / each, 2),
+        "writeMs": round(stamps.get("write", 0.0) * 1000 / each, 2),
+    }
 
 
 def _light_table(transfer: str) -> np.ndarray:
@@ -782,19 +791,29 @@ def export_media(
                     return picture, light
 
                 stamps["loop"] = time.perf_counter()
+                stamps["render_wait"] = stamps["write"] = 0.0
+                # The renderer works up to three frames ahead of the pipe (one thread, in order), so a frame the
+                # encoder takes slowly does not stop the next from rendering; the time this loop waits on each
+                # side is kept, so the export's parts say which side holds it back.
+                depth = 3
                 with ThreadPoolExecutor(max_workers=1) as ahead:
-                    pending = ahead.submit(produce, 0) if count else None
+                    pending = [ahead.submit(produce, j) for j in range(min(depth, count))]
                     for i in range(count):
                         if cancelled():
                             raise InterruptedError("Cancelled")
-                        written, light = pending.result()
-                        pending = ahead.submit(produce, i + 1) if i + 1 < count else None
+                        waited = time.perf_counter()
+                        written, light = pending.pop(0).result()
+                        stamps["render_wait"] += time.perf_counter() - waited
+                        if i + depth < count:
+                            pending.append(ahead.submit(produce, i + depth))
                         if light is not None:
                             max_cll = max(max_cll, light[0])
                             max_fall = max(max_fall, light[1])
                         # The pipe takes the array's own memory, the bytes tobytes()
                         # made a copy of, in the same order: 5 ms a 1080p frame saved.
+                        began_write = time.perf_counter()
                         process.stdin.write(written)
+                        stamps["write"] += time.perf_counter() - began_write
                         stamps.setdefault("first", time.perf_counter())
                         stamps["last"] = time.perf_counter()
                         report(0.1 + 0.85 * (i + 1) / count)
