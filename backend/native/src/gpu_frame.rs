@@ -60,8 +60,11 @@ impl GpuFrame {
             .find_map(|backends| pollster::block_on(wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..Default::default() }).request_adapter(&options)))
             .ok_or_else(|| PyRuntimeError::new_err("no WebGPU adapter"))?;
         let adapter_name = adapter.get_info().name;
-        let big = picture_bytes.max(1 << 28);
-        let limits = wgpu::Limits { max_storage_buffer_binding_size: big as u32, max_buffer_size: big, ..wgpu::Limits::default() };
+        // ask for what the adapter has: a fixed request (256 MB bindings) refused the 128 MB of an OpenGL adapter
+        let limits = adapter.limits();
+        if picture_bytes > limits.max_storage_buffer_binding_size as u64 {
+            return Err(PyRuntimeError::new_err(format!("a {picture_bytes}-byte picture is over this adapter's {} bytes", limits.max_storage_buffer_binding_size)));
+        }
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label: Some("formcut frame"),
