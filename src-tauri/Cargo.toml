@@ -1,6 +1,6 @@
 [package]
 name = "formcut"
-version = "1.94.6"
+version = "1.94.7"
 edition = "2021"
 
 [build-dependencies]
