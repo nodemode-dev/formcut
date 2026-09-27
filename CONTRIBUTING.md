@@ -12,6 +12,10 @@ contributions.
   builds the same thing twice.
 - **Translations** are welcome: formcut ships in sixteen languages, and every
   new string needs all sixteen.
+- **Caption looks** need no code. Style a caption track, choose **Share this look**
+  in the Captions panel, and add the file it saves to
+  [`backend/app/community_looks/`](backend/app/community_looks/README.md): it ships
+  with formcut, listed with your name.
 
 ## Setting up
 

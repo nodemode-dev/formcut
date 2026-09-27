@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import base64
 import json
+import re
+import tempfile
 import threading
 import time
 import uuid
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, UploadFile
@@ -429,13 +432,134 @@ CAPTION_STYLES: list[dict] = [
             "wordStyle": {"mode": "box", "colour": "#101416"},
         },
     },
+    # The animated looks (v2.0.3): the spoken word eases in, fading in as the words arrive ("reveal") or rising
+    # into place ("rise"), over its first WORD_EASE seconds (renderer.py)
+    {
+        "id": "word-by-word",
+        "name": "Word by word",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 800,
+            "align": "center",
+            "outlineColor": "#000000",
+            "outlineWidth": 4,
+            "lineHeight": 1.15,
+            "wordStyle": {"mode": "reveal", "colour": "#ffffff"},
+        },
+    },
+    {
+        "id": "reveal-gold",
+        "name": "Gold reveal",
+        "style": {
+            "size": 6.5,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 900,
+            "align": "center",
+            "outlineColor": "#000000",
+            "outlineWidth": 5,
+            "shadowColor": "#000000",
+            "shadowBlur": 6,
+            "shadowY": 2,
+            "wordStyle": {"mode": "reveal", "colour": "#ffd633"},
+        },
+    },
+    {
+        "id": "reveal-plate",
+        "name": "Plate reveal",
+        "style": {
+            "size": 5,
+            "color": "#f2f4f5",
+            "bold": False,
+            "weight": 600,
+            "align": "center",
+            "outlineWidth": 0,
+            "plateColor": "#101416",
+            "plateOpacity": 0.78,
+            "platePadding": 14,
+            "plateRadius": 6,
+            "wordStyle": {"mode": "reveal", "colour": "#7cf0ff"},
+        },
+    },
+    {
+        "id": "rise",
+        "name": "Rise",
+        "style": {
+            "size": 6,
+            "color": "#ffffff",
+            "bold": True,
+            "weight": 800,
+            "align": "center",
+            "outlineColor": "#001018",
+            "outlineWidth": 4,
+            "lineHeight": 1.2,
+            "wordStyle": {"mode": "rise", "colour": "#7cf0ff"},
+        },
+    },
+    {
+        "id": "rise-sunset",
+        "name": "Sunset rise",
+        "style": {
+            "size": 6.5,
+            "color": "#fff4e8",
+            "bold": True,
+            "weight": 900,
+            "align": "center",
+            "outlineColor": "#1a0a00",
+            "outlineWidth": 5,
+            "lineHeight": 1.2,
+            "wordStyle": {"mode": "rise", "colour": "#ff8a3d"},
+        },
+    },
+    {
+        "id": "rise-neon",
+        "name": "Neon rise",
+        "style": {
+            "size": 6,
+            "color": "#f4ffe8",
+            "bold": True,
+            "weight": 800,
+            "align": "center",
+            "outlineColor": "#0b0014",
+            "outlineWidth": 3,
+            "shadowColor": "#b6ff3b",
+            "shadowBlur": 12,
+            "shadowY": 0,
+            "letterSpacing": 1,
+            "wordStyle": {"mode": "rise", "colour": "#b6ff3b"},
+        },
+    },
 ]
 CAPTION_STYLE_IDS = {entry["id"] for entry in CAPTION_STYLES}
 
+# The community's caption looks: each folder under community_looks/ is a captions package (its manifest.json, with
+# an "author"), added by pull request and checked exactly as an installed package is (effect_packages.load_package);
+# the tests fail on one that does not load, or reuses an id. They ship with formcut and are listed after its own.
+COMMUNITY = Path(__file__).resolve().parent / "community_looks"
+
+
+def community_looks() -> list[dict]:
+    from .effect_packages import load_package
+
+    looks: list[dict] = []
+    if not COMMUNITY.is_dir():
+        return looks
+    for folder in sorted(p for p in COMMUNITY.iterdir() if p.is_dir()):
+        try:
+            entry = load_package(folder)
+            author = str(json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get("author") or "")[:60]
+        except (ValueError, OSError):
+            continue
+        if entry["kind"] == "captions" and entry["id"] not in CAPTION_STYLE_IDS:
+            looks.append({"id": entry["id"], "name": entry["name"], "style": entry["style"], "community": True, "author": author})
+    return looks
+
 
 def caption_style(look_id: str) -> dict | None:
-    """A shipped look or a packaged one, by id."""
-    found = next((e for e in CAPTION_STYLES if e["id"] == look_id), None)
+    """A shipped look, a community one or a packaged one, by id."""
+    found = next((e for e in [*CAPTION_STYLES, *community_looks()] if e["id"] == look_id), None)
     if found is not None:
         return found
     from .effect_packages import entries
@@ -450,11 +574,48 @@ def list_title_styles() -> list[dict]:
 
 @router.get("/captions")
 def list_caption_styles() -> list[dict]:
-    """The eight shipped looks, then every installed captions package as a look of its own."""
+    """The shipped looks, then every installed captions package as a look of its own."""
     from .effect_packages import entries
 
-    packaged = [{"id": e["id"], "name": e["name"], "style": e["style"], "package": True} for e in entries("captions")]
-    return [*CAPTION_STYLES, *packaged]
+    community = community_looks()
+    taken = CAPTION_STYLE_IDS | {look["id"] for look in community}
+    packaged = [
+        {"id": e["id"], "name": e["name"], "style": e["style"], "package": True} for e in entries("captions") if e["id"] not in taken
+    ]
+    return [*CAPTION_STYLES, *community, *packaged]
+
+
+class ShareBody(BaseModel):
+    name: str
+    style: dict
+    author: str = ""
+
+
+@router.post("/captions/share")
+def share_caption_look(body: ShareBody) -> Response:
+    """A caption look as a captions package, its manifest.json: the file the package installer takes, and the file a
+    contributor adds to the community looks (community_looks/<id>/manifest.json). Checked as both check it."""
+    from .effect_packages import load_package
+
+    name = _clean_name(body.name) if body.name.strip() else "My caption look"
+    author = re.sub(r"[^A-Za-z0-9_.-]", "", body.author.lstrip("@"))[:39]
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "look"
+    look_id = f"{slug}-by-{author.lower().replace('_', '-').replace('.', '-')}" if author else slug
+    if len(look_id) < 2 or look_id in CAPTION_STYLE_IDS:
+        look_id = f"{look_id}-look"
+    manifest = {"id": look_id, "name": name, "kind": "captions", "author": author, "style": body.style}
+    with tempfile.TemporaryDirectory() as folder:
+        (Path(folder) / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        try:
+            entry = load_package(Path(folder))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+    manifest["style"] = entry["style"]
+    return Response(
+        json.dumps(manifest, indent=2).encode(),
+        media_type="application/json",
+        headers={"content-disposition": f'attachment; filename="{look_id}.json"'},
+    )
 
 
 @router.get("/texttemplates")

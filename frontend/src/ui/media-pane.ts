@@ -125,9 +125,16 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
               <option value="highlight">${t("cap.wordStyle.highlight")}</option>
               <option value="pop">${t("cap.wordStyle.pop")}</option>
               <option value="box">${t("cap.wordStyle.box")}</option>
+              <option value="reveal">${t("cap.wordStyle.reveal")}</option>
+              <option value="rise">${t("cap.wordStyle.rise")}</option>
             </select>
             <span>${t("cap.wordColour")}</span>
             <input type="color" class="mini-select" data-ref="cap-word-colour" value="#ffd633" aria-label="${t("cap.wordColour")}" />
+          </div>
+          <div class="prop-row">
+            <input type="text" class="mini-select" data-ref="cap-share-name" maxlength="60" placeholder="${t("cap.share.name")}" aria-label="${t("cap.share.name")}" />
+            <input type="text" class="mini-select" data-ref="cap-share-author" maxlength="39" placeholder="${t("cap.share.author")}" aria-label="${t("cap.share.author")}" />
+            <button type="button" class="tool-chip" data-ref="cap-share" title="${t("cap.share.hint")}">${t("cap.share")}</button>
           </div>
           <div class="prop-row">
             <span>${t("cap.emphasis")}</span>
@@ -768,7 +775,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const cancelChip = el.querySelector<HTMLElement>('[data-ref="cap-cancel"]')!;
   let captionStyle: Partial<TextStyle> = {};
   const styled = (): Partial<TextStyle> => {
-    const mode = el.querySelector<HTMLSelectElement>('[data-ref="cap-word-style"]')!.value as "plain" | "highlight" | "pop" | "box";
+    const mode = el.querySelector<HTMLSelectElement>('[data-ref="cap-word-style"]')!.value as "plain" | "highlight" | "pop" | "box" | "reveal" | "rise";
     const colour = el.querySelector<HTMLInputElement>('[data-ref="cap-word-colour"]')!.value;
     return mode === "plain" ? captionStyle : { ...captionStyle, wordStyle: { mode, colour } };
   };
@@ -893,6 +900,29 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     capSay(`${t("cap.exported")}: ${cues.length}`);
   };
   el.querySelector('[data-ref="cap-export-srt"]')!.addEventListener("click", () => void exportCaptions("srt"));
+  // Share this look: the panel's look as a captions package file, which any formcut installs as it is and which the
+  // community looks take (backend/app/community_looks/README.md)
+  el.querySelector('[data-ref="cap-share"]')!.addEventListener("click", () => void (async () => {
+    const name = el.querySelector<HTMLInputElement>('[data-ref="cap-share-name"]')!.value.trim();
+    const author = el.querySelector<HTMLInputElement>('[data-ref="cap-share-author"]')!.value.trim();
+    const res = await fetch("/api/presets/captions/share", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-formcut-local": "1" },
+      body: JSON.stringify({ name, author, style: styled() }),
+    });
+    if (!res.ok) {
+      const detail = (await res.json().catch(() => ({}))) as { detail?: string };
+      capSay(`${t("cap.share.failed")}: ${detail.detail ?? res.status}`);
+      return;
+    }
+    const file = res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "caption-look.json";
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await res.blob());
+    link.download = file;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    capSay(`${t("cap.share.saved")}: ${file}`);
+  })());
   el.querySelector('[data-ref="cap-export-vtt"]')!.addEventListener("click", () => void exportCaptions("vtt"));
 
   // Phase 9: the caption track's text as an editable transcript. Rows are
@@ -1047,13 +1077,13 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   // or to every caption of the chosen track, and keeps it for the next
   // transcription (the word style and colour controls follow it).
   const captionGrid = el.querySelector<HTMLElement>('[data-ref="caption-grid"]')!;
-  let captionLooks: Array<{ id: string; name: string; style: Record<string, unknown> }> = [];
-  // The looks: the eight the engine ships and every installed captions
+  let captionLooks: Array<{ id: string; name: string; style: Record<string, unknown>; community?: boolean; author?: string }> = [];
+  // The looks: the ones the engine ships, the community's (each with its author) and every installed captions
   // package; the grid is patched in place, and rebuilt from the engine when
   // the packages change (an install or a removal dispatches the event).
   const loadCaptionLooks = () => fetch("/api/presets/captions")
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
-    .then((looks: Array<{ id: string; name: string; style: Record<string, unknown> }>) => {
+    .then((looks: typeof captionLooks) => {
       captionLooks = looks;
       const wanted = new Set(looks.map((entry) => entry.id));
       for (const card of captionGrid.querySelectorAll<HTMLElement>("[data-caption-look]")) if (!wanted.has(card.dataset.captionLook!)) card.remove();
@@ -1061,7 +1091,9 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       captionGrid.insertAdjacentHTML("beforeend", looks.filter((entry) => !present.has(entry.id)).map((entry) =>
         `<div class="effect-card title-card" data-caption-look="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-label="${escapeHtml(entry.name)}">` +
         `<div class="effect-thumb has-image"><img src="/api/catalogue/preview/caption/${encodeURIComponent(entry.id)}" alt="" loading="lazy" draggable="false" /></div>` +
-        `<div class="effect-name">${escapeHtml(entry.name)}</div></div>`).join(""));
+        `<div class="effect-name">${escapeHtml(entry.name)}</div>` +
+        (entry.community ? `<div class="effect-by">${escapeHtml(t("cap.looks.by"))} ${escapeHtml(entry.author ?? "")}</div>` : "") +
+        `</div>`).join(""));
     })
     .catch(() => { /* the gallery is optional if the engine is offline */ });
   void loadCaptionLooks();

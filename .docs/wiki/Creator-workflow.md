@@ -42,6 +42,14 @@ on, and it always lands on a frame. Transcription appends captions to the track
 named in the caption picker, and if that track already holds clips across the
 caption span it creates a Captions track instead, so nothing is written over.
 
+Caption looks: fourteen ship with formcut, six of them animated, the spoken word
+fading in as the words arrive (reveal) or rising into place (rise) over its first
+0.15 s. After them come the community's looks, each with its author, from
+`backend/app/community_looks/`, then any installed captions package. **Share this
+look** in the Captions panel saves the panel's look as a captions package file,
+which any formcut installs as it is and which the community looks take by pull
+request.
+
 ## Appearance and layout
 
 Thirty appearance profiles live under Settings, Appearance: twenty-eight

@@ -200,7 +200,9 @@ def caption_style_preview(item: str) -> np.ndarray:
             }
         ],
     }
-    return FrameRenderer(project).frame(0.3)
+    # an animated look's card shows its word settled, the card being a still
+    mode = (entry["style"].get("wordStyle") or {}).get("mode")
+    return FrameRenderer(project).frame(0.45 if mode in ("reveal", "rise") else 0.3)
 
 
 def render(kind: str, item: str) -> np.ndarray:

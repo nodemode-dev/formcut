@@ -24,7 +24,7 @@ export interface TextStyle {
   wrapWidth?: number;
   textOpacity?: number;
   /** How the word being spoken is drawn when the clip carries words: coloured, popped larger, or on a box. */
-  wordStyle?: { mode: "highlight" | "pop" | "box"; colour: string };
+  wordStyle?: { mode: "highlight" | "pop" | "box" | "reveal" | "rise"; colour: string };
 }
 
 export function defaultTextStyle(content = "Title"): TextStyle {

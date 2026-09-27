@@ -133,6 +133,17 @@ def paint_text(draw, origin, content: str, font, fill, align: str, spacing: floa
             cursor += font.getlength(char) + tracking
 
 
+# The animated word modes (v2.0.3): the spoken word eases in over its first WORD_EASE seconds, fading in with
+# "reveal" (the words after it not drawn yet, their places kept) and rising into place with "rise".
+WORD_EASE = 0.15
+ANIMATED_WORDS = ("reveal", "rise")
+
+
+def _with_alpha(colour, alpha: int):
+    rgb = ImageColor.getrgb(colour) if isinstance(colour, str) else tuple(colour)
+    return (*rgb[:3], alpha)
+
+
 def paint_words(
     draw,
     origin,
@@ -166,6 +177,10 @@ def paint_words(
             active = index
     if mode == "none":
         active = -1
+    eased = 1.0
+    if active >= 0 and mode in ANIMATED_WORDS:
+        progress = min(1.0, max(0.0, (local - float(words[active].get("t", 0))) / WORD_EASE))
+        eased = 1.0 - (1.0 - progress) ** 3
     # Per-word emphasis: a word carrying its own colour keeps it, by position.
     own = [word.get("colour") or None for word in words]
     lines = content.split("\n")
@@ -181,6 +196,11 @@ def paint_words(
         top = y + line_no * step
         for token, token_width in zip(tokens, widths, strict=True):
             lit = index == active
+            if mode == "reveal" and index > active:
+                # not spoken yet: nothing drawn, its place kept, so the line does not move as the words arrive
+                cursor += token_width + space
+                index += 1
+                continue
             if lit and mode == "box":
                 pad = font.size * 0.12
                 draw.rounded_rectangle(
@@ -197,6 +217,18 @@ def paint_words(
                     fill=accent,
                     stroke_width=stroke,
                     stroke_fill=stroke_fill,
+                    anchor="la",
+                )
+            elif lit and mode in ANIMATED_WORDS:
+                shade = round(255 * eased)
+                rise = (1.0 - eased) * font.size * 0.4 if mode == "rise" else 0.0
+                draw.text(
+                    (cursor, top + rise),
+                    token,
+                    font=font,
+                    fill=_with_alpha(accent, shade),
+                    stroke_width=stroke,
+                    stroke_fill=None if stroke_fill is None else _with_alpha(stroke_fill, shade),
                     anchor="la",
                 )
             else:
@@ -845,7 +877,10 @@ class FrameRenderer:
         a cache keyed by its style and the frame size; a word-animated title is drawn per frame as before."""
         text = clip.get("textStyle") or {"content": clip.get("label", "Title")}
         words = clip.get("words") or []
-        animated = bool(words) and (text.get("wordMode", "none") in ("highlight", "pop", "box") or any(w.get("colour") for w in words))
+        # the word style's mode is read where the text style keeps it (wordStyle.mode): read as "wordMode", which
+        # no style has, every karaoke caption was cached as a still, its lit word held through playback and export
+        mode = (text.get("wordStyle") or {}).get("mode")
+        animated = bool(words) and (mode in ("highlight", "pop", "box", *ANIMATED_WORDS) or any(w.get("colour") for w in words))
         if not animated:
             key = (clip.get("id"), json.dumps(text, sort_keys=True, default=str), self.width, self.height)
             self._last_text_key = ("text", key)
@@ -918,7 +953,7 @@ class FrameRenderer:
         word_mode = (text.get("wordStyle") or {}).get("mode")
         # Per-word emphasis: a word with its own colour is drawn in it whether
         # or not it is the one being spoken, so the block takes the word path.
-        if words and (word_mode in ("highlight", "pop", "box") or any(word.get("colour") for word in words)):
+        if words and (word_mode in ("highlight", "pop", "box", *ANIMATED_WORDS) or any(word.get("colour") for word in words)):
             big = title_font(text, round(size * 1.18)) if word_mode == "pop" else font
             paint_words(draw, (x, y), content, font, text, words, local, align, spacing, tracking, stroke, stroke_fill, big)
         else:

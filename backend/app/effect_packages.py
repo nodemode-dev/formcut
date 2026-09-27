@@ -211,8 +211,10 @@ def load_package(folder) -> dict:
         if unknown:
             raise ValueError(f"the style has keys the caption track does not take: {', '.join(unknown[:5])}")
         word = style.get("wordStyle")
-        if word is not None and (not isinstance(word, dict) or word.get("mode") not in (None, "none", "highlight", "pop", "box")):
-            raise ValueError("wordStyle must be an object with a mode of none, highlight, pop or box")
+        if word is not None and (
+            not isinstance(word, dict) or word.get("mode") not in (None, "none", "highlight", "pop", "box", "reveal", "rise")
+        ):
+            raise ValueError("wordStyle must be an object with a mode of none, highlight, pop, box, reveal or rise")
         return {
             "id": manifest["id"],
             "name": manifest["name"],
