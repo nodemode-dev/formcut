@@ -339,7 +339,8 @@ def stack_active() -> bool:
     from . import gpu_frame
 
     if gpu_frame.available():
-        return _stack_fuse is None
+        # the Rust frame path, unless the composite is pinned to the CPU (the bench's reference, a user's choice)
+        return _stack_fuse is None and os.environ.get("FORMCUT_COMPOSITE", "").lower() != "cpu"
     return _stack_fuse is None and _stack_wanted(status())
 
 
@@ -608,8 +609,13 @@ def composite_stack(canvas: np.ndarray, layers: list, transfer: str = "srgb", yu
                 _last_light = (int(recorder.light[0]), float(recorder.light[1]))
             return out
         except Exception as exc:
+            # as the Python compositor does: the fuse blows, later frames take the CPU path, and this frame is
+            # composed on the CPU from the layers it holds in memory
             _stack_fuse = f"{type(exc).__name__}: {exc}"[:200]
-            raise
+            for layer, mode in layers:
+                if not isinstance(layer, (int, np.integer)):
+                    canvas = composite(canvas, layer, mode, transfer)
+            return canvas
     return _composite_stack_python(canvas, layers, transfer, yuv)
 
 

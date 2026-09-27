@@ -24,10 +24,15 @@ _status: dict | None = None
 _unavailable: str | None = None
 
 WORKING = 5
-POOL = 32
+POOL = 12
 CANVAS_A = WORKING + POOL
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
+# The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
+API = 2
+# Shared by every Recorder: one executor, its kernels by source, the pool of staged layers, the steps pending
+_kernels: dict[str, int] = {}
+_shared = {"pool": 0, "pending": 0}
 
 
 def available() -> bool:
@@ -43,9 +48,16 @@ def status() -> dict:
         _status = {"available": False, "reason": "FORMCUT_FRAME=python"}
         return _status
     try:
+        if os.environ.get("FORMCUT_FRAME") == "pyref":
+            # the reference executor in Python, the Rust one's semantics exactly: for verifying the recorder
+            _status = {"available": True, "adapter": PyFrame(4 * 4 * 16, 2).adapter() + " (python reference executor)"}
+            return _status
         import formcut_native
 
         probe = formcut_native.GpuFrame(4 * 4 * 16, 2)
+        api = probe.api() if hasattr(probe, "api") else 1
+        if api < API:
+            raise RuntimeError(f"formcut_native is an older build (api {api}, this engine wants {API}); run setup/build_native_gpu")
         _status = {"available": True, "adapter": probe.adapter()}
     except Exception as exc:  # noqa: BLE001 - any failure means the Python path, with the reason kept
         _unavailable = f"{type(exc).__name__}: {exc}"[:200]
@@ -56,77 +68,105 @@ def status() -> dict:
 def executor(height: int, width: int):
     """One executor per process, sized for the largest frame seen so far."""
     global _frame
-    import formcut_native
-
     need = width * height * 16
     if _frame is None or _frame[0] < need:
-        _frame = (need, formcut_native.GpuFrame(need, PICTURES))
+        if _frame is not None and _shared["pending"]:
+            # growing now would drop what this frame has recorded; this layer takes the CPU path, the next frame grows
+            raise RuntimeError("the frame executor cannot grow mid-frame")
+        if os.environ.get("FORMCUT_FRAME") == "pyref":
+            made = PyFrame(need, PICTURES)
+        else:
+            import formcut_native
+
+            made = formcut_native.GpuFrame(need, PICTURES)
+        _frame = (need, made)
+        _kernels.clear()
+        _shared["pool"] = 0
     return _frame[1]
 
 
 class Recorder:
-    """The device context the engine's passes run on, recording instead of running."""
+    """The device context the engine's passes run on, recording instead of running. Every Recorder shares the
+    one executor, its pictures and its pool; a Recorder is a size, as a context is on the Python path."""
 
     def __init__(self, height: int, width: int):
-        from .gpu_effects import HEADER, UNPACK16_CODE, UNPACK_CODE
+        from .gpu_effects import HEADER
 
         self.h, self.w = height, width
-        self.frame = executor(height, width)
+        self.header = HEADER
+        executor(height, width)
         self.buffers = list(range(WORKING))
         self.aux_size = 1 << 40  # anything fits: each pass carries its own aux buffer
-        self.header = HEADER
-        self.unpack = self.kernel(UNPACK_CODE)
-        self.unpack16 = self.kernel(UNPACK16_CODE)
-        self.pool_used = 0
-        self.steps = 0
-        self.light = (0, 0.0)  # after a planar compose: the luma's brightest sixteen-bit code and mean nits
+        self.light = (0, 0.0)  # after a planar compose: the brightest sixteen-bit code and the mean light in nits
+
+    @property
+    def frame(self):
+        return _frame[1]
 
     def kernel(self, code: str) -> int:
         full = code if code.lstrip().startswith("@group") else self.header + code
-        return self.frame.kernel(full)
+        known = _kernels.get(full)
+        if known is None:
+            known = _kernels[full] = self.frame.kernel(full)
+        return known
+
+    def _step(self, code: int, src: int, dst: int, held: int, w: int, h: int, params: list, aux: bytes | None):
+        call = getattr(self.frame, "step", None) or getattr(self.frame, "pass")
+        call(code, src, dst, held, w, h, params, aux)
+        _shared["pending"] += 1
+
+    def _run(self) -> bytes:
+        from .gpu_effects import UNPACK16_CODE, UNPACK_CODE
+
+        data = self.frame.run(self.kernel(UNPACK_CODE), self.kernel(UNPACK16_CODE))
+        _shared["pending"] = 0
+        return data if isinstance(data, (bytes, bytearray)) else bytes(data)
 
     def run(self, code: str, src, dst, params: list, aux: np.ndarray | None = None, width: int | None = None, height: int | None = None):
-        w, h = width or self.w, height or self.h
-        aux_bytes = None if aux is None else np.ascontiguousarray(np.asarray(aux).astype(np.float32)).tobytes()
-        self.frame.step(self.kernel(code), int(src), int(dst), 2, int(w), int(h), [float(v) for v in params[2:]], aux_bytes)
-        self.steps += 1
+        w, h = int(width or self.w), int(height or self.h)
+        # every run in the engine passes [w, h, ...] with w and h the dispatch size; the executor prepends them
+        aux_bytes = None if aux is None else np.ascontiguousarray(np.asarray(aux, dtype=np.float32)).tobytes()
+        self._step(self.kernel(code), int(src), int(dst), 2, w, h, [float(v) for v in params[2:]], aux_bytes)
 
     def upload(self, buffer, image: np.ndarray):
+        image = np.asarray(image)
         h, w = image.shape[:2]
         if image.ndim == 2:
             image = np.repeat(image[:, :, None], 4, axis=2)
+        if image.dtype not in (np.uint8, np.uint16):
+            # the Python context takes float pictures on the 0..255 scale (it divides by 255)
+            image = np.clip(np.round(image), 0, 255).astype(np.uint8)
         if image.shape[2] == 3:
-            image = np.concatenate([image, np.full((h, w, 1), 65535 if image.dtype == np.uint16 else 255, image.dtype)], axis=2)
-        deep = image.dtype == np.uint16
-        if not deep and image.dtype != np.uint8:
-            image = np.round(np.clip(image, 0, 1) * 255).astype(np.uint8)
-        self.frame.upload(int(buffer), int(w), int(h), bool(deep), np.ascontiguousarray(image).tobytes())
-        self.steps += 1
+            full = 65535 if image.dtype == np.uint16 else 255
+            image = np.concatenate([image, np.full((h, w, 1), full, image.dtype)], axis=2)
+        self.frame.upload(int(buffer), int(w), int(h), image.dtype == np.uint16, np.ascontiguousarray(image).tobytes())
+        _shared["pending"] += 1
 
     def copy(self, source, target, height: int, width: int):
         self.frame.copy(int(source), int(target), int(width), int(height))
-        self.steps += 1
+        _shared["pending"] += 1
 
     def stage(self, picture: int, height: int, width: int) -> int | None:
         """A finished layer copied into the pool; its pool index is the layer's handle for the blend."""
-        if self.pool_used >= POOL:
+        if _shared["pool"] >= POOL:
             return None
-        index = WORKING + self.pool_used
-        self.pool_used += 1
+        index = WORKING + _shared["pool"]
+        _shared["pool"] += 1
         self.copy(picture, index, height, width)
         return index
 
     def download(self, buffer, height: int, width: int) -> np.ndarray:
-        """The rare read of a working picture (a CPU-only effect mid-chain): runs what is recorded so far."""
-        from .gpu_effects import PACK_CODE
+        """A working picture's floats, exactly (a CPU-only effect mid-chain): runs what is recorded so far."""
+        self.frame.download(int(buffer), self.kernel(PACK_F32_FRAME_CODE), int(width), int(height), int(width) * int(height) * 16)
+        return np.frombuffer(self._run(), np.float32).reshape(height, width, 4).copy()
 
-        self.frame.download(int(buffer), self.kernel(PACK_CODE), int(width), int(height), int(width) * int(height) * 4)
-        data = self.frame.run(self.unpack, self.unpack16)
-        self.steps = 0  # the pictures persist on the device; the staged pool stays as it is
-        return np.frombuffer(data, np.uint8).reshape(height, width, 4).astype(np.float32) / 255
+    def download16(self, buffer, height: int, width: int) -> np.ndarray:
+        return np.round(np.clip(self.download(buffer, height, width), 0, 1) * 65535).astype(np.uint16)
 
     def compose(self, canvas: np.ndarray, layers: list, transfer: int, yuv: bool) -> np.ndarray:
         """Blend the staged layers over the canvas, in light, and pack the frame: the compositor's job."""
+        from .gpu import MODES
+
         h, w = canvas.shape[:2]
         deep = canvas.dtype == np.uint16
         self.upload(CANVAS_A, canvas)
@@ -138,33 +178,25 @@ class Recorder:
             else:
                 self.upload(0, layer)
                 front = 0
-            from .gpu import MODES
-
             index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
-            self.frame.step(blend, base, other, front, w, h, [float(index), float(transfer)], None)
+            self._step(blend, base, other, front, w, h, [float(index), float(transfer)], None)
             base, other = other, base
-            self.steps += 1
-        if yuv and deep and w % 4 == 0 and h % 2 == 0:
-            self.frame.download(base, self.kernel(PACK_YUV_FRAME_CODE), w, h, w * h * 2 + 2 * (w // 2) * (h // 2) * 2)
+        planar = yuv and deep and w % 4 == 0 and h % 2 == 0
+        if planar:
+            planes = w * h * 3
+            groups = ((w + 15) // 16) * ((h + 15) // 16)
+            code = PACK_YUV_FRAME_CODE.replace("TRANSFER", "2u" if transfer == 2 else "1u")
+            self.frame.download(base, self.kernel(code), w, h, planes + groups * 8)
         else:
             self.frame.download(base, self.kernel(PACK16_FRAME_CODE if deep else PACK_FRAME_CODE), w, h, w * h * (8 if deep else 4))
-        data = self.frame.run(self.unpack, self.unpack16)
-        self.steps = 0
-        self.pool_used = 0
-        if yuv and deep and w % 4 == 0 and h % 2 == 0:
-            planes = np.frombuffer(data, np.uint8).copy()
-            # the light for MaxCLL and MaxFALL from the luma plane (the Python compositor measures the
-            # brightest channel by atomics in its pack; here luma stands in until the executor's pack does the
-            # same, and luma is never above the brightest channel, so the values err low, which the record says)
-            from .gpu import _to_linear
-
-            y = np.frombuffer(planes, np.uint16, count=w * h)
-            codes = np.clip((y.astype(np.float32) - 64.0) / 876.0, 0.0, 1.0)  # limited-range ten-bit luma as a signal fraction
-            peak_code = round(float(codes.max()) * 65535)
-            name = "pq" if transfer == 1 else "hlg"
-            nits = _to_linear(codes[::2], name) * (10000.0 if transfer == 1 else 1000.0)
-            self.light = (peak_code, float(nits.mean()))
-            return planes
+        data = self._run()
+        _shared["pool"] = 0
+        if planar:
+            # the light the pack measured, one (brightest code, light sum) pair a workgroup
+            tail = np.frombuffer(data, np.uint32, offset=planes, count=groups * 2).reshape(groups, 2)
+            total = float(tail[:, 1].view(np.float32).astype(np.float64).sum())
+            self.light = (int(tail[:, 0].max()), total / (w * h))
+            return np.frombuffer(data, np.uint8, count=planes).copy()
         return np.frombuffer(data, np.uint16 if deep else np.uint8).reshape(h, w, 4).copy()
 
 
@@ -246,44 +278,216 @@ PACK16_FRAME_CODE = (
 """
 )
 
-# Ten-bit 4:2:0 planes, one invocation per 4x2 block (the compositor's PACK_YUV_CODE, over these bindings);
-# the light is measured on the CPU from the planes' luma when the frame comes back this way.
+# The floats of a picture, exactly, for a mid-frame read.
+PACK_F32_FRAME_CODE = (
+    _PACK_HEAD
+    + """
+    let c = src[i];
+    packed[i * 4u] = bitcast<u32>(c.x);
+    packed[i * 4u + 1u] = bitcast<u32>(c.y);
+    packed[i * 4u + 2u] = bitcast<u32>(c.z);
+    packed[i * 4u + 3u] = bitcast<u32>(c.w);
+}
+"""
+)
+
+# Ten-bit 4:2:0 planes, one invocation per 4x2 block (the compositor's PACK_YUV_CODE over these bindings), and
+# the light for MaxCLL and MaxFALL measured in the same pass: each invocation takes its block's brightest
+# channel code and the sum of its pixels' light (the brightest channel through the transfer, in nits), the
+# workgroup reduces its 256 in shared memory, and one (brightest, sum) pair a workgroup lands after the planes.
+# TRANSFER is 1u for PQ and 2u for HLG, set when the kernel is registered. No early return: the barrier needs
+# every invocation.
 PACK_YUV_FRAME_CODE = """
 @group(0) @binding(0) var<storage, read> src: array<vec4<f32>>;
 @group(0) @binding(1) var<storage, read_write> packed: array<u32>;
 @group(0) @binding(2) var<storage, read> p: array<f32>;
 @group(0) @binding(3) var<storage, read> aux: array<f32>;
 @group(0) @binding(4) var<storage, read> held: array<vec4<f32>>;
+var<workgroup> brightest_of: array<u32, 256>;
+var<workgroup> light_of: array<f32, 256>;
 fn luma(c: vec3<f32>) -> f32 { return 0.2627 * c.r + 0.6780 * c.g + 0.0593 * c.b; }
 fn code(v: f32, offset: f32, span: f32) -> u32 { return u32(clamp(round((offset + span * v) * 4.0), 0.0, 1023.0)); }
+fn nits(v: f32) -> f32 {
+    if (TRANSFER == 2u) {
+        let a = 0.17883277;
+        let b = 0.28466892;
+        let c = 0.55991073;
+        return select((exp((v - c) / a) + b) / 12.0, v * v / 3.0, v <= 0.5) * 1000.0;
+    }
+    let m1 = 0.1593017578125;
+    let m2 = 78.84375;
+    let c1 = 0.8359375;
+    let c2 = 18.8515625;
+    let c3 = 18.6875;
+    let e = pow(clamp(v, 0.0, 1.0), 1.0 / m2);
+    return pow(max(e - c1, 0.0) / (c2 - c3 * e), 1.0 / m1) * 10000.0;
+}
 @compute @workgroup_size(16, 16)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(local_invocation_index) li: u32,
+        @builtin(workgroup_id) wg: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>) {
     let w = u32(p[0]);
     let h = u32(p[1]);
     let bx = id.x * 4u;
     let by = id.y * 2u;
-    if (bx >= w || by >= h) { return; }
-    let cw = w / 2u;
-    let ch = h / 2u;
-    var cb = vec2<f32>(0.0);
-    var cr = vec2<f32>(0.0);
-    for (var row = 0u; row < 2u; row = row + 1u) {
-        let y = by + row;
-        for (var pair = 0u; pair < 2u; pair = pair + 1u) {
-            let x0 = bx + pair * 2u;
-            let c0 = clamp(src[y * w + x0].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
-            let c1 = clamp(src[y * w + x0 + 1u].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
-            let y0 = luma(c0);
-            let y1 = luma(c1);
-            packed[(y * w + x0) / 2u] = code(y0, 16.0, 219.0) | (code(y1, 16.0, 219.0) << 16u);
-            cb[pair] = cb[pair] + ((c0.b - y0) / 1.8814 + (c1.b - y1) / 1.8814) * 0.25;
-            cr[pair] = cr[pair] + ((c0.r - y0) / 1.4746 + (c1.r - y1) / 1.4746) * 0.25;
+    var brightest = 0.0;
+    var light = 0.0;
+    if (bx < w && by < h) {
+        let cw = w / 2u;
+        let ch = h / 2u;
+        var cb = vec2<f32>(0.0);
+        var cr = vec2<f32>(0.0);
+        for (var row = 0u; row < 2u; row = row + 1u) {
+            let y = by + row;
+            for (var pair = 0u; pair < 2u; pair = pair + 1u) {
+                let x0 = bx + pair * 2u;
+                let c0 = clamp(src[y * w + x0].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+                let c1 = clamp(src[y * w + x0 + 1u].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+                let y0 = luma(c0);
+                let y1 = luma(c1);
+                packed[(y * w + x0) / 2u] = code(y0, 16.0, 219.0) | (code(y1, 16.0, 219.0) << 16u);
+                cb[pair] = cb[pair] + ((c0.b - y0) / 1.8814 + (c1.b - y1) / 1.8814) * 0.25;
+                cr[pair] = cr[pair] + ((c0.r - y0) / 1.4746 + (c1.r - y1) / 1.4746) * 0.25;
+                let m0 = max(c0.r, max(c0.g, c0.b));
+                let m1 = max(c1.r, max(c1.g, c1.b));
+                brightest = max(brightest, max(m0, m1));
+                light = light + nits(m0) + nits(m1);
+            }
         }
+        let y_words = (w * h) / 2u;
+        let u_words = (cw * ch) / 2u;
+        let cindex = (by / 2u) * cw + bx / 2u;
+        packed[y_words + cindex / 2u] = code(cb[0], 128.0, 224.0) | (code(cb[1], 128.0, 224.0) << 16u);
+        packed[y_words + u_words + cindex / 2u] = code(cr[0], 128.0, 224.0) | (code(cr[1], 128.0, 224.0) << 16u);
     }
-    let y_words = (w * h) / 2u;
-    let u_words = (cw * ch) / 2u;
-    let cindex = (by / 2u) * cw + bx / 2u;
-    packed[y_words + cindex / 2u] = code(cb[0], 128.0, 224.0) | (code(cb[1], 128.0, 224.0) << 16u);
-    packed[y_words + u_words + cindex / 2u] = code(cr[0], 128.0, 224.0) | (code(cr[1], 128.0, 224.0) << 16u);
+    brightest_of[li] = u32(round(brightest * 65535.0));
+    light_of[li] = light;
+    workgroupBarrier();
+    if (li == 0u) {
+        var top = 0u;
+        var sum = 0.0;
+        for (var k = 0u; k < 256u; k = k + 1u) {
+            top = max(top, brightest_of[k]);
+            sum = sum + light_of[k];
+        }
+        let slot = (w * h * 3u) / 4u + (wg.y * nwg.x + wg.x) * 2u;
+        packed[slot] = top;
+        packed[slot + 1u] = bitcast<u32>(sum);
+    }
 }
 """
+
+
+class PyFrame:
+    """The Rust executor's semantics in wgpu-py, exactly: the same bind layout (0 read, 1 write, 2 params, 3 aux,
+    4 held), one command encoder a run, a compute pass a dispatch at (ceil(w/16), ceil(h/16)), [w, h] prepended to
+    a pass's parameters, a 16-byte aux when none is given, the upload through the unpack kernels with the other
+    picture as its source and held. FORMCUT_FRAME=pyref selects it; it is how the recorder is verified on a
+    machine without the Rust build, and the Rust executor is held to it."""
+
+    def __init__(self, picture_bytes: int, pictures: int):
+        import wgpu
+        from wgpu.utils import get_default_device
+
+        self.wgpu = wgpu
+        self.device = get_default_device()
+        ro = {"type": wgpu.BufferBindingType.read_only_storage}
+        rw = {"type": wgpu.BufferBindingType.storage}
+        self.layout = self.device.create_bind_group_layout(
+            entries=[{"binding": b, "visibility": wgpu.ShaderStage.COMPUTE, "buffer": rw if b == 1 else ro} for b in range(5)]
+        )
+        self.pipeline_layout = self.device.create_pipeline_layout(bind_group_layouts=[self.layout])
+        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
+        self.pictures = [self.device.create_buffer(size=max(16, picture_bytes), usage=usage) for _ in range(pictures)]
+        self.sources: list[str] = []
+        self.pipelines: dict[int, object] = {}
+        self.steps: list[tuple] = []
+
+    def adapter(self) -> str:
+        return str(self.device.adapter.info.get("device", "adapter"))
+
+    def api(self) -> int:
+        return API
+
+    def kernel(self, source: str) -> int:
+        if source in self.sources:
+            return self.sources.index(source)
+        self.sources.append(source)
+        return len(self.sources) - 1
+
+    def upload(self, picture, width, height, deep, data):
+        self.steps.append(("upload", picture, width, height, deep, bytes(data)))
+
+    def step(self, code, src, dst, held, width, height, params, aux=None):
+        self.steps.append(("pass", code, src, dst, held, width, height, list(params), aux))
+
+    def copy(self, source, target, width, height):
+        self.steps.append(("copy", source, target, width, height))
+
+    def download(self, picture, code, width, height, out_bytes):
+        self.steps.append(("download", picture, code, width, height, out_bytes))
+
+    def _buffer(self, data: bytes):
+        return self.device.create_buffer_with_data(data=data, usage=self.wgpu.BufferUsage.STORAGE)
+
+    def _params(self, values: list) -> object:
+        padded = list(values) + [0.0] * max(0, 32 - len(values))
+        return self._buffer(np.asarray(padded, np.float32).tobytes())
+
+    def _pipeline(self, code: int):
+        if code not in self.pipelines:
+            module = self.device.create_shader_module(code=self.sources[code])
+            self.pipelines[code] = self.device.create_compute_pipeline(
+                layout=self.pipeline_layout, compute={"module": module, "entry_point": "main"}
+            )
+        return self.pipelines[code]
+
+    def _dispatch(self, encoder, code, bindings, width, height):
+        group = self.device.create_bind_group(
+            layout=self.layout,
+            entries=[{"binding": b, "resource": {"buffer": buf, "offset": 0, "size": buf.size}} for b, buf in enumerate(bindings)],
+        )
+        step = encoder.begin_compute_pass()
+        step.set_pipeline(self._pipeline(code))
+        step.set_bind_group(0, group)
+        step.dispatch_workgroups((width + 15) // 16, (height + 15) // 16)
+        step.end()
+
+    def run(self, unpack_code: int, unpack16_code: int) -> bytes:
+        wgpu = self.wgpu
+        steps, self.steps = self.steps, []
+        encoder = self.device.create_command_encoder()
+        readback = None
+        for item in steps:
+            kind = item[0]
+            if kind == "upload":
+                _, picture, width, height, deep, data = item
+                other = (picture + 1) % len(self.pictures)
+                staging = self._buffer(data)
+                bindings = [self.pictures[other], self.pictures[picture], self._params([width, height]), staging, self.pictures[other]]
+                self._dispatch(encoder, unpack16_code if deep else unpack_code, bindings, width, height)
+            elif kind == "pass":
+                _, code, src, dst, held, width, height, params, aux = item
+                aux_buffer = self._buffer(aux or bytes(16))
+                bindings = [self.pictures[src], self.pictures[dst], self._params([width, height, *params]), aux_buffer, self.pictures[held]]
+                self._dispatch(encoder, code, bindings, width, height)
+            elif kind == "copy":
+                _, source, target, width, height = item
+                encoder.copy_buffer_to_buffer(self.pictures[source], 0, self.pictures[target], 0, width * height * 16)
+            else:
+                _, picture, code, width, height, out_bytes = item
+                size = max(16, (out_bytes + 3) // 4 * 4)
+                packed = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC)
+                params = self._params([width, height])
+                bindings = [self.pictures[picture], packed, params, params, self.pictures[picture]]
+                self._dispatch(encoder, code, bindings, width, height)
+                read = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
+                encoder.copy_buffer_to_buffer(packed, 0, read, 0, size)
+                readback = (read, out_bytes)
+        self.device.queue.submit([encoder.finish()])
+        if readback is None:
+            return b""
+        read, out_bytes = readback
+        read.map_sync(wgpu.MapMode.READ)
+        data = bytes(read.read_mapped())[:out_bytes]
+        read.unmap()
+        return data
