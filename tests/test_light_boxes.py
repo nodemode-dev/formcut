@@ -7,7 +7,6 @@ import shutil
 import subprocess
 
 import pytest
-
 from app.render_api import write_light_boxes
 
 pytestmark = pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="needs ffmpeg and ffprobe")
