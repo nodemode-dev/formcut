@@ -670,6 +670,8 @@ def export_media(
             str(fps),
             "-i",
             "pipe:0",
+            "-filter_threads",
+            str(max(2, min(8, (os.cpu_count() or 2) // 2))),
             "-i",
             str(audio),
             "-map",
@@ -694,6 +696,13 @@ def export_media(
             # frame order. Each worker keeps its own renderer, so decoders stay
             # sequential inside a chunk; one worker reproduces the old path.
             workers = export_workers()
+            # The pool suits the CPU path, where renderers on separate cores add up. On the device path they
+            # all queue for one GPU lock and one decoder each seeks into the same clip, and the M5 export read
+            # 18 fps against a 41 fps render; there the frame path renders one frame ahead on a thread while
+            # the encoder takes the last (the render and the pipe write overlap, the GPU never idles for the
+            # write), which is the same shape the decoder's own prefetch has.
+            if gpu.stack_active():
+                workers = 1
             if workers > 1 and count > workers * 4:
                 chunk = math.ceil(count / workers)
                 spans = [(start, min(count, start + chunk)) for start in range(0, count, chunk)]
@@ -715,18 +724,26 @@ def export_media(
                             report(0.1 + 0.85 * done / count)
             else:
                 max_cll, max_fall = 0.0, 0.0
-                for i in range(count):
-                    if cancelled():
-                        raise InterruptedError("Cancelled")
-                    # The pipe takes the array's own memory, the bytes tobytes()
-                    # made a copy of, in the same order: 5 ms a 1080p frame saved.
-                    written = renderer.frame(i / fps)
-                    if renderer.deep:
-                        peak, average = _light_of(written, renderer.transfer)
-                        max_cll = max(max_cll, peak)
-                        max_fall = max(max_fall, average)
-                    process.stdin.write(np.ascontiguousarray(written))
-                    report(0.1 + 0.85 * (i + 1) / count)
+
+                def produce(i: int):
+                    picture = np.ascontiguousarray(renderer.frame(i / fps))
+                    light = _light_of(picture, renderer.transfer) if renderer.deep else None
+                    return picture, light
+
+                with ThreadPoolExecutor(max_workers=1) as ahead:
+                    pending = ahead.submit(produce, 0) if count else None
+                    for i in range(count):
+                        if cancelled():
+                            raise InterruptedError("Cancelled")
+                        written, light = pending.result()
+                        pending = ahead.submit(produce, i + 1) if i + 1 < count else None
+                        if light is not None:
+                            max_cll = max(max_cll, light[0])
+                            max_fall = max(max_fall, light[1])
+                        # The pipe takes the array's own memory, the bytes tobytes()
+                        # made a copy of, in the same order: 5 ms a 1080p frame saved.
+                        process.stdin.write(written)
+                        report(0.1 + 0.85 * (i + 1) / count)
             process.stdin.close()
             process.wait(timeout=600)
         if process.returncode:
