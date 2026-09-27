@@ -23,7 +23,10 @@ try:
 except ImportError:
     formcut_native = None
 
-BUILT = pytest.mark.skipif(formcut_native is None, reason="the native module is not built here")
+BUILT = pytest.mark.skipif(
+    formcut_native is None or not getattr(formcut_native, "LINEAR_LIGHT", False),
+    reason="the native warp-and-blend kernel is not built here, or still blends in gamma (since R24 every blend is in light; the renderer uses the kernel only once a build declares LINEAR_LIGHT)",
+)
 CANVAS = (360, 640)
 
 
