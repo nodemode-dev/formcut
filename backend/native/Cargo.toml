@@ -15,6 +15,16 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py310"] }
 numpy = "0.22"
 rayon = "1.10"
+# The frame path in Rust (R26), behind the `gpu` feature: the engine's own WGSL kernels recorded into one
+# command buffer per frame with no Python between passes; wgpu talks to Metal, Vulkan or DX12 directly.
+# Build with `maturin develop --release --features gpu`; without the feature the crate is the CPU kernels.
+wgpu = { version = "22", default-features = false, features = ["wgsl", "metal", "vulkan", "dx12"], optional = true }
+pollster = { version = "0.3", optional = true }
+bytemuck = { version = "1.16", optional = true }
+
+[features]
+default = []
+gpu = ["dep:wgpu", "dep:pollster", "dep:bytemuck"]
 
 [profile.release]
 lto = "thin"

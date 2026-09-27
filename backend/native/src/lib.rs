@@ -377,8 +377,13 @@ fn to_bytes(py: Python<'_>, values: PyReadonlyArray3<f32>, mut out: PyReadwriteA
     Ok(())
 }
 
+#[cfg(feature = "gpu")]
+mod gpu_frame;
+
 #[pymodule]
 fn formcut_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    #[cfg(feature = "gpu")]
+    gpu_frame::register(module)?;
     module.add_function(wrap_pyfunction!(composite_affine, module)?)?;
     module.add_function(wrap_pyfunction!(colour_panel, module)?)?;
     module.add_function(wrap_pyfunction!(unit_float, module)?)?;
