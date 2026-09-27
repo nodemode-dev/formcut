@@ -2489,10 +2489,10 @@ def blend_over_blank(transfer: int) -> str:
     read no parameters, the blend mode in p[2]."""
     from .gpu_frame import _blend_body, _blend_functions
 
-    functions = _blend_functions().replace("p[3]", f"{float(transfer)}")
+    functions = _blend_functions().replace("p[3]", f"f32({float(transfer)})")
     body = _blend_body()
     body = body.replace("var b = vec3<f32>(0.0);\n    if (p[4] < 0.5) { b = lin(src[i].rgb); }", "var b = vec3<f32>(0.0);")
-    body = body.replace("held[i]", "src[i]").replace("p[3]", f"{float(transfer)}")
+    body = body.replace("held[i]", "src[i]").replace("p[3]", f"f32({float(transfer)})")
     return (
         functions
         + "@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) {\n    "
@@ -2605,18 +2605,28 @@ def _fused(chain: "_Chain", body) -> None:
     if capture.live:
         return  # something needed the device mid-chain; everything already ran in order
     plan = _fusion_plan(capture.ops, real, start, chain.w, chain.h)
+    if plan is not None and plan[0] in UNFUSED:
+        plan = None
     if plan is None:
         capture.replay()  # the chain's own bookkeeping already follows the passes as they came
         return
     source, params, upload = plan
     out = 1 - start
     aux = None if upload is None else RawAux(np.ascontiguousarray(upload))
-    real.run(source, real.buffers[start], real.buffers[out], params, aux, chain.w, chain.h)
+    try:
+        real.run(source, real.buffers[start], real.buffers[out], params, aux, chain.w, chain.h)
+    except RuntimeError as exc:
+        # a fused kernel the device's compiler refuses (the executor says so when it is registered) runs as the
+        # passes it was made of; the refusal is kept for the bench, and the same plan is not tried again
+        UNFUSED.setdefault(source, f"{type(exc).__name__}: {exc}"[:300])
+        capture.replay()
+        return
     chain.current = out
     FUSED[0] += 1
 
 
 FUSED = [0]  # chains run as one kernel, for the tests and the bench
+UNFUSED: dict[str, str] = {}  # fused kernels the device refused, with why
 
 
 def _run_chain(chain: _Chain, effects: list[dict], local: float) -> None:

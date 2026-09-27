@@ -456,6 +456,10 @@ def main(argv: list[str] | None = None) -> int:
     mad = float(np.mean([d.mean() for d in diffs]))
     over = float(np.mean([(d > 1).mean() for d in diffs]) * 100)
     worst = max(round(float(d.max())) for d in diffs)
+    from . import gpu_effects as _effects
+
+    for why in list(_effects.UNFUSED.values())[:3]:
+        print(f"refused kernel: {why}")
     print(f"difference between the paths: mean {mad:.4f} counts, {over:.3f}% of pixels over 1/255, largest {worst}/255")
     if adapter.get("adapter_type", "").lower() == "cpu":
         print("this adapter is a software rasteriser; the device path shares the CPU with NumPy here,")

@@ -33,7 +33,10 @@ use std::sync::{Arc, Mutex};
 // 5: a validation error is kept and returned by the run that met it (it had aborted the process), and with
 // FORMCUT_GPU_TIMINGS=1 each pass is timed on the device (pass_times), so the bench can say which kernel
 // the frame's device time goes to.
-const API: u32 = 5;
+// 6: a kernel is compiled when it is registered, inside an error scope, and one that does not compile is refused
+// there with naga's message (it had become an invalid pipeline that failed every later run that used it), so
+// the engine can run the passes it would have fused one by one instead.
+const API: u32 = 6;
 const TIMED_PASSES: u32 = 128;
 
 /// Storage buffers by size class, reused frame after frame: taken for a run, given back when it ends.
@@ -190,12 +193,28 @@ impl GpuFrame {
     }
 
     /// Register a kernel's WGSL (with the engine's HEADER where the kernel needs it); returns its id.
-    fn kernel(&mut self, source: String) -> usize {
+    fn kernel(&mut self, source: String) -> PyResult<usize> {
         if let Some(i) = self.sources.iter().position(|s| *s == source) {
-            return i;
+            return Ok(i);
+        }
+        self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.clone().into()) });
+        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { label: None, bind_group_layouts: &[&self.layout], push_constant_ranges: &[] });
+        let pipeline = self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: None,
+            layout: Some(&layout),
+            module: &module,
+            entry_point: "main",
+            compilation_options: Default::default(),
+            cache: None,
+        });
+        if let Some(error) = pollster::block_on(self.device.pop_error_scope()) {
+            return Err(PyRuntimeError::new_err(format!("the kernel does not compile: {error}")));
         }
         self.sources.push(source);
-        self.sources.len() - 1
+        let code = self.sources.len() - 1;
+        self.pipelines.insert(code, Arc::new(pipeline));
+        Ok(code)
     }
 
     /// Averages since the last call, in milliseconds: (recording and submitting, waiting for the device, the copy out).

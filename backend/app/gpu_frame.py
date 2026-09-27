@@ -30,7 +30,7 @@ CANVAS_A = WORKING + POOL + CACHE
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
 # The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
-API = 5
+API = 6
 # Shared by every Recorder: one executor, its kernels by source, the pool of staged layers, the steps pending
 _kernels: dict[str, int] = {}
 _shared = {"pending": 0}

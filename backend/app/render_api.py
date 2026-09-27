@@ -741,7 +741,11 @@ def export_media(
             # 18 fps against a 41 fps render; there the frame path renders one frame ahead on a thread while
             # the encoder takes the last (the render and the pipe write overlap, the GPU never idles for the
             # write), which is the same shape the decoder's own prefetch has.
-            if gpu.stack_active():
+            from . import gpu_frame as _executor
+
+            if gpu.stack_active() or _executor.available():
+                # the frame executor and its recorder serve one renderer at a time; a pool of renderers on it
+                # would share its pictures across threads (the M5's export after a fault took the pool and broke)
                 workers = 1
             if workers > 1 and count > workers * 4:
                 chunk = math.ceil(count / workers)
