@@ -717,6 +717,10 @@ def export_media(
             f"{renderer.width}x{renderer.height}",
             "-r",
             str(fps),
+            # the pipe's frames queue inside ffmpeg (about 128 MB of them) rather than eight at a time, so its
+            # reader is not held up by whatever runs after it
+            "-thread_queue_size",
+            str(max(8, min(64, (128 << 20) // max(1, renderer.width * renderer.height * ((3 if planar else 8) if renderer.deep else 4))))),
             "-i",
             "pipe:0",
             "-filter_threads",
@@ -836,6 +840,7 @@ def export_media(
                 "rate": out_rate,
                 "renderPath": "frames",
                 "timing": _timing(stamps, count),
+                "encoderCommand": [str(part) for part in command],
                 "workingSpace": renderer.transfer if renderer.deep else "bt709",
                 "maxCll": round(max_cll) if renderer.deep else None,
                 "maxFall": round(max_fall) if renderer.deep else None,

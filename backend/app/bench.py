@@ -185,7 +185,7 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
     }
 
 
-def _encoder_alone(frames: list, encoder: str, count: int) -> float:
+def _encoder_alone(frames: list, encoder: str, count: int, command: list | None = None) -> float:
     """The encoder's own rate: the export's encoder and quality flags fed ten-bit frames the device path already
     made (a handful, cycled), with nothing rendered, so an export's rate can be told apart from the encoder's."""
     import subprocess
@@ -201,9 +201,31 @@ def _encoder_alone(frames: list, encoder: str, count: int) -> float:
         return 0.0
     layout = "p010le" if encoder.endswith("_videotoolbox") else "yuv420p10le"
     planes = [_to_planes(np.ascontiguousarray(f), layout).tobytes() for f in deep[:8]]
-    command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", layout, "-s", f"{w}x{h}", "-r", "30", "-i", "pipe:0"]
-    command += ["-c:v", encoder, *tier_flags(encoder, "high"), "-pix_fmt", layout, "-f", "null", "-"]
     total = max(60, count)
+    scratch = None
+    if command:
+        # the export's own command: its audio (a silent track of the same length stands in for it) and its muxing
+        # to a file, the output written to a scratch file instead of the export's
+        import tempfile
+
+        scratch = tempfile.mkdtemp(prefix="formcut-bench-")
+        silence = f"{scratch}/silence.wav"
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", f"{total / 30 + 1:.2f}", silence],
+            check=False,
+        )
+        command = list(command)
+        pipe = command.index("pipe:0")
+        if "-i" in command[pipe + 1 :]:
+            command[command.index("-i", pipe + 1) + 1] = silence
+        if "-t" in command:
+            command[command.index("-t") + 1] = f"{total / 30:.3f}"
+        command[-1] = f"{scratch}/out{os.path.splitext(command[-1])[1] or '.mp4'}"  # the export's own container
+        layout = command[command.index("-pix_fmt") + 1]
+        planes = [_to_planes(np.ascontiguousarray(f), layout).tobytes() for f in deep[:8]]
+    else:
+        command = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", layout, "-s", f"{w}x{h}", "-r", "30", "-i", "pipe:0"]
+        command += ["-c:v", encoder, *tier_flags(encoder, "high"), "-pix_fmt", layout, "-f", "null", "-"]
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     began = time.perf_counter()
     try:
@@ -215,6 +237,10 @@ def _encoder_alone(frames: list, encoder: str, count: int) -> float:
         process.kill()
         return 0.0
     took = time.perf_counter() - began
+    if scratch:
+        import shutil
+
+        shutil.rmtree(scratch, ignore_errors=True)
     return total / took if process.returncode == 0 and took > 0 else 0.0
 
 
@@ -281,6 +307,7 @@ def _export_rate(doc: dict, width: int, frames: int) -> tuple[float, str]:
         item.unlink(missing_ok=True)
     encoder = str(result.get("encoder") or "")
     _export_rate.timing = result.get("timing") or {}
+    _export_rate.command = result.get("encoderCommand") or []
     return (frames / took if took > 0 else 0.0), encoder
 
 
@@ -576,6 +603,15 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"encoder alone: {encoder_rate:6.1f} fps   ({encoder} fed ten-bit frames already made, no rendering: the ceiling an export can reach)"
             )
+        command = getattr(_export_rate, "command", [])
+        if command:
+            exact = _encoder_alone(dev_frames, encoder, args.frames, command)
+            if exact:
+                readings["encoder_export_command_fps"] = exact
+                print(
+                    f"export's own ffmpeg: {exact:6.1f} fps   (the export's exact command, audio, muxing and all, fed the "
+                    "same frames with nothing rendering beside it)"
+                )
         timing = getattr(_export_rate, "timing", {})
         if timing:
             readings["export_steady_fps"] = timing["steadyFps"]
