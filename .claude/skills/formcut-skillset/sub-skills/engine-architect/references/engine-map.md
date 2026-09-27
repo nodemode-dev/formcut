@@ -36,12 +36,12 @@ The rest is written by hand.
 | generate.py | 312 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
-| krea2.py | 473 | /api/models/krea-2 | 5 |
+| krea2.py | 493 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | main.py | 412 | /api/health | 13 |
 | media.py | 878 | /api/media | 25 |
-| model_manager.py | 692 | /api/models | 8 |
+| model_manager.py | 691 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 465 | /api/presets | 8 |
 | project_packages.py | 312 | /api/projects | 4 |

@@ -1,6 +1,6 @@
 {
   "name": "formcut-frontend",
-  "version": "1.100.0",
+  "version": "2.0.2",
   "private": true,
   "type": "module",
   "scripts": {
