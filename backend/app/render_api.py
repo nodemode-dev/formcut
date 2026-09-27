@@ -191,6 +191,14 @@ def export_workers() -> int:
 _LIGHT_TABLES: dict[str, np.ndarray] = {}
 
 
+def _frame_tags(colour_tags: list) -> str:
+    """A setparams filter that tags the frames with the export's own colour (primaries, transfer, matrix, range),
+    so the encoder's tags match the frames' and FFmpeg's colour negotiation (7.1 and later) inserts no scaler."""
+    names = {"-color_primaries": "color_primaries", "-color_trc": "color_trc", "-colorspace": "colorspace", "-color_range": "range"}
+    pairs = [f"{names[flag]}={value}" for flag, value in zip(colour_tags[::2], colour_tags[1::2], strict=False) if flag in names]
+    return "setparams=" + ":".join(pairs) if pairs else "null"
+
+
 def _box(kind: bytes, payload: bytes) -> bytes:
     return (8 + len(payload)).to_bytes(4, "big") + kind + payload
 
@@ -691,6 +699,9 @@ def export_media(
                     "-y",
                     "-i",
                     str(path),
+                    # the intermediate's frames are the final layout already; tagged here so no scaler is put in
+                    "-vf",
+                    _frame_tags(colour_tags),
                     *params,
                     "-pix_fmt",
                     hdr_pix,
@@ -828,10 +839,6 @@ def export_media(
             f"{renderer.width}x{renderer.height}",
             "-r",
             str(fps),
-            # the pipe's frames queue inside ffmpeg (about 128 MB of them) rather than eight at a time, so its
-            # reader is not held up by whatever runs after it
-            "-thread_queue_size",
-            str(max(8, min(64, (128 << 20) // max(1, renderer.width * renderer.height * ((3 if planar else 8) if renderer.deep else 4))))),
             "-i",
             "pipe:0",
             "-filter_threads",
@@ -843,7 +850,14 @@ def export_media(
             "-map",
             "1:a",
             "-vf",
-            ("null" if planar and same_size else f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2")
+            # Planes already in BT.2020 are tagged as what they are: with only the output tagged, FFmpeg 7.1 and
+            # later negotiate the colour and put a scaler in that converts the "unspecified" frames to BT.2020,
+            # which altered every pixel and held the M5's export near 87 fps against 190 without the tags.
+            (
+                (_frame_tags(colour_tags) if colour_tags else "null")
+                if planar and same_size
+                else f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2"
+            )
             + (f",{hdr_filter}" if hdr_filter and not planar else "")
             + (f",{upload}" if upload else ""),
             "-r",
