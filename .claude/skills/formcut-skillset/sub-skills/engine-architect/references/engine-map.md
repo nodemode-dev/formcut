@@ -31,7 +31,7 @@ The rest is written by hand.
 | cloud.py | 447 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 59 | /api/demo | 2 |
-| effect_previews.py | 269 | /api/catalogue/preview | 1 |
+| effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 312 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
@@ -43,7 +43,7 @@ The rest is written by hand.
 | media.py | 878 | /api/media | 25 |
 | model_manager.py | 691 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| presets.py | 465 | /api/presets | 8 |
+| presets.py | 626 | /api/presets | 9 |
 | project_packages.py | 312 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 175 | /api/projects | 9 |
@@ -78,7 +78,7 @@ the automation transports.
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
 - `discovery.py` (65L)
-- `effect_packages.py` (433L)
+- `effect_packages.py` (435L)
 - `encoders.py` (333L)
 - `expressions.py` (51L)
 - `fast_export.py` (301L)
@@ -102,7 +102,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1536L)
+- `renderer.py` (1571L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
