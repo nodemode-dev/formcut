@@ -26,7 +26,7 @@ The rest is written by hand.
 | assets.py | 135 | /api/assets | 3 |
 | automation.py | 711 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
-| catalogue.py | 863 | /api/catalogue | 1 |
+| catalogue.py | 870 | /api/catalogue | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
@@ -86,7 +86,7 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (701L)
-- `gpu_effects.py` (2822L)
+- `gpu_effects.py` (3072L)
 - `gpu_frame.py` (668L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
@@ -95,7 +95,7 @@ the automation transports.
 - `openh264.py` (410L)
 - `package_registry.py` (80L)
 - `paths.py` (32L)
-- `pixel_effects.py` (1034L)
+- `pixel_effects.py` (1056L)
 - `processes.py` (22L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
