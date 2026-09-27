@@ -86,8 +86,8 @@ the automation transports.
 - `frame_cache.py` (146L)
 - `gif_export.py` (78L)
 - `gpu.py` (701L)
-- `gpu_effects.py` (2698L)
-- `gpu_frame.py` (592L)
+- `gpu_effects.py` (2744L)
+- `gpu_frame.py` (626L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (193L)
 - `matte_cache.py` (126L)
@@ -100,7 +100,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1418L)
+- `renderer.py` (1435L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
@@ -115,7 +115,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (232L)
 - `validation.py` (222L)
-- `video_source.py` (510L)
+- `video_source.py` (536L)
 - `windows_console.py` (43L)
 
 ## Reading order for a change
