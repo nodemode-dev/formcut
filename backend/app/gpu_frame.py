@@ -30,7 +30,7 @@ CANVAS_A = WORKING + POOL + CACHE
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
 # The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
-API = 3
+API = 4
 # Shared by every Recorder: one executor, its kernels by source, the pool of staged layers, the steps pending
 _kernels: dict[str, int] = {}
 _shared = {"pending": 0}
@@ -162,10 +162,19 @@ class Recorder:
         _shared["pending"] = 0
         return data if isinstance(data, (bytes, bytearray)) else bytes(data)
 
+    fuses_upload = True  # a layer's upload may join its fused chain (gpu_effects._fused)
+
     def run(self, code: str, src, dst, params: list, aux: np.ndarray | None = None, width: int | None = None, height: int | None = None):
         w, h = int(width or self.w), int(height or self.h)
         # every run in the engine passes [w, h, ...] with w and h the dispatch size; the executor prepends them
-        field = None if aux is None else _u8(np.asarray(aux, dtype=np.float32))
+        from .gpu_effects import RawAux
+
+        if aux is None:
+            field = None
+        elif isinstance(aux, RawAux):
+            field = _u8(aux.data)  # a picture's own bytes, read by the kernel as words
+        else:
+            field = _u8(np.asarray(aux, dtype=np.float32))
         self._step(self.kernel(code), int(src), int(dst), _working[2], w, h, [float(v) for v in params[2:]], field)
 
     def upload(self, buffer, image: np.ndarray):
@@ -246,26 +255,35 @@ class Recorder:
             self.frame.clear(CANVAS_A, w * h * 16)
         base, other = CANVAS_A, CANVAS_B
         blend = self.kernel(BLEND_FRAME_CODE)
-        for layer, mode in layers:
+        last = None  # the last layer is blended inside the pack: the frame is written once, not written and read
+        for n, (layer, mode) in enumerate(layers):
             if isinstance(layer, (int, np.integer)):
                 front = int(layer)
             else:
-                self.upload(_working[0], layer)
-                front = _working[0]
+                self.upload(_working[0] if n < len(layers) - 1 else _working[1], layer)
+                front = _working[0] if n < len(layers) - 1 else _working[1]
             index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
-            self._step(blend, base, other, front, w, h, [float(index), float(transfer), 1.0 if blank else 0.0], None)
+            settings = [float(index), float(transfer), 1.0 if blank else 0.0]
+            if n == len(layers) - 1:
+                last = (front, settings)
+                break
+            self._step(blend, base, other, front, w, h, settings, None)
             blank = False
             base, other = other, base
         planar = bool(yuv) and deep and w % 4 == 0 and h % 2 == 0
+        held, settings = (last[0], last[1]) if last else (None, None)
         if planar:
             planes = w * h * 3
             groups = ((w + 15) // 16) * ((h + 15) // 16)
             # P010 (ten bits high in sixteen, chroma interleaved) is what VideoToolbox takes without a conversion
             p010 = yuv == "p010le"
             code = PACK_YUV_FRAME_CODE.replace("TRANSFER", "2u" if transfer == 2 else "1u").replace("P010", "true" if p010 else "false")
-            self.frame.download(base, self.kernel(code), w, h, planes + groups * 8)
+            code = _blended(code) if last else code
+            self.frame.download(base, self.kernel(code), w, h, planes + groups * 8, held, settings)
         else:
-            self.frame.download(base, self.kernel(PACK16_FRAME_CODE if deep else PACK_FRAME_CODE), w, h, w * h * (8 if deep else 4))
+            code = PACK16_FRAME_CODE if deep else PACK_FRAME_CODE
+            code = _blended(code) if last else code
+            self.frame.download(base, self.kernel(code), w, h, w * h * (8 if deep else 4), held, settings)
         data = self._run()
         _free.extend(_staged)
         _staged.clear()
@@ -277,6 +295,22 @@ class Recorder:
             self.light = (int(tail[:, 0].max()), total / (w * h))
             return np.frombuffer(data, np.uint8, count=planes).copy()
         return np.frombuffer(data, np.uint16 if deep else np.uint8).reshape(h, w, 4).copy()
+
+
+def _blended(pack: str) -> str:
+    """A pack kernel that blends the frame's last layer (held) over the canvas (src) as it reads each pixel: the
+    compositor's own blend arithmetic, the same to the bit, with the frame written once instead of twice."""
+    body = _blend_body().rstrip()
+    body = body[: body.rfind("}")].replace("dst[i] = ", "return ")
+    function = "fn blend_at(i: i32) -> vec4<f32> {\n    " + body + "\n}\n"
+    code = pack.replace("@compute @workgroup_size(16, 16)", _blend_functions() + function + "@compute @workgroup_size(16, 16)", 1)
+    code = code.replace("src[y * w + x0 + 1u].rgb", "blend_at(i32(y * w + x0 + 1u)).rgb").replace(
+        "src[y * w + x0].rgb", "blend_at(i32(y * w + x0)).rgb"
+    )
+    code = code.replace("clamp(src[i], vec4<f32>(0.0), vec4<f32>(1.0))", "clamp(blend_at(i32(i)), vec4<f32>(0.0), vec4<f32>(1.0))")
+    if "src[" in code.split("fn main", 1)[1]:
+        raise RuntimeError("a pack kernel changed shape; the blended pack must follow it")
+    return code
 
 
 def _blend_functions() -> str:
@@ -519,8 +553,8 @@ class PyFrame:
     def timings(self):
         return (0.0, 0.0, 0.0)
 
-    def download(self, picture, code, width, height, out_bytes):
-        self.steps.append(("download", picture, code, width, height, out_bytes))
+    def download(self, picture, code, width, height, out_bytes, held=None, params=None):
+        self.steps.append(("download", picture, code, width, height, out_bytes, picture if held is None else held, list(params or [])))
 
     def _buffer(self, data: bytes):
         return self.device.create_buffer_with_data(data=data, usage=self.wgpu.BufferUsage.STORAGE)
@@ -573,11 +607,11 @@ class PyFrame:
                 _, source, target, width, height = item
                 encoder.copy_buffer_to_buffer(self.pictures[source], 0, self.pictures[target], 0, width * height * 16)
             else:
-                _, picture, code, width, height, out_bytes = item
+                _, picture, code, width, height, out_bytes, held, extra = item
                 size = max(16, (out_bytes + 3) // 4 * 4)
                 packed = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC)
-                params = self._params([width, height])
-                bindings = [self.pictures[picture], packed, params, params, self.pictures[picture]]
+                params = self._params([width, height, *extra])
+                bindings = [self.pictures[picture], packed, params, params, self.pictures[held]]
                 self._dispatch(encoder, code, bindings, width, height)
                 read = self.device.create_buffer(size=size, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST)
                 encoder.copy_buffer_to_buffer(packed, 0, read, 0, size)

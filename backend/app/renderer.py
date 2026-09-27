@@ -648,10 +648,22 @@ class FrameRenderer:
 
         return out, (float(_light_table(self.transfer)[code]), mean_nits)
 
+    def _blank_canvas(self) -> np.ndarray:
+        kind = np.uint16 if self.deep else np.uint8
+        blank = getattr(self, "_blank", None)
+        if blank is None or blank.shape[:2] != (self.height, self.width) or blank.dtype != kind:
+            blank = np.zeros((self.height, self.width, 4), kind)
+            blank[:, :, 3] = 255
+            blank.flags.writeable = False
+            self._blank = blank
+        return blank
+
     def as_working(self, frame: np.ndarray) -> np.ndarray:
         """A decoded frame as the working picture: RGBA bytes for an SDR project; for a deep project, a
         deep HDR frame (uint16 RGB in the transfer) gets its alpha, and a byte frame is lifted."""
         if frame.dtype == np.uint16:
+            if frame.shape[2] == 4:
+                return frame  # RGBA64 from the decoder, alpha full
             h, w = frame.shape[:2]
             return np.concatenate([frame, np.full((h, w, 1), 65535, np.uint16)], axis=2)
         # a byte frame stays bytes here: in a deep project the device lifts it in its own chain (LIFT_CODE)
@@ -1216,8 +1228,13 @@ class FrameRenderer:
         return canvas
 
     def frame(self, time: float) -> np.ndarray:
-        canvas = np.zeros((self.height, self.width, 4), np.uint16 if self.deep else np.uint8)
-        canvas[:, :, 3] = 255
+        if self.project.get("background"):
+            canvas = np.zeros((self.height, self.width, 4), np.uint16 if self.deep else np.uint8)
+            canvas[:, :, 3] = 255
+        else:
+            # nothing will be painted before the layers: one read-only blank canvas serves every frame (the M5
+            # profile showed a 16 MB zeros a frame); anything that would write into it gets its own copy
+            canvas = self._blank_canvas()
         # T3: what shows behind footage that does not fill the frame. Black is
         # the default, so a project without a background renders as before.
         canvas = self.paint_background(canvas, time)
@@ -1397,7 +1414,7 @@ class FrameRenderer:
             ):
                 # Warp and blend in one Rust pass, identical to the Python path below.
                 canvas = self._flush(canvas)
-                canvas = np.ascontiguousarray(canvas)
+                canvas = np.array(canvas) if not canvas.flags.writeable else np.ascontiguousarray(canvas)
                 native.composite_affine(canvas, np.ascontiguousarray(image), [float(v) for v in matrix.ravel()], float(alpha))
                 continue
             # R3: the transform as a device pass, the alpha scaled inside it; cv2 stays the reference.

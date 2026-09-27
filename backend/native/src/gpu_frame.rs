@@ -28,7 +28,9 @@ use std::sync::Arc;
 // 3: buffers come from pools that live across frames (the M5 showed per-frame allocation costing more than
 // the passes), pictures can be cleared on the device, input is read from the caller's memory (numpy or
 // bytes) without a copy on the Python side, and each run's time is split for the bench.
-const API: u32 = 3;
+// 4: a download may bind a second picture as held and carry parameters, so the frame's last blend and its
+// pack run as one kernel.
+const API: u32 = 4;
 
 /// Storage buffers by size class, reused frame after frame: taken for a run, given back when it ends.
 struct Pool {
@@ -60,7 +62,7 @@ enum Step {
     Pass { code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<wgpu::Buffer> },
     Copy { from: usize, to: usize, width: u32, height: u32 },
     Clear { picture: usize, bytes: u64 },
-    Download { picture: usize, code: usize, width: u32, height: u32, out_bytes: u64 },
+    Download { picture: usize, code: usize, width: u32, height: u32, out_bytes: u64, held: usize, params: Vec<f32> },
 }
 
 /// A frame recorded step by step and run as one command buffer.
@@ -205,8 +207,10 @@ impl GpuFrame {
         self.steps.push(Step::Copy { from, to, width, height });
     }
 
-    fn download(&mut self, picture: usize, code: usize, width: u32, height: u32, out_bytes: u64) {
-        self.steps.push(Step::Download { picture, code, width, height, out_bytes });
+    #[pyo3(signature = (picture, code, width, height, out_bytes, held=None, params=None))]
+    #[allow(clippy::too_many_arguments)]
+    fn download(&mut self, picture: usize, code: usize, width: u32, height: u32, out_bytes: u64, held: Option<usize>, params: Option<Vec<f32>>) {
+        self.steps.push(Step::Download { picture, code, width, height, out_bytes, held: held.unwrap_or(picture), params: params.unwrap_or_default() });
     }
 
     /// Record every step into one command buffer, submit once, read the frame back once.
@@ -246,14 +250,16 @@ impl GpuFrame {
                 Step::Clear { picture, bytes } => {
                     encoder.clear_buffer(&self.pictures[picture], 0, Some(bytes.div_ceil(4) * 4));
                 }
-                Step::Download { picture, code, width, height, out_bytes } => {
+                Step::Download { picture, code, width, height, out_bytes, held, params } => {
                     let size = out_bytes.max(16).div_ceil(4) * 4;
                     if self.packed.as_ref().map_or(true, |b| b.size() < size) {
                         let grown = size.next_power_of_two();
                         self.packed = Some(self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("packed"), size: grown, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false }));
                         self.read = Some(self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("read"), size: grown, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false }));
                     }
-                    let params = self.params_buffer(&[width as f32, height as f32]);
+                    let mut p = vec![width as f32, height as f32];
+                    p.extend(params);
+                    let params = self.params_buffer(&p);
                     let pipeline = self.pipeline(code)?;
                     let packed = self.packed.as_ref().expect("packed");
                     let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -264,7 +270,7 @@ impl GpuFrame {
                             wgpu::BindGroupEntry { binding: 1, resource: packed.as_entire_binding() },
                             wgpu::BindGroupEntry { binding: 2, resource: params.as_entire_binding() },
                             wgpu::BindGroupEntry { binding: 3, resource: params.as_entire_binding() },
-                            wgpu::BindGroupEntry { binding: 4, resource: self.pictures[picture].as_entire_binding() },
+                            wgpu::BindGroupEntry { binding: 4, resource: self.pictures[held].as_entire_binding() },
                         ],
                     });
                     self.dispatch(&mut encoder, &pipeline, &group, width, height);

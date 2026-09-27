@@ -2431,7 +2431,9 @@ def _pointwise(code: str):
 
 
 def _fused_source(plan: list) -> str | None:
-    """One kernel for a plan of ("hold",) and ("pass", code, block) steps."""
+    """One kernel for a plan of ("unpack", deep), ("hold",) and ("pass", code, block) steps."""
+    unpack = plan[0][1] if plan and plan[0][0] == "unpack" else None
+    plan = plan[1:] if unpack is not None else plan
     helpers: list[str] = []
     names: dict[str, str] = {}
     functions: list[str] = []
@@ -2466,13 +2468,36 @@ def _fused_source(plan: list) -> str | None:
     main = (
         "@compute @workgroup_size(16, 16)\nfn main(@builtin(global_invocation_id) id: vec3<u32>) {\n    "
         + "\n    ".join(_PROLOGUE)
-        + "\n    var fz = src[i];\n    var fz_held = "
+        + ("\n    var fz = src[i];" if unpack is None else "\n    " + _UNPACK_HEAD[unpack])
+        + "\n    var fz_held = "
         + ("held[i]" if needs_held else "vec4<f32>(0.0)")
         + ";\n    "
         + "\n    ".join(calls)
         + "\n    dst[i] = fz;\n}\n"
     )
-    return "\n".join(helpers) + "\n" + "\n".join(functions) + "\n" + main
+    text = "\n".join(helpers) + "\n" + "\n".join(functions) + "\n" + main
+    if unpack is None:
+        return text
+    # the picture's words come in aux: this kernel declares its own bindings, the header's helpers after them
+    bindings = HEADER.replace("var<storage, read> aux: array<f32>;", "var<storage, read> aux_words: array<u32>;")
+    return bindings + "\n" + text
+
+
+class RawAux:
+    """A picture's own bytes as a pass's aux, read by the kernel as words rather than converted to floats."""
+
+    __slots__ = ("data",)
+
+    def __init__(self, data: np.ndarray):
+        self.data = data
+
+
+# The unpack at the head of a fused chain that begins with the layer's upload: the upload kernels' own
+# arithmetic, reading the picture's bytes from aux as words.
+_UNPACK_HEAD = {
+    False: "let v = aux_words[u32(i)];\n    var fz = vec4<f32>(f32(v & 255u), f32((v >> 8u) & 255u), f32((v >> 16u) & 255u), f32(v >> 24u)) / 255.0;",
+    True: "let lo = aux_words[u32(i) * 2u];\n    let hi = aux_words[u32(i) * 2u + 1u];\n    var fz = vec4<f32>(f32(lo & 65535u), f32(lo >> 16u), f32(hi & 65535u), f32(hi >> 16u)) / 65535.0;",
+}
 
 
 class _Capture:
@@ -2505,6 +2530,21 @@ class _Capture:
 def _fusion_plan(ops: list, real, start: int, w: int, h: int):
     buffers = list(real.buffers)
     current, plan, params = buffers[start], [], [w, h]
+    upload = None
+    if ops and ops[0][0] == "upload":
+        # a layer's upload at the head of its chain: the chain's kernel unpacks the bytes itself
+        target, image = ops[0][1][0], np.asarray(ops[0][1][1])
+        if (
+            target is not current
+            or image.ndim != 3
+            or image.shape[:2] != (h, w)
+            or image.shape[2] != 4
+            or image.dtype not in (np.uint8, np.uint16)
+        ):
+            return None
+        upload = image
+        plan.append(("unpack", image.dtype == np.uint16))
+        ops = ops[1:]
     for name, a, k in ops:
         if name == "copy":
             if a[0] is current and a[1] is buffers[2]:
@@ -2525,10 +2565,10 @@ def _fusion_plan(ops: list, real, start: int, w: int, h: int):
         params += given[2:] + [0.0] * (block - (len(given) - 2))
         plan.append(("pass", code, block))
         current = dst
-    if sum(1 for step in plan if step[0] == "pass") < 2 or len(params) > PARAM_FLOATS:
+    if sum(1 for step in plan if step[0] == "pass") < (1 if upload is not None else 2) or len(params) > PARAM_FLOATS:
         return None
     source = _fused_source(plan)
-    return None if source is None else (source, params)
+    return None if source is None else (source, params, upload)
 
 
 def _fused(chain: "_Chain", body) -> None:
@@ -2549,9 +2589,10 @@ def _fused(chain: "_Chain", body) -> None:
     if plan is None:
         capture.replay()  # the chain's own bookkeeping already follows the passes as they came
         return
-    source, params = plan
+    source, params, upload = plan
     out = 1 - start
-    real.run(source, real.buffers[start], real.buffers[out], params, None, chain.w, chain.h)
+    aux = None if upload is None else RawAux(np.ascontiguousarray(upload))
+    real.run(source, real.buffers[start], real.buffers[out], params, aux, chain.w, chain.h)
     chain.current = out
     FUSED[0] += 1
 
@@ -2623,10 +2664,15 @@ def effects_and_warp(
                 if hit is not None:
                     return hit
             chain = _Chain(context, h, w)
-            context.upload(context.buffers[0], image)
+            # on an executor that can, a layer with effects has its upload unpacked inside the chain's fused kernel
+            joins = bool(effects) and getattr(context, "fuses_upload", False)
+            if not joins:
+                context.upload(context.buffers[0], image)
             if effects:
 
                 def chain_and_round():
+                    if joins:
+                        chain.c.upload(chain.c.buffers[0], image)
                     _run_chain(chain, effects, local)
                     # The CPU rounds to uint8 here; so does the device.
                     chain._pass(QUANTISE_CODE, [])

@@ -144,7 +144,7 @@ class VideoSource:
                 "-threads",
                 "1",
                 "-pix_fmt",
-                "rgb48le" if self.deep and self.hdr else "bgr24",
+                "rgba64le" if self.deep and self.hdr else "bgr24",
                 "-f",
                 "rawvideo",
                 "pipe:1",
@@ -159,7 +159,8 @@ class VideoSource:
     def _pull(self):
         """One frame off the pipe into a fresh buffer, or None when the pipe ends."""
         deep = self.deep and self.hdr
-        size = self.width * self.height * (6 if deep else 3)
+        # a deep frame arrives as RGBA64 with its alpha already full, so nothing on this side adds a channel
+        size = self.width * self.height * (8 if deep else 3)
         pieces = bytearray(size)
         view = memoryview(pieces)
         filled = 0
@@ -171,7 +172,7 @@ class VideoSource:
             filled += count
         view.release()
         if deep:
-            return np.frombuffer(pieces, np.uint16).reshape(self.height, self.width, 3)
+            return np.frombuffer(pieces, np.uint16).reshape(self.height, self.width, 4)
         return np.frombuffer(pieces, np.uint8).reshape(self.height, self.width, 3)
 
     def _prefetch(self):
@@ -288,6 +289,28 @@ class NativeSource(VideoSource):
     def _active(self) -> bool:
         return getattr(self, "container", None) is not None
 
+    def _prefetch(self):
+        """The next frame decoded and scaled on a thread while the caller renders, as the pipe's R8 does: the M5
+        profile showed the in-engine decoder decoding and scaling on the caller's thread, frame after frame."""
+        with self.ahead_lock:
+            container = getattr(self, "container", None)
+            if container is None or self.ahead is not None or self.ahead_thread is not None:
+                return
+            position = self.position
+
+            def pull():
+                try:
+                    frame = self._pull() if self.container is container else None
+                except Exception:
+                    frame = None
+                with self.ahead_lock:
+                    if self.container is container and frame is not None:
+                        self.ahead = (position, frame)
+                    self.ahead_thread = None
+
+            self.ahead_thread = threading.Thread(target=pull, daemon=True)
+            self.ahead_thread.start()
+
     def _next(self):
         """The next decoded frame with its constant-rate index, or (None, None) at the end."""
         try:
@@ -323,21 +346,24 @@ class NativeSource(VideoSource):
 
     def _as_bgr(self, frame):
         if self.deep and self.hdr:
-            picture = frame.reformat(width=self.width, height=self.height, format="rgb48le", interpolation="BICUBIC")
-            return picture.to_ndarray().view(np.uint16).reshape(self.height, self.width, 3)
+            # RGBA64 straight from swscale: the alpha is full already, so the renderer adds no channel (a 16 MB
+            # copy a 1080p frame that the M5 profile showed)
+            picture = frame.reformat(width=self.width, height=self.height, format="rgba64le", interpolation="BICUBIC")
+            return picture.to_ndarray()
         picture = frame.reformat(width=self.width, height=self.height, format="bgr24", interpolation="BICUBIC")
         return picture.to_ndarray()
 
     def release(self):
+        # the read-ahead finishes before the container closes under it
         thread = self.ahead_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=5.0)
         container = getattr(self, "container", None)
         if container is not None:
             with contextlib.suppress(Exception):
                 container.close()
             self.container = None
             self.decoded = None
-        if thread is not None and thread.is_alive():
-            thread.join(timeout=1.0)
         with self.ahead_lock:
             self.ahead = None
             self.ahead_thread = None
