@@ -51,8 +51,11 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
     own media model (a moving gradient with light to full scale), over a lifted title, in a project whose output
     colour is PQ, so the frames run deep, the monitor rolls them off and the export keeps the light."""
     from .media import MEDIA_DIR, ingest_path
+    from .video_source import _decoder_colours
 
     clip = MEDIA_DIR / "bench-pq.mp4"
+    if clip.is_file() and _decoder_colours(clip).get("color_transfer") != "smpte2084":
+        clip.unlink()  # an earlier clip without its PQ tags would bench an SDR decode; made again, tagged
     if not clip.is_file():
         MEDIA_DIR.mkdir(parents=True, exist_ok=True)
         subprocess.run(
@@ -78,7 +81,7 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
                 "-colorspace",
                 "bt2020nc",
                 "-x265-params",
-                "log-level=0",
+                "log-level=0:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
                 str(clip),
             ],
             check=True,
@@ -143,6 +146,29 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
             }
         ],
     }
+
+
+def _describe_sources(doc: dict, width: int) -> None:
+    """The engine's version and how each video source is decoded: whether its colour came from the probe or from
+    the decoder, whether it is HDR, and whether it is decoded deep. The M5 showed an HDR clip decoded as eight
+    bits on one machine and deep on another; this line says which, before any number is read."""
+    import shutil
+
+    from .main import APP_VERSION
+    from .renderer import FrameRenderer
+
+    renderer = FrameRenderer(doc, width)
+    try:
+        renderer.frame(0.0)
+        for source in renderer.sources.values():
+            print(
+                f"source:      {type(source).__name__} {getattr(source, 'codec', '')} {getattr(source, 'transfer', '') or 'no transfer named'}"
+                f" (colour from the {getattr(source, 'colour_source', 'probe')}; ffprobe {'present' if shutil.which('ffprobe') else 'absent'})"
+                f", {'HDR' if getattr(source, 'hdr', False) else 'SDR'}, decoded {'deep, sixteen-bit' if source.deep and source.hdr else 'as eight-bit'}"
+            )
+    finally:
+        renderer.close()
+    print(f"engine:      formcut {APP_VERSION}")
 
 
 def _export_rate(doc: dict, width: int, frames: int) -> tuple[float, str]:
@@ -381,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
     name = adapter.get("device", adapter.get("name", "none"))
     print(f"adapter: {name} ({adapter.get('adapter_type', 'unknown')}, {adapter.get('backend_type', '')})")
     print(f"project: {doc.get('title', 'demo')} at {args.width} wide, {args.frames} consecutive frames at {doc.get('fps', 30)} fps")
+    _describe_sources(doc, args.width)
     floor = _decode_floor(doc, args.width, args.frames)
     if floor:
         print(f"decode floor: {floor:6.2f} fps   (the video sources read sequentially at this width, no rendering; both paths pay this)")

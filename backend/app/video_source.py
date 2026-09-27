@@ -68,6 +68,11 @@ class VideoSource:
         stream = next((item for item in metadata.get("streams", []) if item.get("codec_type") == "video"), None)
         if stream is None:
             raise ValueError("This media has no video stream")
+        if not stream.get("color_transfer"):
+            # the decoder's own reading of the stream, when the probe named no colour (no ffprobe, a report that
+            # did not say): the HDR decision must not hang on which programs a machine happens to have
+            stream = {**_decoder_colours(self.path), **stream}
+        self.colour_source = "probe" if stream.get("color_transfer") and "decoder_colours" not in stream else "decoder"
         self.width, self.height = int(stream["width"]), int(stream["height"])
         self.codec = str(stream.get("codec_name") or "")
         # X7: PQ and HLG decode washed out when read as if they were SDR. The
@@ -423,6 +428,43 @@ def _decode_rate(path: str, hwaccel, frames: int = 24) -> float | None:
         return None
     took = time.perf_counter() - began
     return count / took if took > 0 and count else None
+
+
+_TRC = {
+    1: "bt709",
+    4: "gamma22",
+    5: "gamma28",
+    6: "smpte170m",
+    7: "smpte240m",
+    8: "linear",
+    13: "iec61966-2-1",
+    14: "bt2020-10",
+    15: "bt2020-12",
+    16: "smpte2084",
+    18: "arib-std-b67",
+}
+_PRIMARIES = {1: "bt709", 5: "bt470bg", 6: "smpte170m", 7: "smpte240m", 9: "bt2020", 12: "smpte432"}
+_MATRIX = {1: "bt709", 5: "bt470bg", 6: "smpte170m", 7: "smpte240m", 9: "bt2020nc", 10: "bt2020c"}
+_RANGE = {1: "tv", 2: "pc"}
+
+
+def _decoder_colours(path) -> dict:
+    """A stream's colour as FFmpeg's decoder reads it from the stream itself (PyAV), in ffprobe's names."""
+    if av is None:
+        return {}
+    try:
+        with av.open(str(path)) as container:
+            context = container.streams.video[0].codec_context
+            found = {
+                "color_transfer": _TRC.get(int(context.color_trc or 0)),
+                "color_primaries": _PRIMARIES.get(int(context.color_primaries or 0)),
+                "color_space": _MATRIX.get(int(context.colorspace or 0)),
+                "color_range": _RANGE.get(int(context.color_range or 0)),
+                "pix_fmt": getattr(context, "pix_fmt", None),
+            }
+    except Exception:
+        return {}
+    return {key: value for key, value in found.items() if value} | {"decoder_colours": True}
 
 
 def _open(path, limit=None, deep: bool = False) -> VideoSource:
