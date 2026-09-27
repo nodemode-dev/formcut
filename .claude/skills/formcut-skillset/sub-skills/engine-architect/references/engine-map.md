@@ -72,7 +72,7 @@ the automation transports.
 - `agent_mcp.py` (739L)
 - `ai_upscale.py` (131L)
 - `audio_render.py` (231L)
-- `bench.py` (498L)
+- `bench.py` (525L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `discovery.py` (65L)
@@ -115,7 +115,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (271L)
 - `validation.py` (222L)
-- `video_source.py` (536L)
+- `video_source.py` (578L)
 - `windows_console.py` (43L)
 
 ## Reading order for a change
