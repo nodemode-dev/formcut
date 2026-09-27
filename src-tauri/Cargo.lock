@@ -878,7 +878,7 @@ dependencies = [
 
 [[package]]
 name = "formcut"
-version = "1.94.7"
+version = "1.95.0"
 dependencies = [
  "regex",
  "tauri",
