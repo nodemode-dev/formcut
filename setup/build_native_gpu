@@ -1,20 +1,29 @@
 #!/bin/sh
-# Build formcut's native crate with the Rust frame path (R26) into the engine's own Python.
-# Run it from anywhere: it finds the repository from its own location. The Python it builds
-# into is, in order: an activated virtual environment ($VIRTUAL_ENV), backend/venv,
-# backend/.venv, then python3. Every path is absolute, so the build's own cd cannot lose it.
+# Build formcut's native crate with the Rust frame path (R26) into the engine's own virtual
+# environment, backend/venv, the one ./formcut makes and activates. Run it from anywhere; it
+# finds the repository from its own location. If backend/venv is not there yet, it says so and
+# stops: run ./formcut once first (it installs the engine), or activate the venv you use.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+echo "repository: $ROOT"
 if [ -n "${VIRTUAL_ENV:-}" ] && [ -x "$VIRTUAL_ENV/bin/python" ]; then
-  PY="$VIRTUAL_ENV/bin/python"
+  VENV="$VIRTUAL_ENV"
 elif [ -x "$ROOT/backend/venv/bin/python" ]; then
-  PY="$ROOT/backend/venv/bin/python"
+  VENV="$ROOT/backend/venv"
 elif [ -x "$ROOT/backend/.venv/bin/python" ]; then
-  PY="$ROOT/backend/.venv/bin/python"
+  VENV="$ROOT/backend/.venv"
 else
-  PY="$(command -v python3)"
+  echo "no virtual environment at $ROOT/backend/venv."
+  echo "Run ./formcut once from $ROOT (it installs the engine into backend/venv), then run this again."
+  echo "If the repository is somewhere else, run that copy's setup/build_native_gpu instead."
+  exit 1
 fi
-echo "building with $PY"
+# maturin develop installs into the active virtual environment and refuses without one
+export VIRTUAL_ENV="$VENV"
+PATH="$VENV/bin:$PATH"
+export PATH
+PY="$VENV/bin/python"
+echo "building into $VENV"
 "$PY" -m pip install -q "maturin==1.15.0"
 cd "$ROOT/backend/native"
 "$PY" -m maturin develop --release --features gpu
