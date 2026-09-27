@@ -52,9 +52,9 @@ def providers() -> list[str]:
 
 
 MODELS = {
-    # Krea 2 Turbo, optional and never fetched on its own: krea2.py records the licence, the content filter choice
-    # and (when the filter is declined) the statement of responsibility before these downloads may start. The
-    # content filter is the classifier section 4.2 of that licence names. Every file pinned below to its SHA-256.
+    # Krea 2 Turbo, optional and never fetched on its own: krea2.py records the licence accepted before these downloads
+    # may start, and installs the content filter (the classifier section 4.2 of that licence names) with every build.
+    # Every file pinned below to its SHA-256.
     "krea-2-mlx-q8": {
         "name": "Krea 2 Turbo, 8-bit MLX (mflux-community)",
         "license": "Krea 2 Community License Agreement",
@@ -350,9 +350,8 @@ def start_download(model: str):
     if MODELS[model].get("consent") == "krea-2":
         from .krea2 import consent
 
-        record = consent()
-        if not record.get("licence") or record.get("filter") not in ("enabled", "declined"):
-            raise HTTPException(409, "Krea 2 is installed from its own panel, after its licence and the content filter are decided")
+        if not consent().get("licence"):
+            raise HTTPException(409, "Krea 2 is installed from its own panel, once its licence is accepted")
     return jobs.submit("model-download", lambda _id, report, cancelled: _tracked(model, report, cancelled))
 
 

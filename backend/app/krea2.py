@@ -1,17 +1,19 @@
 """Krea 2 Turbo, an optional local image model.
 
-Nothing of it is installed until a person asks. Installing it takes three decisions, recorded here in
-models/krea-2-consent.json before a byte is downloaded:
+formcut neither ships nor distributes Krea 2: its weights are fetched from their publishers on Hugging Face, onto
+the person's own computer, when that person asks. Installing it takes one decision, recorded in
+models/krea-2-consent.json before a byte is downloaded: the Krea 2 Community License Agreement accepted (its
+terms shown, with the link to them). The content filter that licence requires (section 4.2),
+Falconsai/nsfw_image_detection, is always installed with it and runs on every picture (content_filter.py); there
+is no option to install Krea 2 without it.
 
-1. The Krea 2 Community License Agreement is accepted (its terms are shown, with the link to them).
-2. The content filter the licence requires (section 4.2) is installed and enabled, which formcut recommends:
-   Falconsai/nsfw_image_detection, run on every picture (content_filter.py).
-3. Or the filter is declined, and then only with the waiver below accepted: the person states that by their own
-   choice they do not meet the licence's filtering requirement and that they, not formcut, its developers or
-   NodeMode, are responsible for any violation and any misuse.
+A person may still remove the filter afterwards (delete its files, or change their own build of this open-source
+program). Krea 2 then keeps running: the removal was theirs, knowingly made, and the Krea card and every picture
+made without the filter carry REMOVED_WARNING, which the person may acknowledge (the acknowledgement is recorded
+with a hash of its wording). "Reinstall the content filter" puts it back.
 
-Whatever is chosen, a prompt that sexualises minors is refused before the model runs (prompt_refusal). That is
-not a setting: no licence choice or waiver covers it.
+Whatever else happens, a prompt that sexualises minors is refused before the model runs (prompt_refusal). That is
+not a setting and cannot be removed by removing the filter.
 
 The builds: on a Mac with Apple silicon, mflux-community's MLX quantisations run through mflux (8-bit, the higher
 fidelity, or 4-bit for a Mac with less memory); on Windows and Linux, the 8-bit SDNQ quantisation of a
@@ -70,17 +72,22 @@ FILTER = {
     "source": "onnx-community/nsfw_image_detection-ONNX",
     "licence": "Apache-2.0",
     "size": 343_401_688,
-    "what": "An open-source classifier, named in section 4.2 of the licence, run on every picture Krea 2 makes; a picture "
-    "it scores as NSFW is withheld and never reaches the library.",
+    "what": "An open-source classifier, named in section 4.2 of the licence, installed with Krea 2 and run on every picture "
+    "it makes; a picture it scores as NSFW is withheld and never reaches the library.",
 }
-WAIVER = (
-    "I have chosen not to install and enable a content filter for Krea 2. I understand that section 4.2 of the Krea 2 "
-    "Community License Agreement requires anyone who uses the model to implement reasonable and appropriate content "
-    "filter measures, and that by my own choice I am not meeting that requirement, which is a breach of the licence "
-    "and may end my rights under it (section 9.1). I accept sole responsibility for that choice, for every use I make "
-    "of Krea 2 and of the pictures it makes, and for any violation of the Krea 2 Community License Agreement, of "
-    "Krea's Acceptable Use Policy or of the law that results. formcut, its developers and NodeMode are not "
-    "responsible for any misuse of the model or of formcut, and I will not hold them responsible for it."
+# Shown when Krea 2 runs and the filter formcut installed with it is no longer there.
+REMOVED_WARNING = (
+    "The content filter has been removed. formcut installs Falconsai/nsfw_image_detection with Krea 2 and runs it on "
+    "every picture Krea 2 makes, as section 4.2 of the Krea 2 Community License Agreement requires of anyone who uses "
+    "the model. It is no longer present on this computer or in this build of formcut, which means it was knowingly "
+    "removed, by you or on your behalf. Krea 2 will keep running without it. By using Krea 2 without it you are not "
+    "meeting the licence's filtering requirement, which is a breach of that licence and may end your rights under it "
+    "(section 9.1). You alone are responsible for that decision, for every use you make of Krea 2 and of the pictures "
+    "it makes, and for any violation of the Krea 2 Community License Agreement, of Krea's Acceptable Use Policy, or "
+    "of any law, in any jurisdiction. formcut is open-source software provided under the Apache License, Version 2.0, "
+    '"as is" and without warranty. formcut, its developers and NodeMode do not ship or distribute Krea 2, and, to '
+    "the fullest extent permitted by law, are not responsible for, and cannot be held liable for, how you use or "
+    "modify formcut or the models you install with it. To put the filter back, choose Reinstall the content filter."
 )
 
 # model: the model manager's entry; size in bytes; memory: the unified or system memory it wants, in GB
@@ -163,22 +170,18 @@ def consent() -> dict:
         return {}
 
 
-def record_consent(accept_licence: bool, filter_choice: str, accept_waiver: bool) -> dict:
-    """The three decisions, written before anything is downloaded; declining the filter needs the waiver."""
+def _now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+def record_consent(accept_licence: bool) -> dict:
+    """The licence accepted, written before anything is downloaded; the content filter comes with the model."""
     if not accept_licence:
         raise ValueError(f"Krea 2 is installed only once the {LICENCE_NAME} is accepted")
-    if filter_choice not in ("enable", "decline"):
-        raise ValueError("choose whether to install and enable the content filter")
-    if filter_choice == "decline" and not accept_waiver:
-        raise ValueError("declining the content filter requires accepting the statement of responsibility")
-    now = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     record = {
         **consent(),
-        "licence": {"name": LICENCE_NAME, "version": LICENCE_VERSION, "url": LICENCE_URL, "acceptedAt": now},
-        "filter": "enabled" if filter_choice == "enable" else "declined",
-        "waiver": None
-        if filter_choice == "enable"
-        else {"text": WAIVER, "sha256": hashlib.sha256(WAIVER.encode()).hexdigest(), "acceptedAt": now},
+        "licence": {"name": LICENCE_NAME, "version": LICENCE_VERSION, "url": LICENCE_URL, "acceptedAt": _now()},
+        "filter": "installed with Krea 2",
     }
     CONSENT_FILE.parent.mkdir(parents=True, exist_ok=True)
     CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
@@ -196,36 +199,54 @@ def installed_build() -> str | None:
     return None
 
 
+def _warning_hash() -> str:
+    return hashlib.sha256(REMOVED_WARNING.encode()).hexdigest()
+
+
 def policy() -> dict:
-    """Whether Krea 2 may run now, and if not, why."""
+    """Whether Krea 2 may run now, and if not, why; and whether its content filter is still there. A removed filter
+    does not stop it: that removal was the person's own, and the warning says so."""
     from . import content_filter
 
     record = consent()
     licence = bool(record.get("licence"))
-    choice = record.get("filter")
-    waiver = bool(record.get("waiver")) and (record["waiver"].get("sha256") == hashlib.sha256(WAIVER.encode()).hexdigest())
     build = installed_build()
     filter_ready = content_filter.installed()
+    removed = build is not None and not filter_ready
+    acknowledged = (record.get("removalAcknowledged") or {}).get("sha256") == _warning_hash()
     reason = None
     if not licence:
         reason = f"the {LICENCE_NAME} has not been accepted"
-    elif choice not in ("enabled", "declined"):
-        reason = "the content filter has not been chosen"
-    elif choice == "enabled" and not filter_ready:
-        reason = "the content filter is enabled but not installed"
-    elif choice == "declined" and not waiver:
-        reason = "the content filter was declined without the statement of responsibility"
     elif build is None:
         reason = "no Krea 2 build is installed"
     return {
         "licenceAccepted": licence,
-        "filter": choice,
         "filterInstalled": filter_ready,
-        "waiverOnRecord": waiver,
+        "filterRemoved": removed,
+        "removalAcknowledged": acknowledged,
+        "warning": REMOVED_WARNING if removed else None,
         "build": build,
         "ready": reason is None,
         "reason": reason,
     }
+
+
+def acknowledge_removal() -> dict:
+    """The person's acknowledgement of the warning, with the time and a hash of the wording they saw."""
+    record = consent()
+    record["removalAcknowledged"] = {"sha256": _warning_hash(), "text": REMOVED_WARNING, "acknowledgedAt": _now()}
+    CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    return policy()
+
+
+def _note_run_without_filter() -> None:
+    """Every run without the filter is counted, first and last, beside the acknowledgement."""
+    record = consent()
+    runs = record.get("runsWithoutFilter") or {"first": _now(), "count": 0}
+    runs["count"] = int(runs.get("count", 0)) + 1
+    runs["last"] = _now()
+    record["runsWithoutFilter"] = runs
+    CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
 
 
 # Refused whatever the settings: sexual content involving minors. The two lists are ordinary words, deliberately
@@ -297,18 +318,14 @@ def install_runtime(build: str, report) -> None:
 
 
 def install(build: str, report, cancelled) -> dict:
-    """The job: the build's files (pinned), its environment, and the content filter when it was chosen."""
+    """The job: the build's files (pinned), the content filter (always), and the build's own environment."""
     from .model_manager import download
 
-    state = consent()
-    if not state.get("licence") or state.get("filter") not in ("enabled", "declined"):
-        raise ValueError("record the licence and the content filter choice before installing Krea 2")
-    with_filter = state.get("filter") == "enabled"
-    share = (0.8, 0.95) if with_filter else (0.9, 1.0)
-    download(BUILDS[build]["model"], lambda f: report(f * share[0]), cancelled)
-    if with_filter:
-        download(FILTER["id"], lambda f: report(share[0] + f * (share[1] - share[0])), cancelled)
-    install_runtime(build, lambda f: report(share[1] + f * (1 - share[1])))
+    if not consent().get("licence"):
+        raise ValueError("accept the licence before installing Krea 2")
+    download(FILTER["id"], lambda f: report(f * 0.02), cancelled)
+    download(BUILDS[build]["model"], lambda f: report(0.02 + f * 0.93), cancelled)
+    install_runtime(build, lambda f: report(0.95 + f * 0.05))
     CONSENT_FILE.write_text(json.dumps({**consent(), "build": build}, indent=1), encoding="utf-8")
     return policy()
 
@@ -383,7 +400,9 @@ def generate_to_file(
     if done.returncode or not path.is_file():
         raise RuntimeError("Krea 2 did not make a picture: " + (done.stderr or done.stdout)[-600:])
     verdict = None
-    if state["filter"] == "enabled":
+    if not state["filterInstalled"]:
+        _note_run_without_filter()
+    if state["filterInstalled"]:
         import numpy as np
 
         verdict = content_filter.check(np.asarray(Image.open(path).convert("RGB")))
@@ -400,15 +419,14 @@ def generate_to_file(
         "width": size[0],
         "height": size[1],
         "seed": seed,
-        "contentFilter": verdict or "declined by the user, with the statement of responsibility on record",
+        "contentFilter": verdict or "removed",
+        "warning": None if verdict else REMOVED_WARNING,
         "notice": NOTICE,
     }
 
 
 class ConsentBody(BaseModel):
     acceptLicence: bool = False
-    filter: str = ""
-    acceptWaiver: bool = False
 
 
 class InstallBody(BaseModel):
@@ -417,7 +435,8 @@ class InstallBody(BaseModel):
 
 @router.get("/terms")
 def terms() -> dict:
-    """What a person reads before installing: the licence's terms, the filter, the waiver, the builds for this machine."""
+    """What a person reads before installing: the licence's terms, the filter that comes with it, the warning shown if
+    the filter is later removed, and the builds for this machine."""
     return {
         "licence": {
             "name": LICENCE_NAME,
@@ -428,7 +447,7 @@ def terms() -> dict:
         },
         "notice": NOTICE,
         "filter": FILTER,
-        "waiver": WAIVER,
+        "removedWarning": REMOVED_WARNING,
         "builds": {key: {k: v for k, v in BUILDS[key].items() if k != "packages"} for key in builds_here()},
         "recommended": recommended(),
         "memoryGB": round(memory_gb(), 1),
@@ -444,7 +463,7 @@ def status() -> dict:
 @router.post("/consent")
 def give_consent(body: ConsentBody) -> dict:
     try:
-        record_consent(body.acceptLicence, body.filter, body.acceptWaiver)
+        record_consent(body.acceptLicence)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return policy()
@@ -455,19 +474,20 @@ def start_install(body: InstallBody) -> dict:
     build = body.build or recommended()
     if build not in builds_here():
         raise HTTPException(400, f"no Krea 2 build for this machine ({machine()})")
-    state = consent()
-    if not state.get("licence") or state.get("filter") not in ("enabled", "declined"):
-        raise HTTPException(409, "accept the licence and choose the content filter first")
+    if not consent().get("licence"):
+        raise HTTPException(409, "accept the licence first")
     return jobs.submit("krea-2-install", lambda _id, report, cancelled: install(build, report, cancelled))
 
 
 @router.post("/filter", status_code=202)
-def enable_filter() -> dict:
-    """Turn the content filter on after declining it: the waiver is withdrawn and the classifier fetched."""
+def reinstall_filter() -> dict:
+    """Put the content filter back after it was removed: the classifier fetched again, checked against its pins."""
     from .model_manager import download
 
-    record = consent()
-    if not record.get("licence"):
-        raise HTTPException(409, "accept the licence first")
-    CONSENT_FILE.write_text(json.dumps({**record, "filter": "enabled", "waiver": None}, indent=1), encoding="utf-8")
     return jobs.submit("model-download", lambda _id, report, cancelled: download(FILTER["id"], report, cancelled))
+
+
+@router.post("/acknowledge-removal")
+def acknowledge() -> dict:
+    """The person has read the warning about the removed filter; recorded with the wording's hash."""
+    return acknowledge_removal()

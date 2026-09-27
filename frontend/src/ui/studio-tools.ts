@@ -141,14 +141,14 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           <small>A 12-billion-parameter image model from Krea, run on this computer. Nothing is downloaded until you install it here.</small>
           <details class="krea-terms"><summary>Krea 2 Community License Agreement</summary><ul data-krea-summary></ul><a data-krea-licence target="_blank" rel="noopener">Read the full agreement</a> · <a data-krea-policy target="_blank" rel="noopener">Acceptable Use Policy</a></details>
           <label class="krea-check"><input type="checkbox" data-krea-accept> I have read and accept the Krea 2 Community License Agreement</label>
-          <fieldset class="krea-filter"><legend>Content filter, which the licence requires (section 4.2)</legend>
-            <label><input type="radio" name="krea-filter" value="enable" data-krea-filter-enable checked> Install and enable Falconsai/nsfw_image_detection (recommended)</label>
-            <small data-krea-filter-what></small>
-            <label><input type="radio" name="krea-filter" value="decline" data-krea-filter-decline> Continue without a content filter</label>
-            <div class="krea-waiver" data-krea-waiver hidden><p data-krea-waiver-text></p><label class="krea-check"><input type="checkbox" data-krea-waiver-accept> I accept this statement</label></div>
-          </fieldset>
+          <div class="krea-filter"><strong>Content filter, installed with Krea 2</strong><small data-krea-filter-what></small></div>
           <label>Build <select data-krea-build></select></label>
-          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>Install Krea 2</button><button type="button" class="tool-chip" data-krea-enable-filter hidden>Enable the content filter</button></div>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>Install Krea 2</button><button type="button" class="tool-chip" data-krea-reinstall-filter hidden>Reinstall the content filter</button></div>
+          <div class="krea-removed" data-krea-removed role="alertdialog" aria-labelledby="krea-removed-title" hidden>
+            <strong id="krea-removed-title">The content filter has been removed</strong>
+            <p data-krea-removed-text></p>
+            <div class="krea-actions"><button type="button" class="tool-chip" data-krea-removed-reinstall>Reinstall the content filter</button><button type="button" class="tool-chip" data-krea-removed-ack>I understand</button></div>
+          </div>
         </div>
       </div>
     </section>
@@ -225,14 +225,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   };
   // Krea 2: the card is built once in the markup above; a refresh writes only what changed.
   let kreaTerms: any;
-  const kreaInstallReady = () => {
-    const accepted = q("krea-accept").checked;
-    const declining = q("krea-filter-decline").checked;
-    q("krea-waiver").hidden = !declining;
-    const allowed = accepted && (!declining || q("krea-waiver-accept").checked);
-    q<HTMLButtonElement>("krea-install").disabled = !allowed;
-  };
-  for (const name of ["krea-accept", "krea-filter-enable", "krea-filter-decline", "krea-waiver-accept"]) q(name).addEventListener("change", kreaInstallReady);
+  const kreaInstallReady = () => { q<HTMLButtonElement>("krea-install").disabled = !q("krea-accept").checked; };
+  q("krea-accept").addEventListener("change", kreaInstallReady);
   const refreshKrea = async () => {
     if (!kreaTerms) {
       kreaTerms = await api<any>("/api/models/krea-2/terms", undefined, "GET");
@@ -241,7 +235,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       q<HTMLAnchorElement>("krea-licence").href = kreaTerms.licence.url;
       q<HTMLAnchorElement>("krea-policy").href = kreaTerms.licence.usePolicy;
       q("krea-filter-what").textContent = `${kreaTerms.filter.what} ${kreaTerms.filter.licence}, ${Math.round(kreaTerms.filter.size / 1e6)} MB.`;
-      q("krea-waiver-text").textContent = kreaTerms.waiver;
+      q("krea-removed-text").textContent = kreaTerms.removedWarning;
       const select = q<HTMLSelectElement>("krea-build");
       for (const [key, build] of Object.entries<any>(kreaTerms.builds)) {
         const option = document.createElement("option"); option.value = key;
@@ -255,24 +249,31 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const state = !Object.keys(kreaTerms.builds).length
       ? "No Krea 2 build for this computer"
       : policy.ready
-        ? `Installed: ${kreaTerms.builds[policy.build]?.label ?? policy.build}, content filter ${policy.filter === "enabled" ? "on" : "off (your statement of responsibility is on record)"}`
+        ? `Installed: ${kreaTerms.builds[policy.build]?.label ?? policy.build}, content filter ${policy.filterInstalled ? "on" : "removed"}`
         : policy.licenceAccepted ? `Not ready: ${policy.reason}` : "Not installed";
     if (q("krea-state").textContent !== state) q("krea-state").textContent = state;
-    q("krea-enable-filter").hidden = policy.filter !== "declined";
+    // the filter removed from an installed Krea 2: the warning, shown until acknowledged; the model still runs
+    q("krea-reinstall-filter").hidden = !policy.filterRemoved;
+    q("krea-removed").hidden = !policy.filterRemoved || policy.removalAcknowledged;
     q<HTMLButtonElement>("krea-install").textContent = policy.build ? "Installed" : "Install Krea 2";
     if (policy.build) q<HTMLButtonElement>("krea-install").disabled = true; else kreaInstallReady();
   };
   q("krea-install").addEventListener("click", () => void run(async () => {
-    const declining = q("krea-filter-decline").checked;
-    await api("/api/models/krea-2/consent", { acceptLicence: q("krea-accept").checked, filter: declining ? "decline" : "enable", acceptWaiver: declining && q("krea-waiver-accept").checked });
+    await api("/api/models/krea-2/consent", { acceptLicence: q("krea-accept").checked });
     await job("/api/models/krea-2/install", { build: q<HTMLSelectElement>("krea-build").value });
     await refreshKrea();
-    say(declining ? "Krea 2 is installed without a content filter, as you chose." : "Krea 2 and its content filter are installed.");
+    say("Krea 2 and its content filter are installed.");
   }));
-  q("krea-enable-filter").addEventListener("click", () => void run(async () => {
+  const reinstallFilter = () => void run(async () => {
     await job("/api/models/krea-2/filter");
     await refreshKrea();
-    say("The content filter is installed and on.");
+    say("The content filter is installed again and runs on every Krea 2 picture.");
+  });
+  q("krea-reinstall-filter").addEventListener("click", reinstallFilter);
+  q("krea-removed-reinstall").addEventListener("click", reinstallFilter);
+  q("krea-removed-ack").addEventListener("click", () => void run(async () => {
+    await api("/api/models/krea-2/acknowledge-removal", {});
+    await refreshKrea();
   }));
   const modelRows = new Map<string, HTMLElement>();
   const refreshModels = async () => {
