@@ -484,6 +484,7 @@ class FrameRenderer:
         # (bytes) with the light measured there, and nothing is packed as RGBA16 or converted by ffmpeg.
         self._want_planes = False
         self._final_flush = False
+        self._last_text_key = None  # the text cache's key of the title drawn last, when it is still
         self.closed = False
 
     def close(self):
@@ -629,13 +630,13 @@ class FrameRenderer:
             renderer = self.nested[key] = FrameRenderer(document, self.width)
         return renderer.frame(max(0.0, min(time, renderer.project["duration"])))
 
-    def frame_planes(self, time: float):
+    def frame_planes(self, time: float, layout: str = "yuv420p10le"):
         """A deep frame for the encoder as yuv420p10le planes packed on the device, with (MaxCLL nits, MaxFALL
         nits) measured there; None when the device stack is not active or the frame is not deep, in which
         case the caller takes frame() and converts as before."""
         if not (self.deep and gpu.stack_active()) or self.width % 4 or self.height % 2:
             return None
-        self._want_planes = True
+        self._want_planes = layout
         try:
             out = self.frame(time)
         finally:
@@ -778,6 +779,7 @@ class FrameRenderer:
         animated = bool(words) and (text.get("wordMode", "none") in ("highlight", "pop", "box") or any(w.get("colour") for w in words))
         if not animated:
             key = (clip.get("id"), json.dumps(text, sort_keys=True, default=str), self.width, self.height)
+            self._last_text_key = ("text", key)
             cached = self.text_cache.get(key)
             if cached is not None:
                 return cached.copy()
@@ -786,7 +788,17 @@ class FrameRenderer:
                 self.text_cache.clear()
             self.text_cache[key] = drawn
             return drawn.copy()
+        self._last_text_key = None
         return self._draw_text(clip, text, local)
+
+    def _device_key(self, clip: dict, source_key, image: np.ndarray, matrix, alpha: float, fields: dict) -> tuple | None:
+        """A key for a layer that is the same every frame (a still title, a still image with nothing moving), so
+        the device keeps the finished layer and the next frame blends it without uploading or running anything."""
+        if source_key is None or any(value is not None for value in fields.values()):
+            return None
+        look = json.dumps([clip.get("colour"), clip.get("colorGrade")], sort_keys=True, default=str)
+        placed = np.round(np.asarray(matrix, np.float64), 6).tobytes()
+        return (source_key, look, image.shape, str(image.dtype), placed, round(float(alpha), 6), self.transfer if self.deep else None)
 
     def _draw_text(self, clip: dict, text: dict, local: float) -> np.ndarray:
         image = Image.new("RGBA", (self.width, self.height))
@@ -1193,7 +1205,9 @@ class FrameRenderer:
 
     def _flush(self, canvas: np.ndarray) -> np.ndarray:
         if self.pending_layers:
-            canvas = gpu.composite_stack(canvas, self.pending_layers, transfer=self.transfer, yuv=self._want_planes and self._final_flush)
+            canvas = gpu.composite_stack(
+                canvas, self.pending_layers, transfer=self.transfer, yuv=self._want_planes if self._final_flush else False
+            )
             self.pending_layers = []
         return canvas
 
@@ -1267,15 +1281,17 @@ class FrameRenderer:
                 if gpu.stack_active() and self._device_resident(clip, [], local):
                     transform = transform_at(clip, local)
                     fields = self._layer_fields(clip, image)
+                    placed, alpha = self._matrix(image, transform), self._alpha(clip, local, transform)
                     staged = gpu_effects.effects_and_warp(
                         image,
                         [],
                         local,
-                        self._matrix(image, transform),
-                        self._alpha(clip, local, transform),
+                        placed,
+                        alpha,
                         (self.width, self.height),
                         resident=True,
                         lift=self.transfer if self.deep else None,
+                        device_key=self._device_key(clip, ("still", key), image, placed, alpha, fields),
                         **fields,
                     )
                     if isinstance(staged, int):
@@ -1312,17 +1328,21 @@ class FrameRenderer:
                         table, low, high = load_cube(clip["lutId"])
                         lut = (table, low, high, float(clip.get("lutIntensity", 1)))
                     fields = self._layer_fields(clip, image)
+                    placed, alpha = self._matrix(image, transform), self._alpha(clip, local, transform)
+                    shader = self._shader_of(clip, local)
+                    still_title = clip["kind"] == "text" and not scaled and lut is None and shader is None
                     staged = gpu_effects.effects_and_warp(
                         image,
                         scaled,
                         local,
-                        self._matrix(image, transform),
-                        self._alpha(clip, local, transform),
+                        placed,
+                        alpha,
                         (self.width, self.height),
                         resident=True,
                         lut=lut,
-                        shader=self._shader_of(clip, local),
+                        shader=shader,
                         lift=self.transfer if self.deep else None,
+                        device_key=self._device_key(clip, self._last_text_key, image, placed, alpha, fields) if still_title else None,
                         **fields,
                     )
                     if isinstance(staged, int):

@@ -2437,6 +2437,7 @@ def effects_and_warp(
     matte: np.ndarray | None = None,
     shader: tuple[str, float, list | None] | None = None,
     lift: str | None = None,
+    device_key: object = None,
 ):
     """The chain, a LUT, a key, a mask, a cutout matte and the transform on one resident layer: one upload, then either one readback of the frame-sized layer or, with `resident`, no readback at all: the layer is staged into the frame's compositor on the device and its stage index comes back."""
     if not active() or (effects and not supported(effects)):
@@ -2446,6 +2447,11 @@ def effects_and_warp(
             h, w = image.shape[:2]
             frame_w, frame_h = size
             context = _context(max(h, frame_h), max(w, frame_w))
+            if device_key is not None and hasattr(context, "cached"):
+                # a static layer (a title, a still) finished on the device in an earlier frame: nothing to upload or run
+                hit = context.cached(device_key)
+                if hit is not None:
+                    return hit
             chain = _Chain(context, h, w)
             context.upload(context.buffers[0], image)
             if effects:
@@ -2470,30 +2476,43 @@ def effects_and_warp(
                 chain._pass(MASK_CODE, [], np.ascontiguousarray(mask.reshape(-1)))
             if matte is not None:
                 chain._pass(MASK_CODE, [], np.ascontiguousarray(np.asarray(matte, np.float32).reshape(-1)))
-            inverse = cv2.invertAffineTransform(np.float32(matrix))
-            context.run(
-                WARP_CODE,
-                context.buffers[chain.current],
-                context.buffers[(chain.current + 1) % 2],
-                [frame_w, frame_h, w, h, *[float(v) for v in inverse.ravel()], float(alpha)],
-                None,
-                frame_w,
-                frame_h,
+            identity = (
+                (h, w) == (frame_h, frame_w) and float(alpha) == 1.0 and np.array_equal(np.float64(matrix)[:2], [[1, 0, 0], [0, 1, 0]])
             )
-            result = context.buffers[(chain.current + 1) % 2]
+            if identity:
+                # a full-frame layer that is not moved, scaled or faded: the warp would write back what it read
+                # (bilinear at the pixel centres, weights one and zero), so it is not run
+                result = context.buffers[chain.current]
+                spare = context.buffers[(chain.current + 1) % 2]
+            else:
+                inverse = cv2.invertAffineTransform(np.float32(matrix))
+                context.run(
+                    WARP_CODE,
+                    context.buffers[chain.current],
+                    context.buffers[(chain.current + 1) % 2],
+                    [frame_w, frame_h, w, h, *[float(v) for v in inverse.ravel()], float(alpha)],
+                    None,
+                    frame_w,
+                    frame_h,
+                )
+                result = context.buffers[(chain.current + 1) % 2]
+                spare = context.buffers[chain.current]
             if lift and image.dtype == np.uint8:
                 # a byte layer entering a deep timeline is lifted here, on the frame-sized picture after its
                 # transform, where the CPU path lifts it too (at the blend), so the interpolation happens on
                 # display bytes on both paths and the two agree at the edges
-                lifted = context.buffers[chain.current]
-                context.run(LIFT_CODE, result, lifted, [frame_w, frame_h, 1 if lift == "pq" else 2], None, frame_w, frame_h)
-                result = lifted
+                context.run(LIFT_CODE, result, spare, [frame_w, frame_h, 1 if lift == "pq" else 2], None, frame_w, frame_h)
+                result = spare
             if resident:
                 # R4: the layer never comes back. The compositor copies it on
                 # the device into a pooled buffer of its own before this
                 # context's buffers are reused by the next layer.
                 from .gpu import DeviceLayer, stage_layer
 
+                if device_key is not None and hasattr(context, "keep"):
+                    kept = context.keep(device_key, result, frame_h, frame_w)
+                    if kept is not None:
+                        return kept
                 staged = stage_layer(DeviceLayer(result, frame_h, frame_w), frame_h, frame_w)
                 if staged is None:
                     data = context.download(result, frame_h, frame_w)

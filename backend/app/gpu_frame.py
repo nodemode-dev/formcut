@@ -24,8 +24,9 @@ _status: dict | None = None
 _unavailable: str | None = None
 
 WORKING = 5
-POOL = 12
-CANVAS_A = WORKING + POOL
+POOL = 8
+CACHE = 4  # pictures that keep static layers (titles, stills) finished across frames
+CANVAS_A = WORKING + POOL + CACHE
 CANVAS_B = CANVAS_A + 1
 PICTURES = CANVAS_B + 1
 # The executor's API: 2 takes bytes and returns bytes (1, the first build, moved every byte as a Python int)
@@ -39,12 +40,17 @@ _shared = {"pending": 0}
 _working: list[int] = list(range(WORKING))
 _free: list[int] = list(range(WORKING, WORKING + POOL))
 _staged: list[int] = []
+# static layers kept on the device by key, oldest first; the pictures handed out this frame are not evicted
+_cache: dict = {}
+_cache_used: set[int] = set()
 
 
 def _reset_pictures() -> None:
     _working[:] = list(range(WORKING))
     _free[:] = list(range(WORKING, WORKING + POOL))
     _staged.clear()
+    _cache.clear()
+    _cache_used.clear()
 
 
 def _u8(array: np.ndarray) -> np.ndarray:
@@ -182,6 +188,33 @@ class Recorder:
         _staged.append(picture)
         return picture
 
+    def cached(self, key) -> int | None:
+        """The picture that holds a static layer finished in an earlier frame, or None."""
+        picture = _cache.pop(key, None)
+        if picture is None:
+            return None
+        _cache[key] = picture  # most recent last
+        _cache_used.add(picture)
+        return picture
+
+    def keep(self, key, picture, height: int, width: int) -> int | None:
+        """Copy a finished static layer into a cache picture and hand that picture to the blend."""
+        slot = _cache.pop(key, None)
+        if slot is None:
+            taken = set(_cache.values())
+            spare = [p for p in range(WORKING + POOL, WORKING + POOL + CACHE) if p not in taken]
+            if spare:
+                slot = spare[0]
+            else:
+                oldest = next((k for k, p in _cache.items() if p not in _cache_used), None)
+                if oldest is None:
+                    return None
+                slot = _cache.pop(oldest)
+        self.copy(int(picture), slot, height, width)
+        _cache[key] = slot
+        _cache_used.add(slot)
+        return slot
+
     def download(self, buffer, height: int, width: int) -> np.ndarray:
         """A working picture's floats, exactly (a CPU-only effect mid-chain): runs what is recorded so far."""
         self.frame.download(int(buffer), self.kernel(PACK_F32_FRAME_CODE), int(width), int(height), int(width) * int(height) * 16)
@@ -196,10 +229,12 @@ class Recorder:
 
         h, w = canvas.shape[:2]
         deep = canvas.dtype == np.uint16
-        if canvas.any():
+        # a blank canvas is neither uploaded nor cleared: the first blend is told the base is zero and reads nothing
+        blank = not canvas.any()
+        if not blank:
             self.upload(CANVAS_A, canvas)
-        else:
-            self.frame.clear(CANVAS_A, w * h * 16)  # a blank canvas: zeros on the device instead of zeros uploaded
+        elif not layers:
+            self.frame.clear(CANVAS_A, w * h * 16)
         base, other = CANVAS_A, CANVAS_B
         blend = self.kernel(BLEND_FRAME_CODE)
         for layer, mode in layers:
@@ -209,19 +244,23 @@ class Recorder:
                 self.upload(_working[0], layer)
                 front = _working[0]
             index = MODES.index(mode.lower()) if mode.lower() in MODES else 0
-            self._step(blend, base, other, front, w, h, [float(index), float(transfer)], None)
+            self._step(blend, base, other, front, w, h, [float(index), float(transfer), 1.0 if blank else 0.0], None)
+            blank = False
             base, other = other, base
-        planar = yuv and deep and w % 4 == 0 and h % 2 == 0
+        planar = bool(yuv) and deep and w % 4 == 0 and h % 2 == 0
         if planar:
             planes = w * h * 3
             groups = ((w + 15) // 16) * ((h + 15) // 16)
-            code = PACK_YUV_FRAME_CODE.replace("TRANSFER", "2u" if transfer == 2 else "1u")
+            # P010 (ten bits high in sixteen, chroma interleaved) is what VideoToolbox takes without a conversion
+            p010 = yuv == "p010le"
+            code = PACK_YUV_FRAME_CODE.replace("TRANSFER", "2u" if transfer == 2 else "1u").replace("P010", "true" if p010 else "false")
             self.frame.download(base, self.kernel(code), w, h, planes + groups * 8)
         else:
             self.frame.download(base, self.kernel(PACK16_FRAME_CODE if deep else PACK_FRAME_CODE), w, h, w * h * (8 if deep else 4))
         data = self._run()
         _free.extend(_staged)
         _staged.clear()
+        _cache_used.clear()
         if planar:
             # the light the pack measured, one (brightest code, light sum) pair a workgroup
             tail = np.frombuffer(data, np.uint32, offset=planes, count=groups * 2).reshape(groups, 2)
@@ -249,7 +288,11 @@ def _blend_body() -> str:
     body = body[head_end:]
     body = body.replace("background[i]", "src[i]").replace("foreground[i]", "held[i]").replace("result[i]", "dst[i]")
     body = body.replace("options[0]", "p[2]").replace("options[1]", "p[3]")
-    return body
+    # p[4] = 1: the base is a blank canvas, so it is zero light and is not read (lin(0) is 0 in every transfer)
+    old = "let b = lin(src[i].rgb);"
+    if body.count(old) != 1:
+        raise RuntimeError("the compositor's blend changed shape; the executor's blend must follow it")
+    return body.replace(old, "var b = vec3<f32>(0.0);\n    if (p[4] < 0.5) { b = lin(src[i].rgb); }")
 
 
 # The blend in the executor's layout: src is the canvas so far, held the layer, dst the canvas after.
@@ -375,7 +418,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(local_invocation_
                 let c1 = clamp(src[y * w + x0 + 1u].rgb, vec3<f32>(0.0), vec3<f32>(1.0));
                 let y0 = luma(c0);
                 let y1 = luma(c1);
-                packed[(y * w + x0) / 2u] = code(y0, 16.0, 219.0) | (code(y1, 16.0, 219.0) << 16u);
+                let shift = select(0u, 6u, P010);
+                packed[(y * w + x0) / 2u] = (code(y0, 16.0, 219.0) << shift) | ((code(y1, 16.0, 219.0) << shift) << 16u);
                 cb[pair] = cb[pair] + ((c0.b - y0) / 1.8814 + (c1.b - y1) / 1.8814) * 0.25;
                 cr[pair] = cr[pair] + ((c0.r - y0) / 1.4746 + (c1.r - y1) / 1.4746) * 0.25;
                 let m0 = max(c0.r, max(c0.g, c0.b));
@@ -387,8 +431,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(local_invocation_
         let y_words = (w * h) / 2u;
         let u_words = (cw * ch) / 2u;
         let cindex = (by / 2u) * cw + bx / 2u;
-        packed[y_words + cindex / 2u] = code(cb[0], 128.0, 224.0) | (code(cb[1], 128.0, 224.0) << 16u);
-        packed[y_words + u_words + cindex / 2u] = code(cr[0], 128.0, 224.0) | (code(cr[1], 128.0, 224.0) << 16u);
+        if (P010) {
+            // one word a chroma sample: U low, V high, each ten bits in the top of sixteen
+            packed[y_words + cindex] = (code(cb[0], 128.0, 224.0) << 6u) | ((code(cr[0], 128.0, 224.0) << 6u) << 16u);
+            packed[y_words + cindex + 1u] = (code(cb[1], 128.0, 224.0) << 6u) | ((code(cr[1], 128.0, 224.0) << 6u) << 16u);
+        } else {
+            packed[y_words + cindex / 2u] = code(cb[0], 128.0, 224.0) | (code(cb[1], 128.0, 224.0) << 16u);
+            packed[y_words + u_words + cindex / 2u] = code(cr[0], 128.0, 224.0) | (code(cr[1], 128.0, 224.0) << 16u);
+        }
     }
     brightest_of[li] = u32(round(brightest * 65535.0));
     light_of[li] = light;

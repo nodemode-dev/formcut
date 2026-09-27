@@ -202,7 +202,7 @@ def _light_table(transfer: str) -> np.ndarray:
     return table
 
 
-def _to_planes(frame: np.ndarray) -> np.ndarray:
+def _to_planes(frame: np.ndarray, layout: str = "yuv420p10le") -> np.ndarray:
     """A deep RGBA frame as yuv420p10le planes on the CPU, for the frame the device did not pack: the BT.2020
     matrix in limited range, chroma the mean of each 2x2 block, the same arithmetic as the device's pack."""
     rgb = frame[:, :, :3].astype(np.float32) / 65535
@@ -213,6 +213,9 @@ def _to_planes(frame: np.ndarray) -> np.ndarray:
     cb2 = cb.reshape(h // 2, 2, w // 2, 2).mean(axis=(1, 3))
     cr2 = cr.reshape(h // 2, 2, w // 2, 2).mean(axis=(1, 3))
     code = lambda v, offset, span: np.clip(np.round((offset + span * v) * 4), 0, 1023).astype(np.uint16)  # noqa: E731
+    if layout == "p010le":
+        chroma = np.stack([code(cb2, 128, 224), code(cr2, 128, 224)], axis=-1)
+        return np.concatenate([(code(y, 16, 219) << 6).ravel(), (chroma << 6).ravel()]).view(np.uint8)
     return np.concatenate([code(y, 16, 219).ravel(), code(cb2, 128, 224).ravel(), code(cr2, 128, 224).ravel()]).view(np.uint8)
 
 
@@ -672,6 +675,11 @@ def export_media(
         # pipe carries three bytes a pixel instead of eight and ffmpeg converts nothing; the M5 export sat
         # at 18 fps against a 41 fps render with the conversion in ffmpeg's single thread.
         planar = bool(renderer.deep and gpu.stack_active() and out_w % 4 == 0 and out_h % 2 == 0)
+        # the Rust executor packs P010 for VideoToolbox, which takes it without a conversion; otherwise ten-bit planar
+        from . import gpu_frame
+
+        layout = "p010le" if planar and str(encoder or "").endswith("_videotoolbox") and gpu_frame.available() else "yuv420p10le"
+        same_size = renderer.width == out_w and renderer.height == out_h
         command = [
             program,
             "-v",
@@ -681,7 +689,7 @@ def export_media(
             "-f",
             "rawvideo",
             "-pix_fmt",
-            ("yuv420p10le" if planar else "rgba64le") if renderer.deep else "rgba",
+            (layout if planar else "rgba64le") if renderer.deep else "rgba",
             "-s",
             f"{renderer.width}x{renderer.height}",
             "-r",
@@ -697,7 +705,7 @@ def export_media(
             "-map",
             "1:a",
             "-vf",
-            f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2"
+            ("null" if planar and same_size else f"scale={out_w}:{out_h},pad=ceil(iw/2)*2:ceil(ih/2)*2")
             + (f",{hdr_filter}" if hdr_filter and not planar else "")
             + (f",{upload}" if upload else ""),
             "-r",
@@ -745,13 +753,13 @@ def export_media(
 
                 def produce(i: int):
                     if planar:
-                        got = renderer.frame_planes(i / fps)
+                        got = renderer.frame_planes(i / fps, layout)
                         if got is not None:
                             return got
                     picture = np.ascontiguousarray(renderer.frame(i / fps))
                     if planar:
                         # the device did not pack this frame (nothing on screen, say): converted here as ffmpeg would
-                        picture = _to_planes(picture)
+                        picture = _to_planes(picture, layout)
                     light = _light_of(picture, renderer.transfer) if renderer.deep and not planar else None
                     return picture, light
 
