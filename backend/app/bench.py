@@ -389,7 +389,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.profile:
         os.environ["FORMCUT_GPU_TIMINGS"] = "1"  # the executor times each pass on the device (read at its creation)
-    doc = _hdr_project(args.width, round(args.width * 9 / 16 / 2) * 2) if args.hdr else _load(args.project)
+    # the HDR clip runs as long as the frames asked for (with a second to spare), so a long run measures real
+    # frames, and the export's steady rate over hundreds of frames is the encoder's own, not its queue filling
+    seconds = max(4.0, args.frames / 30 + 1.5)
+    doc = _hdr_project(args.width, round(args.width * 9 / 16 / 2) * 2, seconds) if args.hdr else _load(args.project)
     status = gpu.status()
     from . import gpu_frame
 
