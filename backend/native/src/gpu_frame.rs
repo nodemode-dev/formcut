@@ -19,6 +19,7 @@
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use std::collections::HashMap;
+use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 enum Step {
@@ -34,7 +35,8 @@ pub struct GpuFrame {
     device: wgpu::Device,
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
-    pipelines: HashMap<usize, wgpu::ComputePipeline>,
+    // wgpu 22's ComputePipeline is not Clone (the first build on the M5 said so): shared through Arc
+    pipelines: HashMap<usize, Arc<wgpu::ComputePipeline>>,
     sources: Vec<String>,
     pictures: Vec<wgpu::Buffer>,
     steps: Vec<Step>,
@@ -128,7 +130,7 @@ impl GpuFrame {
                     let params = self.params_buffer(&[width as f32, height as f32]);
                     let other = (picture + 1) % self.pictures.len();
                     let pipeline = self.pipeline(if deep { unpack16_code } else { unpack_code })?;
-                    let group = self.group(other, picture, &params, &staging, picture);
+                    let group = self.group(other, picture, &params, &staging, other);
                     self.dispatch(&mut encoder, &pipeline, &group, width, height);
                     scratch.push(staging);
                     scratch.push(params);
@@ -198,9 +200,9 @@ impl GpuFrame {
         self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("params"), contents: bytemuck::cast_slice(&padded), usage: wgpu::BufferUsages::STORAGE })
     }
 
-    fn pipeline(&mut self, code: usize) -> PyResult<wgpu::ComputePipeline> {
+    fn pipeline(&mut self, code: usize) -> PyResult<Arc<wgpu::ComputePipeline>> {
         if let Some(p) = self.pipelines.get(&code) {
-            return Ok(p.clone());
+            return Ok(Arc::clone(p));
         }
         let source = self.sources.get(code).ok_or_else(|| PyRuntimeError::new_err("unknown kernel"))?.clone();
         let module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.into()) });
@@ -213,7 +215,8 @@ impl GpuFrame {
             compilation_options: Default::default(),
             cache: None,
         });
-        self.pipelines.insert(code, pipeline.clone());
+        let pipeline = Arc::new(pipeline);
+        self.pipelines.insert(code, Arc::clone(&pipeline));
         Ok(pipeline)
     }
 

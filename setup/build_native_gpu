@@ -1,0 +1,14 @@
+#!/bin/sh
+# Build formcut's native crate with the Rust frame path (R26) into the engine's own environment.
+# Run from anywhere; it finds the repository from its own location, installs maturin into the venv
+# it finds (or the current Python) and builds with the gpu feature.
+set -eu
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT/backend"
+PY=python3
+[ -x venv/bin/python ] && PY=venv/bin/python
+[ -x .venv/bin/python ] && PY=.venv/bin/python
+"$PY" -m pip install -q "maturin==1.15.0"
+cd native
+"$PY" -m maturin develop --release --features gpu
+"$PY" -c "import formcut_native as n; f = n.GpuFrame(1920 * 1080 * 16, 5); print('GpuFrame on', f.adapter())"

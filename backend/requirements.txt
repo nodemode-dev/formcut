@@ -26,3 +26,5 @@ PyYAML>=6.0
 # suite's helpers; the version CI runs. The frozen engine never imports it.
 pytest==8.3.4
 av==18.1.0
+# the native crate's builder, for a checkout that builds its own kernels (setup/build_native_gpu)
+maturin==1.15.0
