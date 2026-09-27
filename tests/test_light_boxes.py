@@ -20,15 +20,17 @@ def _make(path, faststart: bool) -> bool:
 
 def _side(path) -> dict:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_streams", "-select_streams", "v", "-of", "json", str(path)], capture_output=True, text=True
+        ["ffprobe", "-v", "error", "-show_streams", "-select_streams", "v", "-of", "json", str(path)],
+        capture_output=True,
+        text=True,
+        check=False,
     ).stdout
     return {d.get("side_data_type"): d for d in json.loads(out)["streams"][0].get("side_data_list", [])}
 
 
 def _packets(path) -> str:
-    return hashlib.sha1(
-        subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-map", "0", "-f", "framemd5", "-"], capture_output=True).stdout
-    ).hexdigest()
+    done = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-map", "0", "-f", "framemd5", "-"], capture_output=True, check=False)
+    return hashlib.sha256(done.stdout).hexdigest()
 
 
 @pytest.mark.parametrize("faststart", [True, False])
