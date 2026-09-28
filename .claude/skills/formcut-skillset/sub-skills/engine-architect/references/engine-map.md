@@ -33,15 +33,17 @@ The rest is written by hand.
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 315 | /api/generate | 2 |
+| generate.py | 347 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
-| jobs.py | 104 | /api/jobs | 3 |
-| krea2.py | 493 | /api/models/krea-2 | 6 |
+| jobs.py | 106 | /api/jobs | 3 |
+| klein.py | 327 | /api/models/klein | 4 |
+| krea2.py | 543 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
-| main.py | 412 | /api/health | 13 |
+| loras.py | 245 | /api/loras | 5 |
+| main.py | 428 | /api/health | 13 |
 | media.py | 878 | /api/media | 25 |
-| model_manager.py | 691 | /api/models | 8 |
+| model_manager.py | 841 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 625 | /api/presets | 9 |
 | project_packages.py | 312 | /api/projects | 4 |
@@ -91,7 +93,8 @@ the automation transports.
 - `gpu_effects.py` (3112L)
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
-- `local_models.py` (235L)
+- `local_models.py` (280L)
+- `local_runner.py` (148L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
 - `openh264.py` (410L)
