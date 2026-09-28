@@ -71,6 +71,7 @@ async def _warm_library() -> None:
 
 app.add_middleware(LocalOnly)
 from .agent_connect import router as agents_router
+from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
 from .klein import router as klein_router
 from .krea2 import router as krea2_router
@@ -88,6 +89,7 @@ app.include_router(terminal_router)
 app.include_router(krea2_router)
 app.include_router(klein_router)
 app.include_router(loras_router)
+app.include_router(checkpoints_router)
 
 
 class _QuietPolls(logging.Filter):

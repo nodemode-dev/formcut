@@ -156,6 +156,7 @@ def generate_to_file(
     memory: str = "auto",
     report=lambda *_: None,
     cancelled=lambda: False,
+    folder: Path | None = None,
 ) -> dict:
     from PIL import Image
 
@@ -163,7 +164,13 @@ def generate_to_file(
 
     spec = VARIANTS[variant]
     state = policy(variant)
-    if not state["ready"]:
+    if folder is not None:
+        # a checkpoint of the person's own (checkpoints.py): mflux, not a pinned build
+        if not _is_apple_silicon():
+            raise RuntimeError("Klein checkpoints run on Apple silicon (mflux)")
+        if not _cli().is_file():
+            raise RuntimeError("Install FLUX.2 [klein] 4B or Krea 2 once from its card: that sets up mflux, which runs checkpoints")
+    elif not state["ready"]:
         raise RuntimeError(f"{spec['label']} cannot run: {state['reason']}")
     refusal = krea2.prompt_refusal(prompt)
     if refusal:
@@ -171,12 +178,13 @@ def generate_to_file(
     started = time.time()
     seed = int(seed) if seed is not None else int.from_bytes(os.urandom(4), "little")
     width, height = max(256, int(width) // 16 * 16), max(256, int(height) // 16 * 16)
-    build = spec["builds"][state["build"]]
-    settings = local_runner.plan(build["bytes"], memory)
+    build = spec["builds"].get(state["build"] or "") or {"label": f"checkpoint {folder.name}" if folder else "", "bytes": 0, "model": ""}
+    size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file()) if folder else build["bytes"]
+    settings = local_runner.plan(int(size), memory)
     steps = max(1, min(50, int(steps or STEPS)))
     command = [
         str(_cli()),
-        "--model", str(MODELS_DIR / build["model"]),
+        "--model", str(folder or MODELS_DIR / build["model"]),
         "--base-model", variant,
         "--prompt", prompt,
         "--width", str(width),
@@ -188,7 +196,7 @@ def generate_to_file(
         *loras.mflux_flags(loras.resolve(stack, variant)),
         *local_runner.mflux_memory_flags(settings),
     ]  # fmt: skip
-    local_runner.run(command, steps, report, cancelled, spec["label"])
+    local_runner.run(command, steps, report, cancelled, f"{spec['label']} checkpoint {folder.name}" if folder else spec["label"])
     if not path.is_file():
         raise RuntimeError(f"{spec['label']} finished without a picture")
     verdict = None

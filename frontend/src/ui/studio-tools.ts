@@ -48,6 +48,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             <label data-gen-count-row="${kind}">${t("gen.count")} <input data-gen-count="${kind}" type="number" min="1" max="4" value="1"></label>
             <label data-gen-memory-row="${kind}" hidden>${t("gen.memory")} <select data-gen-memory="${kind}"><option value="auto">${t("gen.memory.auto")}</option><option value="low">${t("gen.memory.low")}</option><option value="normal">${t("gen.memory.normal")}</option></select></label>
           </div>
+          <small class="stock-note" data-gen-civitai="${kind}" hidden>${t("gen.civitai.hint")}</small>
           <div class="lora-stack" data-gen-loras="${kind}" hidden>
             <div class="lora-head"><strong>${t("gen.loras")}</strong><button type="button" class="tool-chip" data-lora-add="${kind}">${icon("plus")}${t("gen.loras.add")}</button></div>
             <div class="lora-rows" data-lora-rows="${kind}"></div>
@@ -175,6 +176,15 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           <div class="krea-actions"><button type="button" class="tool-chip" data-klein-install="${variant}" disabled>Install</button><button type="button" class="tool-chip" data-klein-use="${variant}" hidden>Generate with it</button></div>
         </div>
       </div>`).join("")}
+      <div class="panel-section krea-card" data-ckpt-card>
+        <div class="panel-section-head"><span>Your own checkpoints</span><small data-ckpt-state></small></div>
+        <div class="panel-rows">
+          <small>A Krea 2 or FLUX.2 [klein] 4B fine-tune converted to mflux's MLX format (the folder mflux-save writes: text_encoder/, tokenizer/, vae/ and the transformer's weights) runs here as a model of its own, with that model's LoRAs. Put each one's folder in:</small>
+          <ul class="ckpt-folders" data-ckpt-folders></ul>
+          <ul class="ckpt-list" data-ckpt-list></ul>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-ckpt-rescan>Look again</button></div>
+        </div>
+      </div>
     <section data-view="terminal" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>${text("Agent terminal")}</span><small data-term-status></small></div><div class="panel-rows">
         <p class="stock-note">${text("A real shell inside formcut, started with this engine's MCP server in its environment. Connect a client once, then run claude or codex here and it drives the editor through the formcut tools while you watch.")}</p>
@@ -322,6 +332,23 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     }));
     one("klein-use").addEventListener("click", () => document.dispatchEvent(new CustomEvent("formcut:klein-use", { detail: variant })));
   }
+  // The person's own checkpoints: the folders to drop them into, and each one found with what it lacks, if anything
+  const refreshCheckpoints = async () => {
+    const reply = await api<any>("/api/checkpoints", undefined, "GET");
+    const folders = q<HTMLUListElement>("ckpt-folders"); folders.replaceChildren();
+    for (const [base, path] of Object.entries<string>(reply.folders)) {
+      const item = document.createElement("li"); const code = document.createElement("code");
+      code.textContent = path; item.append(`${reply.bases[base]}: `, code); folders.append(item);
+    }
+    const list = q<HTMLUListElement>("ckpt-list"); list.replaceChildren();
+    for (const entry of reply.checkpoints as Array<{ name: string; baseLabel: string; usable: boolean; problem?: string; bytes: number }>) {
+      const item = document.createElement("li");
+      item.textContent = `${entry.name} (${entry.baseLabel}, ${(entry.bytes / 1e9).toFixed(1)} GB): ${entry.usable ? "ready in the image generator" : entry.problem}`;
+      list.append(item);
+    }
+    q("ckpt-state").textContent = reply.checkpoints.length ? `${reply.checkpoints.filter((c: { usable: boolean }) => c.usable).length} of ${reply.checkpoints.length} usable` : "None yet";
+  };
+  q("ckpt-rescan").addEventListener("click", () => void run(async () => { await refreshCheckpoints(); await refreshGenerators(); }));
   // Generate with Krea 2: the image generator, Krea 2 chosen, the prompt waiting
   q("krea-use").addEventListener("click", () => void run(async () => {
     activePage = "genimage";
@@ -653,7 +680,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     if (activePage === "project") structure();
     if (activePage === "stock" && !stock.loaded) await stock.search(1);
     if (activePage === "templates") await refreshTemplates();
-    if (activePage === "models") { await refreshModels(); await refreshKrea(); await refreshKlein().catch(() => { /* offline engine */ }); }
+    if (activePage === "models") { await refreshModels(); await refreshKrea(); await refreshKlein().catch(() => { /* offline engine */ }); await refreshCheckpoints().catch(() => { /* offline engine */ }); }
     if (activePage === "speech") await loadSpeechEngine();
   };
   opener.addEventListener("click", () => { modal.hidden = false; void run(showPage); q("close").focus(); });
@@ -851,6 +878,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         // a local model that takes LoRAs shows its stack, one that plans its memory the memory choice
         const base = entry?.options?.loras as string | undefined;
         pick<HTMLElement>(`[data-gen-loras="${kind}"]`).hidden = !base;
+        pick<HTMLElement>(`[data-gen-civitai="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden = !(entry && "memory" in (entry.options ?? {}));
         if (base) void paintLoras(kind, base).catch(() => { /* offline engine */ });
       };
@@ -1005,7 +1033,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
               `<div class="effect-card stock-card"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div></div>`).join(""));
             // what the model's licence sends with its pictures: Krea 2's warning when its content filter was removed
             const warning = status.result?.warning as string | undefined;
-            note.textContent = warning ? `${t("gen.done")}: ${made.length}. ${warning}` : `${t("gen.done")}: ${made.length}`;
+            // what the generator read from a Civitai-style prompt, and what these models do not take
+            const notes = ((status.result?.notes ?? []) as string[]).join(" · ");
+            note.textContent = [`${t("gen.done")}: ${made.length}`, notes, warning].filter(Boolean).join(". ");
             await bin.load();
             break;
           }

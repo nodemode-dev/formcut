@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import uuid
+from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -242,6 +243,64 @@ def _size_of(size: str | None, largest: int = 1024) -> tuple[int, int]:
     return 512, 512
 
 
+def _civitai_prompt(slot: dict, text: str, stack: list) -> tuple[dict, str, list, list, dict]:
+    """<lora:name:strength> tags and Civitai's generation data, for Krea 2, Klein 4B and their checkpoints: the tags'
+    LoRAs found in the library by file name (as Automatic1111 finds them) and put in the stack at their strengths,
+    the parameters line's Steps, Seed and size used, its Model choosing a checkpoint of that name, and a note for what
+    these models do not take (sampler, CFG other than 1, a negative prompt, clip skip)."""
+    from . import checkpoints, loras, prompt_data
+    from .local_models import resolve
+
+    data = prompt_data.parse(text)
+    params, notes, found = data["params"], [], {}
+    base = slot.get("base") or ("krea-2" if slot["runner"] == "krea-2" else slot["id"])
+    model = params.get("model")
+    if model and model.lower() not in (base, slot.get("id", ""), "krea2", "krea-2", "flux2-klein-4b"):
+        ckpt = checkpoints.find(base, model)
+        if ckpt is not None and ckpt["id"] != slot.get("id"):
+            chosen = resolve(ckpt["id"])
+            if chosen is not None and chosen["ready"]:
+                slot = chosen
+                notes.append(f"Model {model}: the checkpoint in models/checkpoints/{base}/{ckpt['name']}")
+        elif ckpt is None and slot.get("checkpoint") is None:
+            notes.append(f"Model {model} is not in models/checkpoints/{base}/; made with {checkpoints.BASES[base]}")
+    library = loras.entries(base)
+    missing = []
+    for tag, strength in data["loras"]:
+        entry = prompt_data.match_lora(tag, library)
+        if entry is None:
+            missing.append(tag)
+            continue
+        stack = [item for item in stack if item.get("id") != entry["id"]] + [{"id": entry["id"], "scale": strength}]
+    if missing:
+        folder = loras.LIBRARY / base
+        raise HTTPException(
+            400,
+            f"LoRA not found for {checkpoints.BASES[base]}: {', '.join(missing)}. Put the .safetensors in {folder} (its file name is what <lora:name> names), or add it from a link.",
+        )
+    if len(stack) > loras.MAX_STACK:
+        raise HTTPException(400, f"up to {loras.MAX_STACK} LoRAs at once")
+    if "steps" in params:
+        found["steps"] = max(1, min(50, params["steps"]))
+    if "seed" in params:
+        found["seed"] = params["seed"] & 0xFFFFFFFF
+    if "width" in params and "height" in params:
+        found["width"] = max(256, min(2048, params["width"] // 16 * 16))
+        found["height"] = max(256, min(2048, params["height"] // 16 * 16))
+        if (found["width"], found["height"]) != (params["width"], params["height"]):
+            notes.append(f"size {params['width']}x{params['height']} made {found['width']}x{found['height']} (a multiple of 16)")
+    if params.get("cfg") not in (None, 1.0):
+        notes.append(f"CFG scale {params['cfg']:g} not used: these distilled models run at guidance 1.0")
+    for key, label in (("sampler", "Sampler"), ("schedule_type", "Schedule type"), ("clip_skip", "Clip skip")):
+        if key in params and not (key == "clip_skip" and str(params[key]) == "1"):
+            notes.append(f"{label} {params[key]} not used: mflux samples with the model's own scheduler")
+    if data["negative"]:
+        notes.append("the negative prompt is not used: Krea 2 and FLUX.2 [klein] take none")
+    if data["loras"]:
+        notes.append(f"LoRAs from the prompt: {', '.join(f'{name} {weight:g}' for name, weight in data['loras'])}")
+    return slot, data["prompt"] or text, stack, notes, found
+
+
 def _generate_local(body: GenerateBody):
     """A local slot: the same job shape as a provider, run in the engine, one result per count."""
     from .local_diffusion import generate_to_file
@@ -261,6 +320,15 @@ def _generate_local(body: GenerateBody):
     count = max(1, min(4, body.count))
     kind = slot.get("kind", "image")
     extension = slot.get("extension") or (".mp4" if kind == "video" else ".png")
+    # A prompt written as Civitai shows it: <lora:name:strength> tags and the generation data read into the request
+    prompt, stack, notes = body.prompt, list(body.options.get("loras") or []), []
+    if slot["runner"] in ("krea-2", "mflux-klein"):
+        slot, prompt, stack, notes, found = _civitai_prompt(slot, body.prompt, stack)
+        steps = found.get("steps", steps)
+        seed = found.get("seed", seed)
+        width, height = found.get("width", width), found.get("height", height)
+    elif "<lora:" in body.prompt.lower():
+        raise HTTPException(400, f"{slot.get('label', name)} takes no LoRAs; Krea 2, FLUX.2 [klein] 4B and their checkpoints do")
 
     def operation(job_id, report, cancelled):
         STAGING.mkdir(parents=True, exist_ok=True)
@@ -275,12 +343,13 @@ def _generate_local(body: GenerateBody):
                 report((i + f) / count, label)
 
             this_seed = (int(seed) + index) if seed is not None else None
-            stack, memory = body.options.get("loras"), str(body.options.get("memory") or "auto")
+            memory = str(body.options.get("memory") or "auto")
+            checkpoint = Path(slot["checkpoint"]) if slot.get("checkpoint") else None
             if slot["runner"] == "krea-2":
                 from .krea2 import generate_to_file as krea2_generate
 
                 result = krea2_generate(
-                    body.prompt,
+                    prompt,
                     staged,
                     width=width,
                     height=height,
@@ -290,13 +359,14 @@ def _generate_local(body: GenerateBody):
                     memory=memory,
                     report=each,
                     cancelled=cancelled,
+                    folder=checkpoint,
                 )
             elif slot["runner"] == "mflux-klein":
                 from .klein import generate_to_file as klein_generate
 
                 result = klein_generate(
-                    name,
-                    body.prompt,
+                    slot.get("base", name),
+                    prompt,
                     staged,
                     width=width,
                     height=height,
@@ -306,6 +376,7 @@ def _generate_local(body: GenerateBody):
                     memory=memory,
                     report=each,
                     cancelled=cancelled,
+                    folder=checkpoint,
                 )
             elif slot["runner"] == "command":
                 result = run_command_slot(slot, body.prompt, staged, width, height, seconds, this_seed, each, cancelled)
@@ -342,6 +413,6 @@ def _generate_local(body: GenerateBody):
                 )
             finally:
                 staged.unlink(missing_ok=True)
-        return {"media": made, "kind": kind, "seconds": timings, "model": name, **extras}
+        return {"media": made, "kind": kind, "seconds": timings, "model": slot.get("id", name), "notes": notes, **extras}
 
     return jobs.submit("generate", operation)

@@ -627,6 +627,7 @@
   "gen.loras.remove": "Ukloni",
   "gen.loras.adding": "Dodavanje LoRA-e",
   "gen.loras.added": "LoRA dodana",
+  "gen.civitai.hint": "Napišite <lora:ime:jačina> u upit kao na Civitaiju (ime je naziv datoteke LoRA-e) ili zalijepite podatke o generiranju slike: koriste se njezini Steps, Seed, veličina i Model",
   "gen.loras.triggers": "Okidačke riječi",
   "gen.loras.rescan": "Pogledaj ponovno",
   "gen.loras.folder": "Ili stavite .safetensors datoteke u",

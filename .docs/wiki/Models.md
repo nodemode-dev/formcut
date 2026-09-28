@@ -251,6 +251,32 @@ file keeps its name, strength, trigger words and source. Import a file, or Add f
   checks the download against Civitai's SHA-256 and keeps its trigger words. Civitai asks for an account to download
   most files: add your Civitai API key in Settings.
 
+Prompts written as Civitai shows them work in the generator for Krea 2, Klein 4B and their checkpoints:
+`<lora:name:strength>` tags anywhere in the prompt (the name is the LoRA's file name without `.safetensors`, found
+the way Automatic1111 finds it, then its name in formcut or the file name it was downloaded as; a strength may be
+negative, as sliders use), and a pasted picture's generation data: `Negative prompt:` and the `Steps: ..., Seed: ...,
+Model: ..., width/height` or `Size: WxH` line. Steps, Seed and size are used (the size rounded to a multiple of 16);
+`Model:` chooses a checkpoint of that name in `models/checkpoints/<model>/`; CFG other than 1, the sampler, the
+schedule, clip skip and a negative prompt are not taken by these distilled models, and the result says so. A tag whose
+LoRA is not in the model's folder stops the picture and names the folder to put it in.
+
+### Your own checkpoints
+
+A Krea 2 or Klein 4B fine-tune runs as a model of its own once it is in mflux's MLX format, in a folder under
+`models/checkpoints/krea-2/<name>/` or `models/checkpoints/flux2-klein-4b/<name>/`. mflux's format is the folder
+`mflux-save` writes: `text_encoder/`, `tokenizer/`, `vae/`, and the transformer's weights in `transformer/` (Klein) or
+at the top (Krea 2). Studio > Local models lists what it found, and what a folder lacks. To make one from a fine-tune
+published in the diffusers layout (a Hugging Face repository or a folder with `transformer/`, `text_encoder/`, ...),
+use the mflux formcut installs:
+
+    models/krea-2/runtime/bin/mflux-save --model <repo or folder> --base-model krea-2 \
+        --path models/checkpoints/krea-2/<name> --quantize 8
+
+(`--base-model flux2-klein-4b` for Klein; `--lora-paths` and `--lora-scales` bake LoRAs in.) A single-file checkpoint
+as Civitai serves it for ComfyUI or Automatic1111 has to be put into the diffusers layout first; formcut does not do
+that conversion. A Krea 2 fine-tune is under Krea 2's licence, so it runs once that licence is accepted on the Krea 2
+card, with the content filter as Krea 2 has it.
+
 Every file is checked from its header: LoRA and LyCORIS LoKr load; DoRA in the PEFT layout does not (mflux refuses
 it); a file that fails is listed with its reason and cannot be stacked. In the stack, each LoRA has a strength from -2
 to 2 and a switch; up to eight at once.

@@ -627,6 +627,7 @@
   "gen.loras.remove": "הסרה",
   "gen.loras.adding": "מוסיף את ה-LoRA",
   "gen.loras.added": "ה-LoRA נוספה",
+  "gen.civitai.hint": "כתבו ‎<lora:name:strength>‎ בהנחיה כמו ב-Civitai (השם הוא שם הקובץ של ה-LoRA), או הדביקו את נתוני היצירה של תמונה: ה-Steps, ה-Seed, הגודל וה-Model שלה ישמשו",
   "gen.loras.triggers": "מילות הפעלה",
   "gen.loras.rescan": "חיפוש מחדש",
   "gen.loras.folder": "או גררו קובצי ‎.safetensors אל",

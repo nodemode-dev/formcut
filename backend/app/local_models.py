@@ -161,6 +161,22 @@ def catalogue_entries() -> list[dict]:
                 "licence": slot["licence"],
             }
         )
+    for slot in checkpoint_slots():
+        entries.append(
+            {
+                "id": f"local:{slot['id']}",
+                "label": slot["label"],
+                "kind": "image",
+                "provider": "local",
+                "providerLabel": "This computer",
+                "sizes": slot["sizes"],
+                "options": {"steps": slot["steps"], "guidance": 1.0, "loras": slot["base"], "memory": "auto"},
+                "ready": slot["ready"],
+                "reason": slot["reason"],
+                "runner": slot["runner"],
+                "licence": slot["licence"],
+            }
+        )
     for model in installed():
         if model["id"] in seen_folders:
             continue
@@ -232,10 +248,61 @@ def klein_slots() -> list[dict]:
     return out
 
 
+def checkpoint_slots() -> list[dict]:
+    """The person's own checkpoints (models/checkpoints/<model>/<name>/), each as a model of its own."""
+    from . import checkpoints, klein, krea2
+
+    out = []
+    krea_state = krea2.policy()
+    mflux_krea = (krea2.RUNTIME / "bin" / "mflux-generate-krea2").is_file()
+    for entry in checkpoints.entries():
+        reason = entry["problem"]
+        if entry["base"] == "krea-2":
+            runner, sizes, steps, licence = (
+                "krea-2",
+                ["1024x1024", "1344x768", "768x1344", "1536x1024", "1024x1536"],
+                krea2.STEPS,
+                krea2.LICENCE_NAME,
+            )
+            reason = reason or (
+                None if krea_state["licenceAccepted"] else "accept the Krea 2 licence on its card first (a Krea 2 checkpoint is under it)"
+            )
+            reason = reason or (None if mflux_krea else "install Krea 2 once from its card: that sets up mflux")
+        else:
+            runner, sizes, steps, licence = "mflux-klein", klein.SIZES, klein.STEPS, "the checkpoint's own licence"
+            reason = reason or (None if klein._is_apple_silicon() else "Klein checkpoints run on Apple silicon (mflux)")
+            reason = reason or (
+                None if klein._cli().is_file() else "install FLUX.2 [klein] 4B or Krea 2 once from its card: that sets up mflux"
+            )
+        out.append(
+            {
+                "id": entry["id"],
+                "label": f"{entry['name']} ({entry['baseLabel']} checkpoint, local)",
+                "kind": "image",
+                "runner": runner,
+                "base": entry["base"],
+                "checkpoint": entry["folder"],
+                "licence": licence,
+                "sizes": sizes,
+                "steps": steps,
+                "guidance": 1.0,
+                "ready": reason is None,
+                "reason": reason,
+                "seconds": None,
+                "extension": None,
+                "command": None,
+                "folder": None,
+            }
+        )
+    return out
+
+
 def resolve(name: str) -> dict | None:
     """The slot behind local:<name>: a declared one, or an undeclared diffusion folder of that name."""
     if name == "krea-2":
         return krea2_slot()
+    if name.startswith("ckpt:"):
+        return next((slot for slot in checkpoint_slots() if slot["id"] == name), None)
     if name.startswith("flux2-klein-"):
         return next((slot for slot in klein_slots() if slot["id"] == name), None)
     for slot in declared():

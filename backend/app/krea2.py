@@ -363,11 +363,12 @@ def _command(
     steps: int,
     pairs: list | None = None,
     settings: dict | None = None,
+    checkpoint: Path | None = None,
 ) -> list[str]:
     from . import local_runner, loras
     from .model_manager import ROOT
 
-    folder = ROOT / BUILDS[build]["model"]
+    folder = checkpoint or ROOT / BUILDS[build]["model"]
     pairs = pairs or []
     if BUILDS[build]["platform"] != "macos-arm64":
         # diffusers: the LoRAs as JSON after the usual arguments, loaded with their strengths
@@ -421,6 +422,7 @@ def generate_to_file(
     memory: str = "auto",
     report=lambda *_: None,
     cancelled=lambda: False,
+    folder: Path | None = None,
     **_options,
 ) -> dict:
     """One picture, under the recorded choices: refused prompts never run, and with the filter enabled a picture it
@@ -430,7 +432,14 @@ def generate_to_file(
     from . import content_filter
 
     state = policy()
-    if not state["ready"]:
+    if folder is not None:
+        # a checkpoint of the person's own (checkpoints.py): Krea 2's licence and mflux, not a pinned build
+        if not state["licenceAccepted"]:
+            raise RuntimeError("A Krea 2 checkpoint runs once the Krea 2 Community License Agreement is accepted on the Krea 2 card")
+        if not (RUNTIME / "bin" / "mflux-generate-krea2").is_file():
+            raise RuntimeError("Install Krea 2 once from its card: that sets up mflux, which runs Krea 2 checkpoints")
+        state = {**state, "build": "mlx-q8"}
+    elif not state["ready"]:
         raise RuntimeError(f"Krea 2 cannot run: {state['reason']}")
     refusal = prompt_refusal(prompt)
     if refusal:
@@ -442,10 +451,12 @@ def generate_to_file(
     from . import local_runner, loras
 
     steps = int(steps or STEPS)
-    settings = local_runner.plan(int(BUILDS[state["build"]]["size"]), memory)
+    size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file()) if folder else BUILDS[state["build"]]["size"]
+    settings = local_runner.plan(int(size), memory)
     pairs = loras.resolve(stack, "krea-2")
+    label = f"Krea 2 checkpoint {folder.name}" if folder else "Krea 2"
     local_runner.run(
-        _command(state["build"], prompt, path, width, height, seed, steps, pairs, settings), steps, report, cancelled, "Krea 2"
+        _command(state["build"], prompt, path, width, height, seed, steps, pairs, settings, folder), steps, report, cancelled, label
     )
     if not path.is_file():
         raise RuntimeError("Krea 2 finished without a picture")
@@ -464,7 +475,7 @@ def generate_to_file(
     return {
         "path": str(path),
         "model": "krea-2",
-        "provider": BUILDS[state["build"]]["label"],
+        "provider": f"Krea 2 checkpoint {folder.name} (mflux)" if folder else BUILDS[state["build"]]["label"],
         "seconds": round(time.time() - started, 1),
         "width": size[0],
         "height": size[1],

@@ -265,3 +265,109 @@ def test_a_civitai_link_chooses_the_folder_and_checks_the_hash(library, monkeypa
     assert "SHA-256" in fetched({"url": "https://civitai.com/api/download/models/2766256", "name": "Again"})["error"]
     found.update(base=None, civitaiBase="Flux.2 Klein 9B")
     assert "Flux.2 Klein 9B" in fetched({"url": "https://civitai.com/models/2324991"})["detail"]
+
+
+OWNERS_PROMPT = """stunning woman in her late 20's with brown long hair near the bed. A realistic RAW photograph of a bright pastel bedroom. Detailed Emotions and Expressions, bl00m
+<lora:Emotions V1:1.0> <lora:Detailer-KREA2_from -3 to 6:1.0> <lora:krea2_nose_slider_v1:-2.0>
+Steps: 9, CFG scale: 1, Sampler: Euler a beta, Seed: 1554, Model: silly_krea2, width: 840, height: 1256, Version: ComfyUI, Model hash: 637580F9D0, Clip skip: 1"""
+
+
+def test_a_civitai_prompt_is_read_as_automatic1111_writes_it():
+    from app import prompt_data
+
+    data = prompt_data.parse(OWNERS_PROMPT)
+    assert data["prompt"].endswith("Detailed Emotions and Expressions, bl00m") and "<lora" not in data["prompt"]
+    assert data["loras"] == [("Emotions V1", 1.0), ("Detailer-KREA2_from -3 to 6", 1.0), ("krea2_nose_slider_v1", -2.0)]
+    params = data["params"]
+    assert (params["steps"], params["seed"], params["model"], params["width"], params["height"]) == (9, 1554, "silly_krea2", 840, 1256)
+    also = prompt_data.parse("a cat <lora:x> <lyco:y:0.5:0.2>\nNegative prompt: blurry\nSteps: 20, Size: 1024x768")
+    assert also["loras"] == [("x", 1.0), ("y", 0.5)] and also["negative"] == "blurry" and also["params"]["width"] == 1024
+    library = [
+        {"file": "Emotions-V1.safetensors", "name": "Emotions V1"},
+        {"file": "other.safetensors", "originalFile": "krea2_nose_slider_v1.safetensors"},
+    ]
+    assert prompt_data.match_lora("Emotions V1", library)["file"] == "Emotions-V1.safetensors"
+    assert prompt_data.match_lora("krea2_nose_slider_v1", library)["file"] == "other.safetensors"
+
+
+def _mflux_folder(folder, krea_layout=True):
+    for part in ("text_encoder", "vae", "tokenizer"):
+        (folder / part).mkdir(parents=True)
+    (folder / "text_encoder" / "0.safetensors").write_bytes(b"x")
+    (folder / "vae" / "0.safetensors").write_bytes(b"x")
+    (folder / "tokenizer" / "tokenizer.json").write_text("{}")
+    (folder / ("0.safetensors" if krea_layout else "transformer/0.safetensors")).parent.mkdir(exist_ok=True)
+    (folder / ("0.safetensors" if krea_layout else "transformer/0.safetensors")).write_bytes(b"x")
+
+
+def test_a_checkpoint_in_mflux_format_is_found_and_a_wrong_one_says_why(tmp_path, monkeypatch):
+    from app import checkpoints
+
+    monkeypatch.setattr(checkpoints, "FOLDER", tmp_path / "checkpoints")
+    _mflux_folder(tmp_path / "checkpoints" / "krea-2" / "silly_krea2")
+    _mflux_folder(tmp_path / "checkpoints" / "flux2-klein-4b" / "klein-tune", krea_layout=False)
+    (tmp_path / "checkpoints" / "krea-2" / "half").mkdir()
+    (tmp_path / "checkpoints" / "krea-2" / "comfy.safetensors").write_bytes(b"x")
+    found = {entry["name"]: entry for entry in checkpoints.entries()}
+    assert found["silly_krea2"]["usable"] and found["klein-tune"]["usable"] and found["silly_krea2"]["id"] == "ckpt:krea-2:silly_krea2"
+    assert "missing text_encoder, vae, tokenizer" in found["half"]["problem"] and "convert it" in found["comfy.safetensors"]["problem"]
+    assert checkpoints.find("krea-2", "Silly-Krea2")["name"] == "silly_krea2"
+
+
+def test_the_owners_civitai_prompt_runs_with_its_loras_checkpoint_steps_seed_and_size(tmp_path, monkeypatch, library):
+    from app import checkpoints, krea2
+
+    monkeypatch.setattr(checkpoints, "FOLDER", tmp_path / "checkpoints")
+    _mflux_folder(tmp_path / "checkpoints" / "krea-2" / "silly_krea2")
+    monkeypatch.setattr(krea2, "CONSENT_FILE", tmp_path / "krea-2-consent.json")
+    state = {
+        "licenceAccepted": True,
+        "ready": True,
+        "reason": None,
+        "build": "mlx-q8",
+        "filterInstalled": False,
+        "filterRemoved": True,
+        "removalAcknowledged": False,
+        "warning": krea2.REMOVED_WARNING,
+    }
+    monkeypatch.setattr(krea2, "policy", lambda: state)
+    runtime = tmp_path / "runtime"
+    (runtime / "bin").mkdir(parents=True)
+    recorded = tmp_path / "argv.json"
+    fake = runtime / "bin" / "mflux-generate-krea2"
+    fake.write_text(
+        f"#!{sys.executable}\nimport json, sys\nfrom PIL import Image\njson.dump(sys.argv[1:], open({str(recorded)!r}, 'w'))\n"
+        "Image.new('RGB', (64, 64), 'pink').save(sys.argv[sys.argv.index('--output') + 1])\n"
+    )
+    fake.chmod(0o755)
+    monkeypatch.setattr(krea2, "RUNTIME", runtime)
+    folder = loras.LIBRARY / "krea-2"
+    folder.mkdir(parents=True)
+    for name in ("Emotions V1", "Detailer-KREA2_from -3 to 6", "krea2_nose_slider_v1"):
+        _safetensors(folder / f"{name}.safetensors", ["a.lora_A.weight", "a.lora_B.weight"])
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    listed = next(g for g in client.get("/api/generate").json()["generators"] if g["id"] == "local:ckpt:krea-2:silly_krea2")
+    assert listed["ready"] and listed["options"]["loras"] == "krea-2"
+    started = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": OWNERS_PROMPT, "size": "1024x1024"})
+    assert started.status_code == 202, started.text
+    for _ in range(200):
+        status = client.get(f"/api/jobs/{started.json()['job_id']}").json()
+        if status["status"] in ("done", "error"):
+            break
+        time.sleep(0.05)
+    assert status["status"] == "done", status
+    argv = json.loads(recorded.read_text())
+    value = lambda flag: argv[argv.index(flag) + 1]  # noqa: E731
+    assert value("--model").endswith("checkpoints/krea-2/silly_krea2") and value("--prompt").endswith("bl00m")
+    assert (value("--steps"), value("--seed"), value("--width"), value("--height")) == ("9", "1554", "832", "1248")
+    lora_paths = argv[argv.index("--lora-paths") + 1 : argv.index("--lora-scales")]
+    assert [p.rsplit("/", 1)[1] for p in lora_paths] == [
+        "Emotions V1.safetensors",
+        "Detailer-KREA2_from -3 to 6.safetensors",
+        "krea2_nose_slider_v1.safetensors",
+    ]
+    assert argv[argv.index("--lora-scales") + 1 : argv.index("--lora-scales") + 4] == ["1", "1", "-2"]
+    notes = " | ".join(status["result"]["notes"])
+    assert "Model silly_krea2: the checkpoint" in notes and "Sampler Euler a beta not used" in notes and "made 832x1248" in notes
+    missing = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "a room <lora:Nowhere:0.5>"})
+    assert missing.status_code == 400 and "Nowhere" in missing.json()["detail"] and "krea-2" in missing.json()["detail"]

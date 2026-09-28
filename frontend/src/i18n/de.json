@@ -626,6 +626,7 @@
   "gen.loras.remove": "Entfernen",
   "gen.loras.adding": "LoRA wird hinzugefügt",
   "gen.loras.added": "LoRA hinzugefügt",
+  "gen.civitai.hint": "Schreibe <lora:name:stärke> in den Prompt wie auf Civitai (der Name ist der Dateiname der LoRA) oder füge die Generierungsdaten eines Bildes ein: Steps, Seed, Größe und Model werden übernommen",
   "gen.loras.triggers": "Auslösewörter",
   "gen.loras.rescan": "Erneut nachsehen",
   "gen.loras.folder": "Oder lege .safetensors-Dateien in",

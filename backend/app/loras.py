@@ -138,6 +138,7 @@ def entries(base: str | None = None) -> list[dict]:
                     "triggers": record.get("triggers") or str(check.get("metadata", {}).get("trigger_words") or "")[:200],
                     "source": record.get("source") or "dropped into the folder",
                     "sha256": record.get("sha256"),
+                    "originalFile": record.get("originalFile"),
                 }
             )
     return out
@@ -178,6 +179,7 @@ def add(source_file: Path, name: str, base: str, source: str, extra: dict | None
             (extra or {}).get("triggers") or str(facts["metadata"].get("trigger_words") or facts["metadata"].get("instance_prompt") or "")
         )[:200],
         "added": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "originalFile": (extra or {}).get("originalFile"),  # the name a <lora:name> tag may use
     }
     target.with_suffix(".json").write_text(json.dumps(record, indent=1), encoding="utf-8")
     return next(e for e in entries(base) if e["file"] == target.name)
@@ -281,7 +283,7 @@ def import_lora(file: UploadFile, base: str = Form(...), name: str = Form("")) -
                 raise HTTPException(413, "a LoRA over 3 GB is not taken")
             handle.write(block)
     try:
-        return add(part, name or Path(file.filename or "lora").stem, base, f"file: {file.filename}")
+        return add(part, name or Path(file.filename or "lora").stem, base, f"file: {file.filename}", {"originalFile": file.filename})
     except ValueError as exc:
         part.unlink(missing_ok=True)
         raise HTTPException(400, f"Not added: {exc}") from exc
@@ -354,7 +356,13 @@ def fetch_lora(body: FetchBody) -> dict:
             if hf is not None:
                 repo, revision, name = hf.group(1), hf.group(2), hf.group(3)
                 _download(f"https://huggingface.co/{repo}/resolve/{revision}/{name}", part, {}, report, cancelled)
-                entry = add(part, body.name or Path(name).stem, str(body.base), f"https://huggingface.co/{repo} ({revision}) {name}")
+                entry = add(
+                    part,
+                    body.name or Path(name).stem,
+                    str(body.base),
+                    f"https://huggingface.co/{repo} ({revision}) {name}",
+                    {"originalFile": Path(name).name},
+                )
             else:
                 _download(found["download"], part, found["headers"], report, cancelled)
                 entry = add(
@@ -362,7 +370,7 @@ def fetch_lora(body: FetchBody) -> dict:
                     body.name or found["name"],
                     found["base"],
                     f"https://civitai.com/models (version {found['versionId']}) {found['file']}",
-                    {"expectSha256": found["sha256"], "triggers": found["triggers"]},
+                    {"expectSha256": found["sha256"], "triggers": found["triggers"], "originalFile": found["file"]},
                 )
             return {"lora": entry}
         finally:

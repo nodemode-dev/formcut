@@ -627,6 +627,7 @@
   "gen.loras.remove": "حذف",
   "gen.loras.adding": "در حال افزودن LoRA",
   "gen.loras.added": "LoRA افزوده شد",
+  "gen.civitai.hint": "‎<lora:name:strength>‎ را مانند Civitai در متن بنویسید (نام، نام فایل LoRA است) یا داده‌های تولید یک تصویر را بچسبانید: Steps، Seed، اندازه و Model آن به کار می‌رود",
   "gen.loras.triggers": "واژه‌های فعال‌ساز",
   "gen.loras.rescan": "دوباره نگاه کن",
   "gen.loras.folder": "یا فایل‌های ‎.safetensors را بگذارید در",
