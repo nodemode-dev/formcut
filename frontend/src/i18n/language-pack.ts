@@ -407,6 +407,17 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Memory|Mémoire|Memoria|メモリ|메모리|Memória|Память|Bellek|内存|記憶體
+Low memory (slower)|Peu de mémoire (plus lent)|Poca memoria (più lento)|省メモリ（低速）|저메모리 (느림)|Pouca memória (mais lento)|Мало памяти (медленнее)|Düşük bellek (daha yavaş)|低内存（较慢）|低記憶體（較慢）
+LoRAs|LoRA|LoRA|LoRA|LoRA|LoRAs|LoRA|LoRA'lar|LoRA|LoRA
+Add LoRA|Ajouter une LoRA|Aggiungi LoRA|LoRA を追加|LoRA 추가|Adicionar LoRA|Добавить LoRA|LoRA ekle|添加 LoRA|新增 LoRA
+Import a LoRA file|Importer un fichier LoRA|Importa un file LoRA|LoRA ファイルを読み込む|LoRA 파일 가져오기|Importar um arquivo LoRA|Импортировать файл LoRA|LoRA dosyası içe aktar|导入 LoRA 文件|匯入 LoRA 檔案
+Add from Hugging Face|Ajouter depuis Hugging Face|Aggiungi da Hugging Face|Hugging Face から追加|Hugging Face에서 추가|Adicionar do Hugging Face|Добавить из Hugging Face|Hugging Face'ten ekle|从 Hugging Face 添加|從 Hugging Face 新增
+No LoRAs in this stack|Aucune LoRA dans cette pile|Nessuna LoRA in questa pila|このスタックに LoRA はありません|이 스택에 LoRA가 없습니다|Nenhuma LoRA nesta pilha|В этом наборе нет LoRA|Bu yığında LoRA yok|此堆栈中没有 LoRA|此堆疊中沒有 LoRA
+No LoRAs for this model yet: import a file or add one from Hugging Face|Aucune LoRA pour ce modèle : importez un fichier ou ajoutez-en une depuis Hugging Face|Ancora nessuna LoRA per questo modello: importa un file o aggiungine una da Hugging Face|このモデル用の LoRA はまだありません。ファイルを読み込むか Hugging Face から追加してください|이 모델용 LoRA가 아직 없습니다. 파일을 가져오거나 Hugging Face에서 추가하세요|Ainda não há LoRAs para este modelo: importe um arquivo ou adicione uma do Hugging Face|Для этой модели пока нет LoRA: импортируйте файл или добавьте из Hugging Face|Bu model için henüz LoRA yok: bir dosya içe aktarın veya Hugging Face'ten ekleyin|此模型还没有 LoRA：导入文件或从 Hugging Face 添加|此模型還沒有 LoRA：匯入檔案或從 Hugging Face 新增
+Use this LoRA|Utiliser cette LoRA|Usa questa LoRA|この LoRA を使う|이 LoRA 사용|Usar esta LoRA|Использовать эту LoRA|Bu LoRA'yı kullan|使用此 LoRA|使用此 LoRA
+Adding the LoRA|Ajout de la LoRA|Aggiunta della LoRA|LoRA を追加しています|LoRA 추가 중|Adicionando a LoRA|Добавление LoRA|LoRA ekleniyor|正在添加 LoRA|正在新增 LoRA
+LoRA added|LoRA ajoutée|LoRA aggiunta|LoRA を追加しました|LoRA 추가됨|LoRA adicionada|LoRA добавлена|LoRA eklendi|已添加 LoRA|已新增 LoRA
 Reveal word by word|Révéler mot par mot|Rivela parola per parola|一語ずつ表示|한 단어씩 나타내기|Revelar palavra por palavra|Показывать по одному слову|Kelime kelime göster|逐词显示|逐詞顯示
 Rise the word|Faire monter le mot|Fai salire la parola|単語を浮き上がらせる|단어 떠오르기|Fazer a palavra subir|Слово поднимается|Kelimeyi yükselt|单词上浮|單詞上浮
 Share this look|Partager ce style|Condividi questo stile|このスタイルを共有|이 스타일 공유|Compartilhar este estilo|Поделиться этим стилем|Bu stili paylaş|分享此样式|分享此樣式

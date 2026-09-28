@@ -253,7 +253,7 @@ def _generate_local(body: GenerateBody):
         raise HTTPException(404, "No local model by that name")
     if not slot.get("ready", True):
         raise HTTPException(409, f"{name} is not ready: {slot.get('reason') or 'see models/local_models.json'}")
-    width, height = _size_of(body.size, 2048 if slot["runner"] == "krea-2" else 1024)
+    width, height = _size_of(body.size, 2048 if slot["runner"] in ("krea-2", "mflux-klein") else 1024)
     steps = max(1, min(50, int(body.options.get("steps", slot.get("steps") if slot.get("steps") is not None else 4))))
     guidance = max(0.0, min(15.0, float(body.options.get("guidance", slot.get("guidance") if slot.get("guidance") is not None else 0.0))))
     seconds = float(body.seconds or slot.get("seconds") or 5)
@@ -269,12 +269,44 @@ def _generate_local(body: GenerateBody):
         extras: dict = {}  # what a model's licence sends with its pictures (Krea 2: its notice, the filter's warning)
         for index in range(count):
             staged = STAGING / f"{uuid.uuid4().hex}{extension}"
-            each = lambda f, i=index: report((i + f) / count)  # noqa: E731
+
+            def each(f, message=None, i=index):
+                label = message if count == 1 or message is None else f"Picture {i + 1} of {count}: {message}"
+                report((i + f) / count, label)
+
             this_seed = (int(seed) + index) if seed is not None else None
+            stack, memory = body.options.get("loras"), str(body.options.get("memory") or "auto")
             if slot["runner"] == "krea-2":
                 from .krea2 import generate_to_file as krea2_generate
 
-                result = krea2_generate(body.prompt, staged, width=width, height=height, seed=this_seed, steps=steps)
+                result = krea2_generate(
+                    body.prompt,
+                    staged,
+                    width=width,
+                    height=height,
+                    seed=this_seed,
+                    steps=steps,
+                    stack=stack,
+                    memory=memory,
+                    report=each,
+                    cancelled=cancelled,
+                )
+            elif slot["runner"] == "mflux-klein":
+                from .klein import generate_to_file as klein_generate
+
+                result = klein_generate(
+                    name,
+                    body.prompt,
+                    staged,
+                    width=width,
+                    height=height,
+                    seed=this_seed,
+                    steps=steps,
+                    stack=stack,
+                    memory=memory,
+                    report=each,
+                    cancelled=cancelled,
+                )
             elif slot["runner"] == "command":
                 result = run_command_slot(slot, body.prompt, staged, width, height, seconds, this_seed, each, cancelled)
             else:

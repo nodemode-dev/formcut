@@ -331,7 +331,7 @@ def install(build: str, report, cancelled) -> dict:
 
 
 _DIFFUSERS_RUNNER = """
-import sys, torch
+import json, sys, torch
 from diffusers import Krea2Pipeline
 from sdnq import SDNQConfig  # noqa: F401  (registers SDNQ's quantisation with diffusers and transformers)
 folder, prompt, width, height, seed, steps, out = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6]), sys.argv[7]
@@ -341,16 +341,50 @@ if torch.cuda.is_available():
     pipe.to("cuda") if free >= 20 else pipe.enable_model_cpu_offload()
 elif hasattr(torch, "xpu") and torch.xpu.is_available():
     pipe.to("xpu")
+pairs = json.loads(sys.argv[8]) if len(sys.argv) > 8 else []
+if pairs:
+    names = [f"lora{i}" for i in range(len(pairs))]
+    for name, (path, _scale) in zip(names, pairs):
+        pipe.load_lora_weights(path, adapter_name=name)
+    pipe.set_adapters(names, adapter_weights=[scale for _path, scale in pairs])
 generator = torch.Generator(device="cpu").manual_seed(seed)
 image = pipe(prompt=prompt, width=width, height=height, num_inference_steps=steps, guidance_scale=1.0, generator=generator).images[0]
 image.save(out)
 """
 
 
-def _command(build: str, prompt: str, out: Path, width: int, height: int, seed: int, steps: int) -> list[str]:
+def _command(
+    build: str,
+    prompt: str,
+    out: Path,
+    width: int,
+    height: int,
+    seed: int,
+    steps: int,
+    pairs: list | None = None,
+    settings: dict | None = None,
+) -> list[str]:
+    from . import local_runner, loras
     from .model_manager import ROOT
 
     folder = ROOT / BUILDS[build]["model"]
+    pairs = pairs or []
+    if BUILDS[build]["platform"] != "macos-arm64":
+        # diffusers: the LoRAs as JSON after the usual arguments, loaded with their strengths
+        return [
+            str(_runtime_python()),
+            "-c",
+            _DIFFUSERS_RUNNER,
+            str(folder),
+            prompt,
+            str(width),
+            str(height),
+            str(seed),
+            str(steps),
+            str(out),
+            json.dumps(pairs),
+        ]
+    extra = [*loras.mflux_flags(pairs), *(local_runner.mflux_memory_flags(settings) if settings else [])]
     if BUILDS[build]["platform"] == "macos-arm64":
         cli = RUNTIME / "bin" / "mflux-generate-krea2"
         return [
@@ -371,12 +405,23 @@ def _command(build: str, prompt: str, out: Path, width: int, height: int, seed: 
             str(steps),
             "--output",
             str(out),
+            *extra,
         ]
-    return [str(_runtime_python()), "-c", _DIFFUSERS_RUNNER, str(folder), prompt, str(width), str(height), str(seed), str(steps), str(out)]
+    return []
 
 
 def generate_to_file(
-    prompt: str, path: Path, width: int = 1024, height: int = 1024, seed: int | None = None, steps: int | None = None, **_options
+    prompt: str,
+    path: Path,
+    width: int = 1024,
+    height: int = 1024,
+    seed: int | None = None,
+    steps: int | None = None,
+    stack: list | None = None,
+    memory: str = "auto",
+    report=lambda *_: None,
+    cancelled=lambda: False,
+    **_options,
 ) -> dict:
     """One picture, under the recorded choices: refused prompts never run, and with the filter enabled a picture it
     scores as NSFW is deleted and reported instead of returned."""
@@ -394,11 +439,16 @@ def generate_to_file(
     seed = int(seed) if seed is not None else int.from_bytes(os.urandom(4), "little")
     # Krea 2 works in multiples of 16; the panel's sizes are
     width, height = max(256, int(width) // 16 * 16), max(256, int(height) // 16 * 16)
-    done = subprocess.run(
-        _command(state["build"], prompt, path, width, height, seed, int(steps or STEPS)), capture_output=True, text=True, check=False
+    from . import local_runner, loras
+
+    steps = int(steps or STEPS)
+    settings = local_runner.plan(int(BUILDS[state["build"]]["size"]), memory)
+    pairs = loras.resolve(stack, "krea-2")
+    local_runner.run(
+        _command(state["build"], prompt, path, width, height, seed, steps, pairs, settings), steps, report, cancelled, "Krea 2"
     )
-    if done.returncode or not path.is_file():
-        raise RuntimeError("Krea 2 did not make a picture: " + (done.stderr or done.stdout)[-600:])
+    if not path.is_file():
+        raise RuntimeError("Krea 2 finished without a picture")
     verdict = None
     if not state["filterInstalled"]:
         _note_run_without_filter()

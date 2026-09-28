@@ -46,10 +46,12 @@ def submit(kind: str, operation) -> dict:
             publish("job", job=job_id, job_kind=kind, status="running", progress=0.0)
             last_announced = 0.0
 
-            def report(value):
+            def report(value, message=None):
                 nonlocal last_announced
                 with _lock:
                     job["progress"] = min(0.99, max(0, float(value)))
+                    if message is not None:
+                        job["message"] = str(message)[:200]  # what the job is doing, beside the fraction
                 # Announce every five percent: enough for a progress bar without
                 # flooding a subscriber on a long render.
                 if job["progress"] - last_announced >= 0.05:

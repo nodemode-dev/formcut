@@ -134,6 +134,98 @@ MODELS = {
             "krea-2-sdnq-int8/vae/diffusion_pytorch_model.safetensors": "https://huggingface.co/OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit/resolve/dfa31958258de845f21a86e0dd0566f46d3a7970/vae/diffusion_pytorch_model.safetensors",
         },
     },
+    # FLUX.2 [klein] 4B (Apache-2.0) and 9B (FLUX Non-Commercial License), optional, installed from their card after
+    # the licence is accepted (klein.py); every file pinned below to its SHA-256.
+    "flux2-klein-4b-mlx-q8": {
+        "name": "FLUX.2 [klein] 4B, 8-bit MLX (mflux-community)",
+        "license": "Apache-2.0",
+        "optional": True,
+        "consent": "klein-4b",
+        "maxFileBytes": 2145931486,
+        # mflux-community/flux2-klein-4b-mflux-q8 at ca49409e4ce21c6717ee87caadd9488e0b15208f, 11 files, 8.57 GB
+        "files": {
+            "flux2-klein-4b-mlx-q8/text_encoder/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/text_encoder/0.safetensors",
+            "flux2-klein-4b-mlx-q8/text_encoder/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/text_encoder/1.safetensors",
+            "flux2-klein-4b-mlx-q8/text_encoder/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/text_encoder/model.safetensors.index.json",
+            "flux2-klein-4b-mlx-q8/tokenizer/chat_template.jinja": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/tokenizer/chat_template.jinja",
+            "flux2-klein-4b-mlx-q8/tokenizer/tokenizer.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/tokenizer/tokenizer.json",
+            "flux2-klein-4b-mlx-q8/tokenizer/tokenizer_config.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/tokenizer/tokenizer_config.json",
+            "flux2-klein-4b-mlx-q8/transformer/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/transformer/0.safetensors",
+            "flux2-klein-4b-mlx-q8/transformer/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/transformer/1.safetensors",
+            "flux2-klein-4b-mlx-q8/transformer/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/transformer/model.safetensors.index.json",
+            "flux2-klein-4b-mlx-q8/vae/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/vae/0.safetensors",
+            "flux2-klein-4b-mlx-q8/vae/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q8/resolve/ca49409e4ce21c6717ee87caadd9488e0b15208f/vae/model.safetensors.index.json",
+        },
+    },
+    "flux2-klein-4b-mlx-q4": {
+        "name": "FLUX.2 [klein] 4B, 4-bit MLX (mflux-community)",
+        "license": "Apache-2.0",
+        "optional": True,
+        "consent": "klein-4b",
+        "maxFileBytes": 2145323770,
+        # mflux-community/flux2-klein-4b-mflux-q4 at 794cd159538149ad9830848508c31f0ea7088e58, 11 files, 4.62 GB
+        "files": {
+            "flux2-klein-4b-mlx-q4/text_encoder/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/text_encoder/0.safetensors",
+            "flux2-klein-4b-mlx-q4/text_encoder/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/text_encoder/1.safetensors",
+            "flux2-klein-4b-mlx-q4/text_encoder/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/text_encoder/model.safetensors.index.json",
+            "flux2-klein-4b-mlx-q4/tokenizer/chat_template.jinja": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/tokenizer/chat_template.jinja",
+            "flux2-klein-4b-mlx-q4/tokenizer/tokenizer.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/tokenizer/tokenizer.json",
+            "flux2-klein-4b-mlx-q4/tokenizer/tokenizer_config.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/tokenizer/tokenizer_config.json",
+            "flux2-klein-4b-mlx-q4/transformer/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/transformer/0.safetensors",
+            "flux2-klein-4b-mlx-q4/transformer/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/transformer/1.safetensors",
+            "flux2-klein-4b-mlx-q4/transformer/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/transformer/model.safetensors.index.json",
+            "flux2-klein-4b-mlx-q4/vae/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/vae/0.safetensors",
+            "flux2-klein-4b-mlx-q4/vae/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-4b-mflux-q4/resolve/794cd159538149ad9830848508c31f0ea7088e58/vae/model.safetensors.index.json",
+        },
+    },
+    "flux2-klein-9b-mlx-q8": {
+        "name": "FLUX.2 [klein] 9B, 8-bit MLX (mflux-community)",
+        "license": "FLUX Non-Commercial License v2.1",
+        "optional": True,
+        "consent": "klein-9b",
+        "maxFileBytes": 2140922126,
+        # mflux-community/flux2-klein-9b-mflux-q8 at 9d2042db8ff36cb27b0a86960a1fbe8433f7464b, 16 files, 17.87 GB
+        "files": {
+            "flux2-klein-9b-mlx-q8/text_encoder/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/text_encoder/0.safetensors",
+            "flux2-klein-9b-mlx-q8/text_encoder/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/text_encoder/1.safetensors",
+            "flux2-klein-9b-mlx-q8/text_encoder/2.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/text_encoder/2.safetensors",
+            "flux2-klein-9b-mlx-q8/text_encoder/3.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/text_encoder/3.safetensors",
+            "flux2-klein-9b-mlx-q8/text_encoder/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/text_encoder/model.safetensors.index.json",
+            "flux2-klein-9b-mlx-q8/tokenizer/chat_template.jinja": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/tokenizer/chat_template.jinja",
+            "flux2-klein-9b-mlx-q8/tokenizer/tokenizer.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/tokenizer/tokenizer.json",
+            "flux2-klein-9b-mlx-q8/tokenizer/tokenizer_config.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/tokenizer/tokenizer_config.json",
+            "flux2-klein-9b-mlx-q8/transformer/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/transformer/0.safetensors",
+            "flux2-klein-9b-mlx-q8/transformer/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/transformer/1.safetensors",
+            "flux2-klein-9b-mlx-q8/transformer/2.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/transformer/2.safetensors",
+            "flux2-klein-9b-mlx-q8/transformer/3.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/transformer/3.safetensors",
+            "flux2-klein-9b-mlx-q8/transformer/4.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/transformer/4.safetensors",
+            "flux2-klein-9b-mlx-q8/transformer/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/transformer/model.safetensors.index.json",
+            "flux2-klein-9b-mlx-q8/vae/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/vae/0.safetensors",
+            "flux2-klein-9b-mlx-q8/vae/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q8/resolve/9d2042db8ff36cb27b0a86960a1fbe8433f7464b/vae/model.safetensors.index.json",
+        },
+    },
+    "flux2-klein-9b-mlx-q4": {
+        "name": "FLUX.2 [klein] 9B, 4-bit MLX (mflux-community)",
+        "license": "FLUX Non-Commercial License v2.1",
+        "optional": True,
+        "consent": "klein-9b",
+        "maxFileBytes": 2143173695,
+        # mflux-community/flux2-klein-9b-mflux-q4 at fcbc7528d6b4193cca919390a2a8b5b59e601f65, 12 files, 9.54 GB
+        "files": {
+            "flux2-klein-9b-mlx-q4/text_encoder/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/text_encoder/0.safetensors",
+            "flux2-klein-9b-mlx-q4/text_encoder/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/text_encoder/1.safetensors",
+            "flux2-klein-9b-mlx-q4/text_encoder/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/text_encoder/model.safetensors.index.json",
+            "flux2-klein-9b-mlx-q4/tokenizer/chat_template.jinja": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/tokenizer/chat_template.jinja",
+            "flux2-klein-9b-mlx-q4/tokenizer/tokenizer.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/tokenizer/tokenizer.json",
+            "flux2-klein-9b-mlx-q4/tokenizer/tokenizer_config.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/tokenizer/tokenizer_config.json",
+            "flux2-klein-9b-mlx-q4/transformer/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/transformer/0.safetensors",
+            "flux2-klein-9b-mlx-q4/transformer/1.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/transformer/1.safetensors",
+            "flux2-klein-9b-mlx-q4/transformer/2.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/transformer/2.safetensors",
+            "flux2-klein-9b-mlx-q4/transformer/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/transformer/model.safetensors.index.json",
+            "flux2-klein-9b-mlx-q4/vae/0.safetensors": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/vae/0.safetensors",
+            "flux2-klein-9b-mlx-q4/vae/model.safetensors.index.json": "https://huggingface.co/mflux-community/flux2-klein-9b-mflux-q4/resolve/fcbc7528d6b4193cca919390a2a8b5b59e601f65/vae/model.safetensors.index.json",
+        },
+    },
     "nsfw-filter": {
         "name": "Falconsai/nsfw_image_detection (ONNX), the content filter for Krea 2",
         "license": "Apache-2.0",
@@ -279,7 +371,9 @@ def list_models():
             "downloading": key in _downloading,
             "files": list(spec["files"]),
             # Krea 2's builds and its filter are installed from their own card, after the licence and the filter choice
-            "managedBy": "krea-2" if spec.get("consent") == "krea-2" or key == "nsfw-filter" else None,
+            "managedBy": "krea-2"
+            if spec.get("consent") == "krea-2" or key == "nsfw-filter"
+            else ("klein" if str(spec.get("consent", "")).startswith("klein") else None),
         }
         for key, spec in MODELS.items()
     ]
@@ -352,6 +446,12 @@ def start_download(model: str):
 
         if not consent().get("licence"):
             raise HTTPException(409, "Krea 2 is installed from its own panel, once its licence is accepted")
+    if str(MODELS[model].get("consent", "")).startswith("klein"):
+        from .klein import consent as klein_consent
+
+        variant = "flux2-" + MODELS[model]["consent"]
+        if not klein_consent().get(variant, {}).get("licence"):
+            raise HTTPException(409, "FLUX.2 [klein] is installed from its own card, once its licence is accepted")
     return jobs.submit("model-download", lambda _id, report, cancelled: _tracked(model, report, cancelled))
 
 
@@ -578,6 +678,56 @@ PINNED: dict[str, str] = {
     "realesrgan-x4plus.onnx": "4851ec156207d271f5328605d0582eeb851e656227da8aca093ced9e60789291",
     "kokoro-v1.0.onnx": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a",
     "voices-v1.0.bin": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
+    "flux2-klein-4b-mlx-q8/text_encoder/0.safetensors": "c59037293e62b9142e06e602a03b734fdf7f0f6b80141759f875200bab5ff523",
+    "flux2-klein-4b-mlx-q8/text_encoder/1.safetensors": "ccb1fd9fa0e19db71c44b3fdd9ed16e15dc14de3dcd240a0b162c4a10faba2cc",
+    "flux2-klein-4b-mlx-q8/text_encoder/model.safetensors.index.json": "3273ab420ba8b5bfd991cc233b8d90afa794ffe856925299c892ee4c9d1614f2",
+    "flux2-klein-4b-mlx-q8/tokenizer/chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "flux2-klein-4b-mlx-q8/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "flux2-klein-4b-mlx-q8/tokenizer/tokenizer_config.json": "779410a34a98fb2c6c925a1be6f24d632f1723473161b037f6676eb6c04886c6",
+    "flux2-klein-4b-mlx-q8/transformer/0.safetensors": "442cb6770b834cb47043ef96f929b05b21e84bb1cca6daa806bf416aaa0b04f9",
+    "flux2-klein-4b-mlx-q8/transformer/1.safetensors": "5cbf48740f8655185b3578a25188d2db72148ea2476385979961d89ee56d0dcc",
+    "flux2-klein-4b-mlx-q8/transformer/model.safetensors.index.json": "fce32043337212c1fb02f5da46b0dde35cfecdb577d618e46bab6ce70392468f",
+    "flux2-klein-4b-mlx-q8/vae/0.safetensors": "fc2ff418c22e76c8ad93c43b4ffdee19d10a90898d3d10ef3c53dda9ad9cb4f2",
+    "flux2-klein-4b-mlx-q8/vae/model.safetensors.index.json": "ae30aec3a3da440b700726376c89d1574cb4182e4ca534809243606df4d3be38",
+    "flux2-klein-4b-mlx-q4/text_encoder/0.safetensors": "e59ed2b6825cb8ae3d0ba1e8a43575a565d465ce4518b7d79d28020b19b639cd",
+    "flux2-klein-4b-mlx-q4/text_encoder/1.safetensors": "edbdea3187bc4a0ad0e1ecb7152da8e6b344669413d9e45be5e7a2244f398ee3",
+    "flux2-klein-4b-mlx-q4/text_encoder/model.safetensors.index.json": "7dc8598806b8bbdb0b87b9dc445ac7cf49d7acc42ae333bd0bc0252e46081ed9",
+    "flux2-klein-4b-mlx-q4/tokenizer/chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "flux2-klein-4b-mlx-q4/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "flux2-klein-4b-mlx-q4/tokenizer/tokenizer_config.json": "779410a34a98fb2c6c925a1be6f24d632f1723473161b037f6676eb6c04886c6",
+    "flux2-klein-4b-mlx-q4/transformer/0.safetensors": "36796395e3946496f3e118f26fe22594b1d7d871342a59dd7824349d91c08266",
+    "flux2-klein-4b-mlx-q4/transformer/1.safetensors": "9730ae148ca4f5ffc62860748b849a70987f0b7301588248bd98a2af9bc15070",
+    "flux2-klein-4b-mlx-q4/transformer/model.safetensors.index.json": "dbdecbf3a957b37d15bd943b956dbb25aa648a01df363e7dd5ebbe5ce941358d",
+    "flux2-klein-4b-mlx-q4/vae/0.safetensors": "688ae0c3d2e93573ce8a6d3561d793cf6de5a4207b2e128cad6cd0d71e43b10f",
+    "flux2-klein-4b-mlx-q4/vae/model.safetensors.index.json": "e13e551dabf8c088c8b3c6f52fca3f9e64ead5c42dd592586c7a1f868607afa4",
+    "flux2-klein-9b-mlx-q8/text_encoder/0.safetensors": "4f51420bac589a86582f1380b83d1a3412990d51473e1e34040711824cee8026",
+    "flux2-klein-9b-mlx-q8/text_encoder/1.safetensors": "764c03a294473039d34a47ba279565a44227d6b90a8e75239d2d8cf1d72efbfb",
+    "flux2-klein-9b-mlx-q8/text_encoder/2.safetensors": "8672e6959d170fcd2e6c515898914c6e36670ba04034830f95600c6c3ed5953d",
+    "flux2-klein-9b-mlx-q8/text_encoder/3.safetensors": "5bdd6c1bec85e516d97d076c2417958d38600e6fe41e6719bc43b086f2a3b272",
+    "flux2-klein-9b-mlx-q8/text_encoder/model.safetensors.index.json": "f31568f8ff00cf2c7835643779e410e349f060eb7c4eb4e42345dc58eedca51c",
+    "flux2-klein-9b-mlx-q8/tokenizer/chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "flux2-klein-9b-mlx-q8/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "flux2-klein-9b-mlx-q8/tokenizer/tokenizer_config.json": "779410a34a98fb2c6c925a1be6f24d632f1723473161b037f6676eb6c04886c6",
+    "flux2-klein-9b-mlx-q8/transformer/0.safetensors": "c7067db845996274ccd2da972ef63a2602d4cc19ca0fc346fd40049390c1ee5d",
+    "flux2-klein-9b-mlx-q8/transformer/1.safetensors": "125b89d169c8e0248452ef655eeb7ef4e11a967d730d625d38e719afa13cfa76",
+    "flux2-klein-9b-mlx-q8/transformer/2.safetensors": "41f264def376bce119ad3e4ed3fa0f5be49dfd39f77aa557170c12d0803bb144",
+    "flux2-klein-9b-mlx-q8/transformer/3.safetensors": "3090647e842b2fd45036aa1e976f4aae7c2e29375b86444a82d04ff08bb20d70",
+    "flux2-klein-9b-mlx-q8/transformer/4.safetensors": "2358960404d38c516fd92d99e27118b1f8f7ef010ee2f2ec9676a0554e9e3e47",
+    "flux2-klein-9b-mlx-q8/transformer/model.safetensors.index.json": "ca94b047a13f9f0bbcfbfabcb6dbeb9de0769e541650bb8ec7e471957f2f72b5",
+    "flux2-klein-9b-mlx-q8/vae/0.safetensors": "fc2ff418c22e76c8ad93c43b4ffdee19d10a90898d3d10ef3c53dda9ad9cb4f2",
+    "flux2-klein-9b-mlx-q8/vae/model.safetensors.index.json": "ae30aec3a3da440b700726376c89d1574cb4182e4ca534809243606df4d3be38",
+    "flux2-klein-9b-mlx-q4/text_encoder/0.safetensors": "c7dd85611686adf9c565eb2fb87b3102698f9f8c11e5956b75191f94e1d358c4",
+    "flux2-klein-9b-mlx-q4/text_encoder/1.safetensors": "4d130cd975d9dd15f378ececb383ec7c216ee99be21319f24e0062d946dd0ddc",
+    "flux2-klein-9b-mlx-q4/text_encoder/model.safetensors.index.json": "aaa0615ec11c7b8d2b025531d27cb2d444c07c065b665ad255b11dd81703d27c",
+    "flux2-klein-9b-mlx-q4/tokenizer/chat_template.jinja": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "flux2-klein-9b-mlx-q4/tokenizer/tokenizer.json": "be75606093db2094d7cd20f3c2f385c212750648bd6ea4fb2bf507a6a4c55506",
+    "flux2-klein-9b-mlx-q4/tokenizer/tokenizer_config.json": "779410a34a98fb2c6c925a1be6f24d632f1723473161b037f6676eb6c04886c6",
+    "flux2-klein-9b-mlx-q4/transformer/0.safetensors": "12989c5af7d739b4de31f4b6fe6698fb7118f66cdd12c8b0d36f89b906c23715",
+    "flux2-klein-9b-mlx-q4/transformer/1.safetensors": "de24f4597a567c9a331e9bd0e32f335b3fb764b568447d6f8ff8a23e0a89ed45",
+    "flux2-klein-9b-mlx-q4/transformer/2.safetensors": "debdacc4d89f2addf6cbfe467ea9e6a38516b569cd9e2ddcb80f2a56c19a3e97",
+    "flux2-klein-9b-mlx-q4/transformer/model.safetensors.index.json": "cfb697bc52e2a3b2e00c1536e429c00b5681309d87bd1c9d6a66d89d71aa67a3",
+    "flux2-klein-9b-mlx-q4/vae/0.safetensors": "ab26bf1613e6b51a955bfaf05409e2a16138a072ba0bb7f4fc768236fb4a990b",
+    "flux2-klein-9b-mlx-q4/vae/model.safetensors.index.json": "2fa788f469d20113ba7f099285f0f50396dbd53ae0e5d01c95fcf0cd470c66db",
 }
 
 SOURCES_FILE = ROOT / "sources.json"

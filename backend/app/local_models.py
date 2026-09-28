@@ -138,11 +138,27 @@ def catalogue_entries() -> list[dict]:
                 "provider": "local",
                 "providerLabel": "This computer",
                 "sizes": krea["sizes"],
-                "options": {"steps": krea["steps"], "guidance": krea["guidance"]},
+                "options": {"steps": krea["steps"], "guidance": krea["guidance"], "loras": "krea-2", "memory": "auto"},
                 "ready": krea["ready"],
                 "reason": krea["reason"],
                 "runner": "krea-2",
                 "licence": krea["licence"],
+            }
+        )
+    for slot in klein_slots():
+        entries.append(
+            {
+                "id": f"local:{slot['id']}",
+                "label": f"{slot['label']} (local)",
+                "kind": "image",
+                "provider": "local",
+                "providerLabel": "This computer",
+                "sizes": slot["sizes"],
+                "options": {"steps": slot["steps"], "guidance": 1.0, "loras": slot["id"], "memory": "auto"},
+                "ready": slot["ready"],
+                "reason": slot["reason"],
+                "runner": "mflux-klein",
+                "licence": slot["licence"],
             }
         )
     for model in installed():
@@ -189,10 +205,39 @@ def krea2_slot() -> dict | None:
     }
 
 
+def klein_slots() -> list[dict]:
+    """FLUX.2 [klein] 4B and 9B, each once its licence has been accepted, with its readiness and reason."""
+    from . import klein
+
+    out = []
+    for variant, spec in klein.VARIANTS.items():
+        state = klein.policy(variant)
+        if not state["licenceAccepted"]:
+            continue
+        blank = {"seconds": None, "extension": None, "command": None, "folder": None, "guidance": 1.0}
+        out.append(
+            {
+                "id": variant,
+                "label": spec["label"],
+                "kind": "image",
+                "runner": "mflux-klein",
+                "licence": spec["licence"]["name"],
+                "sizes": klein.SIZES,
+                "steps": klein.STEPS,
+                "ready": state["ready"],
+                "reason": state["reason"],
+                **blank,
+            }
+        )
+    return out
+
+
 def resolve(name: str) -> dict | None:
     """The slot behind local:<name>: a declared one, or an undeclared diffusion folder of that name."""
     if name == "krea-2":
         return krea2_slot()
+    if name.startswith("flux2-klein-"):
+        return next((slot for slot in klein_slots() if slot["id"] == name), None)
     for slot in declared():
         if slot["id"] == name:
             return slot

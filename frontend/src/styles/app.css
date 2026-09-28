@@ -1525,5 +1525,13 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .krea-card .krea-terms ul { margin: var(--sp-1) 0; padding-left: var(--sp-4); color: var(--ink-soft); }
 .krea-card .krea-filter { border: 1px solid var(--edge); border-radius: var(--radius-s); padding: var(--sp-2) var(--sp-3); display: grid; gap: var(--sp-1); }
 .krea-card .krea-removed { border: 1px solid var(--cue); border-radius: var(--radius-s); padding: var(--sp-2) var(--sp-3); color: var(--ink); display: grid; gap: var(--sp-2); }
+.lora-stack { display: grid; gap: var(--sp-2); padding: var(--sp-2); border: 1px solid var(--line); border-radius: var(--radius-s); }
+.lora-stack .lora-head, .lora-stack .lora-library { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.lora-stack .lora-head { justify-content: space-between; }
+.lora-stack .lora-library input:not([type="file"]) { flex: 1 1 16rem; min-width: 0; }
+.lora-row { display: grid; grid-template-columns: auto minmax(8rem, 1fr) minmax(6rem, 10rem) 4.5rem auto; gap: var(--sp-2); align-items: center; }
+.lora-row .lora-scale { width: 100%; }
+.gen-progress { display: grid; gap: var(--sp-1); }
+.gen-progress progress { width: 100%; height: 8px; accent-color: var(--cue); }
 .krea-card .krea-check { display: flex; gap: var(--sp-2); align-items: flex-start; }
 .krea-card .krea-actions { display: flex; gap: var(--sp-2); }

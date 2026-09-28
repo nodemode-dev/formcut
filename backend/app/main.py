@@ -72,7 +72,9 @@ async def _warm_library() -> None:
 app.add_middleware(LocalOnly)
 from .agent_connect import router as agents_router
 from .codecs_api import router as codecs_router
+from .klein import router as klein_router
 from .krea2 import router as krea2_router
+from .loras import router as loras_router
 from .project_packages import router as project_packages_router
 from .subtitles import router as subtitles_router
 from .terminal import router as terminal_router
@@ -84,6 +86,20 @@ app.include_router(project_packages_router)
 app.include_router(subtitles_router)
 app.include_router(terminal_router)
 app.include_router(krea2_router)
+app.include_router(klein_router)
+app.include_router(loras_router)
+
+
+class _QuietPolls(logging.Filter):
+    """The terminal is not flooded by the page asking after a job every second: successful GETs of /api/jobs/<id>
+    are left out of the access log; everything else, errors on those included, is logged as before."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args if isinstance(record.args, tuple) else ()
+        return not (len(args) >= 5 and args[1] == "GET" and str(args[2]).startswith("/api/jobs/") and int(args[4]) < 400)
+
+
+logging.getLogger("uvicorn.access").addFilter(_QuietPolls())
 app.include_router(transcribe_router)
 app.include_router(projects_router)
 app.include_router(media_router)
