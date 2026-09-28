@@ -27,21 +27,22 @@ The rest is written by hand.
 | automation.py | 711 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
+| checkpoints.py | 93 | /api/checkpoints | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 447 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 347 | /api/generate | 2 |
+| generate.py | 418 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 106 | /api/jobs | 3 |
-| klein.py | 260 | /api/models/klein | 3 |
-| krea2.py | 543 | /api/models/krea-2 | 6 |
+| klein.py | 268 | /api/models/klein | 3 |
+| krea2.py | 554 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
-| loras.py | 405 | /api/loras | 5 |
-| main.py | 428 | /api/health | 13 |
+| loras.py | 413 | /api/loras | 5 |
+| main.py | 430 | /api/health | 13 |
 | media.py | 878 | /api/media | 25 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
@@ -93,7 +94,7 @@ the automation transports.
 - `gpu_effects.py` (3112L)
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
-- `local_models.py` (280L)
+- `local_models.py` (347L)
 - `local_runner.py` (148L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
@@ -102,6 +103,7 @@ the automation transports.
 - `paths.py` (32L)
 - `pixel_effects.py` (1056L)
 - `processes.py` (22L)
+- `prompt_data.py` (117L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
