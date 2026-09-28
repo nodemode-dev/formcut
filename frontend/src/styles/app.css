@@ -1531,6 +1531,8 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .lora-stack .lora-library input:not([type="file"]) { flex: 1 1 16rem; min-width: 0; }
 .lora-row { display: grid; grid-template-columns: auto minmax(8rem, 1fr) minmax(6rem, 10rem) 4.5rem auto; gap: var(--sp-2); align-items: center; }
 .lora-row .lora-scale { width: 100%; }
+.lora-stack .lora-folder { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.lora-stack .lora-folder code { overflow-wrap: anywhere; }
 .gen-progress { display: grid; gap: var(--sp-1); }
 .gen-progress progress { width: 100%; height: 8px; accent-color: var(--cue); }
 .krea-card .krea-check { display: flex; gap: var(--sp-2); align-items: flex-start; }

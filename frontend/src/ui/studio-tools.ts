@@ -53,9 +53,10 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             <div class="lora-rows" data-lora-rows="${kind}"></div>
             <div class="lora-library">
               <label class="tool-chip">${t("gen.loras.import")}<input type="file" accept=".safetensors" data-lora-file="${kind}" hidden></label>
-              <input data-lora-url="${kind}" placeholder="https://huggingface.co/<repo>/resolve/<revision>/<file>.safetensors" aria-label="${t("gen.loras.fetch")}">
+              <input data-lora-url="${kind}" placeholder="https://huggingface.co/…/resolve/…/….safetensors · https://civitai.com/models/…" aria-label="${t("gen.loras.fetch")}">
               <button type="button" class="tool-chip" data-lora-fetch="${kind}">${t("gen.loras.fetch")}</button>
             </div>
+            <small class="lora-folder"><span>${t("gen.loras.folder")}</span> <code data-lora-folder="${kind}"></code> <button type="button" class="tool-chip" data-lora-rescan="${kind}">${t("gen.loras.rescan")}</button></small>
           </div>
           <div class="studio-actions">
             <button class="tool-chip is-primary" data-gen-go="${kind}">${icon("diamond")}${t("gen.go")}</button>
@@ -163,19 +164,15 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         </div>
       </div>
     </section>
-    ${["flux2-klein-4b", "flux2-klein-9b"].map((variant) => `
+    ${["flux2-klein-4b"].map((variant) => `
       <div class="panel-section krea-card" data-klein-card="${variant}">
-        <div class="panel-section-head"><span data-klein-title="${variant}">${variant === "flux2-klein-4b" ? "FLUX.2 [klein] 4B" : "FLUX.2 [klein] 9B"} (optional)</span><small data-klein-state="${variant}">Not installed</small></div>
+        <div class="panel-section-head"><span data-klein-title="${variant}">FLUX.2 [klein] 4B (optional)</span><small data-klein-state="${variant}">Not installed</small></div>
         <div class="panel-rows">
-          <small>${variant === "flux2-klein-4b" ? "A 4-billion-parameter image model from Black Forest Labs, four steps a picture, commercial use allowed." : "A 9-billion-parameter image model from Black Forest Labs, higher quality; the model is for non-commercial use."} Run on this computer through mflux, with LoRA stacks. Nothing is downloaded until you install it here.</small>
+          <small>A 4-billion-parameter image model from Black Forest Labs, four steps a picture, under the Apache License 2.0 (commercial use allowed). Run on this computer through mflux, with LoRA stacks. Nothing is downloaded until you install it here.</small>
           <details class="krea-terms"><summary data-klein-licence-name="${variant}"></summary><ul data-klein-summary="${variant}"></ul><a data-klein-licence="${variant}" target="_blank" rel="noopener">Read the model card and licence</a></details>
           <label class="krea-check"><input type="checkbox" data-klein-accept="${variant}"> <span data-klein-accept-label="${variant}"></span></label>
           <label>Build <select data-klein-build="${variant}"></select></label>
-          <div class="krea-actions"><button type="button" class="tool-chip" data-klein-install="${variant}" disabled>Install</button><button type="button" class="tool-chip" data-klein-use="${variant}" hidden>Generate with it</button><button type="button" class="tool-chip" data-klein-reinstall-filter="${variant}" hidden>Reinstall the content filter</button></div>
-          <div class="krea-removed" data-klein-removed="${variant}" role="alertdialog" hidden>
-            <strong>The content filter has been removed</strong><p data-klein-removed-text="${variant}"></p>
-            <div class="krea-actions"><button type="button" class="tool-chip" data-klein-ack="${variant}">I understand</button></div>
-          </div>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-klein-install="${variant}" disabled>Install</button><button type="button" class="tool-chip" data-klein-use="${variant}" hidden>Generate with it</button></div>
         </div>
       </div>`).join("")}
     <section data-view="terminal" class="set-view" hidden>
@@ -287,7 +284,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     // the generator's list follows: Krea 2 appears there the moment its licence is accepted and it is installed
     void refreshGenerators().catch(() => { /* offline engine */ });
   };
-  // FLUX.2 [klein] 4B and 9B: licence, build, install, and the way into the generator
+  // FLUX.2 [klein] 4B: licence, build, install, and the way into the generator (the 9B models' non-commercial
+  // licence does not fit formcut, so they are not offered)
   let kleinTerms: any;
   const refreshKlein = async () => {
     kleinTerms = await api<any>("/api/models/klein/terms", undefined, "GET");
@@ -295,7 +293,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       const one = (name: string) => modal.querySelector<HTMLElement>(`[data-${name}="${variant}"]`)!;
       one("klein-licence-name").textContent = spec.licence.name;
       (one("klein-licence") as HTMLAnchorElement).href = spec.licence.url;
-      one("klein-accept-label").textContent = `I have read and accept the ${spec.licence.name}${spec.licence.commercial ? "" : " (non-commercial use of the model)"}`;
+      one("klein-accept-label").textContent = `I have read the ${spec.licence.name} and accept it`;
       const list = one("klein-summary");
       if (!list.childElementCount) for (const line of spec.licence.summary as string[]) { const item = document.createElement("li"); item.textContent = line; list.append(item); }
       const builds = one("klein-build") as HTMLSelectElement;
@@ -311,12 +309,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       install.disabled = !!status.build || !accept.checked;
       one("klein-state").textContent = status.ready ? `Installed: ${spec.builds[status.build]?.label ?? status.build}` : status.licenceAccepted || status.build ? `Not ready: ${status.reason}` : "Not installed";
       one("klein-use").hidden = !status.ready;
-      one("klein-reinstall-filter").hidden = !status.filterRemoved;
-      one("klein-removed").hidden = !status.filterRemoved || status.removalAcknowledged;
-      one("klein-removed-text").textContent = spec.removedWarning ?? "";
     }
   };
-  for (const variant of ["flux2-klein-4b", "flux2-klein-9b"]) {
+  for (const variant of ["flux2-klein-4b"]) {
     const one = (name: string) => modal.querySelector<HTMLElement>(`[data-${name}="${variant}"]`)!;
     one("klein-accept").addEventListener("change", () => { (one("klein-install") as HTMLButtonElement).disabled = !(one("klein-accept") as HTMLInputElement).checked; });
     one("klein-install").addEventListener("click", () => void run(async () => {
@@ -326,8 +321,6 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       say(`${kleinTerms.variants[variant].label} is installed.`);
     }));
     one("klein-use").addEventListener("click", () => document.dispatchEvent(new CustomEvent("formcut:klein-use", { detail: variant })));
-    one("klein-reinstall-filter").addEventListener("click", () => void run(async () => { await job("/api/models/krea-2/filter"); await refreshKlein(); }));
-    one("klein-ack").addEventListener("click", () => void run(async () => { await api("/api/models/klein/acknowledge-removal", { variant }); await refreshKlein(); }));
   }
   // Generate with Krea 2: the image generator, Krea 2 chosen, the prompt waiting
   q("krea-use").addEventListener("click", () => void run(async () => {
@@ -874,7 +867,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   void refreshGenerators().catch(() => { /* offline engine */ });
 
   // LoRA stacks: one per model (a LoRA made for one does not load on another), each LoRA with its strength
-  type LoraEntry = { id: string; name: string; base: string; scale: number; triggers?: string; format?: string };
+  type LoraEntry = { id: string; name: string; base: string; scale: number; triggers?: string; format?: string; usable?: boolean; problem?: string };
   type StackItem = { id: string; scale: number; enabled: boolean };
   const stacks = new Map<string, StackItem[]>();
   const libraries = new Map<string, LoraEntry[]>();
@@ -883,6 +876,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const reply = await fetch(`/api/loras?base=${encodeURIComponent(base)}`).then((r) => r.json());
     const library: LoraEntry[] = reply.loras ?? [];
     libraries.set(base, library);
+    // the folder a person drops .safetensors files into for this model; Look again reads it afresh
+    pick<HTMLElement>(`[data-lora-folder="${kind}"]`).textContent = reply.folders?.[base] ?? "";
     const stack = (stacks.get(base) ?? []).filter((item) => library.some((entry) => entry.id === item.id));
     stacks.set(base, stack);
     const rows = pick<HTMLElement>(`[data-lora-rows="${kind}"]`);
@@ -901,7 +896,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       const choice = document.createElement("select");
       for (const entry of library) {
         const option = document.createElement("option");
-        option.value = entry.id; option.textContent = entry.name; option.title = entry.triggers ?? "";
+        option.value = entry.id; option.textContent = entry.usable === false ? `${entry.name} (${entry.problem})` : entry.name;
+        option.title = entry.triggers ? `${t("gen.loras.triggers")}: ${entry.triggers}` : "";
+        option.disabled = entry.usable === false;
         choice.append(option);
       }
       choice.value = item.id;
@@ -923,7 +920,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   };
   const addToStack = (kind: string, base: string, entry?: LoraEntry) => {
     const library = libraries.get(base) ?? [];
-    const chosen = entry ?? library[0];
+    const chosen = entry ?? library.find((candidate) => candidate.usable !== false);
     if (!chosen) { pick<HTMLElement>(`[data-gen-note="${kind}"]`).textContent = t("gen.loras.empty"); return; }
     const stack = stacks.get(base) ?? [];
     if (stack.length >= 8) return;
@@ -935,6 +932,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   for (const kind of ["image", "video", "audio"] as const) {
     const note = pick<HTMLElement>(`[data-gen-note="${kind}"]`);
     pick<HTMLButtonElement>(`[data-lora-add="${kind}"]`).addEventListener("click", () => { const base = baseOf(kind); if (base) addToStack(kind, base); });
+    pick<HTMLButtonElement>(`[data-lora-rescan="${kind}"]`).addEventListener("click", () => { const base = baseOf(kind); if (base) void paintLoras(kind, base); });
     pick<HTMLInputElement>(`[data-lora-file="${kind}"]`).addEventListener("change", () => void (async () => {
       const input = pick<HTMLInputElement>(`[data-lora-file="${kind}"]`);
       const file = input.files?.[0]; const base = baseOf(kind);

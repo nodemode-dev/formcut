@@ -232,21 +232,30 @@ Three things are true of all of them:
   reach GitHub or Hugging Face; the pin still applies, so a mirror cannot
   substitute a different file.
 
-## Local image models on Apple silicon: Krea 2, FLUX.2 [klein], LoRA stacks
+## Local image models on Apple silicon: Krea 2, FLUX.2 [klein] 4B, LoRA stacks
 
-Krea 2 Turbo and FLUX.2 [klein] 4B and 9B are optional, installed from their cards in Studio > Local models and run
-by mflux in their own environment. None of them ships with formcut: their MLX builds come from mflux-community on
-Hugging Face, pinned file by file, when you install them. FLUX.2 [klein] 4B is Apache-2.0; 9B is under the FLUX
-Non-Commercial License v2.1 (the model for non-commercial use, its pictures usable for any purpose the licence does not
-prohibit), and, like Krea 2, installs with the content filter its licence requires.
+Krea 2 Turbo and FLUX.2 [klein] 4B are optional, installed from their cards in Studio > Local models and run by
+mflux in their own environment. Neither ships with formcut: their MLX builds come from mflux-community on Hugging
+Face, pinned file by file, when you install them. FLUX.2 [klein] 4B is Apache-2.0, commercial use allowed. The 9B
+Klein models are under the FLUX Non-Commercial License and are not offered.
 
-In the image generator, a model that takes LoRAs shows its stack: add LoRAs from a `.safetensors` file or a Hugging
-Face file link, each tagged with the model it was made for (one made for Klein 4B does not load on 9B or on Krea 2),
-each with its strength from -2 to 2 and a switch to leave it out. LoRA and LyCORIS LoKr files load; DoRA in the PEFT
-layout does not (mflux refuses it). The library lives in `models/loras/`.
+LoRAs live in a folder per model: `models/loras/krea-2/` and `models/loras/flux2-klein-4b/`. Drop `.safetensors`
+files in and they appear in the generator's LoRA stack (Look again reads the folder afresh). A `<name>.json` beside a
+file keeps its name, strength, trigger words and source. Import a file, or Add from a link:
+
+- a Hugging Face file link, `https://huggingface.co/<repo>/resolve/<revision>/<file>.safetensors`, for the model you
+  have chosen;
+- a Civitai model, version or download link (`https://civitai.com/models/<id>`, `...?modelVersionId=<id>`,
+  `https://civitai.com/api/download/models/<id>`): formcut reads Civitai's record, puts the file in the folder of the
+  model Civitai names (Krea 2, or Flux.2 Klein 4B and its base), refuses any other (Klein 9B, SDXL, Flux.1 ...),
+  checks the download against Civitai's SHA-256 and keeps its trigger words. Civitai asks for an account to download
+  most files: add your Civitai API key in Settings.
+
+Every file is checked from its header: LoRA and LyCORIS LoKr load; DoRA in the PEFT layout does not (mflux refuses
+it); a file that fails is listed with its reason and cannot be stacked. In the stack, each LoRA has a strength from -2
+to 2 and a switch; up to eight at once.
 
 Memory: Automatic uses mflux's low-memory mode when the model would take more than about half of this computer's
 memory, Low memory always does (slower), Normal never does; MLX's cache is capped at a tenth of the memory, and one
 local image model runs at a time. The generator shows the model's own progress (loading, each step, finishing), and
 Cancel ends the model's process.
-

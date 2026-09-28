@@ -1,4 +1,4 @@
-"""Local image models, v2.0.7: a real progress bar (the model's own steps), a cancel that ends the model's process,
+"""Local image models, v2.0.7 and v2.0.8: a real progress bar (the model's own steps), a cancel that ends the model's process,
 memory planned for the machine, LoRA stacks with strengths, FLUX.2 [klein] 4B and 9B, and a terminal that is not
 flooded by the page asking after a job."""
 
@@ -97,10 +97,10 @@ def test_a_stack_resolves_to_paths_and_strengths_for_its_own_model(library):
     pairs = loras.resolve(
         [{"id": one["id"], "scale": 0.7}, {"id": two["id"], "scale": 5}, {"id": one["id"], "scale": 1, "enabled": False}], "flux2-klein-4b"
     )
-    assert [s for _, s in pairs] == [0.7, 2.0] and pairs[0][0].endswith("adapter.safetensors")
+    assert [s for _, s in pairs] == [0.7, 2.0] and pairs[0][0].endswith("flux2-klein-4b/One.safetensors")
     assert loras.mflux_flags(pairs)[0] == "--lora-paths" and loras.mflux_flags(pairs)[-2:] == ["0.7", "2"]
-    with pytest.raises(ValueError, match=r"made for FLUX\.2"):
-        loras.resolve([{"id": one["id"], "scale": 1}], "flux2-klein-9b")
+    with pytest.raises(ValueError, match=r"made for FLUX\.2 \[klein\] 4B, not Krea 2"):
+        loras.resolve([{"id": one["id"], "scale": 1}], "krea-2")
 
 
 def test_the_lora_api_imports_lists_edits_and_removes(library):
@@ -125,12 +125,13 @@ def test_every_klein_file_is_pinned_and_gated_on_its_licence(tmp_path, monkeypat
             assert files and all(path in model_manager.PINNED for path in files), build["model"]
             assert all("/resolve/" in url and "mflux-community/" in url for url in files.values())
     client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
-    assert client.post("/api/models/flux2-klein-9b-mlx-q4/download").status_code == 409
-    assert client.post("/api/models/klein/consent", json={"variant": "flux2-klein-9b", "acceptLicence": False}).status_code == 400
-    assert client.post("/api/models/klein/consent", json={"variant": "flux2-klein-9b", "acceptLicence": True}).json()["licenceAccepted"]
+    # only the 4B: the 9B models' non-commercial licence does not fit formcut
+    assert list(klein.VARIANTS) == ["flux2-klein-4b"] and not any("klein-9b" in key for key in model_manager.MODELS)
+    assert client.post("/api/models/flux2-klein-4b-mlx-q4/download").status_code == 409
+    assert client.post("/api/models/klein/consent", json={"variant": "flux2-klein-4b", "acceptLicence": False}).status_code == 400
+    assert client.post("/api/models/klein/consent", json={"variant": "flux2-klein-4b", "acceptLicence": True}).json()["licenceAccepted"]
     terms = client.get("/api/models/klein/terms").json()["variants"]
-    assert terms["flux2-klein-4b"]["licence"]["commercial"] and not terms["flux2-klein-9b"]["licence"]["commercial"]
-    assert terms["flux2-klein-9b"]["filterRequired"] and "FLUX Non-Commercial" in terms["flux2-klein-9b"]["removedWarning"]
+    assert list(terms) == ["flux2-klein-4b"] and terms["flux2-klein-4b"]["licence"]["commercial"]
 
 
 def test_klein_runs_with_its_stack_memory_and_progress_through_the_generator(tmp_path, monkeypatch, library):
@@ -196,3 +197,71 @@ def test_the_terminal_is_not_flooded_by_job_polls():
 
     assert not quiet.filter(record("GET", "/api/jobs/96c8", 200))
     assert quiet.filter(record("GET", "/api/jobs/96c8", 404)) and quiet.filter(record("POST", "/api/generate", 202))
+
+
+def test_a_file_dropped_into_its_models_folder_is_offered(library):
+    folder = loras.LIBRARY / "krea-2"
+    folder.mkdir(parents=True)
+    _safetensors(folder / "dropped style.safetensors", ["d.lora_A.weight", "d.lora_B.weight"], {"trigger_words": "dr0p"})
+    (folder / "broken.safetensors").write_bytes(b"nothing here")
+    listed = {entry["file"]: entry for entry in loras.entries("krea-2")}
+    dropped, broken = listed["dropped style.safetensors"], listed["broken.safetensors"]
+    assert dropped["id"] == "krea-2/dropped style" and dropped["usable"] and dropped["triggers"] == "dr0p"
+    assert dropped["source"] == "dropped into the folder" and not broken["usable"] and "safetensors" in broken["problem"]
+    assert loras.resolve([{"id": dropped["id"], "scale": 0.5}], "krea-2")[0][0].endswith("dropped style.safetensors")
+    with pytest.raises(ValueError, match="cannot be used"):
+        loras.resolve([{"id": broken["id"], "scale": 1}], "krea-2")
+    assert (loras.LIBRARY / "flux2-klein-4b").is_dir()  # each model's folder is there to drop into
+
+
+def test_the_library_of_v2_0_7_moves_into_the_models_folders(library):
+    old = loras.LIBRARY / "neon-1234abcd"
+    old.mkdir(parents=True)
+    _safetensors(old / "adapter.safetensors", ["n.lora_A.weight", "n.lora_B.weight"])
+    (old / "lora.json").write_text(json.dumps({"id": "neon-1234abcd", "name": "Neon", "base": "krea-2", "scale": 0.8}))
+    [entry] = loras.entries()
+    assert entry["id"] == "krea-2/neon-1234abcd" and entry["name"] == "Neon" and entry["scale"] == 0.8 and not old.exists()
+
+
+def test_a_civitai_link_chooses_the_folder_and_checks_the_hash(library, monkeypatch):
+    import hashlib
+
+    payload = _safetensors(library / "civ.safetensors", ["c.lora_A.weight", "c.lora_B.weight"]).read_bytes()
+    found = {
+        "versionId": "2766256",
+        "name": "Spectrum",
+        "file": "X.safetensors",
+        "bytes": len(payload),
+        "download": "https://civitai.com/api/download/models/2766256",
+        "sha256": hashlib.sha256(payload).hexdigest().upper(),
+        "triggers": "ZX_style",
+        "civitaiBase": "Flux.2 Klein 4B-base",
+        "base": "flux2-klein-4b",
+        "headers": {},
+    }
+    monkeypatch.setattr(loras, "civitai_version", lambda url: dict(found))
+    monkeypatch.setattr(loras, "_download", lambda url, part, headers, report, cancelled: part.write_bytes(payload))
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+
+    def fetched(body):
+        started = client.post("/api/loras/fetch", json=body)
+        if started.status_code != 202:
+            return started.json()
+        for _ in range(100):
+            status = client.get(f"/api/jobs/{started.json()['job_id']}").json()
+            if status["status"] in ("done", "error"):
+                return status
+            time.sleep(0.05)
+        return status
+
+    done = fetched({"url": "https://civitai.com/models/2566/spectrum?modelVersionId=2766256"})
+    assert (
+        done["status"] == "done"
+        and done["result"]["lora"]["id"] == "flux2-klein-4b/Spectrum"
+        and done["result"]["lora"]["triggers"] == "ZX_style"
+    )
+    assert "Krea 2" in fetched({"url": "https://civitai.com/api/download/models/2766256", "base": "krea-2"})["detail"]
+    found["sha256"] = "0" * 64
+    assert "SHA-256" in fetched({"url": "https://civitai.com/api/download/models/2766256", "name": "Again"})["error"]
+    found.update(base=None, civitaiBase="Flux.2 Klein 9B")
+    assert "Flux.2 Klein 9B" in fetched({"url": "https://civitai.com/models/2324991"})["detail"]

@@ -1,22 +1,18 @@
-"""FLUX.2 [klein] 4B and 9B, local, on Apple silicon through mflux, with LoRA stacks.
+"""FLUX.2 [klein] 4B, local, on Apple silicon through mflux, with LoRA stacks.
 
-Two optional models from Black Forest Labs, neither shipped nor distributed with formcut: their MLX builds are fetched
+An optional model from Black Forest Labs, neither shipped nor distributed with formcut: its MLX builds are fetched
 from mflux-community on Hugging Face (the publisher of formcut's Krea 2 builds), pinned file by file to a revision,
-when a person installs them from their card in Studio > Local models, and run by the same mflux environment as Krea 2
+when a person installs it from its card in Studio > Local models, and run by the same mflux environment as Krea 2
 (models/krea-2/runtime, installed here if Krea 2 has not installed it), through mflux-generate-flux2.
 
-- 4B: Apache License 2.0, commercial use allowed. Black Forest Labs encourages a content filter; the filter formcut
-  installs with Krea 2 runs on 4B's pictures too whenever it is installed.
-- 9B: the FLUX Non-Commercial License v2.1: the model may be used for non-commercial purposes only (its outputs may be
-  used for any purpose the licence does not prohibit), and filters or manual review must be used with it. As with
-  Krea 2: the licence is accepted before anything downloads, the content filter installs with it, and a filter the
-  person removes afterwards leaves the model running with a warning that the removal and the responsibility are
-  theirs. A prompt sexualising minors is refused before either model runs, whatever else is set.
+Only the 4B, by the owner's choice: it is under the Apache License 2.0, commercial use allowed. The 9B models are
+under the FLUX Non-Commercial License, which does not fit a tool people use for paid work, so formcut does not offer
+them. Black Forest Labs encourages a content filter with 4B; the filter formcut installs with Krea 2 runs on 4B's
+pictures whenever it is installed. A prompt sexualising minors is refused before the model runs, whatever else is set.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import time
@@ -33,7 +29,6 @@ CONSENT_FILE = MODELS_DIR / "klein-consent.json"
 STEPS = 4  # both are distilled to four steps, guidance 1.0
 SIZES = ["1024x1024", "1344x768", "768x1344", "1536x1024", "1024x1536", "512x512"]
 
-NC = "FLUX Non-Commercial License v2.1"
 VARIANTS = {
     "flux2-klein-4b": {
         "label": "FLUX.2 [klein] 4B",
@@ -58,44 +53,7 @@ VARIANTS = {
             "mlx-q4": {"model": "flux2-klein-4b-mlx-q4", "label": "4-bit MLX", "bytes": 4_619_699_678, "note": "smallest and quickest"},
         },
     },
-    "flux2-klein-9b": {
-        "label": "FLUX.2 [klein] 9B",
-        "licence": {
-            "name": NC,
-            "url": "https://huggingface.co/black-forest-labs/FLUX.2-klein-9B",
-            "commercial": False,
-            "summary": [
-                "The FLUX Non-Commercial License v2.1: the model may be used only for non-commercial purposes; a commercial licence is at https://bfl.ai/licensing.",
-                "The pictures it makes may be used for any purpose, commercial ones included, except as the licence prohibits.",
-                "Filters or manual review must be used with the 9B models: formcut installs its content filter with it.",
-                "Black Forest Labs claims no ownership of the pictures; you are responsible for them and their use.",
-            ],
-        },
-        "filterRequired": True,
-        "builds": {
-            "mlx-q8": {
-                "model": "flux2-klein-9b-mlx-q8",
-                "label": "8-bit MLX",
-                "bytes": 17_865_574_635,
-                "note": "best quality, 32 GB of memory or more",
-            },
-            "mlx-q4": {"model": "flux2-klein-9b-mlx-q4", "label": "4-bit MLX", "bytes": 9_541_191_417, "note": "for 16 to 24 GB of memory"},
-        },
-    },
 }
-
-REMOVED_WARNING_9B = (
-    "The content filter has been removed. The FLUX Non-Commercial License requires filters or manual review to be used "
-    "with FLUX.2 [klein] 9B, and formcut installs Falconsai/nsfw_image_detection with it to run on every picture. It is no "
-    "longer present on this computer or in this build of formcut, which means it was knowingly removed, by you or on "
-    "your behalf. The model will keep running without it. Without the filter, reviewing every picture yourself is the "
-    "way left to meet that requirement; you alone are responsible for that, for every use you make of the model and "
-    "its pictures, and for any violation of the licence or of any law, in any jurisdiction. formcut is open-source "
-    'software provided under the Apache License, Version 2.0, "as is" and without warranty; formcut, its developers '
-    "and NodeMode do not ship or distribute FLUX.2 [klein] and, to the fullest extent permitted by law, are not "
-    "responsible for, and cannot be held liable for, how you use or modify formcut or the models you install with it. "
-    "To put the filter back, choose Reinstall the content filter."
-)
 
 
 def _is_apple_silicon() -> bool:
@@ -143,10 +101,6 @@ def installed_build(variant: str) -> str | None:
     return None
 
 
-def _warning_hash() -> str:
-    return hashlib.sha256(REMOVED_WARNING_9B.encode()).hexdigest()
-
-
 def policy(variant: str) -> dict:
     from . import content_filter
 
@@ -155,7 +109,7 @@ def policy(variant: str) -> dict:
     licence = bool(record.get("licence"))
     build = installed_build(variant)
     filter_ready = content_filter.installed()
-    removed = spec["filterRequired"] and build is not None and not filter_ready
+    removed = False  # no filter is required of 4B; it runs whenever installed
     reason = None
     if not _is_apple_silicon():
         reason = "FLUX.2 [klein] runs here on Apple silicon (mflux); on Windows and Linux it is not offered yet"
@@ -169,15 +123,14 @@ def policy(variant: str) -> dict:
         "build": build,
         "filterInstalled": filter_ready,
         "filterRemoved": removed,
-        "removalAcknowledged": (record.get("removalAcknowledged") or {}).get("sha256") == _warning_hash(),
-        "warning": REMOVED_WARNING_9B if removed else None,
+        "warning": None,
         "ready": reason is None,
         "reason": reason,
     }
 
 
 def install(variant: str, build: str, report, cancelled) -> dict:
-    """The build's files (pinned), the content filter for 9B (always), and the mflux environment if not there yet."""
+    """The build's files (pinned) and the mflux environment if not there yet."""
     from .model_manager import download
 
     spec = VARIANTS[variant]
@@ -259,9 +212,7 @@ def generate_to_file(
         "memory": settings,
         "contentFilter": verdict or ("removed" if spec["filterRequired"] else "not installed"),
         "warning": state["warning"],
-        "notice": None
-        if spec["licence"]["commercial"]
-        else f"{spec['label']} is licensed under the {NC}; the model is for non-commercial use.",
+        "notice": None,
     }
 
 
@@ -275,7 +226,6 @@ def terms() -> dict:
             "label": spec["label"],
             "licence": spec["licence"],
             "filterRequired": spec["filterRequired"],
-            "removedWarning": REMOVED_WARNING_9B if spec["filterRequired"] else None,
             "builds": {key: {**build, "available": build["model"] in MODELS} for key, build in spec["builds"].items()},
             "status": policy(variant),
         }
@@ -308,20 +258,3 @@ def start_install(body: InstallBody) -> dict:
     if not consent().get(body.variant, {}).get("licence"):
         raise HTTPException(409, "accept the licence first")
     return jobs.submit("klein-install", lambda _id, report, cancelled: install(body.variant, body.build, report, cancelled))
-
-
-class VariantBody(BaseModel):
-    variant: str
-
-
-@router.post("/acknowledge-removal")
-def acknowledge(body: VariantBody) -> dict:
-    if body.variant not in VARIANTS:
-        raise HTTPException(400, "Unknown model")
-    record = consent()
-    record.setdefault(body.variant, {})["removalAcknowledged"] = {
-        "sha256": _warning_hash(),
-        "acknowledgedAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-    }
-    _save(record)
-    return policy(body.variant)

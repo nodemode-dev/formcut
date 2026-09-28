@@ -47,6 +47,13 @@ PROVIDERS = {
         "base": "https://api.topazlabs.com",
         "purpose": "upscale",
     },
+    "civitai": {
+        "label": "Civitai",
+        "env": "CIVITAI_API_KEY",
+        "base_env": "CIVITAI_BASE",
+        "base": "https://civitai.com",
+        "purpose": "loras",
+    },
 }
 
 
@@ -150,6 +157,10 @@ def test_provider(name: str) -> dict:
             if response.status_code in (200, 404):
                 return {**_state(name), "ok": True, "detail": "Topaz accepted the key"}
             detail = ""
+        elif name == "civitai":
+            # the key's own account: answered with the user when the key is good
+            response = httpx.get(f"{base}/api/v1/me", headers={"Authorization": f"Bearer {key}"}, timeout=20.0)
+            detail = f"signed in as {response.json().get('username', 'this account')}" if response.status_code == 200 else ""
         else:
             response = httpx.get(f"{base}/v1/voices", headers={"xi-api-key": key}, timeout=20.0)
             detail = f"{len(response.json().get('voices', []))} voices available" if response.status_code == 200 else ""
