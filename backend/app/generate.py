@@ -266,6 +266,7 @@ def _generate_local(body: GenerateBody):
         STAGING.mkdir(parents=True, exist_ok=True)
         made = []
         timings = []
+        extras: dict = {}  # what a model's licence sends with its pictures (Krea 2: its notice, the filter's warning)
         for index in range(count):
             staged = STAGING / f"{uuid.uuid4().hex}{extension}"
             each = lambda f, i=index: report((i + f) / count)  # noqa: E731
@@ -291,6 +292,7 @@ def _generate_local(body: GenerateBody):
                     cancelled=cancelled,
                 )
             timings.append(result["seconds"])
+            extras.update({key: result[key] for key in ("notice", "warning") if result.get(key)})
             try:
                 made.append(
                     ingest_path(
@@ -302,11 +304,12 @@ def _generate_local(body: GenerateBody):
                             "prompt": body.prompt,
                             "seconds": result["seconds"],
                             "provider": result["provider"],
+                            **{key: result[key] for key in ("notice", "contentFilter") if result.get(key) is not None},
                         },
                     )
                 )
             finally:
                 staged.unlink(missing_ok=True)
-        return {"media": made, "kind": kind, "seconds": timings, "model": name}
+        return {"media": made, "kind": kind, "seconds": timings, "model": name, **extras}
 
     return jobs.submit("generate", operation)

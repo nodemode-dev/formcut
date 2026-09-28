@@ -143,7 +143,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           <label class="krea-check"><input type="checkbox" data-krea-accept> I have read and accept the Krea 2 Community License Agreement</label>
           <div class="krea-filter"><strong>Content filter, installed with Krea 2</strong><small data-krea-filter-what></small></div>
           <label>Build <select data-krea-build></select></label>
-          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>Install Krea 2</button><button type="button" class="tool-chip" data-krea-reinstall-filter hidden>Reinstall the content filter</button></div>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>Install Krea 2</button><button type="button" class="tool-chip" data-krea-use hidden>Generate with Krea 2</button><button type="button" class="tool-chip" data-krea-reinstall-filter hidden>Reinstall the content filter</button></div>
           <div class="krea-removed" data-krea-removed role="alertdialog" aria-labelledby="krea-removed-title" hidden>
             <strong id="krea-removed-title">The content filter has been removed</strong>
             <p data-krea-removed-text></p>
@@ -257,7 +257,20 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     q("krea-removed").hidden = !policy.filterRemoved || policy.removalAcknowledged;
     q<HTMLButtonElement>("krea-install").textContent = policy.build ? "Installed" : "Install Krea 2";
     if (policy.build) q<HTMLButtonElement>("krea-install").disabled = true; else kreaInstallReady();
+    q("krea-use").hidden = !policy.ready;
+    // the generator's list follows: Krea 2 appears there the moment its licence is accepted and it is installed
+    void refreshGenerators().catch(() => { /* offline engine */ });
   };
+  // Generate with Krea 2: the image generator, Krea 2 chosen, the prompt waiting
+  q("krea-use").addEventListener("click", () => void run(async () => {
+    activePage = "genimage";
+    await showPage();
+    await refreshGenerators();
+    const select = pick<HTMLSelectElement>('[data-gen-model="image"]');
+    select.value = "local:krea-2";
+    select.dispatchEvent(new Event("change"));
+    pick<HTMLTextAreaElement>('[data-gen-prompt="image"]').focus();
+  }));
   q("krea-install").addEventListener("click", () => void run(async () => {
     await api("/api/models/krea-2/consent", { acceptLicence: q("krea-accept").checked });
     await job("/api/models/krea-2/install", { build: q<HTMLSelectElement>("krea-build").value });
@@ -569,6 +582,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   }
   void termStatus();
   const showPage = async () => {
+    // a generator page asks the engine again what it can run: a model installed since (Krea 2) is offered at once
+    if (activePage.startsWith("gen")) void refreshGenerators().catch(() => { /* offline engine */ });
     for (const section of modal.querySelectorAll<HTMLElement>("[data-view]")) section.hidden = section.dataset.view !== activePage;
     for (const button of modal.querySelectorAll<HTMLElement>("[data-page]")) {
       button.classList.toggle("is-active", button.dataset.page === activePage);
@@ -739,19 +754,22 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   // Generation: the sheet builds itself from what the engine says it can do, so
   // a provider that is not configured is visible as such rather than failing
   // only when the button is pressed.
-  let generators: Array<{ id: string; label: string; kind: string; providerLabel: string; sizes: string[]; options: Record<string, unknown>; ready: boolean }> = [];
+  let generators: Array<{ id: string; label: string; kind: string; providerLabel: string; sizes: string[]; options: Record<string, unknown>; ready: boolean; reason?: string }> = [];
   const genJobs = new Map<string, AbortController>();
   const pick = <T extends HTMLElement>(sel: string) => modal.querySelector<T>(sel)!;
   const paintGenerators = () => {
     for (const kind of ["image", "video", "audio"] as const) {
       const select = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`);
       const mine = generators.filter((g) => g.kind === kind);
-      select.innerHTML = mine.map((g) => `<option value="${g.id}">${g.label} · ${g.providerLabel}${g.ready ? "" : " — " + t("gen.needkey")}</option>`).join("")
+      const chosen = select.value;
+      // a local model not ready says why (its reason); a provider says it wants its key
+      select.innerHTML = mine.map((g) => `<option value="${g.id}">${escapeHtml(g.label)} · ${escapeHtml(g.providerLabel)}${g.ready ? "" : " — " + escapeHtml(g.reason ?? t("gen.needkey"))}</option>`).join("")
         || `<option value="">${t("gen.none")}</option>`;
+      if (chosen && mine.some((g) => g.id === chosen)) select.value = chosen;
       const refresh = () => {
         const entry = mine.find((g) => g.id === select.value);
         const ready = pick<HTMLElement>(`[data-gen-ready="${kind}"]`);
-        ready.textContent = entry ? (entry.ready ? t("gen.ready") : t("gen.needkey")) : t("gen.none");
+        ready.textContent = entry ? (entry.ready ? t("gen.ready") : (entry.reason ?? t("gen.needkey"))) : t("gen.none");
         const sizes = pick<HTMLSelectElement>(`[data-gen-size="${kind}"]`);
         sizes.innerHTML = (entry?.sizes ?? []).map((size) => `<option value="${size}">${size}</option>`).join("");
         pick<HTMLElement>(`[data-gen-size-row="${kind}"]`).hidden = !(entry?.sizes ?? []).length;
@@ -763,7 +781,13 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       refresh();
     }
   };
-  void fetch("/api/generate").then((r) => r.json()).then((reply) => { generators = reply.generators ?? []; paintGenerators(); }).catch(() => { /* offline engine */ });
+  // asked when Studio is built, again whenever a generator page opens and whenever a local model's state changes
+  const refreshGenerators = async () => {
+    const reply = await fetch("/api/generate").then((r) => r.json());
+    generators = reply.generators ?? [];
+    paintGenerators();
+  };
+  void refreshGenerators().catch(() => { /* offline engine */ });
 
   for (const kind of ["image", "video", "audio"] as const) {
     const note = pick<HTMLElement>(`[data-gen-note="${kind}"]`);
@@ -794,7 +818,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             const made = status.result?.media ?? [];
             grid.insertAdjacentHTML("afterbegin", made.map((item: { id: string; name: string }) =>
               `<div class="effect-card stock-card"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div></div>`).join(""));
-            note.textContent = `${t("gen.done")}: ${made.length}`;
+            // what the model's licence sends with its pictures: Krea 2's warning when its content filter was removed
+            const warning = status.result?.warning as string | undefined;
+            note.textContent = warning ? `${t("gen.done")}: ${made.length}. ${warning}` : `${t("gen.done")}: ${made.length}`;
             await bin.load();
             break;
           }

@@ -142,3 +142,30 @@ def test_consent_is_written_as_json(fresh):
     krea2.record_consent(True)
     stored = json.loads((fresh / "krea-2-consent.json").read_text())
     assert stored["licence"]["version"] == krea2.LICENCE_VERSION
+
+
+def test_the_studio_generator_offers_krea_and_its_pictures_carry_the_notice(fresh, monkeypatch):
+    """Studio's image generator lists what /api/generate returns: Krea 2 appears once its licence is accepted, runs
+    when installed, and the job hands the page the licence's notice and, with the filter removed, the warning."""
+    import time
+
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    assert not any(g["id"] == "local:krea-2" for g in client.get("/api/generate").json()["generators"])
+    krea2.record_consent(True)
+    listed = next(g for g in client.get("/api/generate").json()["generators"] if g["id"] == "local:krea-2")
+    assert listed["kind"] == "image" and not listed["ready"] and listed["reason"] == "no Krea 2 build is installed"
+    state = {"licenceAccepted": True, "ready": True, "reason": None, "build": "mlx-q8", "filterInstalled": False}
+    monkeypatch.setattr(krea2, "policy", lambda: state)
+    script = "import sys; from PIL import Image; Image.new('RGB', (64, 64), 'teal').save(sys.argv[1])"
+    monkeypatch.setattr(krea2, "_command", lambda build, prompt, out, *a: [sys.executable, "-c", script, str(out)])
+    assert next(g for g in client.get("/api/generate").json()["generators"] if g["id"] == "local:krea-2")["ready"]
+    started = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "a teal square", "size": "1024x1024"})
+    assert started.status_code == 202
+    for _ in range(200):
+        status = client.get(f"/api/jobs/{started.json()['job_id']}").json()
+        if status["status"] in ("done", "error", "failed"):
+            break
+        time.sleep(0.05)
+    assert status["status"] == "done", status
+    result = status["result"]
+    assert len(result["media"]) == 1 and result["notice"] == krea2.NOTICE and result["warning"] == krea2.REMOVED_WARNING
