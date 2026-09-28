@@ -33,7 +33,7 @@ The rest is written by hand.
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 312 | /api/generate | 2 |
+| generate.py | 315 | /api/generate | 2 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 104 | /api/jobs | 3 |
 | krea2.py | 493 | /api/models/krea-2 | 6 |
