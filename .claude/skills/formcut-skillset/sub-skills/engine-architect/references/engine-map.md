@@ -36,7 +36,7 @@ The rest is written by hand.
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 796 | /api/generate | 4 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
-| jobs.py | 108 | /api/jobs | 3 |
+| jobs.py | 109 | /api/jobs | 3 |
 | klein.py | 268 | /api/models/klein | 3 |
 | krea2.py | 725 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
