@@ -152,42 +152,42 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     <section data-view="models" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>Local models</span><small>Download once, then process media locally. You can also import model files acquired separately.</small></div><div class="panel-rows"><small data-model-runtime hidden></small><div data-model-list></div></div></div>
       <div class="panel-section krea-card" data-krea-card>
-        <div class="panel-section-head"><span>Krea 2 Turbo (optional)</span><small data-krea-state>Not installed</small></div>
+        <div class="panel-section-head"><span>${t("models.krea.title")}</span><small data-krea-state>${t("models.notInstalled")}</small></div>
         <div class="panel-rows">
-          <small>A 12-billion-parameter image model from Krea, run on this computer. Nothing is downloaded until you install it here.</small>
-          <details class="krea-terms"><summary>Krea 2 Community License Agreement</summary><ul data-krea-summary></ul><a data-krea-licence target="_blank" rel="noopener">Read the full agreement</a> · <a data-krea-policy target="_blank" rel="noopener">Acceptable Use Policy</a></details>
-          <label class="krea-check"><input type="checkbox" data-krea-accept> I have read and accept the Krea 2 Community License Agreement</label>
-          <div class="krea-filter"><strong>Content filter, installed with Krea 2</strong><small data-krea-filter-what></small></div>
-          <label>Build <select data-krea-build></select></label>
-          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>Install Krea 2</button><button type="button" class="tool-chip" data-krea-use hidden>Generate with Krea 2</button><button type="button" class="tool-chip" data-krea-reinstall-filter hidden>Reinstall the content filter</button></div>
+          <small>${t("models.krea.about")}</small>
+          <details class="krea-terms"><summary>Krea 2 Community License Agreement</summary><ul data-krea-summary></ul><a data-krea-licence target="_blank" rel="noopener">${t("models.krea.readAgreement")}</a> · <a data-krea-policy target="_blank" rel="noopener">${t("models.krea.aup")}</a></details>
+          <label class="krea-check"><input type="checkbox" data-krea-accept> ${t("models.krea.accept")}</label>
+          <div class="krea-filter"><strong>${t("models.krea.filter")}</strong><small data-krea-filter-what></small></div>
+          <label>${t("models.build")} <select data-krea-build></select></label>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-krea-install disabled>${t("models.krea.install")}</button><button type="button" class="tool-chip" data-krea-use hidden>${t("models.krea.use")}</button><button type="button" class="tool-chip" data-krea-reinstall-filter hidden>${t("models.reinstallFilter")}</button></div>
           <div class="krea-removed" data-krea-removed role="alertdialog" aria-labelledby="krea-removed-title" hidden>
-            <strong id="krea-removed-title">The content filter has been removed</strong>
+            <strong id="krea-removed-title">${t("models.filterRemoved")}</strong>
             <p data-krea-removed-text></p>
-            <div class="krea-actions"><button type="button" class="tool-chip" data-krea-removed-reinstall>Reinstall the content filter</button><button type="button" class="tool-chip" data-krea-removed-ack>I understand</button></div>
+            <div class="krea-actions"><button type="button" class="tool-chip" data-krea-removed-reinstall>${t("models.reinstallFilter")}</button><button type="button" class="tool-chip" data-krea-removed-ack>${t("models.understand")}</button></div>
           </div>
         </div>
       </div>
-    </section>
     ${["flux2-klein-4b"].map((variant) => `
       <div class="panel-section krea-card" data-klein-card="${variant}">
-        <div class="panel-section-head"><span data-klein-title="${variant}">FLUX.2 [klein] 4B (optional)</span><small data-klein-state="${variant}">Not installed</small></div>
+        <div class="panel-section-head"><span data-klein-title="${variant}">${t("models.klein.title")}</span><small data-klein-state="${variant}">${t("models.notInstalled")}</small></div>
         <div class="panel-rows">
-          <small>A 4-billion-parameter image model from Black Forest Labs, four steps a picture, under the Apache License 2.0 (commercial use allowed). Run on this computer through mflux, with LoRA stacks. Nothing is downloaded until you install it here.</small>
-          <details class="krea-terms"><summary data-klein-licence-name="${variant}"></summary><ul data-klein-summary="${variant}"></ul><a data-klein-licence="${variant}" target="_blank" rel="noopener">Read the model card and licence</a></details>
+          <small>${t("models.klein.about")}</small>
+          <details class="krea-terms"><summary data-klein-licence-name="${variant}"></summary><ul data-klein-summary="${variant}"></ul><a data-klein-licence="${variant}" target="_blank" rel="noopener">${t("models.klein.readCard")}</a></details>
           <label class="krea-check"><input type="checkbox" data-klein-accept="${variant}"> <span data-klein-accept-label="${variant}"></span></label>
-          <label>Build <select data-klein-build="${variant}"></select></label>
-          <div class="krea-actions"><button type="button" class="tool-chip" data-klein-install="${variant}" disabled>Install</button><button type="button" class="tool-chip" data-klein-use="${variant}" hidden>Generate with it</button></div>
+          <label>${t("models.build")} <select data-klein-build="${variant}"></select></label>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-klein-install="${variant}" disabled>${t("models.install")}</button><button type="button" class="tool-chip" data-klein-use="${variant}" hidden>${t("models.use")}</button></div>
         </div>
       </div>`).join("")}
       <div class="panel-section krea-card" data-ckpt-card>
-        <div class="panel-section-head"><span>Your own checkpoints</span><small data-ckpt-state></small></div>
+        <div class="panel-section-head"><span>${t("models.ckpt.title")}</span><small data-ckpt-state></small></div>
         <div class="panel-rows">
-          <small>A Krea 2 or FLUX.2 [klein] 4B fine-tune converted to mflux's MLX format (the folder mflux-save writes: text_encoder/, tokenizer/, vae/ and the transformer's weights) runs here as a model of its own, with that model's LoRAs. Put each one's folder in:</small>
+          <small>${t("models.ckpt.about")}</small>
           <ul class="ckpt-folders" data-ckpt-folders></ul>
           <ul class="ckpt-list" data-ckpt-list></ul>
-          <div class="krea-actions"><button type="button" class="tool-chip" data-ckpt-rescan>Look again</button></div>
+          <div class="krea-actions"><button type="button" class="tool-chip" data-ckpt-rescan>${t("gen.loras.rescan")}</button></div>
         </div>
       </div>
+    </section>
     <section data-view="terminal" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>${text("Agent terminal")}</span><small data-term-status></small></div><div class="panel-rows">
         <p class="stock-note">${text("A real shell inside formcut, started with this engine's MCP server in its environment. Connect a client once, then run claude or codex here and it drives the editor through the formcut tools while you watch.")}</p>
@@ -283,15 +283,15 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     }
     const policy = await api<any>("/api/models/krea-2/status", undefined, "GET");
     const state = !Object.keys(kreaTerms.builds).length
-      ? "No Krea 2 build for this computer"
+      ? t("models.krea.noBuild")
       : policy.ready
-        ? `Installed: ${kreaTerms.builds[policy.build]?.label ?? policy.build}, content filter ${policy.filterInstalled ? "on" : "removed"}`
-        : policy.licenceAccepted ? `Not ready: ${policy.reason}` : "Not installed";
+        ? `${t("models.installedAs").replace("{build}", kreaTerms.builds[policy.build]?.label ?? policy.build)}, ${t(policy.filterInstalled ? "models.filterOn" : "models.filterOff")}`
+        : policy.licenceAccepted ? t("models.notReady").replace("{reason}", policy.reason) : t("models.notInstalled");
     if (q("krea-state").textContent !== state) q("krea-state").textContent = state;
     // the filter removed from an installed Krea 2: the warning, shown until acknowledged; the model still runs
     q("krea-reinstall-filter").hidden = !policy.filterRemoved;
     q("krea-removed").hidden = !policy.filterRemoved || policy.removalAcknowledged;
-    q<HTMLButtonElement>("krea-install").textContent = policy.build ? "Installed" : "Install Krea 2";
+    q<HTMLButtonElement>("krea-install").textContent = policy.build ? t("models.installed") : t("models.krea.install");
     if (policy.build) q<HTMLButtonElement>("krea-install").disabled = true; else kreaInstallReady();
     q("krea-use").hidden = !policy.ready;
     // the generator's list follows: Krea 2 appears there the moment its licence is accepted and it is installed
@@ -306,7 +306,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       const one = (name: string) => modal.querySelector<HTMLElement>(`[data-${name}="${variant}"]`)!;
       one("klein-licence-name").textContent = spec.licence.name;
       (one("klein-licence") as HTMLAnchorElement).href = spec.licence.url;
-      one("klein-accept-label").textContent = `I have read the ${spec.licence.name} and accept it`;
+      one("klein-accept-label").textContent = t("models.acceptNamed").replace("{licence}", spec.licence.name);
       const list = one("klein-summary");
       if (!list.childElementCount) for (const line of spec.licence.summary as string[]) { const item = document.createElement("li"); item.textContent = line; list.append(item); }
       const builds = one("klein-build") as HTMLSelectElement;
@@ -318,9 +318,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       const accept = one("klein-accept") as HTMLInputElement;
       if (status.licenceAccepted) { accept.checked = true; accept.disabled = true; }
       const install = one("klein-install") as HTMLButtonElement;
-      install.textContent = status.build ? "Installed" : "Install";
+      install.textContent = status.build ? t("models.installed") : t("models.install");
       install.disabled = !!status.build || !accept.checked;
-      one("klein-state").textContent = status.ready ? `Installed: ${spec.builds[status.build]?.label ?? status.build}` : status.licenceAccepted || status.build ? `Not ready: ${status.reason}` : "Not installed";
+      one("klein-state").textContent = status.ready
+        ? t("models.installedAs").replace("{build}", spec.builds[status.build]?.label ?? status.build)
+        : status.licenceAccepted || status.build ? t("models.notReady").replace("{reason}", status.reason) : t("models.notInstalled");
       one("klein-use").hidden = !status.ready;
     }
   };
@@ -331,7 +333,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       await api("/api/models/klein/consent", { variant, acceptLicence: (one("klein-accept") as HTMLInputElement).checked });
       await job("/api/models/klein/install", { variant, build: (one("klein-build") as HTMLSelectElement).value });
       await refreshKlein(); void refreshGenerators().catch(() => { /* offline engine */ });
-      say(`${kleinTerms.variants[variant].label} is installed.`);
+      say(t("models.installedNamed").replace("{name}", kleinTerms.variants[variant].label));
     }));
     one("klein-use").addEventListener("click", () => document.dispatchEvent(new CustomEvent("formcut:klein-use", { detail: variant })));
   }
@@ -346,10 +348,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const list = q<HTMLUListElement>("ckpt-list"); list.replaceChildren();
     for (const entry of reply.checkpoints as Array<{ name: string; baseLabel: string; usable: boolean; problem?: string; bytes: number }>) {
       const item = document.createElement("li");
-      item.textContent = `${entry.name} (${entry.baseLabel}, ${(entry.bytes / 1e9).toFixed(1)} GB): ${entry.usable ? "ready in the image generator" : entry.problem}`;
+      item.textContent = `${entry.name} (${entry.baseLabel}, ${(entry.bytes / 1e9).toFixed(1)} GB): ${entry.usable ? t("models.ckpt.ready") : entry.problem}`;
       list.append(item);
     }
-    q("ckpt-state").textContent = reply.checkpoints.length ? `${reply.checkpoints.filter((c: { usable: boolean }) => c.usable).length} of ${reply.checkpoints.length} usable` : "None yet";
+    q("ckpt-state").textContent = reply.checkpoints.length
+      ? t("models.ckpt.usable").replace("{usable}", String(reply.checkpoints.filter((c: { usable: boolean }) => c.usable).length)).replace("{total}", String(reply.checkpoints.length))
+      : t("models.ckpt.none");
   };
   q("ckpt-rescan").addEventListener("click", () => void run(async () => { await refreshCheckpoints(); await refreshGenerators(); }));
   // Generate with Krea 2: the image generator, Krea 2 chosen, the prompt waiting
@@ -366,12 +370,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     await api("/api/models/krea-2/consent", { acceptLicence: q("krea-accept").checked });
     await job("/api/models/krea-2/install", { build: q<HTMLSelectElement>("krea-build").value });
     await refreshKrea();
-    say("Krea 2 and its content filter are installed.");
+    say(t("models.krea.done"));
   }));
   const reinstallFilter = () => void run(async () => {
     await job("/api/models/krea-2/filter");
     await refreshKrea();
-    say("The content filter is installed again and runs on every Krea 2 picture.");
+    say(t("models.krea.filterBack"));
   });
   q("krea-reinstall-filter").addEventListener("click", reinstallFilter);
   q("krea-removed-reinstall").addEventListener("click", reinstallFilter);
