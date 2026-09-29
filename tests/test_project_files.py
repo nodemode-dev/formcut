@@ -149,3 +149,43 @@ def test_the_interface_offers_project_files_linking_and_the_missing_media_dialog
     assert "/api/project-files/open" in bar and "/api/project-files/save" in bar and "showMissingMedia(" in bar
     assert "/api/media/link" in pane and "/api/system/dialogs" in pane and "showMissingMedia(" in pane
     assert "/api/media/relink-search" in dialog and "/relink`" in dialog and "missing.useAnyway" in dialog
+
+
+def test_collect_files_puts_the_project_and_a_copy_of_its_footage_in_one_folder(tmp_path, client):
+    from app import jobs
+
+    one = linking.link_path(_clip(tmp_path / "Card A", "clip.mp4"))
+    two = linking.link_path(_clip(tmp_path / "Card B", "clip.mp4", source="mandelbrot"))  # the same name, another file
+    project = _project(one["id"], "clip.mp4", "p-collect")
+    project["timelines"][0]["tracks"][0]["clips"].append(
+        {**project["timelines"][0]["tracks"][0]["clips"][0], "id": "c2", "mediaId": two["id"], "start": 1}
+    )
+    store.save_project(project)
+    started = client.post("/api/project-files/collect", json={"projectId": "p-collect", "folder": str(tmp_path / "Handover")})
+    assert started.status_code == 202
+    for _ in range(200):
+        status = jobs.status(started.json()["job_id"])
+        if status["status"] != "running":
+            break
+        __import__("time").sleep(0.05)
+    result = status["result"]
+    root = tmp_path / "Handover" / "Launch"
+    assert result["path"] == str(root / "Launch.fmc") and result["files"] == 2 and not result["missing"]
+    assert sorted(p.name for p in (root / "Footage").iterdir()) == ["clip 2.mp4", "clip.mp4"]
+    table = json.loads((root / "Launch.fmc").read_text())["media"]
+    assert {entry["relative"] for entry in table.values()} == {"Footage/clip.mp4", "Footage/clip 2.mp4"}
+    assert project_files.file_of("p-collect") is None  # the project stays kept where it was
+    # the summaries tell the start screen which file a project is kept in
+    client.post("/api/project-files/save", json={"projectId": "p-collect", "path": str(tmp_path / "Kept.fmc")})
+    summary = next(s for s in client.get("/api/projects/summaries").json() if s["id"] == "p-collect")
+    assert summary["file"] == str(tmp_path / "Kept.fmc")
+
+
+def test_save_and_the_start_screen_offer_project_files():
+    from pathlib import Path
+
+    ui = Path(__file__).resolve().parents[1] / "frontend" / "src" / "ui"
+    bar, home, menu = ((ui / name).read_text(encoding="utf-8") for name in ("titlebar.ts", "start-screen.ts", "file-menu.ts"))
+    assert '["collect", "file.collect"]' in menu and "/api/project-files/collect" in bar
+    assert "ev.shiftKey ? saveAs() : doSave(true)" in bar and "offered.has(result.id)" in bar
+    assert 'fromFile.dataset.act = "open-file"' in home and "project.file ?" in home

@@ -8,6 +8,7 @@
 // deleted without losing anything.
 import { escapeHtml } from "./safe-text";
 import { mediaView, openViewer, type ViewItem } from "./viewer";
+import { showMissingMedia, type MissingItem } from "./missing-media";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { loadDemoProject } from "../engine/demo";
@@ -269,7 +270,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
         `<span>${when(Number(project.updated) || 0)}</span>` +
         `<span>${runtime(Number(project.duration) || 0)}</span>` +
         `<span>${Number(project.clips) || 0} ${t("home.clips")}</span>`;
-      const format = `${project.width ?? ""}${project.width ? "x" : ""}${project.height ?? ""}`;
+      const format = `${project.width ?? ""}${project.width ? "x" : ""}${project.height ?? ""}${project.file ? ` · ${String(project.file).split(/[\\/]/).pop()}` : ""}`;  // the .fmc it is kept in
       const art = project.cover
         ? `<img src="/api/projects/${id}/cover" alt="" loading="lazy">`
         : icon("film");
@@ -654,7 +655,20 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       fresh.dataset.act = "new";
       const demo = chip(t("start.demo"), (button) => void openDemo(button), "play");
       demo.dataset.act = "demo";
-      actions.append(fresh, demo);
+      // a .fmc from anywhere on this computer: its project in, its media linked back, the rest offered to Locate
+      const fromFile = chip(t("file.openFile"), () => void (async () => {
+        try {
+          const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", title: t("file.openFile"), types: ["fmc"] });
+          if (!chosen.paths.length) return;
+          const opened = await api<{ project: { id: string }; missing: MissingItem[] }>("/api/project-files/open", { path: chosen.paths[0] });
+          if (await openProject(engine, opened.project.id)) dismiss();
+          if (opened.missing.length) showMissingMedia(opened.missing, () => void openProject(engine, opened.project.id));
+        } catch (error) {
+          say(error instanceof Error ? error.message : t("home.failed"));
+        }
+      })(), "folder");
+      fromFile.dataset.act = "open-file";
+      actions.append(fresh, demo, fromFile);
       void renderProjects();
       return;
     }

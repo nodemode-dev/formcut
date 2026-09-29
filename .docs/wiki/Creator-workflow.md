@@ -51,7 +51,12 @@ where the file is, where it is relative to the `.fmc` (so a project folder moved
 footage), and its fingerprint. When a file is not where the project last found it, the Missing media dialog lists it:
 Locate it with the system's dialog and the others are looked for beside it, or Search a folder and every missing file
 is looked for there and below, by name and then by fingerprint (a renamed file too); a file of another length is asked
-about first. The `.fc` package stays the way to hand a project over with its footage inside it.
+about first. Cmd+S saves; for a project not yet kept in a file it offers Save as project file once, and Shift+Cmd+S always
+does. File > Collect files makes a folder named after the project holding its `.fmc` and a copy of every file its clips
+use in `Footage/` (two files of one name told apart), the `.fmc` pointing at them relative to itself, so the folder
+can be moved, zipped or handed over whole; the project itself stays kept where it was. The start screen opens a
+project file too, and shows the `.fmc` each project is kept in. The `.fc` package stays the way to hand a project over
+as one zipped file.
 
 Any picture or video can be seen full screen, on its own: View on a media library card (or Space on a focused
 card), View on the start screen's media, or a click on a result in Studio's image generator. The viewer sits above

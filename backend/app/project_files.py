@@ -19,6 +19,9 @@ from __future__ import annotations
 
 import contextlib
 import os
+import platform
+import shutil
+import subprocess
 import time
 from pathlib import Path
 
@@ -173,6 +176,102 @@ def _keep_record(media_id: str, entry: dict) -> None:
             }
         )
         media._write(items)
+
+
+def collect(project_id: str, folder: Path, report=lambda *_: None, cancelled=lambda: False) -> dict:
+    """Collect Files, as After Effects does: <folder>/<title>/<title>.fmc with a copy of every file its clips use in
+    Footage/ beside it, the .fmc pointing at those copies (by path and relative to it), so the folder can be moved,
+    zipped or handed over whole. The project itself stays kept where it was; the collected .fmc is a copy of it.
+    Two files of the same name are told apart (a number added); a file missing now is listed, not copied."""
+    project = store.get_project(project_id)
+    if project is None:
+        raise HTTPException(404, "project not found")
+    title = "".join(ch for ch in str(project.get("title") or "Untitled") if ch not in '/\\:*?"<>|').strip() or "Untitled"
+    root = Path(folder).expanduser() / title
+    footage = root / "Footage"
+    footage.mkdir(parents=True, exist_ok=True)
+    where = root / f"{title}{SUFFIX}"
+    table = media_table(project, where)
+    used: set[str] = set()
+    missing, copied, total = [], 0, 0
+    items = list(table.items())
+    for index, (media_id, entry) in enumerate(items):
+        if cancelled():
+            raise InterruptedError("cancelled")
+        source = media.media_path(media_id)
+        if source is None:
+            missing.append(entry.get("name") or media_id)
+            continue
+        name = Path(entry.get("path") or entry.get("name") or source.name).name
+        stem, suffix = Path(name).stem, Path(name).suffix or source.suffix
+        candidate, number = f"{stem}{suffix}", 2
+        while candidate.lower() in used:
+            candidate, number = f"{stem} {number}{suffix}", number + 1
+        used.add(candidate.lower())
+        target = footage / candidate
+        report(index / max(1, len(items)), f"Copying {candidate}")
+        shutil.copy2(source.resolve(), target)
+        copied += 1
+        total += target.stat().st_size
+        entry.update({"path": str(target.resolve()), "relative": f"Footage/{candidate}", "linked": True})
+    document = {
+        "format": FORMAT,
+        "version": VERSION,
+        "app": f"formcut {_app_version()}",
+        "saved": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "collected": True,
+        "project": project,
+        "media": table,
+    }
+    write_json(where, document, keep_backup=False)
+    return {"path": str(where), "folder": str(root), "files": copied, "bytes": total, "missing": missing}
+
+
+def _app_version() -> str:
+    from .main import APP_VERSION
+
+    return APP_VERSION
+
+
+def reveal(path: Path) -> dict:
+    """The file shown in the system's file manager (the Mac's Finder selects it)."""
+    path = Path(path).expanduser()
+    if not path.exists():
+        raise HTTPException(404, f"nothing at {path}")
+    system = platform.system()
+    command = (
+        ["open", "-R", str(path)]
+        if system == "Darwin"
+        else ["explorer", f"/select,{path}"]
+        if system == "Windows"
+        else ["xdg-open", str(path.parent)]
+    )
+    try:
+        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError as exc:
+        return {"opened": False, "path": str(path), "detail": str(exc)}
+    return {"opened": True, "path": str(path)}
+
+
+class CollectBody(BaseModel):
+    projectId: str
+    folder: str
+
+
+@router.post("/collect", status_code=202)
+def collect_files(body: CollectBody) -> dict:
+    from . import jobs
+
+    return jobs.submit("collect", lambda _job, report, cancelled: collect(body.projectId, Path(body.folder), report, cancelled))
+
+
+class RevealBody(BaseModel):
+    path: str
+
+
+@router.post("/reveal")
+def reveal_file(body: RevealBody) -> dict:
+    return reveal(Path(body.path))
 
 
 class SaveBody(BaseModel):

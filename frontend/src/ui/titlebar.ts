@@ -142,8 +142,41 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     document.dispatchEvent(new CustomEvent("formcut:home"));
   });
 
-  const doSave = async () => {
+  // Save as project file: the project written to a .fmc of the person's choosing; every save after follows it there
+  const saveAs = async () => {
+    try {
+      const saved = await saveProject(engine);
+      if (!saved) { showToast(t("toast.savefail")); hideToastSoon(2500); return; }
+      const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "save", title: t("file.saveAs"), defaultName: `${saved.title || "Untitled"}.fmc` });
+      if (!chosen.paths.length) return;
+      const written = await api<{ path: string }>("/api/project-files/save", { projectId: saved.id, path: chosen.paths[0] });
+      showToast(`${t("file.savedTo")} ${written.path}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : t("toast.savefail"));
+    }
+    hideToastSoon(4000);
+  };
+  const waitCollect = async (jobId: string) => {
+    for (;;) {
+      const status = await fetch(`/api/jobs/${jobId}`).then((r) => r.json());
+      if (status.status === "done") return status.result as { path: string; folder: string; files: number; missing: string[] };
+      if (status.status !== "running") throw new Error(status.error ?? status.status);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  };
+  // Save: to the store and, for a project kept in a .fmc, its file (the engine writes it); a project not yet in a file
+  // is offered Save as once, as After Effects asks where an unsaved project goes
+  const offered = new Set<string>();
+  const doSave = async (fromKeys = false) => {
     const result = await saveProject(engine);
+    if (result && fromKeys && !offered.has(result.id)) {
+      offered.add(result.id);
+      const kept = await fetch(`/api/project-files/of/${result.id}`).then((r) => r.json()).catch(() => ({ path: "unknown" }));
+      if (!kept.path) {
+        const dialogs = await fetch("/api/system/dialogs").then((r) => r.json()).catch(() => ({ available: false }));
+        if (dialogs.available) { await saveAs(); return; }
+      }
+    }
     showToast(result ? t("toast.saved") : t("toast.savefail"));
     hideToastSoon(2500);
   };
@@ -196,18 +229,23 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     } else if (hit.dataset.act === "save") {
       await doSave();
     } else if (hit.dataset.act === "save-as") {
-      // the project written to a .fmc file of the person's choosing; every save after follows it there
+      await saveAs();
+    } else if (hit.dataset.act === "collect") {
+      // Collect Files: a folder with the project file and a copy of all its footage, to move or hand over whole
       try {
         const saved = await saveProject(engine);
         if (!saved) { showToast(t("toast.savefail")); hideToastSoon(2500); return; }
-        const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "save", title: t("file.saveAs"), defaultName: `${saved.title || "Untitled"}.fmc` });
+        const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "folder", title: t("file.collect") });
         if (!chosen.paths.length) return;
-        const written = await api<{ path: string }>("/api/project-files/save", { projectId: saved.id, path: chosen.paths[0] });
-        showToast(`${t("file.savedTo")} ${written.path}`);
+        showToast(t("file.collecting"));
+        const started = await api<{ job_id: string }>("/api/project-files/collect", { projectId: saved.id, folder: chosen.paths[0] });
+        const done = await waitCollect(started.job_id);
+        showToast(`${t("file.collected")} ${done.folder}${done.missing.length ? ` (${done.missing.join(", ")}: ${t("missing.title").toLowerCase()})` : ""}`);
+        void api("/api/project-files/reveal", { path: done.path });
       } catch (error) {
-        showToast(error instanceof Error ? error.message : t("toast.savefail"));
+        showToast(error instanceof Error ? error.message : String(error));
       }
-      hideToastSoon(4000);
+      hideToastSoon(5000);
     } else if (hit.dataset.act === "open-file") {
       // a .fmc file: its project into the editor, its media linked back where found, the rest offered to Locate
       try {
@@ -233,7 +271,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
     if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "s") {
       ev.preventDefault();
-      void doSave();
+      void (ev.shiftKey ? saveAs() : doSave(true));  // Shift: Save as project file
     }
   });
 

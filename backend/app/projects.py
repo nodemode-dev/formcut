@@ -58,7 +58,16 @@ def _summary(record: dict) -> dict:
         "width": document.get("width"),
         "height": document.get("height"),
         "cover": path.is_file(),
+        # the .fmc the project is kept in, when it is (project_files.py)
+        "file": _file_of(record.get("id")),
     }
+
+
+def _file_of(project_id) -> str | None:
+    from .project_files import file_of
+
+    path = file_of(str(project_id)) if project_id else None
+    return str(path) if path else None
 
 
 def _ensure_cover(record: dict) -> None:
