@@ -29,16 +29,16 @@ The rest is written by hand.
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
 | clip_visuals.py | 165 | /api/media | 2 |
-| cloud.py | 447 | /api/cloud | 9 |
+| cloud.py | 441 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 796 | /api/generate | 4 |
-| instagram.py | 213 | /api/connect/instagram | 4 |
+| instagram.py | 206 | /api/connect/instagram | 4 |
 | jobs.py | 109 | /api/jobs | 3 |
-| klein.py | 268 | /api/models/klein | 3 |
-| krea2.py | 725 | /api/models/krea-2 | 6 |
+| klein.py | 267 | /api/models/klein | 3 |
+| krea2.py | 726 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
@@ -46,13 +46,13 @@ The rest is written by hand.
 | media.py | 1065 | /api/media | 25 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| presets.py | 625 | /api/presets | 9 |
+| presets.py | 620 | /api/presets | 9 |
 | project_packages.py | 312 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 175 | /api/projects | 9 |
-| providers.py | 172 | /api/providers | 4 |
+| providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
-| remote.py | 264 | /api/remote | 6 |
+| remote.py | 257 | /api/remote | 6 |
 | render_api.py | 1258 | /api/render | 13 |
 | render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
@@ -60,12 +60,12 @@ The rest is written by hand.
 | subtitles.py | 109 | /api/subtitles | 2 |
 | templates.py | 214 | /api/templates | 7 |
 | terminal.py | 181 | /api/terminal | 2 |
-| tiktok.py | 340 | /api/connect/tiktok/app | 7 |
+| tiktok.py | 333 | /api/connect/tiktok/app | 7 |
 | track.py | 178 | /api/track | 1 |
 | transcribe.py | 525 | /api/transcribe | 2 |
 | tts.py | 91 | /api/tts | 3 |
 | upscale.py | 313 | /api/media | 2 |
-| webhooks.py | 252 | /api/webhooks | 5 |
+| webhooks.py | 247 | /api/webhooks | 5 |
 
 ## Modules with no routes of their own
 
@@ -81,6 +81,7 @@ the automation transports.
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
 - `discovery.py` (65L)
+- `durable.py` (84L)
 - `effect_packages.py` (435L)
 - `encoders.py` (333L)
 - `expressions.py` (51L)
@@ -114,7 +115,7 @@ the automation transports.
 - `security.py` (68L)
 - `segmentation.py` (323L)
 - `stabilise.py` (209L)
-- `store.py` (71L)
+- `store.py` (103L)
 - `subject.py` (220L)
 - `template_assets.py` (92L)
 - `template_library.py` (452L)
