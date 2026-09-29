@@ -34,7 +34,7 @@ The rest is written by hand.
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 746 | /api/generate | 3 |
+| generate.py | 751 | /api/generate | 3 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 108 | /api/jobs | 3 |
 | klein.py | 268 | /api/models/klein | 3 |
@@ -53,7 +53,7 @@ The rest is written by hand.
 | providers.py | 172 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 264 | /api/remote | 6 |
-| render_api.py | 1241 | /api/render | 13 |
+| render_api.py | 1258 | /api/render | 13 |
 | render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -95,7 +95,7 @@ the automation transports.
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (361L)
-- `local_runner.py` (282L)
+- `local_runner.py` (291L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
 - `openh264.py` (410L)
