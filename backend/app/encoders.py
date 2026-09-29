@@ -43,7 +43,6 @@ TIERS: dict[str, dict[str, list[str]]] = {
     "libsvtav1": {"high": ["-crf", "26"], "medium": ["-crf", "34"], "low": ["-crf", "45"]},
     "libaom-av1": {"high": ["-crf", "26", "-b:v", "0"], "medium": ["-crf", "34", "-b:v", "0"], "low": ["-crf", "45", "-b:v", "0"]},
     "libvpx-vp9": {"high": ["-crf", "24", "-b:v", "0"], "medium": ["-crf", "33", "-b:v", "0"], "low": ["-crf", "40", "-b:v", "0"]},
-    "_hardware": {"high": ["-q:v", "45"], "medium": ["-q:v", "60"], "low": ["-q:v", "75"]},
     "_nvenc": {"high": ["-cq", "21"], "medium": ["-cq", "28"], "low": ["-cq", "35"]},
     "_qsv": {"high": ["-global_quality", "21"], "medium": ["-global_quality", "28"], "low": ["-global_quality", "35"]},
     # AMF takes constant quantisers per frame type; -q:v means nothing to it.
@@ -208,9 +207,36 @@ def addon_binary_for(encoder: str):
     return None
 
 
-def tier_flags(encoder: str, quality: str) -> list[str]:
-    """Quality flags for an encoder, falling back by family."""
+# A hardware encoder needs about a quarter more bits than x264 for the same picture.
+HARDWARE_MARGIN = 1.25
+
+
+def codec_of(encoder: str) -> str:
+    name = encoder.lower()
+    if "265" in name or "hevc" in name:
+        return "hevc"
+    if "av1" in name:
+        return "av1"
+    if "vp9" in name:
+        return "vp9"
+    return "h264"
+
+
+def hardware_kbps(encoder: str, quality: str, width: int = 0, height: int = 0, fps: float = 0.0) -> int:
+    """The bitrate a hardware encoder is given for a tier: the size the export sheet estimates (fitted to x264 at the
+    tier's crf), with the hardware margin, so the file comes out as estimated and looks as the tier promises."""
+    width, height, fps = width or 1920, height or 1080, fps or 30.0
+    return max(500, round(estimate_bitrate(codec_of(encoder), width, height, fps, quality) * HARDWARE_MARGIN))
+
+
+def tier_flags(encoder: str, quality: str, width: int = 0, height: int = 0, fps: float = 0.0) -> list[str]:
+    """Quality flags for an encoder, falling back by family. The output's size and rate set a hardware encoder's
+    bitrate (VideoToolbox and unnamed hardware): until 2.2.8 these took "-q:v 45" for High, a scale on which
+    VideoToolbox's higher numbers are the better ones, so High came out worse than Low: 2.4 Mbit/s for 1080p and
+    3.3 for 1440p, a third of what the sheet estimated, soft and blocky."""
     quality = quality if quality in ("high", "medium", "low") else "high"
+    if encoder.endswith(("_videotoolbox", "_v4l2m2m", "_mediacodec", "_omx")):
+        return _bitrate_flags(encoder, quality, width, height, fps)
     if encoder == "mpeg4":
         # A fixed quantiser gives each tier the same look at any frame size.
         return ["-q:v", {"high": "2", "medium": "4", "low": "8"}[quality]]
@@ -223,7 +249,18 @@ def tier_flags(encoder: str, quality: str) -> list[str]:
     for family in ("_amf", "_vaapi", "_mf"):
         if encoder.endswith(family):
             return TIERS[family][quality]
-    return TIERS["_hardware"][quality]
+    return _bitrate_flags(encoder, quality, width, height, fps)
+
+
+def _bitrate_flags(encoder: str, quality: str, width: int, height: int, fps: float) -> list[str]:
+    """A target bitrate with room above it: the rate control every hardware encoder has, whatever its quality scale."""
+    kbps = hardware_kbps(encoder, quality, width, height, fps)
+    flags = ["-b:v", f"{kbps}k", "-maxrate", f"{round(kbps * 1.5)}k", "-bufsize", f"{kbps * 2}k"]
+    if encoder.endswith("_videotoolbox"):
+        flags += ["-allow_sw", "1"]  # a Mac without the hardware block still encodes
+        if encoder.startswith("h264"):
+            flags += ["-profile:v", "high"]
+    return flags
 
 
 def status() -> dict:
@@ -316,9 +353,16 @@ def estimate_bitrate(codec: str, width: int, height: int, fps: float, quality: s
     return base * CODEC_FACTOR.get(codec, 1.0) * tiers.get(quality, 1.0)
 
 
-def estimate_size(codec: str, width: int, height: int, fps: float, quality: str, duration: float, has_audio: bool = True) -> dict:
-    """Estimated output size in bytes, with the parts that made it up."""
-    video = estimate_bitrate(codec, width, height, fps, quality)
+def is_hardware(encoder: str | None) -> bool:
+    return bool(encoder) and not str(encoder).startswith("lib") and encoder not in ("mpeg4", "gif")
+
+
+def estimate_size(
+    codec: str, width: int, height: int, fps: float, quality: str, duration: float, has_audio: bool = True, encoder: str | None = None
+) -> dict:
+    """Estimated output size in bytes, with the parts that made it up; a hardware encoder's with its margin, as it is
+    given (tier_flags), so the estimate is the size that comes out."""
+    video = estimate_bitrate(codec, width, height, fps, quality) * (HARDWARE_MARGIN if is_hardware(encoder) else 1.0)
     audio = AUDIO_KBPS if has_audio else 0.0
     total_bits = (video + audio) * 1000.0 * max(0.0, float(duration))
     return {

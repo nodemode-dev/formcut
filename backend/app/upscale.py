@@ -92,6 +92,18 @@ def _still(source: Path, out: Path, factor: float, method: str) -> None:
     large.save(out, "PNG")
 
 
+def _source_size(source: Path) -> tuple[int, int, float]:
+    """A video's width, height and frame rate from ffprobe; zeros when it cannot be read."""
+    from .media import _ffprobe
+
+    try:
+        stream = next(s for s in _ffprobe(source).get("streams", []) if s.get("codec_type") == "video")
+        top, _, bottom = str(stream.get("r_frame_rate") or "30/1").partition("/")
+        return int(stream["width"]), int(stream["height"]), float(top) / float(bottom or 1)
+    except (StopIteration, KeyError, ValueError, ZeroDivisionError, OSError):
+        return 0, 0, 0.0
+
+
 def _encoder() -> str:
     return next(filter(None, (encoders.choose(codec) for codec in encoders.CONTAINERS["mp4"])), "mpeg4")
 
@@ -109,7 +121,10 @@ def _video(source: Path, out: Path, factor: float, method: str, seconds: float, 
     program = shutil.which("ffmpeg") or "ffmpeg"
     command = [program, "-v", "error", "-nostdin", "-y", *device, "-i", str(source), "-map", "0:v:0", "-map", "0:a?", "-vf", chain]
     pixels = [] if upload else ["-pix_fmt", "yuv420p"]
-    command += ["-c:v", encoder, *encoders.tier_flags(encoder, "high"), *pixels, "-c:a", "aac", "-b:a", "192k"]
+    # the output's size and rate, so a hardware encoder's bitrate fits the upscaled picture
+    width, height, fps = _source_size(source)
+    size = (_even(width * factor), _even(height * factor)) if width else (0, 0)
+    command += ["-c:v", encoder, *encoders.tier_flags(encoder, "high", *size, fps), *pixels, "-c:a", "aac", "-b:a", "192k"]
     command += ["-movflags", "+faststart", "-progress", "pipe:1", str(out)]
     with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
         for line in process.stdout:

@@ -33,6 +33,35 @@ else
   echo "No .env found. Copy example.env to .env for keys and paths; both are optional."
 fi
 
+# The native engine: formcut_native in backend/venv, current with this engine. Without it (or with an older build) the
+# engine runs its slower Python path, which it did silently until 2.2.8. With Rust installed it is built here, once;
+# FORMCUT_NATIVE_AUTOBUILD=0 skips that.
+NATIVE="$(cd backend && ./venv/bin/python - <<'PY' 2>/dev/null | tail -1
+import sys
+sys.path.insert(0, ".")
+from app.gpu_frame import API
+try:
+    import formcut_native
+    probe = formcut_native.GpuFrame(64, 2)
+    api = probe.api() if hasattr(probe, "api") else 1
+    print("ready" if api >= API else f"an older build (api {api}, this engine wants {API})")
+except Exception as exc:
+    print(f"missing ({type(exc).__name__})")
+PY
+)"
+echo ""
+if [ "$NATIVE" = "ready" ]; then
+  echo "Native engine: ready"
+else
+  echo "Native engine: ${NATIVE:-not found}"
+  if [ "${FORMCUT_NATIVE_AUTOBUILD:-1}" != "0" ] && command -v cargo >/dev/null 2>&1; then
+    echo "Building it now (setup/build_native_gpu); a few minutes the first time..."
+    if setup/build_native_gpu; then echo "Native engine: built"; else echo "The native build failed (above); formcut runs on the slower Python path."; fi
+  else
+    echo "formcut runs on the slower Python path. Install Rust (https://rustup.rs), then run setup/build_native_gpu."
+  fi
+fi
+
 echo ""
 echo "Booting the engine..."
 ( cd backend && ./boot_backend ) &

@@ -17,7 +17,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
+from . import encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import CONTAINERS, addon_binary_for, estimate_bitrate, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -527,7 +527,14 @@ def export_media(
             hdr_filter = "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le"
             colour_tags = ["-color_primaries", "bt2020", "-color_trc", transfer, "-colorspace", "bt2020nc", "-color_range", "tv"]
             pix = pixel_format(encoder or "", True)
-        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality), *colour_tags, *audio_flags] if encoder else []
+        codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality, out_w, out_h, fps), *colour_tags, *audio_flags] if encoder else []
+        if encoder and encoder.endswith("_videotoolbox") and not hdr_filter:
+            # VideoToolbox writes the matrix into the stream but not the primaries or the transfer (the owner's
+            # exports read "unknown"): the bitstream's own colour description says BT.709 throughout
+            codec += [
+                "-bsf:v",
+                f"{'hevc' if 'hevc' in encoder else 'h264'}_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1",
+            ]
         # an HDR timeline exported through a codec that cannot carry HDR (H.264, say) renders as SDR: the frames
         # would otherwise leave the renderer PQ- or HLG-encoded and be tagged BT.709, a washed-out picture
         render_project = project if hdr_filter or output_colour not in ("hlg", "pq") else {**project, "outputColour": "bt709"}
@@ -1264,7 +1271,12 @@ def estimate(body: EstimateInput):
     if body.format == "gif":
         audible = False
     return {
-        "tiers": {tier: estimate_size(codec, width, height, fps, tier, project["duration"], audible) for tier in ("high", "medium", "low")},
+        "tiers": {
+            tier: estimate_size(
+                codec, width, height, fps, tier, project["duration"], audible, encoders.choose(codec) if body.format != "gif" else None
+            )
+            for tier in ("high", "medium", "low")
+        },
         "width": width,
         "height": height,
         "fps": fps,

@@ -673,6 +673,7 @@
   "file.collect": "Recopilar archivos…",
   "file.collecting": "Recopilando archivos…",
   "file.collected": "Recopilado en",
+  "share.cloud": "Nube",
   "gen.go": "Generar",
   "gen.img2img": "Partir de",
   "gen.img2img.none": "Nada (solo el prompt)",

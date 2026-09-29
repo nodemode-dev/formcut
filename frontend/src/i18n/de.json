@@ -673,6 +673,7 @@
   "file.collect": "Dateien sammeln…",
   "file.collecting": "Dateien werden gesammelt…",
   "file.collected": "Gesammelt in",
+  "share.cloud": "Cloud",
   "gen.go": "Erzeugen",
   "gen.img2img": "Ausgehen von",
   "gen.img2img.none": "Nichts (nur der Prompt)",

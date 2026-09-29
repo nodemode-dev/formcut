@@ -89,7 +89,17 @@ def upscale_video(source: Path, out: Path, width: int, height: int, fps: float, 
     chain = f"scale={target_w}:{target_h}:flags=lanczos" + (f",{upload}" if upload else "")
     encode = [program, "-v", "error", "-nostdin", "-y", *device, "-f", "rawvideo", "-pix_fmt", "rgb24"]
     encode += ["-s", f"{width * SCALE}x{height * SCALE}", "-r", f"{fps:.6f}", "-i", "-", "-i", str(source)]
-    encode += ["-map", "0:v:0", "-map", "1:a?", "-vf", chain, "-c:v", encoder, *encoders.tier_flags(encoder, "high")]
+    encode += [
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a?",
+        "-vf",
+        chain,
+        "-c:v",
+        encoder,
+        *encoders.tier_flags(encoder, "high", target_w, target_h, fps),
+    ]
     encode += ([] if upload else ["-pix_fmt", "yuv420p"]) + [
         "-c:a",
         "aac",

@@ -58,6 +58,16 @@ async def _prepare_models() -> None:
 
 
 @app.on_event("startup")
+async def _report_engine() -> None:
+    # which frame path, GPU and ffmpeg this run has, said in the terminal once it is known (engine_report.py)
+    import threading
+
+    from .engine_report import say
+
+    threading.Thread(target=say, name="engine-report", daemon=True).start()
+
+
+@app.on_event("startup")
 async def _recover_media() -> None:
     # media files the index does not know (media.json lost or rebuilt) taken back into the library at start
     import threading
@@ -83,6 +93,7 @@ app.add_middleware(LocalOnly)
 from .agent_connect import router as agents_router
 from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
+from .engine_report import router as engine_router
 from .klein import router as klein_router
 from .krea2 import router as krea2_router
 from .linking import router as linking_router
@@ -105,6 +116,7 @@ app.include_router(loras_router)
 app.include_router(checkpoints_router)
 app.include_router(linking_router)
 app.include_router(media_check_router)
+app.include_router(engine_router)
 app.include_router(project_files_router)
 
 

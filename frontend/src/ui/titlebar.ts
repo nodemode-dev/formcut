@@ -280,7 +280,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   modal.className = "modal-scrim";
   modal.hidden = true;
   modal.innerHTML = `
-    <div class="modal-panel">
+    <div class="modal-panel export-panel">
       <div class="modal-title">${t("export.title")}</div>
       <div class="modal-row">
         <span>${t("export.format")}</span>
@@ -324,16 +324,18 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
           <button data-val="pq">PQ (HDR10)</button>
         </div>
       </div>
-      <p class="modal-note">${text("HLG and PQ export in ten bits with the BT.2020 transform applied on the way out; they need an encoder that carries ten bits (HEVC, AV1 or VP9), and a Rec.709 file is written otherwise.")}</p>
+      <p class="modal-note" data-ref="hdr-note" hidden>${text("HLG and PQ export in ten bits with the BT.2020 transform applied on the way out; they need an encoder that carries ten bits (HEVC, AV1 or VP9), and a Rec.709 file is written otherwise.")}</p>
       <div class="modal-row">
         <span>${t("export.exact")}</span>
         <button class="toggle" data-ref="exact" aria-label="${t("export.exact")}"></button>
       </div>
       <div class="modal-row export-estimate" data-ref="estimate"></div>
-      <div class="modal-actions">
-        <button class="tool-chip" data-ref="post" hidden>${icon("export")}${t("tiktok.lastExport")}</button>
-        <button class="tool-chip" data-ref="post-ig" hidden>${icon("pip")}${t("instagram.lastExport")}</button>
-        <button class="tool-chip" data-ref="save-cloud" hidden>${icon("grid")}${t("cloud.lastExport")}</button>
+      <div class="modal-actions export-actions">
+        <div class="export-share">
+          <button class="tool-chip" data-ref="post" hidden title="${t("tiktok.lastExport")}" aria-label="${t("tiktok.lastExport")}">${icon("export")}TikTok</button>
+          <button class="tool-chip" data-ref="post-ig" hidden title="${t("instagram.lastExport")}" aria-label="${t("instagram.lastExport")}">${icon("pip")}Instagram</button>
+          <button class="tool-chip" data-ref="save-cloud" hidden title="${t("cloud.lastExport")}" aria-label="${t("cloud.lastExport")}">${icon("grid")}${t("share.cloud")}</button>
+        </div>
         <button class="tool-chip" data-ref="cancel">${t("export.cancel")}</button>
         <button class="btn-export" data-ref="start">${icon("export")}${t("export.start")}</button>
       </div>
@@ -341,6 +343,10 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
   document.body.append(modal);
   const segValue = (ref: string): string =>
     modal.querySelector<HTMLElement>(`[data-ref="${ref}"] .is-active`)?.dataset.val ?? "";
+  // the HLG/PQ note only when HLG or PQ is chosen: it says what they need, which Rec.709 does not
+  modal.querySelector('[data-ref="colour"]')!.addEventListener("click", () => requestAnimationFrame(() => {
+    modal.querySelector<HTMLElement>('[data-ref="hdr-note"]')!.hidden = segValue("colour") === "bt709";
+  }));
   // X5: fill the codec choices this machine can actually encode, and keep a
   // live size estimate under the options as they change.
   const estimateRow = modal.querySelector<HTMLElement>('[data-ref="estimate"]')!;

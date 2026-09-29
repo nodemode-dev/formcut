@@ -1566,3 +1566,14 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .missing-media-list li div { display: grid; min-width: 0; }
 .missing-media-list small { color: var(--ink-faint); overflow-wrap: anywhere; }
 .missing-media-actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+
+/* The export sheet (2.2.8): wide enough for its choices on one line each, no label or button broken over lines;
+   the owner's screenshot showed it 360px wide, its labels, choices and footer buttons wrapped into stacks */
+.modal-panel.export-panel { width: min(680px, 94vw); max-height: calc(100vh - 48px); overflow-y: auto; }
+.export-panel .modal-row { grid-template-columns: minmax(150px, max-content) minmax(0, 1fr); }
+.export-panel .modal-row > span { white-space: nowrap; }
+.export-panel .modal-row > .seg { flex-wrap: nowrap; justify-self: start; max-width: 100%; }
+.export-panel .modal-row.export-estimate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.export-actions { align-items: center; }
+.export-share { display: flex; gap: var(--sp-2); margin-right: auto; }
+.tool-chip, .btn-export { white-space: nowrap; }

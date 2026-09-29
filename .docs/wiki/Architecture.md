@@ -38,6 +38,18 @@ frame it needs. Stills are bounded to preview size, and a still whose effect
 stack is only colour grades is prepared once per renderer rather than every
 frame.
 
+At start the engine says in the terminal what it runs on: the native Rust frame path (formcut_native, built into
+`backend/venv` by `setup/build_native_gpu`) or, when that is missing, an older build or not usable, the slower Python
+path and why; the GPU and whether compositing is on it; and the ffmpeg in use, with zscale, VideoToolbox and hardware
+decode. GET /api/engine gives the same. The boot script checks the native engine first and, with Rust installed,
+builds it when it is missing or older than the engine (FORMCUT_NATIVE_AUTOBUILD=0 skips that).
+
+Hardware encoders (VideoToolbox, and any not otherwise known) are given a bitrate per tier: the size the export sheet
+estimates for the output's size and frame rate, with a quarter more for a hardware encoder, a maximum half as high
+again and a buffer twice the rate; H.264 through VideoToolbox is High profile, and its bitstream carries the BT.709
+colour description. The sheet's estimate uses the same rate. (Until 2.2.8 VideoToolbox took "-q:v 45" for High, on a
+scale where its higher numbers are the better ones: High came out worse than Low.)
+
 formcut asks the ffmpeg it runs which filters it was built with (`ffmpeg -filters`, once per binary). A wide-gamut
 SDR clip (BT.2020, a BT.601 tag) is converted to BT.709 with zscale where ffmpeg has it, else with ffmpeg's own
 colorspace filter, which every ffmpeg has (on the demo's BT.2020 clip the two differ by about 2.5 in 255 on average),
