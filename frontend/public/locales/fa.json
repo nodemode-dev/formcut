@@ -655,6 +655,8 @@
   "gen.continuous.stopped": "پس از {n} تصویر متوقف شد",
   "gen.continuous.prompt": "تصویر بعدی از متن جدید استفاده می‌کند",
   "gen.continuous.finishing": "این تصویر تمام می‌شود و سپس متوقف می‌شود",
+  "gen.stop": "توقف",
+  "gen.stopped": "متوقف شد",
   "gen.go": "ساختن",
   "gen.img2img": "شروع از",
   "gen.img2img.none": "هیچ (فقط متن)",

@@ -817,3 +817,30 @@ def test_unticking_continuous_finishes_the_picture_in_hand_then_stops(tmp_path, 
     time.sleep(0.8)
     assert len(json.loads((tmp_path / "argv.json.calls").read_text())) == 1
     assert client.post(f"/api/generate/sessions/{job}/finish").status_code == 404
+
+
+def test_the_page_reads_the_step_tqdm_shows_now_not_the_one_before():
+    """tqdm writes a carriage return and then its reading, so the reading on screen is the unfinished line. Until 2.1.9
+    formcut waited for the next step's carriage return, a whole step behind the terminal (the owner's screenshot:
+    2/8 [01:58<05:56] on the page against 3/8 [03:18<05:43] in the terminal)."""
+    import threading as th
+
+    got = []
+
+    def report(value, message=None, **fields):
+        got.append((round(value, 3), message, fields.get("timing")))
+
+    script = r"""
+import sys, time
+sys.stderr.write("\r  0%|    | 0/4 [00:00<?, ?it/s]"); sys.stderr.flush(); time.sleep(0.2)
+sys.stderr.write("\r 50%|##  | 2/4 [01:10<01:10, 35.00s/it]"); sys.stderr.flush()
+time.sleep(2.0)
+sys.stderr.write("\n")
+"""
+    runner = th.Thread(target=local_runner.run, args=([sys.executable, "-c", script], 4, report, lambda: False, "Stand-in"))
+    runner.start()
+    time.sleep(1.2)  # the stand-in is still on step 2, its line not yet ended
+    now = [entry for entry in got if entry[2] and not entry[2].get("loading")]
+    runner.join()
+    assert now and now[-1][2] == {"elapsed": "01:10", "remaining": "01:10", "rate": "35.00s/it", "step": 2, "steps": 4}
+    assert now[-1][0] == 0.5 and now[-1][1] == "Step 2 of 4"  # the bar's share is tqdm's own 50%

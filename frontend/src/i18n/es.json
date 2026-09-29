@@ -654,6 +654,8 @@
   "gen.continuous.stopped": "Detenido tras {n} imágenes",
   "gen.continuous.prompt": "La siguiente imagen usa el nuevo prompt",
   "gen.continuous.finishing": "Terminando esta imagen y luego se detiene",
+  "gen.stop": "Detener",
+  "gen.stopped": "Detenido",
   "gen.go": "Generar",
   "gen.img2img": "Partir de",
   "gen.img2img.none": "Nada (solo el prompt)",

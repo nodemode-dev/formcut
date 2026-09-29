@@ -71,7 +71,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           </div>
           <div class="studio-actions">
             <button class="tool-chip is-primary" data-gen-go="${kind}">${icon("diamond")}${t("gen.go")}</button>
-            <button class="tool-chip" data-gen-cancel="${kind}" hidden>${t("cap.cancel")}</button>
+            <button class="tool-chip" data-gen-cancel="${kind}" hidden>${t("gen.stop")}</button>
           </div>
           <div class="gen-progress" data-gen-progress="${kind}" hidden><progress data-gen-bar="${kind}" max="1" value="0"></progress><small data-gen-stage="${kind}"></small></div>
           <p class="stock-note" data-gen-note="${kind}"></p>
@@ -871,6 +871,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const genJobIds = new Map<string, string>();
   const runs = new Map<string, number>();  // continuous runs so far, per kind
   const sessionKinds = new Set<string>();  // kinds with a continuous session running in the engine
+  const finishing = new Set<string>();  // kinds whose session was asked to finish the picture in hand
   // The full-screen viewer for a generated picture: above Studio, closed by Escape, a click or its button
   const viewer = document.createElement("div");
   viewer.className = "gen-viewer"; viewer.hidden = true; viewer.setAttribute("role", "dialog"); viewer.setAttribute("aria-modal", "true");
@@ -1058,7 +1059,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       // at once)
       const id = genJobIds.get(kind);
       if (id && sessionKinds.has(kind)) {
-        void api(`/api/generate/sessions/${id}/finish`, {}).then(() => { note.textContent = t("gen.continuous.finishing"); }).catch(() => { /* already ended */ });
+        finishing.add(kind);  // said beside the bar until the picture is saved
+        void api(`/api/generate/sessions/${id}/finish`, {}).then(() => { note.textContent = t("gen.continuous.finishing"); }).catch(() => { finishing.delete(kind); });
       }
     });
     // the prompt changed during a session: the next picture reads it (its LoRAs, size and steps stay as started)
@@ -1116,7 +1118,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       // the engine's job is ended too (the model's process with it), not only the page's asking
       const id = genJobIds.get(kind);
       if (id) void fetch(`/api/jobs/${id}`, { method: "DELETE", headers: { "x-formcut-local": "1" } });
-      genJobs.get(kind)?.abort(); genJobs.delete(kind); cancel.hidden = true; note.textContent = t("cap.cancelled");
+      genJobs.get(kind)?.abort(); genJobs.delete(kind); cancel.hidden = true; finishing.delete(kind); note.textContent = t("gen.stopped");
     });
     pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).addEventListener("click", () => void (async () => {
       const generator = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`).value;
@@ -1196,7 +1198,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           }
           if (status.status === "error" || status.status === "failed") { note.textContent = String(status.error ?? t("gen.failed")); break; }
           if (status.status === "cancelled") {
-            note.textContent = session && shown.size ? t("gen.continuous.stopped").replace("{n}", String((status.made ?? []).length)) : t("cap.cancelled");
+            note.textContent = session && (status.made ?? []).length ? t("gen.continuous.stopped").replace("{n}", String((status.made ?? []).length)) : t("gen.stopped");
             break;
           }
           bar.value = status.progress ?? 0;
@@ -1207,7 +1209,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           const reading = timing && !timing.loading && timing.remaining
             ? `${timing.step}/${timing.steps} [${timing.elapsed}<${timing.remaining}, ${timing.rate}]`
             : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
-          stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}% · ${reading}`;
+          stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}% · ${reading}${finishing.has(kind) ? ` · ${t("gen.continuous.finishing")}` : ""}`;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } catch (error) {
@@ -1221,6 +1223,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         // continuous: a random seed, ticked, the run finished (not cancelled, not failed): the next starts itself
         const again = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
         sessionKinds.delete(kind);
+        finishing.delete(kind);
         if (!session && finished && !stopped && again.checked && !again.disabled && !modal.hidden) {
           runs.set(kind, (runs.get(kind) ?? 1) + 1);
           note.textContent += ` · ${t("gen.continuous.run").replace("{n}", String(runs.get(kind)))}`;

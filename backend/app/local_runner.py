@@ -184,7 +184,7 @@ def _say(report, terminal: _Terminal | None = None):
 def _run(
     command, steps, say, cancelled, label, env, time_limit, images=1, on_tick=None, continuous=False, terminal=None, on_next=None
 ) -> str:
-    say(0.02, f"Loading {label}")
+    say(0.0, f"Loading {label}")
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
@@ -196,7 +196,47 @@ def _run(
     reader = threading.Thread(target=_pump, args=(process.stdout, chunks), daemon=True)
     reader.start()
     tail: deque = deque(maxlen=60)
-    started, last_step, loading, image = time.time(), -1, 0.02, 0
+    started, last_step, image = time.time(), -1, 0
+    last_reading = None
+
+    def read(line: bytes) -> None:
+        """One line of the model's output: tqdm's meter gives the step, the time taken and left, and the rate; the
+        bar's fraction is tqdm's own (steps done of steps, of this picture in a session, of all of them in a batch)."""
+        nonlocal last_step, image, last_reading
+        meter = METER.search(line)
+        timing = None
+        if meter:
+            elapsed, left, rate, unit = (part.decode() for part in meter.group(3, 4, 5, 6))
+            timing = {
+                "elapsed": elapsed,
+                "remaining": left,
+                "rate": f"{rate}{unit}",
+                "step": int(meter.group(1)),
+                "steps": int(meter.group(2)),
+            }
+        for raw_done, raw_total in STEP.findall(line):
+            done, total = int(raw_done), int(raw_total)
+            if total != steps:
+                continue
+            if done < last_step and image + 1 < images:
+                image += 1  # the next seed's picture: mflux draws its steps again from 0
+                if on_next is not None:
+                    on_next()  # the picture before it is written: it is taken now, before this one goes on
+            share = done / max(1, total)
+            value = share if continuous else (image + share) / images
+            if done != last_step:
+                last_step = done
+                stage = f"Step {done} of {total}" if done < total else "Finishing the picture"
+                if continuous:
+                    stage = f"Picture {image + 1}: {stage}"
+                elif images > 1:
+                    stage = f"Picture {image + 1} of {images}: {stage}"
+                last_reading = timing
+                say(value, stage, **({"timing": timing} if timing else {}))
+            elif timing and timing != last_reading:
+                last_reading = timing  # the same step, a newer reading (tqdm's rate and time left settle)
+                say(value, None, timing=timing)
+
     pending = b""
     try:
         while True:
@@ -214,47 +254,14 @@ def _run(
                 for line in lines:
                     if line.strip():
                         tail.append(line.decode("utf-8", "replace"))
-                    meter = METER.search(line)
-                    timing = None
-                    if meter:
-                        # tqdm's own reading: elapsed, left and the rate, for the page to show as tqdm does
-                        elapsed, left, rate, unit = (part.decode() for part in meter.group(3, 4, 5, 6))
-                        timing = {
-                            "elapsed": elapsed,
-                            "remaining": left,
-                            "rate": f"{rate}{unit}",
-                            "step": int(meter.group(1)),
-                            "steps": int(meter.group(2)),
-                        }
-                    found = STEP.findall(line)
-                    for raw_done, raw_total in found:
-                        done, total = int(raw_done), int(raw_total)
-                        if total == steps and timing and done == last_step:
-                            say(
-                                0.1 + 0.85 * ((image if not continuous else 0) + done / max(1, total)) / (1 if continuous else images),
-                                None,
-                                timing=timing,
-                            )
-                        if total == steps and done != last_step:
-                            if done < last_step and image + 1 < images:
-                                image += 1  # the next seed's picture: mflux draws its steps again from 0
-                                if on_next is not None:
-                                    on_next()  # the picture before it is written: it is taken now, before this one goes on
-                            last_step = done
-                            stage = f"Step {done} of {total}" if done < total else "Finishing the picture"
-                            extra = {"timing": timing} if timing else {}
-                            if continuous:
-                                say(0.1 + 0.85 * done / max(1, total), f"Picture {image + 1}: {stage}", **extra)
-                            else:
-                                if images > 1:
-                                    stage = f"Picture {image + 1} of {images}: {stage}"
-                                say(0.1 + 0.85 * (image + done / max(1, total)) / images, stage, **extra)
+                    read(line)
+                # tqdm writes "\r" first and its reading after it, so the reading on screen now is the line not yet
+                # ended: read it too (before 2.1.9 it waited for the next step's "\r", a whole step behind)
+                read(pending)
             elif last_step < 0:
-                # loading can take a minute on the first run: the bar creeps so the page is seen to be alive, and
-                # the time loading has taken goes with it
-                loading = min(0.09, loading + 0.0005)
+                # while the model loads, the time loading has taken (the bar stays at 0: no step has been made)
                 waited = int(time.time() - started)
-                say(loading, f"Loading {label}", timing={"elapsed": f"{waited // 60:02d}:{waited % 60:02d}", "loading": True})
+                say(0.0, f"Loading {label}", timing={"elapsed": f"{waited // 60:02d}:{waited % 60:02d}", "loading": True})
             if on_tick is not None:
                 on_tick()
             if cancelled():
@@ -272,7 +279,7 @@ def _run(
     text = "\n".join(tail)
     if process.returncode:
         raise RuntimeError(f"{label} did not make a picture: " + text[-600:])
-    say(0.96, "Finishing the picture")
+    say(1.0, "Finishing the picture")
     return text
 
 

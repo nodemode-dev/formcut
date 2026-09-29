@@ -407,6 +407,7 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Stopped|Arrêté|Fermato|停止しました|중지됨|Parado|Остановлено|Durduruldu|已停止|已停止
 Finishing this picture, then stopping|Fin de cette image, puis arrêt|Completa questa immagine, poi si ferma|この画像を仕上げてから停止します|이 이미지를 마친 뒤 중지합니다|Terminando esta imagem e depois parando|Завершается это изображение, затем остановка|Bu görsel tamamlanıyor, sonra durulacak|完成这张图片后停止|完成這張圖片後停止
 Continuous: {n} pictures, the model kept loaded|En continu : {n} images, le modèle reste chargé|Continuo: {n} immagini, il modello resta caricato|連続：{n} 枚、モデルは読み込まれたまま|연속: {n}장, 모델은 로드된 상태 유지|Contínuo: {n} imagens, o modelo continua carregado|Непрерывно: {n} изображений, модель остаётся загруженной|Sürekli: {n} görsel, model yüklü kalıyor|连续：{n} 张图片，模型保持加载|連續：{n} 張圖片，模型保持載入
 Stopped after {n} pictures|Arrêté après {n} images|Fermato dopo {n} immagini|{n} 枚で停止しました|{n}장 후 중지됨|Parado após {n} imagens|Остановлено после {n} изображений|{n} görselden sonra durduruldu|在 {n} 张图片后停止|在 {n} 張圖片後停止

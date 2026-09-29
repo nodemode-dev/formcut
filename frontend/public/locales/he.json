@@ -655,6 +655,8 @@
   "gen.continuous.stopped": "נעצר אחרי {n} תמונות",
   "gen.continuous.prompt": "התמונה הבאה משתמשת בהנחיה החדשה",
   "gen.continuous.finishing": "מסיים את התמונה הזו ואז עוצר",
+  "gen.stop": "עצירה",
+  "gen.stopped": "נעצר",
   "gen.go": "יצירה",
   "gen.img2img": "התחלה מ",
   "gen.img2img.none": "כלום (רק מההנחיה)",
