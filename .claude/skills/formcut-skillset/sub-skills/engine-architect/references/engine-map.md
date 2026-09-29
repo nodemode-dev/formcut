@@ -33,6 +33,7 @@ The rest is written by hand.
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 68 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
+| engine_report.py | 94 | /api/engine | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 796 | /api/generate | 4 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
@@ -43,7 +44,7 @@ The rest is written by hand.
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
-| main.py | 446 | /api/health | 13 |
+| main.py | 458 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
@@ -56,7 +57,7 @@ The rest is written by hand.
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1272 | /api/render | 13 |
+| render_api.py | 1284 | /api/render | 13 |
 | render_stream.py | 87 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -67,7 +68,7 @@ The rest is written by hand.
 | track.py | 178 | /api/track | 1 |
 | transcribe.py | 525 | /api/transcribe | 2 |
 | tts.py | 91 | /api/tts | 3 |
-| upscale.py | 313 | /api/media | 2 |
+| upscale.py | 328 | /api/media | 2 |
 | webhooks.py | 247 | /api/webhooks | 5 |
 
 ## Modules with no routes of their own
@@ -77,7 +78,7 @@ helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
 - `agent_mcp.py` (739L)
-- `ai_upscale.py` (131L)
+- `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
 - `cli.py` (61L)
@@ -86,7 +87,7 @@ the automation transports.
 - `discovery.py` (65L)
 - `durable.py` (84L)
 - `effect_packages.py` (435L)
-- `encoders.py` (333L)
+- `encoders.py` (377L)
 - `expressions.py` (51L)
 - `fast_export.py` (301L)
 - `fast_layers.py` (408L)
