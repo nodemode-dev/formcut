@@ -64,20 +64,69 @@ def run(
 ) -> str:
     """Run a model's process to its end, reporting progress; returns the end of its output. Raises InterruptedError
     on cancel and RuntimeError on a failure or a time-out."""
-    say = _say(report)
+    terminal = _Terminal(label)
+    say = _say(report, terminal)
     if not HEAVY.acquire(blocking=False):
         say(0.0, "Waiting for the picture before it to finish")
         while not HEAVY.acquire(timeout=0.25):
             if cancelled():
                 raise InterruptedError("cancelled")
+    outcome = "stopped"
     try:
-        return _run(command, steps, say, cancelled, label, env, time_limit, images)
+        text = _run(command, steps, say, cancelled, label, env, time_limit, images)
+        outcome = "done"
+        return text
+    except InterruptedError:
+        outcome = "cancelled"
+        raise
     finally:
         HEAVY.release()
+        terminal.end(outcome)
 
 
-def _say(report):
+class _Terminal:
+    """The run's progress drawn in the terminal the engine was started from: a bar redrawn in place when the terminal
+    is one (a line only when the stage changes otherwise, so a log file is not filled), then a closing line."""
+
+    WIDTH = 28
+
+    def __init__(self, label: str):
+        import sys
+
+        self.label, self.stream = label, sys.__stderr__
+        self.live = bool(getattr(self.stream, "isatty", lambda: False)())
+        self.last, self.started = None, time.time()
+
+    def draw(self, value: float, message: str | None) -> None:
+        if self.stream is None or os.environ.get("FORMCUT_QUIET_PROGRESS") == "1":
+            return
+        filled = int(self.WIDTH * max(0.0, min(1.0, value)))
+        text = f"  {self.label}  [{'#' * filled}{'.' * (self.WIDTH - filled)}] {int(value * 100):3d}%  {message or ''}"
+        try:
+            if self.live:
+                self.stream.write("\r" + text.ljust(96)[:120])
+                self.stream.flush()
+            elif message != self.last:
+                self.stream.write(text + "\n")
+                self.stream.flush()
+        except (OSError, ValueError):
+            pass
+        self.last = message
+
+    def end(self, outcome: str) -> None:
+        if self.stream is None or os.environ.get("FORMCUT_QUIET_PROGRESS") == "1":
+            return
+        try:
+            self.stream.write(("\n" if self.live else "") + f"  {self.label}: {outcome} in {time.time() - self.started:.1f} s\n")
+            self.stream.flush()
+        except (OSError, ValueError):
+            pass
+
+
+def _say(report, terminal: _Terminal | None = None):
     def say(value: float, message: str | None = None) -> None:
+        if terminal is not None:
+            terminal.draw(value, message)
         try:
             report(value, message)
         except TypeError:  # a report that takes only the fraction

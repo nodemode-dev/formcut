@@ -260,6 +260,23 @@ Model: ..., width/height` or `Size: WxH` line. Steps, Seed and size are used (th
 schedule, clip skip and a negative prompt are not taken by these distilled models, and the result says so. A tag whose
 LoRA is not in the model's folder stops the picture and names the folder to put it in.
 
+### Steps, seed, continuous runs, and what each picture carries
+
+For Krea 2, Klein 4B and their checkpoints the image generator has a Steps slider (1 to 50, starting at the model's
+own: 8 for Krea 2, 4 for Klein) and a Seed slider with its number beside it: -1 (Random) draws a new seed each run,
+any other seed repeats a picture. The seed used is shown on each result and in the note, and written into the
+picture's file as Automatic1111 writes it (the PNG's `parameters`: the prompt, the LoRAs as `<lora:file:strength>`
+tags, then Steps, Sampler, CFG scale, Seed, Size, Model), beside mflux's own record; the library keeps the same.
+Pasted back into the generator, that text asks for the same picture. With a random seed, Continuous starts the next
+run as each one finishes, until it is unticked, cancelled, a run fails, or Studio is closed.
+
+A result opens full screen with a click (or Enter): Escape, a click or Close returns; the arrow keys move through
+the results. While a picture is made, the terminal formcut was started from shows a progress bar with the model's
+own steps (a line per stage when the output is not a terminal); `FORMCUT_QUIET_PROGRESS=1` turns it off.
+
+If Krea 2's content filter was removed, its warning goes with each picture until it is acknowledged (I understand)
+on the Krea 2 card in Studio > Local models; after that the pictures no longer carry it.
+
 ### What formcut asks of mflux for Krea 2
 
 `mflux-generate-krea2` as mflux 0.20.0 parses it: `--model` the build's or checkpoint's folder (no `--base-model`,

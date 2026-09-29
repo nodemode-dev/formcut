@@ -26,3 +26,16 @@ def test_the_cards_words_are_translated():
     for card in ("data-krea-card", "data-klein-card", "data-ckpt-card"):
         block = SOURCE[SOURCE.index(card) : SOURCE.index("</div>\n      </div>", SOURCE.index(card))]
         assert "Install Krea 2<" not in block and "Not installed<" not in block and ">Build <" not in block
+
+
+def test_the_generator_has_steps_and_seed_sliders_continuous_and_a_viewer():
+    for marker in (
+        'data-gen-steps="${kind}"',
+        'type="range" min="-1" max="4294967295"',
+        'data-gen-continuous="${kind}"',
+        "gen-viewer",
+        'data-gen-view="${item.id}"',
+    ):
+        assert marker in SOURCE, marker
+    tokens = (ROOT / "styles" / "tokens.css").read_text(encoding="utf-8")
+    assert "--z-viewer: 750;" in tokens

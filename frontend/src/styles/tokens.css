@@ -65,5 +65,6 @@
   --z-sticky: 500;
   --z-dropdown: 600;
   --z-overlay: 700;
+  --z-viewer: 750; /* a full-screen picture above an overlay such as Studio */
   --z-toast: 800;
 }

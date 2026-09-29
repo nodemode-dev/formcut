@@ -525,7 +525,8 @@ def generate_many(
                 "seed": seed,
                 "memory": settings,
                 "contentFilter": verdict or "removed",
-                "warning": None if verdict else REMOVED_WARNING,
+                # the warning goes with pictures until it is acknowledged on the Krea 2 card, not after
+                "warning": None if verdict or state.get("removalAcknowledged") else REMOVED_WARNING,
                 "notice": NOTICE,
             }
         )

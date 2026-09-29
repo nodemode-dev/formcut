@@ -598,3 +598,59 @@ def test_image_to_image_starts_from_a_library_picture_or_the_playheads_frame(tmp
     )
     refused = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "x", "options": {"image": {"nothing": 1}}})
     assert refused.status_code == 400
+
+
+def test_seed_minus_one_is_random_and_the_seed_used_is_in_the_file_and_the_library(tmp_path, monkeypatch, library):
+    from app import krea2, media, prompt_data
+    from PIL import Image
+
+    recorded = _krea_standin(tmp_path, monkeypatch)
+    (loras.LIBRARY / "krea-2").mkdir(parents=True)
+    _safetensors(loras.LIBRARY / "krea-2" / "Emotions V1.safetensors", ["a.lora_A.weight", "a.lora_B.weight"])
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    body = {
+        "generator": "local:krea-2",
+        "prompt": "a quiet room <lora:Emotions V1:0.8>",
+        "size": "1024x1024",
+        "options": {"seed": -1, "steps": 6},
+    }
+    done = _finished(client, body)
+    assert done["status"] == "done", done
+    argv = json.loads(recorded.read_text())
+    used = int(argv[argv.index("--seed") + 1])
+    assert done["result"]["seeds"] == [used] and argv[argv.index("--steps") + 1] == "6"
+    [item] = done["result"]["media"]
+    assert item["seed"] == used and item["steps"] == 6 and item["loras"] == [{"file": "Emotions V1", "scale": 0.8}]
+    stored = next(media.MEDIA_DIR.glob(f"{item['id']}.*"))
+    with Image.open(stored) as picture:
+        parameters = picture.text["parameters"]
+    assert f"Seed: {used}" in parameters and "Steps: 6" in parameters and "<lora:Emotions V1:0.8>" in parameters
+    # the text, pasted back, asks for the same picture
+    again = prompt_data.parse(parameters)
+    assert again["params"]["seed"] == used and again["params"]["steps"] == 6 and again["loras"] == [("Emotions V1", 0.8)]
+    assert again["params"]["model"] == "krea-2" and again["prompt"] == "a quiet room"
+    assert done["result"]["warning"] == krea2.REMOVED_WARNING  # the filter removed and not yet acknowledged
+
+
+def test_the_filter_warning_stops_once_acknowledged(tmp_path, monkeypatch, library):
+    from app import krea2
+
+    _krea_standin(tmp_path, monkeypatch)
+    state = krea2.policy()
+    monkeypatch.setattr(krea2, "policy", lambda: {**state, "removalAcknowledged": True})
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    done = _finished(client, {"generator": "local:krea-2", "prompt": "a quiet room", "options": {"seed": 7}})
+    assert done["status"] == "done", done
+    assert "warning" not in done["result"] and done["result"]["seeds"] == [7]
+
+
+def test_the_terminal_shows_a_progress_bar(monkeypatch):
+    import io
+
+    out = io.StringIO()
+    monkeypatch.setattr(sys, "__stderr__", out)
+    monkeypatch.delenv("FORMCUT_QUIET_PROGRESS", raising=False)
+    local_runner.run([sys.executable, "-c", STEPS_SCRIPT], 4, lambda *a: None, lambda: False, "Stand-in")
+    text = out.getvalue()
+    assert "Stand-in  [" in text and "Step 2 of 4" in text and "Stand-in: done in" in text
+    assert text.count("Step 2 of 4") == 1  # not a terminal: a line when the stage changes, not a flood

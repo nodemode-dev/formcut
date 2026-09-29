@@ -46,6 +46,13 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             <label data-gen-size-row="${kind}">${t("gen.size")} <select data-gen-size="${kind}"></select></label>
             <label data-gen-seconds-row="${kind}" hidden>${t("gen.seconds")} <input data-gen-seconds="${kind}" type="number" min="1" max="22" value="5"></label>
             <label data-gen-count-row="${kind}">${t("gen.count")} <input data-gen-count="${kind}" type="number" min="1" max="4" value="1"></label>
+            <label data-gen-steps-row="${kind}" hidden>${t("gen.steps")} <input type="range" min="1" max="50" step="1" value="8" data-gen-steps="${kind}"> <output data-gen-steps-out="${kind}">8</output></label>
+            <div class="gen-seed" data-gen-seed-row="${kind}" hidden>
+              <label>${t("gen.seed")} <input type="range" min="-1" max="4294967295" step="1" value="-1" data-gen-seed-range="${kind}" aria-label="${t("gen.seed")}"></label>
+              <input type="number" class="gen-seed-number" min="-1" max="4294967295" step="1" value="-1" data-gen-seed="${kind}" aria-label="${t("gen.seed")}" title="${t("gen.seed.hint")}">
+              <button type="button" class="tool-chip" data-gen-seed-random="${kind}">${t("gen.seed.random")}</button>
+              <label class="gen-continuous"><input type="checkbox" data-gen-continuous="${kind}"> ${t("gen.continuous")}</label>
+            </div>
             <label data-gen-source-row="${kind}" hidden>${t("gen.img2img")} <select data-gen-source="${kind}"></select></label>
             <label data-gen-strength-row="${kind}" hidden>${t("gen.img2img.strength")} <input type="range" min="0" max="1" step="0.05" value="0.4" data-gen-strength="${kind}"> <output data-gen-strength-out="${kind}">0.4</output></label>
             <label data-gen-sampler-row="${kind}" hidden>${t("gen.sampler")} <select data-gen-sampler="${kind}"><option value="er_sde">ER-SDE</option><option value="euler">Euler</option></select></label>
@@ -862,6 +869,31 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   document.addEventListener("formcut:klein-use", (event) => kleinUse((event as CustomEvent<string>).detail));
   const genJobs = new Map<string, AbortController>();
   const genJobIds = new Map<string, string>();
+  const runs = new Map<string, number>();  // continuous runs so far, per kind
+  // The full-screen viewer for a generated picture: above Studio, closed by Escape, a click or its button
+  const viewer = document.createElement("div");
+  viewer.className = "gen-viewer"; viewer.hidden = true; viewer.setAttribute("role", "dialog"); viewer.setAttribute("aria-modal", "true");
+  viewer.innerHTML = `<img class="gen-viewer-image" alt=""><div class="gen-viewer-bar"><span class="gen-viewer-caption"></span><button type="button" class="tool-chip gen-viewer-close">${t("gen.view.close")}</button></div>`;
+  document.body.append(viewer);
+  let viewing: { grid: HTMLElement; card: HTMLElement } | null = null;
+  const showCard = (card: HTMLElement) => {
+    viewer.querySelector<HTMLImageElement>(".gen-viewer-image")!.src = `/api/media/${card.dataset.genView}/file`;
+    viewer.querySelector<HTMLElement>(".gen-viewer-caption")!.textContent = card.dataset.genCaption ?? "";
+  };
+  const openViewer = (grid: HTMLElement, card: HTMLElement) => {
+    viewing = { grid, card }; showCard(card); viewer.hidden = false; viewer.querySelector<HTMLButtonElement>(".gen-viewer-close")!.focus();
+  };
+  const closeViewer = () => { viewer.hidden = true; viewer.querySelector<HTMLImageElement>(".gen-viewer-image")!.removeAttribute("src"); viewing?.card.focus(); viewing = null; };
+  viewer.addEventListener("click", (event) => { if (!(event.target as HTMLElement).closest(".gen-viewer-bar") || (event.target as HTMLElement).closest(".gen-viewer-close")) closeViewer(); });
+  document.addEventListener("keydown", (event) => {
+    if (viewer.hidden || !viewing) return;
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeViewer(); return; }
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      const cards = [...viewing.grid.querySelectorAll<HTMLElement>("[data-gen-view]")];
+      const next = cards[cards.indexOf(viewing.card) + (event.key === "ArrowRight" ? 1 : -1)];
+      if (next) { viewing.card = next; showCard(next); }
+    }
+  }, true);
   const pick = <T extends HTMLElement>(sel: string) => modal.querySelector<T>(sel)!;
   const paintGenerators = () => {
     for (const kind of ["image", "video", "audio"] as const) {
@@ -888,6 +920,15 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         pick<HTMLElement>(`[data-gen-civitai="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden = !(entry && "memory" in (entry.options ?? {}));
         pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden = !(entry && "scheduler" in (entry.options ?? {}));
+        // steps and seed as sliders for the local models (Krea 2, Klein, checkpoints): steps start at the model's own
+        const local = !!entry && entry.id.startsWith("local:") && "steps" in (entry.options ?? {});
+        pick<HTMLElement>(`[data-gen-steps-row="${kind}"]`).hidden = !local;
+        pick<HTMLElement>(`[data-gen-seed-row="${kind}"]`).hidden = !local;
+        if (local) {
+          const steps = pick<HTMLInputElement>(`[data-gen-steps="${kind}"]`);
+          if (!steps.dataset.touched) steps.value = String(entry!.options.steps);
+          pick<HTMLOutputElement>(`[data-gen-steps-out="${kind}"]`).value = steps.value;
+        }
         // image-to-image, where the model takes it: a picture to start from, and how much it shapes the result
         const takesImage = !!entry && "image" in (entry.options ?? {});
         pick<HTMLElement>(`[data-gen-source-row="${kind}"]`).hidden = !takesImage;
@@ -996,6 +1037,20 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const note = pick<HTMLElement>(`[data-gen-note="${kind}"]`);
     pick<HTMLButtonElement>(`[data-lora-add="${kind}"]`).addEventListener("click", () => { const base = baseOf(kind); if (base) addToStack(kind, base); });
     pick<HTMLSelectElement>(`[data-gen-source="${kind}"]`).addEventListener("change", () => sourceChanged(kind));
+    const stepsInput = pick<HTMLInputElement>(`[data-gen-steps="${kind}"]`);
+    stepsInput.addEventListener("input", () => { stepsInput.dataset.touched = "1"; pick<HTMLOutputElement>(`[data-gen-steps-out="${kind}"]`).value = stepsInput.value; });
+    const seedRange = pick<HTMLInputElement>(`[data-gen-seed-range="${kind}"]`);
+    const seedNumber = pick<HTMLInputElement>(`[data-gen-seed="${kind}"]`);
+    const continuous = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
+    // continuous runs only with a random seed: a fixed one would make the same picture again and again
+    const seedChanged = () => { continuous.disabled = Number(seedNumber.value) !== -1; if (continuous.disabled) continuous.checked = false; };
+    seedRange.addEventListener("input", () => { seedNumber.value = seedRange.value; seedChanged(); });
+    seedNumber.addEventListener("change", () => {
+      const value = Math.max(-1, Math.min(4294967295, Math.trunc(Number(seedNumber.value)) || 0));
+      seedNumber.value = String(Number.isFinite(Number(seedNumber.value)) ? value : -1); seedRange.value = seedNumber.value; seedChanged();
+    });
+    pick<HTMLButtonElement>(`[data-gen-seed-random="${kind}"]`).addEventListener("click", () => { seedNumber.value = "-1"; seedRange.value = "-1"; seedChanged(); });
+    continuous.addEventListener("change", () => { if (!continuous.checked) runs.set(kind, 0); });
     pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`).addEventListener("input", (event) => {
       const input = event.target as HTMLInputElement; input.dataset.touched = "1";
       pick<HTMLOutputElement>(`[data-gen-strength-out="${kind}"]`).value = Number(input.value).toFixed(2);
@@ -1054,6 +1109,10 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       if (base) body.options.loras = (stacks.get(base) ?? []).filter((item) => item.enabled).map((item) => ({ id: item.id, scale: item.scale }));
       if (!pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden) body.options.memory = pick<HTMLSelectElement>(`[data-gen-memory="${kind}"]`).value;
       if (!pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden) body.options.scheduler = pick<HTMLSelectElement>(`[data-gen-sampler="${kind}"]`).value;
+      if (!pick<HTMLElement>(`[data-gen-steps-row="${kind}"]`).hidden) {
+        body.options.steps = Number(pick<HTMLInputElement>(`[data-gen-steps="${kind}"]`).value);
+        body.options.seed = Number(pick<HTMLInputElement>(`[data-gen-seed="${kind}"]`).value);  // -1: random
+      }
       const source = pick<HTMLElement>(`[data-gen-source-row="${kind}"]`).hidden ? "" : pick<HTMLSelectElement>(`[data-gen-source="${kind}"]`).value;
       if (source) {
         const snapshot = engine.snapshot;
@@ -1069,6 +1128,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       cancel.hidden = false;
       const controller = new AbortController();
       genJobs.set(kind, controller);
+      let finished = false;
       try {
         const started = await api("/api/generate", body);
         genJobIds.set(kind, started.job_id);
@@ -1077,14 +1137,16 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           const status = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
           if (status.status === "done") {
             const made = status.result?.media ?? [];
-            grid.insertAdjacentHTML("afterbegin", made.map((item: { id: string; name: string }) =>
-              `<div class="effect-card stock-card"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div></div>`).join(""));
+            grid.insertAdjacentHTML("afterbegin", made.map((item: { id: string; name: string; seed?: number; steps?: number }) =>
+              `<div class="effect-card stock-card gen-result" role="button" tabindex="0" data-gen-view="${item.id}" data-gen-caption="${escapeHtml([item.name, item.seed !== undefined ? `${t("gen.seed")} ${item.seed}` : "", item.steps ? `${t("gen.steps")} ${item.steps}` : ""].filter(Boolean).join(" · "))}"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div>${item.seed !== undefined ? `<small class="gen-seed-used">${t("gen.seed")} ${item.seed}</small>` : ""}</div>`).join(""));
             // what the model's licence sends with its pictures: Krea 2's warning when its content filter was removed
             const warning = status.result?.warning as string | undefined;
             // what the generator read from a Civitai-style prompt, and what these models do not take
             const notes = ((status.result?.notes ?? []) as string[]).join(" · ");
-            note.textContent = [`${t("gen.done")}: ${made.length}`, notes, warning].filter(Boolean).join(". ");
+            const seeds = ((status.result?.seeds ?? []) as number[]).join(", ");
+            note.textContent = [`${t("gen.done")}: ${made.length}`, seeds ? `${t("gen.seed")} ${seeds}` : "", notes, warning].filter(Boolean).join(". ");
             await bin.load();
+            finished = true;
             break;
           }
           if (status.status === "error" || status.status === "failed") { note.textContent = String(status.error ?? t("gen.failed")); break; }
@@ -1098,10 +1160,27 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       } finally {
         cancel.hidden = true;
         progress.hidden = true;
+        const stopped = controller.signal.aborted;
         genJobs.delete(kind);
         genJobIds.delete(kind);
+        // continuous: a random seed, ticked, the run finished (not cancelled, not failed): the next starts itself
+        const again = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
+        if (finished && !stopped && again.checked && !again.disabled && !modal.hidden) {
+          runs.set(kind, (runs.get(kind) ?? 1) + 1);
+          note.textContent += ` · ${t("gen.continuous.run").replace("{n}", String(runs.get(kind)))}`;
+          setTimeout(() => { if (again.checked && !genJobs.has(kind)) pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).click(); }, 400);
+        } else if (!again.checked) runs.set(kind, 1);
       }
     })());
+    // a result opens full screen: the picture itself, its seed and steps; arrows move through the results
+    grid.addEventListener("click", (event) => {
+      const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");
+      if (card) openViewer(grid, card);
+    });
+    grid.addEventListener("keydown", (event) => {
+      const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");
+      if (card && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openViewer(grid, card); }
+    });
   }
 
   document.addEventListener("formcut:studio", event => {

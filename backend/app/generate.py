@@ -292,6 +292,67 @@ def _source_image(spec: dict, into: Path) -> Path:
     raise HTTPException(400, "give a media image, a media video and a time, or the project and a time to start from")
 
 
+def _recipe(prompt: str, result: dict, steps: int, stack: list, sampling: dict, slot: dict) -> dict:
+    """What made a picture: its seed and settings, and the "parameters" text Automatic1111 writes into a PNG, with the
+    LoRAs as <lora:file:strength> tags so that the text, pasted back into the generator, makes the picture again."""
+    from . import loras
+
+    base = slot.get("base") or ("krea-2" if slot["runner"] == "krea-2" else slot["id"])
+    library = {entry["id"]: entry for entry in loras.entries(base)}
+    used = []
+    for item in stack or []:
+        entry = library.get(str(item.get("id")))
+        if entry and item.get("enabled") is not False and float(item.get("scale", 1)) != 0:
+            used.append((entry["file"].rsplit(".", 1)[0], float(item.get("scale", entry["scale"]))))
+    tags = " ".join(f"<lora:{stem}:{scale:g}>" for stem, scale in used)
+    guidance = float(sampling.get("guidance", 1.0)) if slot["runner"] == "krea-2" else 1.0
+    scheduler = sampling.get("scheduler") or ("er_sde" if slot["runner"] == "krea-2" else "flow match euler")
+    line = [
+        f"Steps: {steps}",
+        f"Sampler: {scheduler}",
+        f"CFG scale: {guidance:g}",
+        f"Seed: {result['seed']}",
+        f"Size: {result.get('width')}x{result.get('height')}",
+    ]
+    # a checkpoint by its folder's name, a base model by its id: what the generator's Model reads back
+    line.append(f"Model: {Path(slot['checkpoint']).name if slot.get('checkpoint') else base}")
+    if sampling.get("image"):
+        line.append(f"Denoising strength: {1 - float(sampling['image'][1]):g}")
+    line.append("Version: formcut")
+    text = prompt + (f"\n{tags}" if tags else "")
+    if sampling.get("negative") and guidance != 1.0:
+        text += f"\nNegative prompt: {sampling['negative']}"
+    text += "\n" + ", ".join(line)
+    return {
+        "seed": result["seed"],
+        "steps": steps,
+        "width": result.get("width"),
+        "height": result.get("height"),
+        "loras": [{"file": stem, "scale": scale} for stem, scale in used],
+        "sampler": scheduler,
+        "guidance": guidance,
+        **({"imageInfluence": float(sampling["image"][1])} if sampling.get("image") else {}),
+        "parameters": text,
+    }
+
+
+def _stamp(path: Path, parameters: str) -> None:
+    """The picture's "parameters" written into its PNG beside what is already there (mflux's own record included)."""
+    from PIL import Image
+    from PIL.PngImagePlugin import PngInfo
+
+    if path.suffix.lower() != ".png":
+        return
+    with Image.open(path) as picture:
+        picture.load()
+        info = PngInfo()
+        for key, value in (getattr(picture, "text", None) or {}).items():
+            if key != "parameters":
+                info.add_text(key, str(value))
+        info.add_text("parameters", parameters)
+        picture.save(path, pnginfo=info)
+
+
 def _fit(width: int, height: int, largest: int = 2048) -> tuple[int, int]:
     """A source picture's size within the model's largest side, in multiples of 16."""
     scale = min(1.0, largest / max(width, height))
@@ -398,6 +459,8 @@ def _generate_local(body: GenerateBody):
     guidance = max(0.0, min(15.0, float(body.options.get("guidance", slot.get("guidance") if slot.get("guidance") is not None else 0.0))))
     seconds = float(body.seconds or slot.get("seconds") or 5)
     seed = body.options.get("seed")
+    if seed is not None and int(seed) < 0:
+        seed = None  # -1: a random seed, the one used reported with each picture
     count = max(1, min(4, body.count))
     kind = slot.get("kind", "image")
     extension = slot.get("extension") or (".mp4" if kind == "video" else ".png")
@@ -437,6 +500,7 @@ def _generate_local(body: GenerateBody):
         timings = []
         extras: dict = {}  # what a model's licence sends with its pictures (Krea 2: its notice, the filter's warning)
         batch: list | None = None  # Krea 2: every seed in one run of mflux, the model loaded once
+        seeds_used: list[int] = []
         for index in range(count):
             staged = STAGING / f"{uuid.uuid4().hex}{extension}"
 
@@ -509,6 +573,13 @@ def _generate_local(body: GenerateBody):
                 )
             timings.append(result["seconds"])
             extras.update({key: result[key] for key in ("notice", "warning") if result.get(key)})
+            recipe = {}
+            if slot["runner"] in ("krea-2", "mflux-klein") and result.get("seed") is not None:
+                # what made the picture, written into the file as Automatic1111 writes it ("parameters"), so it can be
+                # pasted back into the generator, and kept in the library's record
+                recipe = _recipe(prompt, result, steps, stack, sampling, slot)
+                _stamp(staged, recipe["parameters"])
+                seeds_used.append(result["seed"])
             try:
                 made.append(
                     ingest_path(
@@ -521,6 +592,7 @@ def _generate_local(body: GenerateBody):
                             "seconds": result["seconds"],
                             "provider": result["provider"],
                             **{key: result[key] for key in ("notice", "contentFilter") if result.get(key) is not None},
+                            **recipe,
                         },
                     )
                 )
@@ -528,6 +600,14 @@ def _generate_local(body: GenerateBody):
                 staged.unlink(missing_ok=True)
         if sampling.get("image"):
             Path(sampling["image"][0]).unlink(missing_ok=True)  # the source's staged copy
-        return {"media": made, "kind": kind, "seconds": timings, "model": slot.get("id", name), "notes": notes, **extras}
+        return {
+            "media": made,
+            "kind": kind,
+            "seconds": timings,
+            "model": slot.get("id", name),
+            "notes": notes,
+            "seeds": seeds_used,
+            **extras,
+        }
 
     return jobs.submit("generate", operation)
