@@ -58,6 +58,16 @@ async def _prepare_models() -> None:
 
 
 @app.on_event("startup")
+async def _recover_media() -> None:
+    # media files the index does not know (media.json lost or rebuilt) taken back into the library at start
+    import threading
+
+    from .media import recover_library
+
+    threading.Thread(target=recover_library, name="media-recovery", daemon=True).start()
+
+
+@app.on_event("startup")
 async def _warm_library() -> None:
     # The stickers are drawn in the background, so the Stickers tab opens full.
     # The test suite sets FORMCUT_NO_WARM: its library tests use their own folders.

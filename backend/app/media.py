@@ -1,6 +1,8 @@
 import contextlib
 import json
 import mimetypes
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -18,6 +20,13 @@ from .paths import DATA_DIR
 MEDIA_DIR = DATA_DIR / "media"
 THUMB_DIR = DATA_DIR / "thumbs"
 INDEX_FILE = DATA_DIR / "media.json"
+# media.json is not the only record of the library any more (v2.2.2): the owner lost it by accident and every clip
+# stopped decoding, its media unknown though every file was still there. The index is written whole to a temporary
+# file and moved into place (never half-written), the version before it kept as media.json.bak, and each item's
+# own record kept in media-records/<id>.json; the index is rebuilt from those, and from the files themselves, when
+# it is missing or unreadable, and any media file the index does not know is taken back into it.
+BACKUP_FILE = DATA_DIR / "media.json.bak"
+RECORDS_DIR = DATA_DIR / "media-records"
 _lock = threading.Lock()
 
 router = APIRouter(prefix="/api/media", tags=["media"])
@@ -44,23 +53,188 @@ _index_cache: tuple[tuple[int, int], list[dict]] | None = None
 def _read() -> list[dict]:
     """The media index, parsed once for each version of the file (its modification time and size): the renderer
     looked media up twice a frame, reading and parsing the whole index each time, which the M5 profile showed
-    at about three milliseconds a frame against a library the bench had filled."""
+    at about three milliseconds a frame against a library the bench had filled. Missing or unreadable, it is
+    rebuilt (_recover) rather than read as an empty library."""
     global _index_cache
     try:
         stat = INDEX_FILE.stat()
     except OSError:
-        return []
+        return _recover() if MEDIA_DIR.is_dir() else []
     stamp = (stat.st_mtime_ns, stat.st_size)
     if _index_cache is not None and _index_cache[0] == stamp:
         return [dict(item) for item in _index_cache[1]]
-    items = json.loads(INDEX_FILE.read_text())
+    try:
+        items = json.loads(INDEX_FILE.read_text())
+        if not isinstance(items, list):
+            raise ValueError("not a list")
+    except ValueError:
+        return _recover()
     _index_cache = (stamp, items)
     return [dict(item) for item in items]
 
 
+_record_texts: dict[str, str] = {}  # what each item's record last said, so an unchanged one is not written again
+
+
 def _write(items: list[dict]) -> None:
+    """The index written whole and moved into place, the version before it kept as media.json.bak, and each item's
+    own record in media-records/. A record goes only when its media is deleted (delete_media): an index written
+    without an item, as one rebuilt from nothing would be, does not take the item's record with it."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    INDEX_FILE.write_text(json.dumps(items, indent=2))
+    text = json.dumps(items, indent=2)
+    if INDEX_FILE.is_file():
+        with contextlib.suppress(OSError):
+            shutil.copyfile(INDEX_FILE, BACKUP_FILE)
+    temporary = INDEX_FILE.with_name(f".media-{uuid.uuid4().hex}.json")
+    temporary.write_text(text)
+    os.replace(temporary, INDEX_FILE)
+    RECORDS_DIR.mkdir(parents=True, exist_ok=True)
+    for item in items:
+        media_id = str(item.get("id") or "")
+        if not _ID.fullmatch(media_id):
+            continue
+        record = json.dumps(item, indent=1)
+        if _record_texts.get(media_id) != record:
+            (RECORDS_DIR / f"{media_id}.json").write_text(record)
+            _record_texts[media_id] = record
+
+
+_ID = re.compile(r"[0-9a-f]{32}")
+
+
+def _names_from_projects() -> dict[str, str]:
+    """Each media id a saved project's clip uses, with the name the clip shows (its label): what a recovered item is
+    called when nothing else recorded its name."""
+    from .store import list_projects
+
+    names: dict[str, str] = {}
+    try:
+        projects = list_projects()
+    except (OSError, ValueError):
+        return names
+
+    def walk(value) -> None:
+        if isinstance(value, dict):
+            media_id, label = value.get("mediaId"), value.get("label") or value.get("name")
+            if isinstance(media_id, str) and isinstance(label, str) and label.strip():
+                names.setdefault(media_id, label.strip())
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    walk(projects)
+    return names
+
+
+def _adopt(items: list[dict], only: str | None = None, fallback: dict | None = None) -> tuple[list[dict], bool]:
+    """Every media file in the media folder the index does not know, taken back into it: from its own record when
+    there is one, else probed afresh (its kind, length, size and colour), named after the clip that uses it in a
+    saved project, else "Recovered <kind> <id>". A copy formcut made of its demo media when the index was lost is
+    dropped once the original it copies is back. With only, just that id. Returns the items and whether any changed."""
+    if not MEDIA_DIR.is_dir():
+        return items, False
+    known = {item.get("id") for item in items}
+    names: dict[str, str] | None = None
+    changed = False
+    for path in sorted(MEDIA_DIR.glob(f"{only}.*" if only else "*")):
+        media_id, kind = path.stem, _kind(path.suffix.lower())
+        if not path.is_file() or kind is None or not _ID.fullmatch(media_id) or media_id in known:
+            continue
+        item = None
+        try:
+            item = json.loads((RECORDS_DIR / f"{media_id}.json").read_text())
+        except (OSError, ValueError):
+            item = None
+        if (not isinstance(item, dict) or item.get("id") != media_id) and fallback and isinstance(fallback.get(media_id), dict):
+            item = fallback[media_id]  # no record of its own: the backup's entry
+        if not isinstance(item, dict) or item.get("id") != media_id:
+            if names is None:
+                names = _names_from_projects()
+            try:
+                info = _probe(path, kind)
+            except Exception as exc:  # a file that does not probe is left out, not the whole library
+                print(f"formcut: {path.name} could not be read back into the media library: {exc}", file=sys.stderr)
+                continue
+            thumb = THUMB_DIR / f"{media_id}.jpg"
+            has_thumb = thumb.is_file() or _thumbnail(path, thumb, kind, info.get("duration", 0))
+            name = names.get(media_id) or f"Recovered {kind} {media_id[:8]}{path.suffix.lower()}"
+            item = {"id": media_id, "name": name, "kind": kind, "size": path.stat().st_size, "thumb": has_thumb, **info, "recovered": True}
+        items.append(item)
+        known.add(media_id)
+        changed = True
+    if changed and not only:
+        items, dropped = _drop_demo_copies(items)
+        changed = changed or dropped
+    return items, changed
+
+
+def _drop_demo_copies(items: list[dict]) -> tuple[list[dict], bool]:
+    """A demo file formcut imported again because the index was gone, once the original is back beside it: the same
+    bytes, the copy no saved project uses. Only formcut's own demo copies; a person's imports are theirs to delete."""
+    import hashlib
+
+    used = set(_names_from_projects())
+
+    def digest(item: dict) -> str | None:
+        found = list(MEDIA_DIR.glob(f"{item['id']}.*"))
+        if not found:
+            return None
+        with open(found[0], "rb") as handle:
+            return hashlib.sha256(handle.read()).hexdigest()
+
+    recovered = [item for item in items if item.get("recovered")]
+    keep, dropped = [], False
+    for item in items:
+        twin = next(
+            (
+                r
+                for r in recovered
+                if item.get("source") == "demo" and r is not item and r.get("size") == item.get("size") and r["id"] in used
+            ),
+            None,
+        )
+        if twin is not None and item["id"] not in used and digest(twin) == digest(item):
+            twin.setdefault("source", "demo")
+            for path in MEDIA_DIR.glob(f"{item['id']}.*"):
+                path.unlink(missing_ok=True)
+            (THUMB_DIR / f"{item['id']}.jpg").unlink(missing_ok=True)
+            (RECORDS_DIR / f"{item['id']}.json").unlink(missing_ok=True)
+            dropped = True
+            continue
+        keep.append(item)
+    return keep, dropped
+
+
+def _recover() -> list[dict]:
+    """media.json missing or unreadable: the library rebuilt from media.json.bak, the items' own records and the
+    files in the media folder, then written again."""
+    global _index_cache
+    # each item's own record first (the latest word on it), the backup's entry for one without, the file itself last
+    backup: dict = {}
+    try:
+        loaded = json.loads(BACKUP_FILE.read_text())
+        if isinstance(loaded, list):
+            backup = {item.get("id"): item for item in loaded if isinstance(item, dict)}
+    except (OSError, ValueError):
+        backup = {}
+    items, _ = _adopt([], fallback=backup)
+    _index_cache = None
+    _write(items)
+    return [dict(item) for item in items]
+
+
+def recover_library() -> dict:
+    """At start: any media file the index does not know taken back into it (the owner's case, the index rebuilt
+    empty and filled again while the files it had listed were still there), names put back from projects."""
+    with _lock:
+        items = _read()
+        before = len(items)
+        items, changed = _adopt(items)
+        if changed:
+            _write(items)
+    return {"recovered": max(0, len(items) - before), "items": len(items)}
 
 
 def _kind(ext: str) -> str | None:
@@ -193,6 +367,10 @@ def ingest_path(src: Path, name: str, extra: dict | None = None) -> dict:
     if kind is None:
         raise HTTPException(status_code=415, detail=f"unsupported file type {ext or 'none'}")
     media_id = uuid.uuid4().hex
+    with _lock:
+        # a lost index is rebuilt first, and written, so the file arriving now is not taken for a lost one
+        if not INDEX_FILE.is_file():
+            _write(_read())
     MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     stored = MEDIA_DIR / f"{media_id}{ext}"
     shutil.move(str(src), stored)
@@ -212,7 +390,7 @@ def ingest_path(src: Path, name: str, extra: dict | None = None) -> dict:
     if proxies.wants_proxy(item):
         proxies.enqueue(media_id, stored)
     with _lock:
-        items = _read()
+        items = [entry for entry in _read() if entry.get("id") != media_id]
         items.append(item)
         _write(items)
     return item
@@ -233,7 +411,14 @@ def import_media(file: UploadFile) -> dict:
 
 def _find(media_id: str) -> dict:
     with _lock:
-        found = next((m for m in _read() if m["id"] == media_id), None)
+        items = _read()
+        found = next((m for m in items if m["id"] == media_id), None)
+        if found is None and _ID.fullmatch(media_id or ""):
+            # its file still there, its entry lost: taken back into the index, and the clip plays
+            items, changed = _adopt(items, only=media_id)
+            if changed:
+                _write(items)
+                found = next((m for m in items if m["id"] == media_id), None)
     if found is None:
         raise HTTPException(status_code=404, detail="media not found")
     return found
@@ -813,6 +998,8 @@ def delete_media(media_id: str):
     for path in MEDIA_DIR.glob(f"{media_id}.*"):
         path.unlink(missing_ok=True)
     (THUMB_DIR / f"{media_id}.jpg").unlink(missing_ok=True)
+    (RECORDS_DIR / f"{media_id}.json").unlink(missing_ok=True)  # deleted: not to be taken back
+    _record_texts.pop(media_id, None)
     proxies.remove(media_id)
 
 

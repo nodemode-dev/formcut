@@ -38,6 +38,15 @@ frame it needs. Stills are bounded to preview size, and a still whose effect
 stack is only colour grades is prepared once per renderer rather than every
 frame.
 
+The media library's index (`media.json` in the data folder) is not its only record. It is written whole to a
+temporary file and moved into place, the version before it kept as `media.json.bak`, and each item's own record
+kept in `media-records/<id>.json`. When the index is missing or unreadable it is rebuilt from those, and from the
+files in `media/` themselves (probed afresh, named after the clip that uses them in a saved project, or
+"Recovered <kind> <id>"); a media file the index does not know is taken back into it when a clip asks for it and at
+start, so a lost index no longer leaves every clip undecodable. Deleting media removes its record, so it does not
+come back. A copy of the demo media that formcut imported again because the index was gone is dropped once the
+original is back beside it.
+
 Where the device path runs, formcut converts decoded frames to RGB itself
 (`backend/app/yuv.py`) rather than through swscale. A planar 4:2:0 frame at its
 own size (8-bit, full-range 8-bit, or 10-bit) goes up to the device as its
