@@ -42,8 +42,8 @@ The rest is written by hand.
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
-| main.py | 430 | /api/health | 13 |
-| media.py | 878 | /api/media | 25 |
+| main.py | 440 | /api/health | 13 |
+| media.py | 1065 | /api/media | 25 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 625 | /api/presets | 9 |
