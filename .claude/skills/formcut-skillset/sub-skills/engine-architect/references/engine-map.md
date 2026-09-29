@@ -124,9 +124,9 @@ the automation transports.
 - `template_library.py` (452L)
 - `text_templates.py` (393L)
 - `timing.py` (269L)
-- `tools.py` (271L)
+- `tools.py` (299L)
 - `validation.py` (222L)
-- `video_source.py` (622L)
+- `video_source.py` (649L)
 - `windows_console.py` (43L)
 - `yuv.py` (225L)
 
