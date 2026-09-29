@@ -60,8 +60,19 @@ def mflux_memory_flags(settings: dict) -> list[str]:
 
 
 def run(
-    command: list[str], steps: int, report, cancelled, label: str, env: dict | None = None, time_limit: float = TIME_LIMIT, images: int = 1
+    command: list[str],
+    steps: int,
+    report,
+    cancelled,
+    label: str,
+    env: dict | None = None,
+    time_limit: float = TIME_LIMIT,
+    images: int = 1,
+    on_tick=None,
+    continuous: bool = False,
 ) -> str:
+    """on_tick is called several times a second while the model runs (a continuous session collects its pictures
+    there); continuous shows each picture's own progress rather than the share of all, and has no time limit."""
     """Run a model's process to its end, reporting progress; returns the end of its output. Raises InterruptedError
     on cancel and RuntimeError on a failure or a time-out."""
     terminal = _Terminal(label)
@@ -73,7 +84,7 @@ def run(
                 raise InterruptedError("cancelled")
     outcome = "stopped"
     try:
-        text = _run(command, steps, say, cancelled, label, env, time_limit, images)
+        text = _run(command, steps, say, cancelled, label, env, float("inf") if continuous else time_limit, images, on_tick, continuous)
         outcome = "done"
         return text
     except InterruptedError:
@@ -135,7 +146,7 @@ def _say(report, terminal: _Terminal | None = None):
     return say
 
 
-def _run(command, steps, say, cancelled, label, env, time_limit, images=1) -> str:
+def _run(command, steps, say, cancelled, label, env, time_limit, images=1, on_tick=None, continuous=False) -> str:
     say(0.02, f"Loading {label}")
     process = subprocess.Popen(
         command,
@@ -172,13 +183,18 @@ def _run(command, steps, say, cancelled, label, env, time_limit, images=1) -> st
                                 image += 1  # the next seed's picture: mflux draws its steps again from 0
                             last_step = done
                             stage = f"Step {done} of {total}" if done < total else "Finishing the picture"
-                            if images > 1:
-                                stage = f"Picture {image + 1} of {images}: {stage}"
-                            say(0.1 + 0.85 * (image + done / max(1, total)) / images, stage)
+                            if continuous:
+                                say(0.1 + 0.85 * done / max(1, total), f"Picture {image + 1}: {stage}")
+                            else:
+                                if images > 1:
+                                    stage = f"Picture {image + 1} of {images}: {stage}"
+                                say(0.1 + 0.85 * (image + done / max(1, total)) / images, stage)
             elif last_step < 0:
                 # loading can take a minute on the first run: the bar creeps so the page is seen to be alive
                 loading = min(0.09, loading + 0.0005)
                 say(loading, f"Loading {label}")
+            if on_tick is not None:
+                on_tick()
             if cancelled():
                 _end(process)
                 raise InterruptedError("cancelled")

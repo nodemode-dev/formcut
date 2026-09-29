@@ -283,6 +283,7 @@ for token in sys.argv[start:]:
     seeds.append(token)
 steps = int(sys.argv[sys.argv.index("--steps") + 1])
 for seed in seeds:
+    __import__("time").sleep(float(__import__("os").environ.get("FAKE_DELAY", "0")))
     for k in range(steps + 1):
         sys.stderr.write("\\r" + str(k) + "/" + str(steps) + " [00:00<00:00]")
         sys.stderr.flush()
@@ -654,3 +655,52 @@ def test_the_terminal_shows_a_progress_bar(monkeypatch):
     text = out.getvalue()
     assert "Stand-in  [" in text and "Step 2 of 4" in text and "Stand-in: done in" in text
     assert text.count("Step 2 of 4") == 1  # not a terminal: a line when the stage changes, not a flood
+
+
+def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_path, monkeypatch, library):
+    from app import media
+    from PIL import Image
+
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "0.25")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    listed = next(g for g in client.get("/api/generate").json()["generators"] if g["id"] == "local:krea-2")
+    assert listed["options"]["continuous"] is True
+    started = client.post(
+        "/api/generate", json={"generator": "local:krea-2", "prompt": "a red room", "options": {"seed": -1, "steps": 4, "continuous": True}}
+    )
+    assert started.status_code == 202, started.text
+    job = started.json()["job_id"]
+
+    def made(at_least):
+        for _ in range(400):
+            status = client.get(f"/api/jobs/{job}").json()
+            if len(status.get("made") or []) >= at_least or status["status"] != "running":
+                return status
+            time.sleep(0.05)
+        return status
+
+    first = made(2)
+    assert len(first["made"]) >= 2 and first["seeds"] == [item["seed"] for item in first["made"]]
+    changed = client.post(f"/api/generate/sessions/{job}/prompt", json={"prompt": "a blue room <lora:gone:1>"})
+    assert changed.status_code == 200 and changed.json()["prompt"] == "a blue room"
+    later = made(len(first["made"]) + 2)
+    assert client.delete(f"/api/jobs/{job}").status_code == 200
+    for _ in range(200):
+        ended = client.get(f"/api/jobs/{job}").json()
+        if ended["status"] != "running":
+            break
+        time.sleep(0.05)
+    assert ended["status"] == "cancelled"
+    calls = json.loads((tmp_path / "argv.json.calls").read_text())
+    assert len(calls) == 1  # one process: the model loaded once for every picture
+    argv = calls[0]
+    assert "--prompt-file" in argv and "--prompt" not in argv
+    seeds = argv[argv.index("--seed") + 1 : argv.index("--steps")]
+    assert len(seeds) == 500 and [str(s) for s in later["seeds"]] == seeds[: len(later["seeds"])]
+    prompts = [item["prompt"] for item in later["made"]]
+    assert prompts[0] == "a red room" and prompts[-1] == "a blue room"
+    stored = next(media.MEDIA_DIR.glob(f"{later['made'][-1]['id']}.*"))
+    with Image.open(stored) as picture:
+        assert f"Seed: {later['made'][-1]['seed']}" in picture.text["parameters"]
+    assert client.post(f"/api/generate/sessions/{job}/prompt", json={"prompt": "x"}).status_code == 404

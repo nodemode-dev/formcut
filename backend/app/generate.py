@@ -292,6 +292,136 @@ def _source_image(spec: dict, into: Path) -> Path:
     raise HTTPException(400, "give a media image, a media video and a time, or the project and a time to start from")
 
 
+_SESSIONS: dict[str, Path] = {}  # continuous sessions: their job and the prompt file mflux reads before each seed
+
+
+def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling: dict, width: int, height: int, steps: int, notes: list):
+    """Krea 2 (or a checkpoint) generating picture after picture with the model and its LoRAs loaded once, until
+    cancelled: one mflux process over many random seeds (krea2.run_continuous). Each picture goes through the content
+    filter, has its recipe written into it, joins the library, and is published on the job as it is made; the prompt
+    can be changed between pictures (POST /api/generate/sessions/<job>/prompt)."""
+    import time as clock
+
+    from . import content_filter, krea2
+    from .media import ingest_path
+
+    checkpoint = Path(slot["checkpoint"]) if slot.get("checkpoint") else None
+    memory = str(body.options.get("memory") or "auto")
+
+    def operation(job_id, report, cancelled):
+        STAGING.mkdir(parents=True, exist_ok=True)
+        prompt_file = STAGING / f"prompt-{job_id}.txt"
+        prompt_file.write_text(prompt, encoding="utf-8")
+        _SESSIONS[job_id] = prompt_file
+        made, seeds_used, session_notes = [], [], list(notes)
+        last = {"time": clock.time()}
+        state = krea2.policy()
+        warning = None if state["filterInstalled"] or state.get("removalAcknowledged") else krea2.REMOVED_WARNING
+
+        def on_picture(seed_value: int, path: Path) -> None:
+            from PIL import Image
+
+            seconds = round(clock.time() - last["time"], 1)
+            last["time"] = clock.time()
+            verdict = None
+            if state["filterInstalled"]:
+                import numpy as np
+
+                verdict = content_filter.check(np.asarray(Image.open(path).convert("RGB")))
+                if verdict["withheld"]:
+                    path.unlink(missing_ok=True)
+                    session_notes.append(f"seed {seed_value} withheld by the content filter, NSFW score {verdict['nsfw']:.2f}")
+                    report(0.1, "Next picture", notes=list(session_notes))
+                    return
+            with Image.open(path) as picture:
+                dims = picture.size
+            current = prompt_file.read_text(encoding="utf-8")
+            result = {"seed": seed_value, "width": dims[0], "height": dims[1], "seconds": seconds}
+            recipe = _recipe(current, result, steps, stack, sampling, slot)
+            _stamp(path, recipe["parameters"])
+            try:
+                item = ingest_path(
+                    path,
+                    f"{current[:48]} ({name}, local)",
+                    extra={
+                        "source": "generated",
+                        "generator": body.generator,
+                        "prompt": current,
+                        "seconds": seconds,
+                        "provider": f"Krea 2 checkpoint {checkpoint.name} (mflux)" if checkpoint else "Krea 2 (mflux, continuous)",
+                        "notice": krea2.NOTICE,
+                        "contentFilter": verdict or "removed",
+                        **recipe,
+                    },
+                )
+            finally:
+                path.unlink(missing_ok=True)
+            made.append(item)
+            seeds_used.append(seed_value)
+            report(
+                0.1,
+                f"Picture {len(made)} done in {seconds:g} s",
+                made=list(made),
+                seeds=list(seeds_used),
+                notes=list(session_notes),
+                warning=warning,
+            )
+
+        try:
+            while not cancelled():
+                # the seeds of one session run out after hundreds of pictures: the next session loads the model again
+                krea2.run_continuous(
+                    prompt_file,
+                    STAGING,
+                    on_picture,
+                    width,
+                    height,
+                    steps=steps,
+                    stack=stack,
+                    memory=memory,
+                    report=report,
+                    cancelled=cancelled,
+                    folder=checkpoint,
+                    sampling=sampling,
+                )
+        finally:
+            _SESSIONS.pop(job_id, None)
+            prompt_file.unlink(missing_ok=True)
+            if sampling.get("image"):
+                Path(sampling["image"][0]).unlink(missing_ok=True)
+        return {
+            "media": made,
+            "kind": "image",
+            "seeds": seeds_used,
+            "notes": session_notes,
+            "model": slot.get("id", name),
+            **({"warning": warning} if warning else {}),
+        }
+
+    return jobs.submit("generate", operation)
+
+
+class SessionPrompt(BaseModel):
+    prompt: str
+
+
+@router.post("/sessions/{job_id}/prompt")
+def change_session_prompt(job_id: str, body: SessionPrompt) -> dict:
+    """A continuous session's prompt, changed between pictures: the next picture reads it. Its LoRAs, size and steps
+    stay as the session started; a <lora:> tag is taken out, as the loaded LoRAs cannot change mid-session."""
+    from . import krea2, prompt_data
+
+    prompt_file = _SESSIONS.get(job_id)
+    if prompt_file is None:
+        raise HTTPException(404, "No continuous session by that id")
+    text = prompt_data.parse(body.prompt)["prompt"] or body.prompt
+    refusal = krea2.prompt_refusal(text)
+    if refusal:
+        raise HTTPException(400, refusal)
+    prompt_file.write_text(text, encoding="utf-8")
+    return {"prompt": text, "applies": "from the next picture"}
+
+
 def _recipe(prompt: str, result: dict, steps: int, stack: list, sampling: dict, slot: dict) -> dict:
     """What made a picture: its seed and settings, and the "parameters" text Automatic1111 writes into a PNG, with the
     LoRAs as <lora:file:strength> tags so that the text, pasted back into the generator, makes the picture again."""
@@ -493,6 +623,9 @@ def _generate_local(body: GenerateBody):
                 notes.append("Denoising strength read as the image's influence (1 minus it)")
     elif "<lora:" in body.prompt.lower():
         raise HTTPException(400, f"{slot.get('label', name)} takes no LoRAs; Krea 2, FLUX.2 [klein] 4B and their checkpoints do")
+
+    if body.options.get("continuous") and slot["runner"] == "krea-2":
+        return _continuous(body, slot, name, prompt, stack, sampling, width, height, steps, notes)
 
     def operation(job_id, report, cancelled):
         STAGING.mkdir(parents=True, exist_ok=True)

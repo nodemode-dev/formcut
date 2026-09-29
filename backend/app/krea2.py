@@ -366,6 +366,7 @@ def _command(
     checkpoint: Path | None = None,
     seeds: list[int] | None = None,
     sampling: dict | None = None,
+    prompt_file: Path | None = None,
 ) -> list[str]:
     from . import local_runner
     from .model_manager import ROOT
@@ -392,7 +393,9 @@ def _command(
     # --no-bake-lora keeps a 4-bit model 4-bit; --scheduler is er_sde (default) or euler; --guidance other than 1.0
     # turns CFG on, which is when --negative-prompt is used; --vae-tiling cuts the decode's memory
     sampling = sampling or {}
-    command = [str(RUNTIME / "bin" / "mflux-generate-krea2"), "--model", str(folder), "--prompt", prompt]
+    # a continuous session reads its prompt from a file, which mflux reads again before each seed
+    words = ["--prompt-file", str(prompt_file)] if prompt_file else ["--prompt", prompt]
+    command = [str(RUNTIME / "bin" / "mflux-generate-krea2"), "--model", str(folder), *words]
     command += ["--width", str(width), "--height", str(height), "--seed", *(str(s) for s in (seeds or [seed])), "--steps", str(steps)]
     command += ["--output", str(out)]
     if sampling.get("scheduler") in ("er_sde", "euler"):
@@ -422,6 +425,89 @@ def _four_bit(build: str, folder: Path | None) -> bool:
     if folder is not None:
         return bool(re.search(r"(^|[-_ ])(q4|4bit|4-bit|int4)($|[-_ ])", folder.name.lower()))
     return build == "mlx-q4"
+
+
+SESSION_SEEDS = 500  # a continuous session's seeds; a new session starts when they run out
+
+
+def run_continuous(
+    prompt_file: Path,
+    staging: Path,
+    on_picture,
+    width: int = 1024,
+    height: int = 1024,
+    steps: int | None = None,
+    stack: list | None = None,
+    memory: str = "auto",
+    report=lambda *_: None,
+    cancelled=lambda: False,
+    folder: Path | None = None,
+    sampling: dict | None = None,
+) -> int:
+    """A continuous session: one run of mflux over many random seeds, so Krea 2 (or the checkpoint) and its LoRAs are
+    loaded once and stay in memory between pictures. The prompt is read from prompt_file before each seed (mflux's
+    --prompt-file), so it can be changed between pictures; each picture, once written, goes to on_picture(seed, path)
+    as it is made. Ends when cancelled or when the seeds run out; returns how many pictures were made."""
+    from PIL import Image
+
+    from . import local_runner, loras
+
+    state = policy()
+    if folder is not None:
+        if not state["licenceAccepted"]:
+            raise RuntimeError("A Krea 2 checkpoint runs once the Krea 2 Community License Agreement is accepted on the Krea 2 card")
+        if not (RUNTIME / "bin" / "mflux-generate-krea2").is_file():
+            raise RuntimeError("Install Krea 2 once from its card: that sets up mflux, which runs Krea 2 checkpoints")
+        state = {**state, "build": "mlx-q8"}
+    elif not state["ready"]:
+        raise RuntimeError(f"Krea 2 cannot run: {state['reason']}")
+    if BUILDS[state["build"]]["platform"] != "macos-arm64" and folder is None:
+        raise RuntimeError("A continuous session keeps the model loaded through mflux, on Apple silicon")
+    refusal = prompt_refusal(prompt_file.read_text(encoding="utf-8"))
+    if refusal:
+        raise ValueError(refusal)
+    width, height = max(256, int(width) // 16 * 16), max(256, int(height) // 16 * 16)
+    steps = int(steps or STEPS)
+    size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file()) if folder else BUILDS[state["build"]]["size"]
+    settings = local_runner.plan(int(size), memory)
+    pairs = loras.resolve(stack, "krea-2")
+    sampling = {**(sampling or {})}
+    sampling.setdefault("bake", not (settings["lowRam"] or _four_bit(state["build"], folder)))
+    seeds = [int.from_bytes(os.urandom(4), "little") for _ in range(SESSION_SEEDS)]
+    pattern = staging / f"session-{os.getpid()}-{int(time.time() * 1000)}-{{seed}}.png"
+    label = f"Krea 2 checkpoint {folder.name}" if folder else "Krea 2"
+    command = _command(state["build"], "", pattern, width, height, seeds[0], steps, pairs, settings, folder, seeds, sampling, prompt_file)
+    taken = {"next": 0, "size": -1, "ended": False}
+
+    def collect() -> None:
+        # a picture is taken once its file is whole: there, the same size twice running, and readable (once the
+        # process has ended, whatever is on disk is whole)
+        while taken["next"] < len(seeds):
+            target = Path(str(pattern).replace("{seed}", str(seeds[taken["next"]])))
+            if not target.is_file():
+                return
+            size_now = target.stat().st_size
+            if not taken["ended"] and (size_now == 0 or size_now != taken["size"]):
+                taken["size"] = size_now
+                return
+            try:
+                with Image.open(target) as picture:
+                    picture.verify()
+            except (OSError, SyntaxError):
+                return
+            on_picture(seeds[taken["next"]], target)
+            taken["next"] += 1
+            taken["size"] = -1
+
+    try:
+        local_runner.run(command, steps, report, cancelled, label, images=len(seeds), on_tick=collect, continuous=True)
+    except InterruptedError:
+        taken["ended"] = True
+        collect()
+        raise
+    taken["ended"] = True
+    collect()
+    return taken["next"]
 
 
 def generate_to_file(prompt: str, path: Path, width: int = 1024, height: int = 1024, seed: int | None = None, **options) -> dict:

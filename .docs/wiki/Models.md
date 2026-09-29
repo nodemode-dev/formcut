@@ -268,7 +268,13 @@ any other seed repeats a picture. The seed used is shown on each result and in t
 picture's file as Automatic1111 writes it (the PNG's `parameters`: the prompt, the LoRAs as `<lora:file:strength>`
 tags, then Steps, Sampler, CFG scale, Seed, Size, Model), beside mflux's own record; the library keeps the same.
 Pasted back into the generator, that text asks for the same picture. With a random seed, Continuous starts the next
-run as each one finishes, until it is unticked, cancelled, a run fails, or Studio is closed.
+run as each one finishes, until it is unticked, cancelled, a run fails, or Studio is closed. With Krea 2 and its
+checkpoints, Continuous is a session in the engine: one run of mflux over hundreds of random seeds, so the model and
+its LoRAs are loaded once and stay in memory between pictures; each picture joins the results as soon as it is made
+(through the content filter, with its recipe written into it); the prompt can be changed while it runs, and the next
+picture reads it (mflux's `--prompt-file`), while the LoRAs, size and steps stay as the session started. Unticking
+Continuous or Cancel ends the session and frees the memory. Beside the progress bar, the generator shows how long
+the current picture has taken, and each result's time.
 
 A result opens full screen with a click (or Enter): Escape, a click or Close returns; the arrow keys move through
 the results. While a picture is made, the terminal formcut was started from shows a progress bar with the model's

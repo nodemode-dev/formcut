@@ -870,6 +870,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const genJobs = new Map<string, AbortController>();
   const genJobIds = new Map<string, string>();
   const runs = new Map<string, number>();  // continuous runs so far, per kind
+  const sessionKinds = new Set<string>();  // kinds with a continuous session running in the engine
   // The full-screen viewer for a generated picture: above Studio, closed by Escape, a click or its button
   const viewer = document.createElement("div");
   viewer.className = "gen-viewer"; viewer.hidden = true; viewer.setAttribute("role", "dialog"); viewer.setAttribute("aria-modal", "true");
@@ -1050,7 +1051,22 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       seedNumber.value = String(Number.isFinite(Number(seedNumber.value)) ? value : -1); seedRange.value = seedNumber.value; seedChanged();
     });
     pick<HTMLButtonElement>(`[data-gen-seed-random="${kind}"]`).addEventListener("click", () => { seedNumber.value = "-1"; seedRange.value = "-1"; seedChanged(); });
-    continuous.addEventListener("change", () => { if (!continuous.checked) runs.set(kind, 0); });
+    continuous.addEventListener("change", () => {
+      if (continuous.checked) return;
+      runs.set(kind, 0);
+      // unticked during a session: the session ends (the model's process with it)
+      if (sessionKinds.has(kind)) pick<HTMLButtonElement>(`[data-gen-cancel="${kind}"]`).click();
+    });
+    // the prompt changed during a session: the next picture reads it (its LoRAs, size and steps stay as started)
+    let promptTimer = 0;
+    pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).addEventListener("input", () => {
+      const id = genJobIds.get(kind);
+      if (!id || !sessionKinds.has(kind)) return;
+      window.clearTimeout(promptTimer);
+      promptTimer = window.setTimeout(() => void api(`/api/generate/sessions/${id}/prompt`, { prompt: pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).value })
+        .then(() => { note.textContent = t("gen.continuous.prompt"); })
+        .catch((error: Error) => { note.textContent = error.message; }), 700);
+    });
     pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`).addEventListener("input", (event) => {
       const input = event.target as HTMLInputElement; input.dataset.touched = "1";
       pick<HTMLOutputElement>(`[data-gen-strength-out="${kind}"]`).value = Number(input.value).toFixed(2);
@@ -1085,6 +1101,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       } catch (error) { note.textContent = error instanceof Error ? error.message : t("gen.failed"); }
     })());
     const grid = pick<HTMLElement>(`[data-gen-grid="${kind}"]`);
+    const shown = new Set<string>();
+    const addCards = (items: Array<{ id: string; name: string; seed?: number; steps?: number }>) => {
+      for (const item of items) shown.add(item.id);
+      grid.insertAdjacentHTML("afterbegin", items.map((item) =>
+        `<div class="effect-card stock-card gen-result" role="button" tabindex="0" data-gen-view="${item.id}" data-gen-caption="${escapeHtml([item.name, item.seed !== undefined ? `${t("gen.seed")} ${item.seed}` : "", item.steps ? `${t("gen.steps")} ${item.steps}` : ""].filter(Boolean).join(" · "))}"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div>${item.seed !== undefined ? `<small class="gen-seed-used">${t("gen.seed")} ${item.seed}</small>` : ""}</div>`).join(""));
+    };
     const cancel = pick<HTMLButtonElement>(`[data-gen-cancel="${kind}"]`);
     cancel.addEventListener("click", () => {
       // the engine's job is ended too (the model's process with it), not only the page's asking
@@ -1126,6 +1148,13 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       bar.value = 0; stage.textContent = t("gen.working"); progress.hidden = false;
       note.textContent = t("gen.working");
       cancel.hidden = false;
+      // a continuous session where the model takes one (Krea 2 and its checkpoints): the engine keeps the model and its
+      // LoRAs loaded and makes picture after picture until stopped; elsewhere each run starts the next from here
+      const ticked = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
+      const session = ticked.checked && !ticked.disabled && !!generators.find((g) => g.id === generator)?.options?.continuous;
+      if (session) body.options.continuous = true;
+      if (session) sessionKinds.add(kind); else sessionKinds.delete(kind);
+      let pictureStart = Date.now();
       const controller = new AbortController();
       genJobs.set(kind, controller);
       let finished = false;
@@ -1133,26 +1162,39 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         const started = await api("/api/generate", body);
         genJobIds.set(kind, started.job_id);
         note.textContent = "";
-        for (let waited = 0; waited < 3600 && !controller.signal.aborted; waited += 1) {
+        for (let waited = 0; (session || waited < 3600) && !controller.signal.aborted; waited += 1) {
           const status = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
+          const partial = (status.made ?? []) as Array<{ id: string; name: string; seed?: number; steps?: number; seconds?: number }>;
+          if (partial.length > shown.size) {
+            addCards(partial.filter((item) => !shown.has(item.id)));
+            pictureStart = Date.now();
+            const latest = partial[partial.length - 1];
+            note.textContent = [t("gen.continuous.session").replace("{n}", String(partial.length)), latest?.seed !== undefined ? `${t("gen.seed")} ${latest.seed}` : "", latest?.seconds ? `${latest.seconds} s` : "", status.warning ?? ""].filter(Boolean).join(" · ");
+            void bin.load();
+          }
           if (status.status === "done") {
             const made = status.result?.media ?? [];
-            grid.insertAdjacentHTML("afterbegin", made.map((item: { id: string; name: string; seed?: number; steps?: number }) =>
-              `<div class="effect-card stock-card gen-result" role="button" tabindex="0" data-gen-view="${item.id}" data-gen-caption="${escapeHtml([item.name, item.seed !== undefined ? `${t("gen.seed")} ${item.seed}` : "", item.steps ? `${t("gen.steps")} ${item.steps}` : ""].filter(Boolean).join(" · "))}"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div>${item.seed !== undefined ? `<small class="gen-seed-used">${t("gen.seed")} ${item.seed}</small>` : ""}</div>`).join(""));
+            addCards(made.filter((item: { id: string }) => !shown.has(item.id)));
             // what the model's licence sends with its pictures: Krea 2's warning when its content filter was removed
             const warning = status.result?.warning as string | undefined;
             // what the generator read from a Civitai-style prompt, and what these models do not take
             const notes = ((status.result?.notes ?? []) as string[]).join(" · ");
             const seeds = ((status.result?.seeds ?? []) as number[]).join(", ");
-            note.textContent = [`${t("gen.done")}: ${made.length}`, seeds ? `${t("gen.seed")} ${seeds}` : "", notes, warning].filter(Boolean).join(". ");
+            const took = ((status.result?.seconds ?? []) as number[]).map((value) => `${value} s`).join(", ");
+            note.textContent = [`${t("gen.done")}: ${made.length}`, took, seeds ? `${t("gen.seed")} ${seeds}` : "", notes, warning].filter(Boolean).join(". ");
             await bin.load();
             finished = true;
             break;
           }
           if (status.status === "error" || status.status === "failed") { note.textContent = String(status.error ?? t("gen.failed")); break; }
-          if (status.status === "cancelled") { note.textContent = t("cap.cancelled"); break; }
+          if (status.status === "cancelled") {
+            note.textContent = session && shown.size ? t("gen.continuous.stopped").replace("{n}", String((status.made ?? []).length)) : t("cap.cancelled");
+            break;
+          }
           bar.value = status.progress ?? 0;
-          stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}%`;
+          // the stage, its share, and how long this picture has taken so far
+          const elapsed = Math.floor((Date.now() - pictureStart) / 1000);
+          stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}% · ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } catch (error) {
@@ -1165,7 +1207,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         genJobIds.delete(kind);
         // continuous: a random seed, ticked, the run finished (not cancelled, not failed): the next starts itself
         const again = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
-        if (finished && !stopped && again.checked && !again.disabled && !modal.hidden) {
+        sessionKinds.delete(kind);
+        if (!session && finished && !stopped && again.checked && !again.disabled && !modal.hidden) {
           runs.set(kind, (runs.get(kind) ?? 1) + 1);
           note.textContent += ` · ${t("gen.continuous.run").replace("{n}", String(runs.get(kind)))}`;
           setTimeout(() => { if (again.checked && !genJobs.has(kind)) pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).click(); }, 400);
