@@ -10,6 +10,7 @@ import struct
 import sys
 import threading
 import time
+from pathlib import Path
 
 import pytest
 from app import klein, local_runner, loras
@@ -496,3 +497,104 @@ def test_several_krea_pictures_come_from_one_run_of_mflux(tmp_path, monkeypatch,
     assert len(calls) == 1 and " ".join(calls[0]).count("--seed 40 41 42") == 1 and "--scheduler euler" in " ".join(calls[0])
     assert "--no-bake-lora" in calls[0]  # the 4-bit build keeps its LoRA unbaked
     assert len(status["result"]["media"]) == 3
+
+
+def _krea_standin(tmp_path, monkeypatch):
+    from app import krea2
+
+    monkeypatch.setattr(krea2, "CONSENT_FILE", tmp_path / "krea-2-consent.json")
+    state = {
+        "licenceAccepted": True,
+        "ready": True,
+        "reason": None,
+        "build": "mlx-q8",
+        "filterInstalled": False,
+        "filterRemoved": True,
+        "removalAcknowledged": False,
+        "warning": krea2.REMOVED_WARNING,
+    }
+    monkeypatch.setattr(krea2, "policy", lambda: state)
+    runtime = tmp_path / "runtime"
+    (runtime / "bin").mkdir(parents=True)
+    recorded = tmp_path / "argv.json"
+    fake = runtime / "bin" / "mflux-generate-krea2"
+    fake.write_text(FAKE_KREA.format(python=sys.executable, recorded=str(recorded)))
+    fake.chmod(0o755)
+    monkeypatch.setattr(krea2, "RUNTIME", runtime)
+    return recorded
+
+
+def _finished(client, body):
+    started = client.post("/api/generate", json=body)
+    if started.status_code != 202:
+        return started
+    for _ in range(300):
+        status = client.get(f"/api/jobs/{started.json()['job_id']}").json()
+        if status["status"] in ("done", "error"):
+            return status
+        time.sleep(0.02)
+    return status
+
+
+def test_image_to_image_starts_from_a_library_picture_or_the_playheads_frame(tmp_path, monkeypatch, library):
+    from app import media
+    from PIL import Image
+
+    recorded = _krea_standin(tmp_path, monkeypatch)
+    picture = tmp_path / "start.png"
+    Image.new("RGB", (400, 300), "teal").save(picture)
+    item = media.ingest_path(picture, "start.png")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    listed = next(g for g in client.get("/api/generate").json()["generators"] if g["id"] == "local:krea-2")
+    assert listed["options"]["image"] == 0.4
+    done = _finished(
+        client,
+        {
+            "generator": "local:krea-2",
+            "prompt": "the same room at night",
+            "size": "source",
+            "options": {"image": {"mediaId": item["id"]}, "imageStrength": 0.6},
+        },
+    )
+    assert done["status"] == "done", done
+    argv = json.loads(recorded.read_text())
+    source = argv[argv.index("--image") + 1]
+    assert argv[argv.index("--image") + 2] == "0.6" and (argv[argv.index("--width") + 1], argv[argv.index("--height") + 1]) == (
+        "400",
+        "288",
+    )
+    assert not Path(source).exists() and "started from the image at influence 0.6" in done["result"]["notes"]
+    # the playhead's frame, rendered from the project; Civitai's Denoising strength read as 1 minus it
+    clip = {
+        "id": "c",
+        "kind": "text",
+        "label": "c",
+        "start": 0,
+        "duration": 1,
+        "textStyle": {"content": "hello", "size": 8, "color": "#ffffff"},
+    }
+    project = {
+        "title": "p",
+        "width": 320,
+        "height": 180,
+        "fps": 30,
+        "duration": 1,
+        "activeTimeline": 0,
+        "timelines": [{"id": "p", "name": "p", "tracks": [{"id": "t", "name": "V", "clips": [clip]}]}],
+    }
+    done = _finished(
+        client,
+        {
+            "generator": "local:krea-2",
+            "prompt": "a sign\nSteps: 8, Denoising strength: 0.7",
+            "options": {"image": {"project": project, "time": 0.5}},
+        },
+    )
+    assert done["status"] == "done", done
+    argv = json.loads(recorded.read_text())
+    assert argv[argv.index("--image") + 2] == "0.3" and (argv[argv.index("--width") + 1], argv[argv.index("--height") + 1]) == (
+        "320",
+        "256",
+    )
+    refused = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "x", "options": {"image": {"nothing": 1}}})
+    assert refused.status_code == 400

@@ -271,7 +271,14 @@ step, slower), and then the negative prompt with `--negative-prompt`; each LoRA 
 `--no-bake-lora` for a 4-bit model (the 4-bit build, or a checkpoint whose folder name says q4 or 4bit) or when
 memory is short, as baking would turn a 4-bit model's LoRA layers to 8-bit; and for memory `--low-ram` (which tiles
 the decode), `--mlx-cache-limit-gb`, or `--vae-tiling` alone when the model fits but its untiled decode (about 7 GB
-at 1024 px) would not. Image-to-image (`--image`) and NVIDIA PiD decoding (`--pid-decode`) are not used.
+at 1024 px) would not. NVIDIA PiD decoding (`--pid-decode`) is not used.
+
+Image-to-image (`--image PATH STRENGTH`): Krea 2 and its checkpoints can start from a picture. In the image
+generator, Start from takes the frame at the playhead (rendered from the project as it stands, as an export would draw
+it) or an image or video in the media library (a video at the playhead's time); Image influence runs from 0 (the
+picture has no say) to 1, mflux's default 0.4; the size follows the source (Match the source picture, fitted within
+2048 pixels, in multiples of 16) unless another is chosen. A pasted Civitai prompt's `Denoising strength` is read as
+1 minus the influence (A1111's denoising is how much is repainted). FLUX.2 [klein] 4B does not take a source here.
 
 ### Your own checkpoints
 

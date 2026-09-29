@@ -46,6 +46,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             <label data-gen-size-row="${kind}">${t("gen.size")} <select data-gen-size="${kind}"></select></label>
             <label data-gen-seconds-row="${kind}" hidden>${t("gen.seconds")} <input data-gen-seconds="${kind}" type="number" min="1" max="22" value="5"></label>
             <label data-gen-count-row="${kind}">${t("gen.count")} <input data-gen-count="${kind}" type="number" min="1" max="4" value="1"></label>
+            <label data-gen-source-row="${kind}" hidden>${t("gen.img2img")} <select data-gen-source="${kind}"></select></label>
+            <label data-gen-strength-row="${kind}" hidden>${t("gen.img2img.strength")} <input type="range" min="0" max="1" step="0.05" value="0.4" data-gen-strength="${kind}"> <output data-gen-strength-out="${kind}">0.4</output></label>
             <label data-gen-sampler-row="${kind}" hidden>${t("gen.sampler")} <select data-gen-sampler="${kind}"><option value="er_sde">ER-SDE</option><option value="euler">Euler</option></select></label>
             <label data-gen-memory-row="${kind}" hidden>${t("gen.memory")} <select data-gen-memory="${kind}"><option value="auto">${t("gen.memory.auto")}</option><option value="low">${t("gen.memory.low")}</option><option value="normal">${t("gen.memory.normal")}</option></select></label>
           </div>
@@ -882,6 +884,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         pick<HTMLElement>(`[data-gen-civitai="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden = !(entry && "memory" in (entry.options ?? {}));
         pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden = !(entry && "scheduler" in (entry.options ?? {}));
+        // image-to-image, where the model takes it: a picture to start from, and how much it shapes the result
+        const takesImage = !!entry && "image" in (entry.options ?? {});
+        pick<HTMLElement>(`[data-gen-source-row="${kind}"]`).hidden = !takesImage;
+        if (takesImage) paintSources(kind, entry!.options.image as number);
+        else pick<HTMLElement>(`[data-gen-strength-row="${kind}"]`).hidden = true;
         if (base) void paintLoras(kind, base).catch(() => { /* offline engine */ });
       };
       select.onchange = refresh;
@@ -948,6 +955,28 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       rows.append(row);
     });
   };
+  // Image-to-image sources: the frame at the playhead, or an image or video in the media library
+  const paintSources = (kind: string, influence: number) => {
+    const select = pick<HTMLSelectElement>(`[data-gen-source="${kind}"]`);
+    const chosen = select.value;
+    const options = [`<option value="">${t("gen.img2img.none")}</option>`, `<option value="frame">${t("gen.img2img.frame")}</option>`];
+    for (const item of bin.all.filter((m) => m.kind === "image" || m.kind === "video")) options.push(`<option value="media:${item.id}">${escapeHtml(item.name)}</option>`);
+    select.innerHTML = options.join("");
+    if ([...select.options].some((option) => option.value === chosen)) select.value = chosen;
+    const strength = pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`);
+    if (!strength.dataset.touched) strength.value = String(influence);
+    pick<HTMLOutputElement>(`[data-gen-strength-out="${kind}"]`).value = Number(strength.value).toFixed(2);
+    sourceChanged(kind);
+  };
+  const sourceChanged = (kind: string) => {
+    const on = !!pick<HTMLSelectElement>(`[data-gen-source="${kind}"]`).value;
+    pick<HTMLElement>(`[data-gen-strength-row="${kind}"]`).hidden = !on;
+    // with a source, the size follows it unless another is chosen
+    const sizes = pick<HTMLSelectElement>(`[data-gen-size="${kind}"]`);
+    const match = sizes.querySelector('option[value="source"]');
+    if (on && !match) { sizes.insertAdjacentHTML("afterbegin", `<option value="source">${t("gen.size.source")}</option>`); sizes.value = "source"; }
+    if (!on && match) match.remove();
+  };
   const addToStack = (kind: string, base: string, entry?: LoraEntry) => {
     const library = libraries.get(base) ?? [];
     const chosen = entry ?? library.find((candidate) => candidate.usable !== false);
@@ -962,6 +991,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   for (const kind of ["image", "video", "audio"] as const) {
     const note = pick<HTMLElement>(`[data-gen-note="${kind}"]`);
     pick<HTMLButtonElement>(`[data-lora-add="${kind}"]`).addEventListener("click", () => { const base = baseOf(kind); if (base) addToStack(kind, base); });
+    pick<HTMLSelectElement>(`[data-gen-source="${kind}"]`).addEventListener("change", () => sourceChanged(kind));
+    pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`).addEventListener("input", (event) => {
+      const input = event.target as HTMLInputElement; input.dataset.touched = "1";
+      pick<HTMLOutputElement>(`[data-gen-strength-out="${kind}"]`).value = Number(input.value).toFixed(2);
+    });
     pick<HTMLButtonElement>(`[data-lora-rescan="${kind}"]`).addEventListener("click", () => { const base = baseOf(kind); if (base) void paintLoras(kind, base); });
     pick<HTMLInputElement>(`[data-lora-file="${kind}"]`).addEventListener("change", () => void (async () => {
       const input = pick<HTMLInputElement>(`[data-lora-file="${kind}"]`);
@@ -1016,6 +1050,13 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       if (base) body.options.loras = (stacks.get(base) ?? []).filter((item) => item.enabled).map((item) => ({ id: item.id, scale: item.scale }));
       if (!pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden) body.options.memory = pick<HTMLSelectElement>(`[data-gen-memory="${kind}"]`).value;
       if (!pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden) body.options.scheduler = pick<HTMLSelectElement>(`[data-gen-sampler="${kind}"]`).value;
+      const source = pick<HTMLElement>(`[data-gen-source-row="${kind}"]`).hidden ? "" : pick<HTMLSelectElement>(`[data-gen-source="${kind}"]`).value;
+      if (source) {
+        const snapshot = engine.snapshot;
+        // the frame at the playhead is rendered from the project as it stands; a video in the library at the playhead too
+        body.options.image = source === "frame" ? { project: snapshot, time: snapshot.playhead } : { mediaId: source.slice(6), time: snapshot.playhead };
+        body.options.imageStrength = Number(pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`).value);
+      }
       const progress = pick<HTMLElement>(`[data-gen-progress="${kind}"]`);
       const bar = pick<HTMLProgressElement>(`[data-gen-bar="${kind}"]`);
       const stage = pick<HTMLElement>(`[data-gen-stage="${kind}"]`);

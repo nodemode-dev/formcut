@@ -406,6 +406,10 @@ def _command(
         command += ["--lora", path, f"{scale:g}"]
     if pairs and not sampling.get("bake", True):
         command.append("--no-bake-lora")
+    if sampling.get("image"):
+        # image-to-image: the picture to start from and its influence (0 none, mflux's default 0.4)
+        source, strength = sampling["image"]
+        command += ["--image", str(source), f"{float(strength):g}"]
     if settings:
         command += local_runner.mflux_memory_flags(settings)
         if settings.get("vaeTiling") and not settings["lowRam"]:

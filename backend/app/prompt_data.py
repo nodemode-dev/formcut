@@ -91,6 +91,8 @@ def _read(raw: dict) -> dict:
         out["width"] = _number(raw["width"], int)
     if "height" in raw:
         out["height"] = _number(raw["height"], int)
+    if "denoising strength" in raw:
+        out["denoising_strength"] = _number(raw["denoising strength"])
     for key in ("sampler", "schedule type", "clip skip", "version", "model hash"):
         if raw.get(key):
             out[key.replace(" ", "_")] = raw[key]

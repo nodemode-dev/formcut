@@ -243,6 +243,61 @@ def _size_of(size: str | None, largest: int = 1024) -> tuple[int, int]:
     return 512, 512
 
 
+IMAGE_STRENGTH = 0.4  # mflux's default for Krea 2's --image: how much the source picture shapes the result
+
+
+def _source_image(spec: dict, into: Path) -> Path:
+    """The picture image-to-image starts from, written as a PNG into the staging folder: an image in the media
+    library, a video in it at a time, or the project's own frame at a time (rendered at full size, as an export)."""
+    import numpy as np
+    from PIL import Image
+
+    from . import media
+
+    out = into / f"source-{uuid.uuid4().hex}.png"
+    into.mkdir(parents=True, exist_ok=True)
+    if spec.get("mediaId"):
+        item = media._find(str(spec["mediaId"]))
+        matches = list(media.MEDIA_DIR.glob(f"{item['id']}.*"))
+        if not matches:
+            raise HTTPException(404, "that media file is missing")
+        if item.get("kind") == "image":
+            with Image.open(matches[0]) as picture:
+                picture.convert("RGB").save(out)
+            return out
+        if item.get("kind") == "video":
+            import cv2
+
+            capture = cv2.VideoCapture(str(matches[0]))
+            capture.set(cv2.CAP_PROP_POS_MSEC, max(0.0, float(spec.get("time") or 0)) * 1000)
+            ok, frame = capture.read()
+            capture.release()
+            if not ok:
+                raise HTTPException(400, "could not read that video at that time")
+            Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).save(out)
+            return out
+        raise HTTPException(400, "image-to-image starts from an image or a video's frame")
+    if isinstance(spec.get("project"), dict):
+        from .renderer import FrameRenderer
+
+        renderer = FrameRenderer(spec["project"])
+        try:
+            pixels = np.asarray(renderer.frame(max(0.0, float(spec.get("time") or 0))))
+        finally:
+            close = getattr(renderer, "close", None)
+            if close:
+                close()
+        Image.fromarray(pixels[..., :3].astype(np.uint8)).save(out)
+        return out
+    raise HTTPException(400, "give a media image, a media video and a time, or the project and a time to start from")
+
+
+def _fit(width: int, height: int, largest: int = 2048) -> tuple[int, int]:
+    """A source picture's size within the model's largest side, in multiples of 16."""
+    scale = min(1.0, largest / max(width, height))
+    return max(256, int(width * scale) // 16 * 16), max(256, int(height * scale) // 16 * 16)
+
+
 def _civitai_prompt(slot: dict, text: str, stack: list) -> tuple[dict, str, list, list, dict]:
     """<lora:name:strength> tags and Civitai's generation data, for Krea 2, Klein 4B and their checkpoints: the tags'
     LoRAs found in the library by file name (as Automatic1111 finds them) and put in the stack at their strengths,
@@ -321,6 +376,9 @@ def _civitai_prompt(slot: dict, text: str, stack: list) -> tuple[dict, str, list
             notes.append("the negative prompt is not used: it takes CFG, a CFG scale other than 1" + ("" if krea else " (Krea 2 only)"))
     if data["loras"]:
         notes.append(f"LoRAs from the prompt: {', '.join(f'{name} {weight:g}' for name, weight in data['loras'])}")
+    if "denoising_strength" in params:
+        # A1111's img2img denoising is how much is repainted; mflux's strength how much the source is kept
+        found["imageStrength"] = max(0.0, min(1.0, 1.0 - params["denoising_strength"]))
     return slot, data["prompt"] or text, stack, notes, found
 
 
@@ -355,6 +413,21 @@ def _generate_local(body: GenerateBody):
         steps = found.get("steps", steps)
         seed = found.get("seed", seed)
         width, height = found.get("width", width), found.get("height", height)
+        # image-to-image, for Krea 2 and its checkpoints: the source picture and how much it shapes the result
+        if body.options.get("image"):
+            if slot["runner"] != "krea-2":
+                raise HTTPException(400, "Image-to-image works with Krea 2 and its checkpoints")
+            source = _source_image(body.options["image"], STAGING)
+            strength = float(found.get("imageStrength", body.options.get("imageStrength", IMAGE_STRENGTH)))
+            sampling["image"] = (str(source), max(0.0, min(1.0, strength)))
+            if (not body.size or body.size == "source") and "width" not in found:
+                from PIL import Image
+
+                with Image.open(source) as picture:
+                    width, height = _fit(*picture.size)
+            notes.append(f"started from the image at influence {sampling['image'][1]:g}")
+            if "imageStrength" in found:
+                notes.append("Denoising strength read as the image's influence (1 minus it)")
     elif "<lora:" in body.prompt.lower():
         raise HTTPException(400, f"{slot.get('label', name)} takes no LoRAs; Krea 2, FLUX.2 [klein] 4B and their checkpoints do")
 
@@ -453,6 +526,8 @@ def _generate_local(body: GenerateBody):
                 )
             finally:
                 staged.unlink(missing_ok=True)
+        if sampling.get("image"):
+            Path(sampling["image"][0]).unlink(missing_ok=True)  # the source's staged copy
         return {"media": made, "kind": kind, "seconds": timings, "model": slot.get("id", name), "notes": notes, **extras}
 
     return jobs.submit("generate", operation)
