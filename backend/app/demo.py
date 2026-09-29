@@ -25,7 +25,12 @@ def demo_dir() -> Path:
 
 
 def _stored(item: dict) -> bool:
-    return any(MEDIA_DIR.glob(f"{item['id']}.*"))
+    """The demo item's file there and whole (the same size as the demo's own file), not merely a name that matches."""
+    from .media import media_path
+
+    path = media_path(item["id"])
+    source = demo_dir() / str(item.get("name") or "")
+    return path is not None and path.stat().st_size > 0 and (not source.is_file() or path.stat().st_size == source.stat().st_size)
 
 
 @router.get("")
@@ -42,7 +47,11 @@ def seed_demo() -> dict:
         raise HTTPException(404, "Demo media is not included in this build: " + ", ".join(missing))
     with _seeding:
         with _lock:
-            known = {item["name"]: item for item in _read() if item.get("source") == "demo"}
+            # each demo file's first whole copy in the library (a lost index can leave several under one name)
+            known = {}
+            for item in _read():
+                if item.get("source") == "demo" and item.get("name") not in known and _stored(item):
+                    known[item["name"]] = item
         media = []
         for name in FILES:
             item = known.get(name)

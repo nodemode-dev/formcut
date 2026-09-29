@@ -233,6 +233,7 @@ class VideoSource:
             ahead = self._take_ahead()
             frame = ahead[1] if ahead is not None and ahead[0] == self.position else self._pull()
             if frame is None:
+                self.last_error = self._said()  # what the decoder said, kept before the release discards it
                 self.release()
                 return False, None
             self.position += 1
@@ -243,6 +244,18 @@ class VideoSource:
             self.last = (self.position - 1, frame)
         self._prefetch()
         return True, frame
+
+    def _said(self) -> str:
+        """The decoder's own last words (ffmpeg's error output), for a read that failed."""
+        errors = getattr(self, "errors", None)
+        if errors is None:
+            return ""
+        try:
+            errors.seek(0)
+            text = errors.read().decode("utf-8", "replace").strip()
+        except (OSError, ValueError):
+            return ""
+        return text[-400:]
 
     def release(self):
         thread = self.ahead_thread

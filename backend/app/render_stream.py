@@ -1,6 +1,7 @@
 import io
 import math
 import struct
+import sys
 import threading
 import time
 
@@ -50,7 +51,13 @@ async def stream(request: Request, session_id: str, start: float = 0, fps: float
             if wait > 0:
                 time.sleep(wait)
             state["index"] = index
-            pixels = state["renderer"].frame(at)
+            try:
+                pixels = state["renderer"].frame(at)
+            except Exception as exc:  # noqa: BLE001 - a frame that fails ends the stream cleanly, not the connection
+                # (a failure raised inside a started stream took the whole response down with "response already
+                # started"; the preview's own frame request then shows what is wrong)
+                print(f"formcut: the preview stream stopped at {at:.2f} s: {exc}", file=sys.__stderr__)
+                return None
             if format == "jpeg":
                 output = io.BytesIO()
                 Image.fromarray(pixels).convert("RGB").save(output, format="JPEG", quality=82)

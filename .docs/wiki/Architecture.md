@@ -38,6 +38,14 @@ frame it needs. Stills are bounded to preview size, and a still whose effect
 stack is only colour grades is prepared once per renderer rather than every
 frame.
 
+A clip whose media cannot be read (not in the library, its file missing, a link to nothing, or a file the decoder
+cannot open) is drawn in the preview as a card naming the file and the reason, and said once in the terminal; the rest
+of the frame goes on, and the preview stream no longer takes its connection down. An export stops instead, naming the
+file and the reason. A video that the device's colour path cannot read is read again with formcut's own conversion.
+`cd backend && ./venv/bin/python -m app.media_check` (or GET /api/media/health) reports every item's file and whether
+it decodes through both colour paths, and every clip in a saved project whose media the library does not have; it
+changes nothing.
+
 Every state file in the data folder is kept the same careful way (`durable.py`): written whole to a temporary
 file and moved into place, the version it replaces kept as `<name>.bak`, and a file that cannot be read set aside
 as `<name>.damaged-<time>` (never overwritten) with its backup read in its place, rather than read as empty and saved
@@ -51,8 +59,7 @@ kept in `media-records/<id>.json`. When the index is missing or unreadable it is
 files in `media/` themselves (probed afresh, named after the clip that uses them in a saved project, or
 "Recovered <kind> <id>"); a media file the index does not know is taken back into it when a clip asks for it and at
 start, so a lost index no longer leaves every clip undecodable. Deleting media removes its record, so it does not
-come back. A copy of the demo media that formcut imported again because the index was gone is dropped once the
-original is back beside it.
+come back. Recovery never deletes a file.
 
 Where the device path runs, formcut converts decoded frames to RGB itself
 (`backend/app/yuv.py`) rather than through swscale. A planar 4:2:0 frame at its

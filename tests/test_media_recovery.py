@@ -111,17 +111,17 @@ def test_deleted_media_does_not_come_back(library):
     assert [i["id"] for i in media.list_media()] == [kept["id"]]
 
 
-def test_formcuts_own_demo_copy_goes_once_the_original_is_back(library):
+def test_recovery_never_deletes_a_file(library):
+    """2.2.2 to 2.2.5 dropped formcut's own demo copies once their originals were back, deleting their files, and the
+    open project that used a copy lost it. Recovery keeps every file now; a duplicate is the person's to delete."""
     original = media.ingest_path(_clip_file(library, "demo.mp4"), "input-clip-example.mp4", extra={"source": "demo"})
     store.save_project(_project(original["id"], "input-clip-example.mp4"))
-    # the index lost, then the demo imported again under a new id, as the owner's library shows
     media.INDEX_FILE.unlink()
     media.BACKUP_FILE.unlink()
     shutil.rmtree(media.RECORDS_DIR)
     media._write([])
     shutil.copyfile(next(media.MEDIA_DIR.glob(f"{original['id']}.*")), library / "again.mp4")
     copy = media.ingest_path(library / "again.mp4", "input-clip-example.mp4", extra={"source": "demo"})
-    result = media.recover_library()
+    media.recover_library()
     ids = [i["id"] for i in media.list_media()]
-    assert original["id"] in ids and copy["id"] not in ids and result["items"] == 1
-    assert not list(media.MEDIA_DIR.glob(f"{copy['id']}.*"))
+    assert original["id"] in ids and copy["id"] in ids and media.media_path(copy["id"]) is not None

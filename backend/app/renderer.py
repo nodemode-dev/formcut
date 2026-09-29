@@ -1,9 +1,13 @@
+import contextlib
 import json
 import math
 import os
+import sys
+from pathlib import Path
 
 import cv2
 import numpy as np
+from fastapi import HTTPException
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 
 from . import gpu, gpu_effects
@@ -475,6 +479,66 @@ def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
     return out
 
 
+class MediaUnreadable(ValueError):
+    """A clip's media that cannot be read: not in the library, its file missing, or not decodable. Says which, and why."""
+
+    def __init__(self, name: str, reason: str):
+        super().__init__(f"{name}: {reason}")
+        self.name, self.reason = name, reason
+
+
+_said_already: set[str] = set()
+
+
+def _say_once(text: str) -> None:
+    """A problem said once in the terminal, not once a frame."""
+    if text in _said_already:
+        return
+    _said_already.add(text)
+    with contextlib.suppress(OSError, ValueError, AttributeError):
+        print(f"formcut: {text}", file=sys.__stderr__)
+
+
+def _why(path: Path, capture) -> str:
+    """What is wrong with a file that did not decode: gone, a link to nothing, empty, or the decoder's own words."""
+    if path.is_symlink() and not path.exists():
+        return f"its link points at {os.readlink(path)}, which is not there; relink it from the Media panel"
+    if not path.exists():
+        return "its file is missing; relink it from the Media panel"
+    if path.stat().st_size == 0:
+        return "its file is empty"
+    said = (getattr(capture, "last_error", "") or "").strip().splitlines()
+    return "the decoder could not read it" + (f" ({said[-1][:200]})" if said else "")
+
+
+def placeholder(width: int, height: int, problem: MediaUnreadable) -> np.ndarray:
+    """The card a preview shows for a clip whose media cannot be read: its name and what is wrong."""
+    from PIL import ImageDraw, ImageFont
+
+    card = Image.new("RGBA", (int(width), int(height)), (28, 20, 22, 255))
+    draw = ImageDraw.Draw(card)
+    size = max(12, int(min(width, height) / 22))
+    try:
+        font, small = ImageFont.load_default(size=size), ImageFont.load_default(size=max(10, int(size * 0.7)))
+    except TypeError:  # an older Pillow
+        font = small = ImageFont.load_default()
+    draw.rectangle((0, 0, width - 1, height - 1), outline=(220, 70, 70, 255), width=max(2, size // 6))
+    margin = size
+    draw.text((margin, height / 2 - size * 1.6), f"Cannot show {problem.name}", fill=(255, 225, 225, 255), font=font)
+    words, line, lines = problem.reason.split(), "", []
+    limit = max(16, int((width - 2 * margin) / (size * 0.42)))
+    for word in words:
+        if len(line) + len(word) + 1 > limit:
+            lines.append(line)
+            line = word
+        else:
+            line = f"{line} {word}".strip()
+    lines.append(line)
+    for index, text in enumerate(lines[:4]):
+        draw.text((margin, height / 2 + index * size * 0.95), text, fill=(235, 190, 190, 255), font=small)
+    return np.array(card)
+
+
 class FrameRenderer:
     # A renderer built without its constructor (the tail tests do this) is an SDR renderer.
     deep = False
@@ -762,11 +826,19 @@ class FrameRenderer:
         media_id = clip.get("mediaId")
         if not media_id:
             raise ValueError("Media clip has no source")
+        if not hasattr(self, "_cpu_only"):
+            self._cpu_only = set()
         # a clip's media record and files are looked up once for this renderer's life, not every frame (a glob of
         # the media folder and two reads of the index a frame, about three milliseconds on a full library)
         known = self._media_known.get(media_id) if hasattr(self, "_media_known") else None
         if known is None:
-            known = (_find(media_id), list(MEDIA_DIR.glob(f"{media_id}.*")))
+            try:
+                record_found = _find(media_id)
+            except HTTPException:
+                raise MediaUnreadable(
+                    clip.get("label") or media_id, "it is not in the media library (media.json lost it, or it was deleted)"
+                ) from None
+            known = (record_found, [p for p in MEDIA_DIR.glob(f"{media_id}.*") if not p.name.startswith(".")])
             if not hasattr(self, "_media_known"):
                 self._media_known = {}
             self._media_known[media_id] = known
@@ -783,12 +855,20 @@ class FrameRenderer:
                 stand_in = proxy_for(media_id, paths[0], self.decode_limit)
                 if stand_in is not None:
                     paths = [stand_in]
-        if not paths:
-            raise ValueError("Media file is missing: " + media_id)
+        if not paths or not paths[0].exists():
+            where = known[0].get("path") or (str(paths[0]) if paths else "")
+            raise MediaUnreadable(
+                known[0].get("name") or clip.get("label") or media_id,
+                f"its file is missing{f' (last at {where})' if where else ''}; relink it from the Media panel",
+            )
         record = known[0]
         native = max(float(record.get("width") or 0), float(record.get("height") or 0))
         if clip["kind"] == "image":
             if media_id not in self.stills:
+                try:
+                    Image.open(paths[0]).close()
+                except OSError as exc:
+                    raise MediaUnreadable(record.get("name") or media_id, f"it could not be opened as a picture ({exc})") from exc
                 with Image.open(paths[0]) as image:
                     still = ImageOps.exif_transpose(image).convert("RGBA")
                     if self.decode_limit and max(still.size) > self.decode_limit:
@@ -798,11 +878,14 @@ class FrameRenderer:
             if native:
                 self.decode_scale[media_id] = max(still.shape[0], still.shape[1]) / native
             return apply_crop(still.copy(), clip)
-        cursor = self._cursor(media_id, time, paths[0])
+        try:
+            cursor = self._cursor(media_id, time, paths[0])
+        except (ValueError, OSError) as exc:  # a file that is not a video (damaged, or another file under its name)
+            raise MediaUnreadable(record.get("name") or media_id, f"the decoder could not open it ({exc})") from exc
         capture = self.sources[cursor]
         from . import yuv
 
-        capture.own_conversion = yuv.wanted(gpu.stack_active())
+        capture.own_conversion = yuv.wanted(gpu.stack_active()) and media_id not in self._cpu_only
         capture.want_planes = planes and capture.own_conversion  # planes kept, or converted on the read-ahead's thread
         keep_planes = planes and not crop_box(clip)
         rate = capture.fps
@@ -845,8 +928,18 @@ class FrameRenderer:
                 capture.seek(back)
                 ok, frame = capture.read()
                 frame = frame if ok else None
+            if frame is None and getattr(capture, "own_conversion", False):
+                # the device's colour path could not take this source's frames: read it converted here instead
+                self._cpu_only.add(media_id)
+                capture.own_conversion = False
+                capture.want_planes = False
+                capture.seek(wanted)
+                ok, frame = capture.read()
+                frame = frame if ok else None
+                if frame is not None:
+                    _say_once(f"{record.get('name', media_id)}: read with formcut's own conversion instead of the device's")
             if frame is None:
-                raise ValueError("Could not decode source frame")
+                raise MediaUnreadable(record.get("name") or media_id, _why(paths[0], capture))
         result = frame if keep_planes and hasattr(frame, "aux") else self.as_working(frame)
         self.frame_numbers[cursor] = wanted
         self.frames[cursor] = frame
@@ -1449,11 +1542,19 @@ class FrameRenderer:
                         and (not early or gpu_effects.supported(early))
                         and self._device_resident(clip, early, local)
                     )
-                    image = (
-                        self.text_frame(clip, local)
-                        if clip["kind"] == "text"
-                        else self.media_frame(clip, source_time(clip, local), planes=straight)
-                    )
+                    try:
+                        image = (
+                            self.text_frame(clip, local)
+                            if clip["kind"] == "text"
+                            else self.media_frame(clip, source_time(clip, local), planes=straight)
+                        )
+                    except MediaUnreadable as problem:
+                        # the preview draws the clip as a card saying what is wrong, and the rest of the frame goes on;
+                        # an export (no decode limit) stops, naming the file and the reason
+                        if not self.decode_limit:
+                            raise
+                        _say_once(str(problem))
+                        image = placeholder(self.width, self.height, problem)
                 if hasattr(image, "aux"):
                     pass  # planes for the device: no colour, grade or stabilisation to apply on this side
                 else:

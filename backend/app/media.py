@@ -164,47 +164,10 @@ def _adopt(items: list[dict], only: str | None = None, fallback: dict | None = N
         items.append(item)
         known.add(media_id)
         changed = True
-    if changed and not only:
-        items, dropped = _drop_demo_copies(items)
-        changed = changed or dropped
+    # (2.2.2 to 2.2.5 also dropped formcut's own demo copies once their originals were back, deleting their files:
+    # a copy the open project used went with them. Recovery never deletes a file now; a duplicate is the person's to
+    # delete.)
     return items, changed
-
-
-def _drop_demo_copies(items: list[dict]) -> tuple[list[dict], bool]:
-    """A demo file formcut imported again because the index was gone, once the original is back beside it: the same
-    bytes, the copy no saved project uses. Only formcut's own demo copies; a person's imports are theirs to delete."""
-    import hashlib
-
-    used = set(_names_from_projects())
-
-    def digest(item: dict) -> str | None:
-        found = list(MEDIA_DIR.glob(f"{item['id']}.*"))
-        if not found:
-            return None
-        with open(found[0], "rb") as handle:
-            return hashlib.sha256(handle.read()).hexdigest()
-
-    recovered = [item for item in items if item.get("recovered")]
-    keep, dropped = [], False
-    for item in items:
-        twin = next(
-            (
-                r
-                for r in recovered
-                if item.get("source") == "demo" and r is not item and r.get("size") == item.get("size") and r["id"] in used
-            ),
-            None,
-        )
-        if twin is not None and item["id"] not in used and digest(twin) == digest(item):
-            twin.setdefault("source", "demo")
-            for path in MEDIA_DIR.glob(f"{item['id']}.*"):
-                path.unlink(missing_ok=True)
-            (THUMB_DIR / f"{item['id']}.jpg").unlink(missing_ok=True)
-            (RECORDS_DIR / f"{item['id']}.json").unlink(missing_ok=True)
-            dropped = True
-            continue
-        keep.append(item)
-    return keep, dropped
 
 
 def _recover() -> list[dict]:
