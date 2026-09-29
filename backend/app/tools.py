@@ -148,6 +148,34 @@ def ffmpeg() -> str:
     return shutil.which("ffmpeg") or "ffmpeg"
 
 
+_FILTERS: dict[str, frozenset[str]] = {}
+
+
+def filters() -> frozenset[str]:
+    """The filters the ffmpeg formcut runs was built with, read once per binary (ffmpeg -filters). Builds differ: the
+    one Homebrew or a person installs may lack zscale (it needs libzimg), which formcut's colour conversion asked for
+    unconditionally until 2.2.7, so a BT.2020 clip failed with "Filter not found"."""
+    binary = ffmpeg()
+    if binary not in _FILTERS:
+        try:
+            listed = subprocess.run([binary, "-hide_banner", "-filters"], capture_output=True, text=True, check=False, timeout=20).stdout
+        except (OSError, subprocess.SubprocessError):
+            listed = ""
+        names = set()
+        for line in listed.splitlines():
+            parts = line.split()
+            if len(parts) >= 3 and "->" in parts[2]:
+                names.add(parts[1])
+        _FILTERS[binary] = frozenset(names)
+    return _FILTERS[binary]
+
+
+def has_filter(name: str) -> bool:
+    """Whether ffmpeg has the filter; when its list cannot be read, assumed so (the old behaviour) rather than guessed."""
+    found = filters()
+    return not found or name in found
+
+
 def licence_note() -> dict:
     """What is shipped beside the binary, for the diagnostics panel."""
     folder = bundle_dir()

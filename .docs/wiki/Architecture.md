@@ -38,6 +38,13 @@ frame it needs. Stills are bounded to preview size, and a still whose effect
 stack is only colour grades is prepared once per renderer rather than every
 frame.
 
+formcut asks the ffmpeg it runs which filters it was built with (`ffmpeg -filters`, once per binary). A wide-gamut
+SDR clip (BT.2020, a BT.601 tag) is converted to BT.709 with zscale where ffmpeg has it, else with ffmpeg's own
+colorspace filter, which every ffmpeg has (on the demo's BT.2020 clip the two differ by about 2.5 in 255 on average),
+else by swscale's matrix alone; HDR (PQ, HLG) is tone-mapped through zscale where there is one, and converted by
+matrix alone otherwise. An ffmpeg installed with Homebrew or by hand may lack zscale (it needs libzimg); the terminal
+says once which route is taken.
+
 A clip whose media cannot be read (not in the library, its file missing, a link to nothing, or a file the decoder
 cannot open) is drawn in the preview as a card naming the file and the reason, and said once in the terminal; the rest
 of the frame goes on, and the preview stream no longer takes its connection down. An export stops instead, naming the

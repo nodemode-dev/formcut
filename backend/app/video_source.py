@@ -29,8 +29,19 @@ MATRICES = ("bt709", "bt2020nc", "bt2020c", "bt470bg", "smpte170m", "smpte240m",
 TRANSFERS = ("bt709", "smpte170m", "bt470bg", "bt470m", "iec61966-2-1", "bt2020-10", "bt2020-12", "smpte240m", "linear")
 
 
+def _once(text: str, _said: set = set()) -> None:  # noqa: B006 - said once per run, on purpose
+    if text not in _said:
+        _said.add(text)
+        with contextlib.suppress(OSError, ValueError, AttributeError):
+            print(f"formcut: {text}", file=sys.__stderr__)
+
+
 def conversion_for(stream: dict) -> str:
-    """The zscale step to BT.709 an SDR stream needs, or nothing when its primaries already are."""
+    """The step to BT.709 an SDR stream needs, or nothing when its primaries already are: zscale where ffmpeg has it,
+    else ffmpeg's own colorspace filter (built into every ffmpeg, no library needed), which converts the same
+    primaries, matrix and transfer; with neither, swscale's rule, as for an untagged source."""
+    from .tools import has_filter
+
     primaries = str(stream.get("color_primaries") or "")
     transfer = str(stream.get("color_transfer") or "")
     if transfer in ("smpte2084", "arib-std-b67") or primaries in ("bt709", "") or primaries not in PRIMARIES:
@@ -38,7 +49,28 @@ def conversion_for(stream: dict) -> str:
     matrix = str(stream.get("color_space") or "")
     source_matrix = matrix if matrix in MATRICES else ("bt2020nc" if primaries == "bt2020" else "smpte170m")
     source_transfer = transfer if transfer in TRANSFERS else "bt709"
-    return f"zscale=pin={primaries}:min={source_matrix}:tin={source_transfer}:p=bt709:m=bt709:t=bt709:r=tv,format=yuv420p,"
+    if has_filter("zscale"):
+        return f"zscale=pin={primaries}:min={source_matrix}:tin={source_transfer}:p=bt709:m=bt709:t=bt709:r=tv,format=yuv420p,"
+    if has_filter("colorspace"):
+        _once("this ffmpeg has no zscale (it needs libzimg): wide-gamut clips are converted with its colorspace filter instead")
+        space = "bt2020nc" if source_matrix == "bt2020c" else source_matrix
+        source_range = "pc" if stream.get("color_range") == "pc" else "tv"
+        return f"colorspace=iprimaries={primaries}:ispace={space}:itrc={source_transfer}:irange={source_range}:all=bt709:range=tv:format=yuv420p,"
+    _once("this ffmpeg has neither zscale nor colorspace: wide-gamut clips are shown with swscale's matrix only")
+    return ""
+
+
+def tonemap_for(stream: dict) -> str:
+    """PQ and HLG to BT.709: linearised through zscale and tone-mapped with hable. An ffmpeg without zscale cannot do
+    that; the clip is then converted by matrix alone (it shows, flatter than it should), and the terminal says so."""
+    from .tools import has_filter
+
+    if has_filter("zscale") and has_filter("tonemap"):
+        return "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,"
+    _once(
+        "this ffmpeg has no zscale (it needs libzimg): HDR clips are shown without tone mapping; an ffmpeg built with libzimg restores it"
+    )
+    return "scale=in_color_matrix=bt2020:out_color_matrix=bt709,format=yuv420p,"
 
 
 def colour_of(stream: dict) -> dict:
@@ -79,12 +111,7 @@ class VideoSource:
         # chain linearises through zscale, tone-maps with hable, and lands on
         # BT.709, the same recipe for preview and export because every decode
         # comes through this pipe.
-        self.tonemap = (
-            "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,"
-            "zscale=t=bt709:m=bt709:r=tv,format=yuv420p,"
-            if stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
-            else conversion_for(stream)
-        )
+        self.tonemap = tonemap_for(stream) if stream.get("color_transfer") in ("smpte2084", "arib-std-b67") else conversion_for(stream)
         self.hdr = stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
         self.transfer = str(stream.get("color_transfer") or "")
         # what formcut's own conversion (yuv.py) needs of the stream, and whether the renderer takes planes from it
