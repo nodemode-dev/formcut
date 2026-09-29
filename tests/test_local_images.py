@@ -645,16 +645,38 @@ def test_the_filter_warning_stops_once_acknowledged(tmp_path, monkeypatch, libra
     assert "warning" not in done["result"] and done["result"]["seeds"] == [7]
 
 
-def test_the_terminal_shows_a_progress_bar(monkeypatch):
+def test_the_terminal_shows_the_models_own_progress_bar(monkeypatch):
     import io
 
     out = io.StringIO()
     monkeypatch.setattr(sys, "__stderr__", out)
     monkeypatch.delenv("FORMCUT_QUIET_PROGRESS", raising=False)
-    local_runner.run([sys.executable, "-c", STEPS_SCRIPT], 4, lambda *a: None, lambda: False, "Stand-in")
+    script = STEPS_SCRIPT + "\nimport os\nsys.stderr.write('columns ' + os.environ.get('COLUMNS', '?') + '\\n')\n"
+    local_runner.run([sys.executable, "-c", script], 4, lambda *a, **k: None, lambda: False, "Stand-in")
     text = out.getvalue()
-    assert "Stand-in  [" in text and "Step 2 of 4" in text and "Stand-in: done in" in text
-    assert text.count("Step 2 of 4") == 1  # not a terminal: a line when the stage changes, not a flood
+    # the model's tqdm output itself, as it came, between formcut's opening and closing lines; no bar of formcut's
+    assert text.startswith("formcut: Stand-in\n") and "2/4 [00:02<00:04, 1.0it/s]" in text and "\r" in text
+    assert "formcut: Stand-in: done in" in text and "Stand-in  [" not in text
+    assert "columns " in text and "columns ?" not in text  # tqdm is told the terminal's width
+
+
+def test_the_page_gets_tqdms_reading_elapsed_left_and_rate():
+    readings = []
+
+    def report(value, message=None, **fields):
+        if "timing" in fields:
+            readings.append(fields["timing"])
+
+    script = r"""
+import sys, time
+for k, stamp in enumerate(["[00:00<?, ?it/s]", "[00:03<00:21,  7.02s/it]", "[00:05<00:10,  1.95it/s]"]):
+    sys.stderr.write("\r 10%|#  | " + str(k) + "/8 " + stamp); sys.stderr.flush(); time.sleep(0.05)
+sys.stderr.write("\n")
+"""
+    local_runner.run([sys.executable, "-c", script], 8, report, lambda: False, "Stand-in")
+    steps = [r for r in readings if not r.get("loading")]
+    assert {"step": 1, "steps": 8, "elapsed": "00:03", "remaining": "00:21", "rate": "7.02s/it"} in steps
+    assert {"step": 2, "steps": 8, "elapsed": "00:05", "remaining": "00:10", "rate": "1.95it/s"} in steps
 
 
 def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_path, monkeypatch, library):

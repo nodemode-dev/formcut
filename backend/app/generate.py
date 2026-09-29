@@ -637,9 +637,9 @@ def _generate_local(body: GenerateBody):
         for index in range(count):
             staged = STAGING / f"{uuid.uuid4().hex}{extension}"
 
-            def each(f, message=None, i=index):
+            def each(f, message=None, i=index, **fields):
                 label = message if count == 1 or message is None else f"Picture {i + 1} of {count}: {message}"
-                report((i + f) / count, label)
+                report((i + f) / count, label, **fields)
 
             this_seed = (int(seed) + index) if seed is not None else None
             memory = str(body.options.get("memory") or "auto")

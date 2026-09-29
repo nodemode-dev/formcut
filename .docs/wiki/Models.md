@@ -273,12 +273,14 @@ checkpoints, Continuous is a session in the engine: one run of mflux over hundre
 its LoRAs are loaded once and stay in memory between pictures; each picture joins the results as soon as it is made
 (through the content filter, with its recipe written into it); the prompt can be changed while it runs, and the next
 picture reads it (mflux's `--prompt-file`), while the LoRAs, size and steps stay as the session started. Unticking
-Continuous or Cancel ends the session and frees the memory. Beside the progress bar, the generator shows how long
-the current picture has taken, and each result's time.
+Continuous or Cancel ends the session and frees the memory. Each result's time is in the note.
 
 A result opens full screen with a click (or Enter): Escape, a click or Close returns; the arrow keys move through
-the results. While a picture is made, the terminal formcut was started from shows a progress bar with the model's
-own steps (a line per stage when the output is not a terminal); `FORMCUT_QUIET_PROGRESS=1` turns it off.
+the results. While a picture is made, the terminal formcut was started from shows mflux's own output as it comes,
+its tqdm progress bar included (the steps, the time elapsed and left, its/s), redrawn in place and sized to the
+terminal, between a line from formcut when the run starts and one when it ends; `FORMCUT_QUIET_PROGRESS=1` keeps it
+out. Under the generator's progress bar, the same reading as tqdm gives it: the step and `[elapsed<left, rate]`, or
+while the model loads, how long loading has taken.
 
 If Krea 2's content filter was removed, its warning goes with each picture until it is acknowledged (I understand)
 on the Krea 2 card in Studio > Local models; after that the pictures no longer carry it.

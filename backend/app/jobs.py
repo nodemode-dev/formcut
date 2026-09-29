@@ -53,7 +53,7 @@ def submit(kind: str, operation) -> dict:
                     if message is not None:
                         job["message"] = str(message)[:200]  # what the job is doing, beside the fraction
                     # what a long job has made so far (a continuous generation's pictures), for the page to show
-                    job.update({key: value for key, value in fields.items() if key in ("made", "seeds", "notes", "warning")})
+                    job.update({key: value for key, value in fields.items() if key in ("made", "seeds", "notes", "warning", "timing")})
                 # Announce every five percent: enough for a progress bar without
                 # flooding a subscriber on a long render.
                 if job["progress"] - last_announced >= 0.05:

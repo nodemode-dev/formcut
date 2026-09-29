@@ -1192,9 +1192,14 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             break;
           }
           bar.value = status.progress ?? 0;
-          // the stage, its share, and how long this picture has taken so far
+          // the stage and its share, then the model's own reading as its tqdm bar gives it: the step, the time taken,
+          // the time left, and its/s (or s/it); while it loads, the time loading has taken
           const elapsed = Math.floor((Date.now() - pictureStart) / 1000);
-          stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}% · ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
+          const timing = status.timing as { elapsed?: string; remaining?: string; rate?: string; step?: number; steps?: number; loading?: boolean } | undefined;
+          const reading = timing && !timing.loading && timing.remaining
+            ? `${timing.step}/${timing.steps} [${timing.elapsed}<${timing.remaining}, ${timing.rate}]`
+            : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
+          stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}% · ${reading}`;
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } catch (error) {
