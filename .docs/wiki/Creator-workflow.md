@@ -42,6 +42,17 @@ on, and it always lands on a frame. Transcription appends captions to the track
 named in the caption picker, and if that track already holds clips across the
 caption span it creates a Captions track instead, so nothing is written over.
 
+Project files and linked media. File > Save as project file writes the project to a `.fmc` file wherever you
+choose (for instance `~/Documents/Client/Launch.fmc`); from then on every save, the autosave included, writes that file
+too. File > Open project file reads one back. Import, on the computer formcut runs on, opens the system's own dialog
+and links the files where they are rather than copying them (the library keeps a link to each file, its path and a
+fingerprint; deleting it from the library removes only the link). A `.fmc` records, for every file its clips use,
+where the file is, where it is relative to the `.fmc` (so a project folder moved or handed over whole finds its
+footage), and its fingerprint. When a file is not where the project last found it, the Missing media dialog lists it:
+Locate it with the system's dialog and the others are looked for beside it, or Search a folder and every missing file
+is looked for there and below, by name and then by fingerprint (a renamed file too); a file of another length is asked
+about first. The `.fc` package stays the way to hand a project over with its footage inside it.
+
 Any picture or video can be seen full screen, on its own: View on a media library card (or Space on a focused
 card), View on the start screen's media, or a click on a result in Studio's image generator. The viewer sits above
 everything; Escape, a click outside its bar, or Close returns, and the arrow keys move through the pictures and videos

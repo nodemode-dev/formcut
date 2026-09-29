@@ -6,6 +6,7 @@ import { listProjects, newProject, openProject, saveProject, installAutosave } f
 import { exportProject } from "./export-job";
 import { api } from "../engine/api";
 import { icon } from "./icons";
+import { showMissingMedia, type MissingItem } from "./missing-media";
 import { t } from "../i18n";
 import { buildModePanel } from "./mode-popout";
 import { openTikTok } from "./tiktok-dialog";
@@ -194,6 +195,33 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       hideToastSoon(2000);
     } else if (hit.dataset.act === "save") {
       await doSave();
+    } else if (hit.dataset.act === "save-as") {
+      // the project written to a .fmc file of the person's choosing; every save after follows it there
+      try {
+        const saved = await saveProject(engine);
+        if (!saved) { showToast(t("toast.savefail")); hideToastSoon(2500); return; }
+        const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "save", title: t("file.saveAs"), defaultName: `${saved.title || "Untitled"}.fmc` });
+        if (!chosen.paths.length) return;
+        const written = await api<{ path: string }>("/api/project-files/save", { projectId: saved.id, path: chosen.paths[0] });
+        showToast(`${t("file.savedTo")} ${written.path}`);
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : t("toast.savefail"));
+      }
+      hideToastSoon(4000);
+    } else if (hit.dataset.act === "open-file") {
+      // a .fmc file: its project into the editor, its media linked back where found, the rest offered to Locate
+      try {
+        const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", title: t("file.openFile"), types: ["fmc"] });
+        if (!chosen.paths.length) return;
+        const opened = await api<{ project: { id: string }; missing: MissingItem[] }>("/api/project-files/open", { path: chosen.paths[0] });
+        const ok = await openProject(engine, opened.project.id);
+        showToast(ok ? t("file.opened") : "Open failed");
+        hideToastSoon(2500);
+        if (opened.missing.length) showMissingMedia(opened.missing, () => void openProject(engine, opened.project.id));
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : "Open failed");
+        hideToastSoon(4000);
+      }
     } else if (hit.dataset.open) {
       const ok = await openProject(engine, hit.dataset.open);
       showToast(ok ? "Project opened" : "Open failed");

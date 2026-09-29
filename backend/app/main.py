@@ -85,7 +85,9 @@ from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
 from .klein import router as klein_router
 from .krea2 import router as krea2_router
+from .linking import router as linking_router
 from .loras import router as loras_router
+from .project_files import router as project_files_router
 from .project_packages import router as project_packages_router
 from .subtitles import router as subtitles_router
 from .terminal import router as terminal_router
@@ -100,6 +102,8 @@ app.include_router(krea2_router)
 app.include_router(klein_router)
 app.include_router(loras_router)
 app.include_router(checkpoints_router)
+app.include_router(linking_router)
+app.include_router(project_files_router)
 
 
 class _QuietPolls(logging.Filter):

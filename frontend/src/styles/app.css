@@ -1525,7 +1525,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .krea-card .krea-terms ul { margin: var(--sp-1) 0; padding-left: var(--sp-4); color: var(--ink-soft); }
 .krea-card .krea-filter { border: 1px solid var(--edge); border-radius: var(--radius-s); padding: var(--sp-2) var(--sp-3); display: grid; gap: var(--sp-1); }
 .krea-card .krea-removed { border: 1px solid var(--cue); border-radius: var(--radius-s); padding: var(--sp-2) var(--sp-3); color: var(--ink); display: grid; gap: var(--sp-2); }
-.lora-stack { display: grid; gap: var(--sp-2); padding: var(--sp-2); border: 1px solid var(--line); border-radius: var(--radius-s); }
+.lora-stack { display: grid; gap: var(--sp-2); padding: var(--sp-2); border: 1px solid var(--edge); border-radius: var(--radius-s); }
 .lora-stack .lora-head, .lora-stack .lora-library { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
 .lora-stack .lora-head { justify-content: space-between; }
 .lora-stack .lora-library input:not([type="file"]) { flex: 1 1 16rem; min-width: 0; }
@@ -1556,3 +1556,13 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .gen-progress progress { width: 100%; height: 8px; accent-color: var(--cue); }
 .krea-card .krea-check { display: flex; gap: var(--sp-2); align-items: flex-start; }
 .krea-card .krea-actions { display: flex; gap: var(--sp-2); }
+
+/* Missing media (missing-media.ts): above everything, as the viewer is */
+.missing-media { position: fixed; inset: 0; z-index: var(--z-viewer); display: grid; place-items: center; background: rgba(0, 0, 0, 0.55); }
+.missing-media-panel { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 64px); overflow: auto; display: grid; gap: var(--sp-3); padding: var(--sp-4); background: var(--float); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--radius-m, 10px); }
+.missing-media-panel h2 { margin: 0; font-size: 16px; }
+.missing-media-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.missing-media-list li { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.missing-media-list li div { display: grid; min-width: 0; }
+.missing-media-list small { color: var(--ink-faint); overflow-wrap: anywhere; }
+.missing-media-actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }

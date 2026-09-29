@@ -1,4 +1,6 @@
 import { titleSpeech } from "./title-speech";
+import { showMissingMedia, type MissingItem } from "./missing-media";
+import { openProject, saveProject } from "../engine/persistence";
 import { escapeHtml } from "./safe-text";
 import { reconcilePresets } from "./preset-grid";
 import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
@@ -1255,7 +1257,24 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     activeKind = (hit.dataset.kind ?? "") as MediaKind | "";
     applyFilter();
   });
-  el.querySelector('[data-ref="import"]')!.addEventListener("click", () => fileInput.click());
+  // Import: on this computer, the system's own dialog and the files linked where they are (not copied; linking.py);
+  // where there is no dialog (a phone, another computer), the browser's upload, which copies
+  let dialogs: boolean | null = null;
+  const hasDialogs = async () => {
+    if (dialogs === null) dialogs = await fetch("/api/system/dialogs").then((r) => r.json()).then((d) => !!d.available).catch(() => false);
+    return dialogs;
+  };
+  el.querySelector('[data-ref="import"]')!.addEventListener("click", () => void (async () => {
+    if (!(await hasDialogs())) { fileInput.click(); return; }
+    try {
+      const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", multiple: true, title: t("chip.import") });
+      if (!chosen.paths.length) return;
+      await api("/api/media/link", { paths: chosen.paths });
+      await bin.load();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : String(error));
+    }
+  })());
   el.querySelector('[data-ref="cloud"]')!.addEventListener("click", () => openCloudBrowser(bin));
   fileInput.addEventListener("change", async () => {
     const files = Array.from(fileInput.files ?? []);
@@ -1291,7 +1310,17 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     if (changed === "clips" || changed === "timeline") syncRelink();
   });
 
-  el.querySelector('[data-ref="relink-btn"]')!.addEventListener("click", () => relinkFile.click());
+  // Relink: the Missing media dialog on this computer (Locate, Search a folder); an upload by name elsewhere
+  el.querySelector('[data-ref="relink-btn"]')!.addEventListener("click", () => void (async () => {
+    if (!(await hasDialogs())) { relinkFile.click(); return; }
+    const gone = await fetch("/api/media/missing").then((r) => r.json()).catch(() => []) as MissingItem[];
+    if (!gone.length) { relinkFile.click(); return; }
+    showMissingMedia(gone, () => void (async () => {
+      await bin.load();
+      const id = engine.snapshot.projectId;
+      if (id) { await saveProject(engine); await openProject(engine, id); }  // the preview draws the found files
+    })());
+  })());
   relinkFile.addEventListener("change", async () => {
     const files = Array.from(relinkFile.files ?? []);
     relinkFile.value = "";

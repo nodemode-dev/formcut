@@ -137,6 +137,20 @@ def session_stats(session_id: str):
     return item["cache"].stats()
 
 
+def forget_media(media_id: str) -> None:
+    """A relinked media item: each preview session's renderer forgets where its file was and what it drew from it."""
+    with _lock:
+        items = list(_sessions.values())
+    for item in items:
+        renderer = item.get("renderer")
+        known = getattr(renderer, "_media_known", None)
+        if isinstance(known, dict):
+            known.pop(media_id, None)
+        cache = item["cache"]
+        with cache.lock:
+            cache.frames.clear()
+
+
 def release_frames() -> int:
     """The preview's cached frames let go, for a local image model that needs the memory more (up to 240 frames a
     session, over a gigabyte at 1080p): the preview draws them again when they are asked for. Returns the bytes."""

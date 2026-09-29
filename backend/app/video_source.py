@@ -498,6 +498,21 @@ def _open(path, limit=None, deep: bool = False) -> VideoSource:
 
 _pool_lock = threading.Lock()
 _idle: list[tuple[float, VideoSource]] = []
+
+
+def forget_path(path) -> None:
+    """Idle decoders of a file let go: its media was relinked to another file under the same name (linking.py)."""
+    with _pool_lock:
+        keep = []
+        for stamp, source in _idle:
+            if str(getattr(source, "path", "")) == str(path):
+                with contextlib.suppress(Exception):
+                    source.release()
+            else:
+                keep.append((stamp, source))
+        _idle[:] = keep
+
+
 IDLE_LIMIT = 4
 IDLE_SECONDS = 60.0
 

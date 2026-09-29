@@ -225,6 +225,16 @@ def _recover() -> list[dict]:
     return [dict(item) for item in items]
 
 
+def media_path(media_id: str) -> Path | None:
+    """The file behind a media item, when it is there: its own file in the media folder, or the file a linked item's
+    link points at (linking.py). None when it is gone, or its link dangles because the file moved."""
+    for path in MEDIA_DIR.glob(f"{media_id}.*"):
+        if path.name.startswith(".") or not path.is_file():
+            continue
+        return path
+    return None
+
+
 def recover_library() -> dict:
     """At start: any media file the index does not know taken back into it (the owner's case, the index rebuilt
     empty and filled again while the files it had listed were still there), names put back from projects."""
@@ -975,7 +985,7 @@ def reveal_media(media_id: str) -> dict:
     matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
     if not matches:
         raise HTTPException(status_code=404, detail="file missing")
-    path = matches[0]
+    path = matches[0].resolve()  # a linked item's own file, where it is, not its link
     if sys.platform == "darwin":
         command = ["open", "-R", str(path)]
     elif sys.platform == "win32":
