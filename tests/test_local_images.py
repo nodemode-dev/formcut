@@ -292,12 +292,15 @@ for token in sys.argv[start:]:
         break
     seeds.append(token)
 steps = int(sys.argv[sys.argv.index("--steps") + 1])
+literal = __import__("os").environ.get("FAKE_LITERAL") == "1"  # a picture named otherwise than by its seed
 for seed in seeds:
     __import__("time").sleep(float(__import__("os").environ.get("FAKE_DELAY", "0")))
     for k in range(steps + 1):
+        __import__("time").sleep(float(__import__("os").environ.get("FAKE_STEP", "0")))
         sys.stderr.write("\\r" + str(k) + "/" + str(steps) + " [00:00<00:00]")
         sys.stderr.flush()
-    Image.new("RGB", (64, 64), "pink").save(sys.argv[sys.argv.index("--output") + 1].replace("{{seed}}", seed))
+    out = sys.argv[sys.argv.index("--output") + 1]
+    Image.new("RGB", (64, 64), "pink").save(out.replace("{{seed}}", "image") if literal else out.replace("{{seed}}", seed))
 """
 
 
@@ -804,7 +807,7 @@ def test_unticking_continuous_finishes_the_picture_in_hand_then_stops(tmp_path, 
             break
         time.sleep(0.05)
     asked_with = len(status["made"])
-    assert client.post(f"/api/generate/sessions/{job}/finish").json() == {"finishing": True}
+    assert client.post(f"/api/generate/sessions/{job}/finish").json()["finishing"] is True
     for _ in range(400):
         status = client.get(f"/api/jobs/{job}").json()
         if status["status"] != "running":
@@ -844,3 +847,52 @@ sys.stderr.write("\n")
     runner.join()
     assert now and now[-1][2] == {"elapsed": "01:10", "remaining": "01:10", "rate": "35.00s/it", "step": 2, "steps": 4}
     assert now[-1][0] == 0.5 and now[-1][1] == "Step 2 of 4"  # the bar's share is tqdm's own 50%
+
+
+def _session(client, prompt, steps=4):
+    started = client.post(
+        "/api/generate", json={"generator": "local:krea-2", "prompt": prompt, "options": {"seed": -1, "steps": steps, "continuous": True}}
+    )
+    return started.json()["job_id"]
+
+
+def _until(client, job, test, tries=600):
+    for _ in range(tries):
+        status = client.get(f"/api/jobs/{job}").json()
+        if test(status):
+            return status
+        time.sleep(0.02)
+    return status
+
+
+def test_a_picture_named_otherwise_is_shown_before_the_next_begins(tmp_path, monkeypatch, library):
+    """mflux writing the same name each time (not the seed's): each picture still taken as soon as it is whole."""
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "1.2")
+    monkeypatch.setenv("FAKE_LITERAL", "1")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    job = _session(client, "a grey room")
+    first = _until(client, job, lambda s: len(s.get("made") or []) >= 1)
+    shown_at = time.time()
+    second = _until(client, job, lambda s: len(s.get("made") or []) >= 2)
+    client.delete(f"/api/jobs/{job}")
+    _until(client, job, lambda s: s["status"] != "running")
+    # the first was shown during the pause before the second picture (1.2 s), not when the second began its steps
+    assert len(first["made"]) == 1 and len(second["made"]) == 2 and time.time() - shown_at > 0.8
+    assert first["made"][0]["seed"] == second["seeds"][0] and second["seeds"][0] != second["seeds"][1]
+
+
+def test_unticking_mid_picture_finishes_that_picture_not_the_one_before(tmp_path, monkeypatch, library):
+    """The owner's case: Continuous unticked while picture 2 was being made. Picture 2 is finished and saved, then the
+    session stops; until 2.1.10 saving picture 1 late ended the session and picture 2 was lost."""
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "0.1")
+    monkeypatch.setenv("FAKE_STEP", "0.15")  # each step takes its time, as Krea 2's do
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    job = _session(client, "a yellow room", steps=6)
+    # picture 1 saved, picture 2 under way (its second step drawn)
+    _until(client, job, lambda s: len(s.get("made") or []) >= 1 and "Picture 2: Step 2" in (s.get("message") or ""))
+    asked = client.post(f"/api/generate/sessions/{job}/finish").json()
+    assert asked["after"] == 2
+    ended = _until(client, job, lambda s: s["status"] != "running")
+    assert ended["status"] == "done" and len(ended["result"]["media"]) == 2

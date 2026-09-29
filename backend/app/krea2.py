@@ -443,6 +443,7 @@ def run_continuous(
     cancelled=lambda: False,
     folder: Path | None = None,
     sampling: dict | None = None,
+    on_begin=None,
 ) -> int:
     """A continuous session: one run of mflux over many random seeds, so Krea 2 (or the checkpoint) and its LoRAs are
     loaded once and stay in memory between pictures. The prompt is read from prompt_file before each seed (mflux's
@@ -474,41 +475,54 @@ def run_continuous(
     sampling = {**(sampling or {})}
     sampling.setdefault("bake", not (settings["lowRam"] or _four_bit(state["build"], folder)))
     seeds = [int.from_bytes(os.urandom(4), "little") for _ in range(SESSION_SEEDS)]
-    pattern = staging / f"session-{os.getpid()}-{int(time.time() * 1000)}-{{seed}}.png"
+    # the session's own folder: every picture mflux writes in it is this session's, whatever mflux names it
+    folder_out = staging / f"session-{os.getpid()}-{int(time.time() * 1000)}"
+    folder_out.mkdir(parents=True, exist_ok=True)
+    pattern = folder_out / "{seed}.png"
     label = f"Krea 2 checkpoint {folder.name}" if folder else "Krea 2"
     command = _command(state["build"], "", pattern, width, height, seeds[0], steps, pairs, settings, folder, seeds, sampling, prompt_file)
-    taken = {"next": 0, "size": -1, "ended": False, "seen": set()}
-    prefix = pattern.name.split("{seed}")[0]
+    taken = {"next": 0, "ended": False, "seen": set(), "last": {}}
 
     def collect(force: bool = False) -> None:
-        # A picture is taken as soon as it is whole: when mflux begins the next seed (force: the one before is written),
-        # when the process ends, or, between, once its file is there, the same size twice running, and readable.
-        # By its seed's name; failing that, any new picture of this session (should mflux name it otherwise).
+        # Any picture in the session's folder not yet taken, by what it is (its name, time and size), not by the name
+        # it was expected to have: mflux may name a picture otherwise than by its seed, or write the same name again.
+        # Whole: once mflux has begun the next picture (force), once the process has ended, or, between, once it has
+        # stayed the same across two looks and reads as a picture. Its seed from its name when it holds one of ours,
+        # else the next in order. (Until 2.1.10 a picture was looked for by its seed's name alone between those
+        # moments, and one named otherwise waited for the next picture's first step, a step of Krea 2 later.)
         whole = force or taken["ended"]
-        while taken["next"] < len(seeds):
-            target = Path(str(pattern).replace("{seed}", str(seeds[taken["next"]])))
-            if not target.is_file() and whole:
-                others = sorted(
-                    (p for p in staging.glob(f"{prefix}*.png") if p.name not in taken["seen"]),
-                    key=lambda p: p.stat().st_mtime_ns,
-                )
-                target = others[0] if others else target
-            if not target.is_file():
-                return
-            size_now = target.stat().st_size
-            if not whole and (size_now == 0 or size_now != taken["size"]):
-                taken["size"] = size_now
-                return
+        found = []
+        for path in folder_out.glob("*.png"):
             try:
-                with Image.open(target) as picture:
+                stat = path.stat()
+            except OSError:
+                continue
+            mark = (path.name, stat.st_mtime_ns, stat.st_size)
+            if mark in taken["seen"] or stat.st_size == 0:
+                continue
+            if not whole and taken["last"].get(path.name) != mark:
+                taken["last"][path.name] = mark  # seen once: taken if the same next time
+                continue
+            found.append((stat.st_mtime_ns, path, mark))
+        for _, path, mark in sorted(found):
+            try:
+                with Image.open(path) as picture:
                     picture.verify()
             except (OSError, SyntaxError):
-                return
-            taken["seen"].add(target.name)
-            on_picture(seeds[taken["next"]], target)
+                continue
+            taken["seen"].add(mark)
+            by_name = next((s for s in seeds if str(s) in path.stem), None)
+            seed = by_name if by_name is not None else seeds[min(taken["next"], len(seeds) - 1)]
+            on_picture(seed, path)
             taken["next"] += 1
-            taken["size"] = -1
 
+    def begun() -> None:
+        collect(force=True)  # the picture before is written: taken before this one goes on
+        if on_begin is not None:
+            on_begin()
+
+    if on_begin is not None:
+        on_begin()  # the first picture begins with the process
     try:
         local_runner.run(
             command,
@@ -519,14 +533,18 @@ def run_continuous(
             images=len(seeds),
             on_tick=collect,
             continuous=True,
-            on_next=lambda: collect(force=True),
+            on_next=begun,
         )
     except InterruptedError:
         taken["ended"] = True
         collect()
         raise
-    taken["ended"] = True
-    collect()
+    finally:
+        taken["ended"] = True
+        collect()
+        import shutil
+
+        shutil.rmtree(folder_out, ignore_errors=True)
     return taken["next"]
 
 

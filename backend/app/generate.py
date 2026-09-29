@@ -316,8 +316,21 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
         prompt_file = STAGING / f"prompt-{job_id}.txt"
         prompt_file.write_text(prompt, encoding="utf-8")
         finish = threading.Event()
-        _SESSIONS[job_id] = {"prompt": prompt_file, "finish": finish}
-        ending = {"now": False}  # set once the picture in hand is saved after a finish was asked for
+        # "started": pictures begun so far; "finishAfter": how many were begun when a finish was asked for, the one
+        # then in hand included: the session stops once that many are saved (or withheld), not at the next saved
+        # "ending" is set once the picture in hand when the finish was asked for is saved, or at once when none was
+        session = {"prompt": prompt_file, "finish": finish, "started": 0, "finishAfter": None, "handled": 0}
+        ending = {"now": False}
+        session["ending"] = ending
+        _SESSIONS[job_id] = session
+
+        def begun() -> None:
+            session["started"] += 1
+
+        def handled() -> None:
+            session["handled"] += 1
+            if session["finishAfter"] is not None and session["handled"] >= session["finishAfter"]:
+                ending["now"] = True
 
         def stop() -> bool:
             return cancelled() or ending["now"]
@@ -341,8 +354,7 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                     path.unlink(missing_ok=True)
                     session_notes.append(f"seed {seed_value} withheld by the content filter, NSFW score {verdict['nsfw']:.2f}")
                     report(0.1, "Next picture", notes=list(session_notes))
-                    if finish.is_set():
-                        ending["now"] = True
+                    handled()
                     return
             with Image.open(path) as picture:
                 dims = picture.size
@@ -377,8 +389,7 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                 notes=list(session_notes),
                 warning=warning,
             )
-            if finish.is_set():
-                ending["now"] = True  # the picture in hand is saved: the session stops here
+            handled()
 
         try:
             while not stop():
@@ -396,6 +407,7 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                     cancelled=stop,
                     folder=checkpoint,
                     sampling=sampling,
+                    on_begin=begun,
                 )
         except InterruptedError:
             # Cancel stops at once and the job is cancelled; a finish asked for ends here once its picture is saved
@@ -425,8 +437,12 @@ def finish_session(job_id: str) -> dict:
     session = _SESSIONS.get(job_id)
     if session is None:
         raise HTTPException(404, "No continuous session by that id")
+    # the picture in hand now, and any before it not yet saved, are finished; nothing begun after
+    session["finishAfter"] = max(1, session["started"])
+    if session["handled"] >= session["finishAfter"]:
+        session["ending"]["now"] = True  # between pictures, none in hand: it stops now
     session["finish"].set()
-    return {"finishing": True}
+    return {"finishing": True, "after": session["finishAfter"]}
 
 
 class SessionPrompt(BaseModel):
