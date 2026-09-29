@@ -95,7 +95,7 @@ the automation transports.
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (361L)
-- `local_runner.py` (229L)
+- `local_runner.py` (276L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
 - `openh264.py` (410L)
