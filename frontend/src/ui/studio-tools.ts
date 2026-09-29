@@ -4,6 +4,7 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { api, waitJob } from "../engine/api";
 import { escapeHtml } from "./safe-text";
+import { openViewer } from "./viewer";
 import { buildCreatorPanel } from "./creator-panel";
 import { buildRecording } from "./recorder";
 import { icon } from "./icons";
@@ -872,30 +873,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const runs = new Map<string, number>();  // continuous runs so far, per kind
   const sessionKinds = new Set<string>();  // kinds with a continuous session running in the engine
   const finishing = new Set<string>();  // kinds whose session was asked to finish the picture in hand
-  // The full-screen viewer for a generated picture: above Studio, closed by Escape, a click or its button
-  const viewer = document.createElement("div");
-  viewer.className = "gen-viewer"; viewer.hidden = true; viewer.setAttribute("role", "dialog"); viewer.setAttribute("aria-modal", "true");
-  viewer.innerHTML = `<img class="gen-viewer-image" alt=""><div class="gen-viewer-bar"><span class="gen-viewer-caption"></span><button type="button" class="tool-chip gen-viewer-close">${t("gen.view.close")}</button></div>`;
-  document.body.append(viewer);
-  let viewing: { grid: HTMLElement; card: HTMLElement } | null = null;
-  const showCard = (card: HTMLElement) => {
-    viewer.querySelector<HTMLImageElement>(".gen-viewer-image")!.src = `/api/media/${card.dataset.genView}/file`;
-    viewer.querySelector<HTMLElement>(".gen-viewer-caption")!.textContent = card.dataset.genCaption ?? "";
+  // a result opens in the platform's full-screen viewer (viewer.ts), the results beside it one arrow away
+  const viewResults = (grid: HTMLElement, card: HTMLElement) => {
+    const cards = [...grid.querySelectorAll<HTMLElement>("[data-gen-view]")];
+    openViewer(cards.map((one) => ({ src: `/api/media/${one.dataset.genView}/file`, kind: "image" as const, caption: one.dataset.genCaption ?? "" })), cards.indexOf(card));
   };
-  const openViewer = (grid: HTMLElement, card: HTMLElement) => {
-    viewing = { grid, card }; showCard(card); viewer.hidden = false; viewer.querySelector<HTMLButtonElement>(".gen-viewer-close")!.focus();
-  };
-  const closeViewer = () => { viewer.hidden = true; viewer.querySelector<HTMLImageElement>(".gen-viewer-image")!.removeAttribute("src"); viewing?.card.focus(); viewing = null; };
-  viewer.addEventListener("click", (event) => { if (!(event.target as HTMLElement).closest(".gen-viewer-bar") || (event.target as HTMLElement).closest(".gen-viewer-close")) closeViewer(); });
-  document.addEventListener("keydown", (event) => {
-    if (viewer.hidden || !viewing) return;
-    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeViewer(); return; }
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-      const cards = [...viewing.grid.querySelectorAll<HTMLElement>("[data-gen-view]")];
-      const next = cards[cards.indexOf(viewing.card) + (event.key === "ArrowRight" ? 1 : -1)];
-      if (next) { viewing.card = next; showCard(next); }
-    }
-  }, true);
   const pick = <T extends HTMLElement>(sel: string) => modal.querySelector<T>(sel)!;
   const paintGenerators = () => {
     for (const kind of ["image", "video", "audio"] as const) {
@@ -1170,6 +1152,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         note.textContent = "";
         for (let waited = 0; (session || waited < 3600) && !controller.signal.aborted; waited += 1) {
           const status = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
+          // stopped while this answer was on its way: Stop has said so, and the bar is not drawn again after it
+          if (controller.signal.aborted) break;
           const partial = (status.made ?? []) as Array<{ id: string; name: string; seed?: number; steps?: number; seconds?: number }>;
           // each picture of a session as soon as the engine has it: by its id (the cards already shown hold earlier
           // runs' pictures too, so their count says nothing about this session's)
@@ -1211,6 +1195,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
           stage.textContent = `${status.message ?? t("gen.working")} · ${Math.round((status.progress ?? 0) * 100)}% · ${reading}${finishing.has(kind) ? ` · ${t("gen.continuous.finishing")}` : ""}`;
           await new Promise((resolve) => setTimeout(resolve, 1000));
+          if (controller.signal.aborted) break;
         }
       } catch (error) {
         note.textContent = error instanceof Error ? error.message : t("gen.failed");
@@ -1234,11 +1219,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     // a result opens full screen: the picture itself, its seed and steps; arrows move through the results
     grid.addEventListener("click", (event) => {
       const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");
-      if (card) openViewer(grid, card);
+      if (card) viewResults(grid, card);
     });
     grid.addEventListener("keydown", (event) => {
       const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");
-      if (card && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openViewer(grid, card); }
+      if (card && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); viewResults(grid, card); }
     });
   }
 

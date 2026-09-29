@@ -33,9 +33,10 @@ def test_the_generator_has_steps_and_seed_sliders_continuous_and_a_viewer():
         'data-gen-steps="${kind}"',
         'type="range" min="-1" max="4294967295"',
         'data-gen-continuous="${kind}"',
-        "gen-viewer",
         'data-gen-view="${item.id}"',
     ):
         assert marker in SOURCE, marker
+    # the viewer is the platform's own now (viewer.ts), the generator's results among its users
+    assert "gen-viewer" in (ROOT / "ui" / "viewer.ts").read_text(encoding="utf-8") and "openViewer(" in SOURCE
     tokens = (ROOT / "styles" / "tokens.css").read_text(encoding="utf-8")
     assert "--z-viewer: 750;" in tokens

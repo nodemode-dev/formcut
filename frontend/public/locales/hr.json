@@ -657,6 +657,7 @@
   "gen.continuous.finishing": "Dovršava se ova slika, zatim se zaustavlja",
   "gen.stop": "Zaustavi",
   "gen.stopped": "Zaustavljeno",
+  "view.open": "Prikaži",
   "gen.go": "Stvori",
   "gen.img2img": "Kreni od",
   "gen.img2img.none": "Ničega (samo upit)",

@@ -656,6 +656,7 @@
   "gen.continuous.finishing": "Dieses Bild wird fertiggestellt, dann wird angehalten",
   "gen.stop": "Stopp",
   "gen.stopped": "Angehalten",
+  "view.open": "Ansehen",
   "gen.go": "Erzeugen",
   "gen.img2img": "Ausgehen von",
   "gen.img2img.none": "Nichts (nur der Prompt)",

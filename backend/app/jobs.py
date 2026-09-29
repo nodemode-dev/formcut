@@ -49,7 +49,8 @@ def submit(kind: str, operation) -> dict:
             def report(value, message=None, **fields):
                 nonlocal last_announced
                 with _lock:
-                    job["progress"] = min(0.99, max(0, float(value)))
+                    if value is not None:  # None: the message or fields only, the bar left where it is
+                        job["progress"] = min(0.99, max(0, float(value)))
                     if message is not None:
                         job["message"] = str(message)[:200]  # what the job is doing, beside the fraction
                     # what a long job has made so far (a continuous generation's pictures), for the page to show

@@ -353,7 +353,7 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                 if verdict["withheld"]:
                     path.unlink(missing_ok=True)
                     session_notes.append(f"seed {seed_value} withheld by the content filter, NSFW score {verdict['nsfw']:.2f}")
-                    report(0.1, "Next picture", notes=list(session_notes))
+                    report(None, "Next picture", notes=list(session_notes))
                     handled()
                     return
             with Image.open(path) as picture:
@@ -382,7 +382,7 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
             made.append(item)
             seeds_used.append(seed_value)
             report(
-                0.1,
+                None,  # the bar stays where the picture left it; the next picture's steps move it
                 f"Picture {len(made)} done in {seconds:g} s",
                 made=list(made),
                 seeds=list(seeds_used),

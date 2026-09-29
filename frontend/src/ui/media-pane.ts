@@ -2,6 +2,7 @@ import { titleSpeech } from "./title-speech";
 import { escapeHtml } from "./safe-text";
 import { reconcilePresets } from "./preset-grid";
 import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
+import { mediaView as viewOf, openViewer, type ViewItem } from "./viewer";
 import { formatTimecode, type ProjectEngine } from "../engine/project";
 import type { MediaKind } from "../engine/types";
 import { MASK_SHAPES, defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
@@ -1164,11 +1165,23 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       <div class="effect-thumb bin-thumb">
         ${item.thumb ? `<img src="${thumbUrl(item)}" alt="" loading="lazy" draggable="false" />` : `<span class="bin-glyph">${icon(item.kind === "audio" ? "speaker" : "pip")}</span>`}
         <span class="dur-chip">${mm}:${ss}</span>
+        ${upscalable ? `<button type="button" class="bin-view" title="${escapeHtml(t("view.open"))}" aria-label="${escapeHtml(t("view.open"))}">${icon("eye")}</button>` : ""}
         ${upscalable ? `<button type="button" class="bin-upscale" title="${escapeHtml(t("upscale.action"))}" aria-label="${escapeHtml(t("upscale.action"))}">${icon("fullscreen")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-post" title="${escapeHtml(t("tiktok.action"))}" aria-label="${escapeHtml(t("tiktok.action"))}">${icon("export")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-ig" title="${escapeHtml(t("instagram.action"))}" aria-label="${escapeHtml(t("instagram.action"))}">${icon("pip")}</button>` : ""}
       </div>
       <div class="effect-name">${escapeHtml(item.name)}</div>${item.colourHandling && item.colourHandling !== "as decoded" ? `<div class="bin-colour" title="${escapeHtml(item.colourHandling)}">${escapeHtml(item.colour ?? "")} · ${escapeHtml(item.colourHandling)}</div>` : ""}`;
+    // View: the picture or video full screen, on its own (viewer.ts); Space on a focused card does the same
+    const viewCard = () => {
+      const cards = [...(card.parentElement?.querySelectorAll<HTMLElement>("[data-media]") ?? [])];
+      const views = cards.map((one) => bin.all.find((m) => m.id === one.dataset.media)).filter((m): m is MediaItem => !!m).map(viewOf).filter((v): v is ViewItem => !!v);
+      const mine = viewOf(item);
+      if (mine) openViewer(views, Math.max(0, views.findIndex((v) => v.src === mine.src)));
+    };
+    card.querySelector(".bin-view")?.addEventListener("click", (ev) => { ev.stopPropagation(); viewCard(); });
+    card.addEventListener("keydown", (ev) => {
+      if (ev.key === " " && ev.target === card && upscalable) { ev.preventDefault(); viewCard(); }
+    });
     card.querySelector(".bin-upscale")?.addEventListener("click", (ev) => {
       // The card's own click adds it to the timeline on touch layouts.
       ev.stopPropagation();

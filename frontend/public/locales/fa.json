@@ -657,6 +657,7 @@
   "gen.continuous.finishing": "این تصویر تمام می‌شود و سپس متوقف می‌شود",
   "gen.stop": "توقف",
   "gen.stopped": "متوقف شد",
+  "view.open": "نمایش",
   "gen.go": "ساختن",
   "gen.img2img": "شروع از",
   "gen.img2img.none": "هیچ (فقط متن)",

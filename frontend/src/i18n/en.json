@@ -656,6 +656,7 @@
   "gen.continuous.finishing": "Finishing this picture, then stopping",
   "gen.stop": "Stop",
   "gen.stopped": "Stopped",
+  "view.open": "View",
   "gen.go": "Generate",
   "gen.img2img": "Start from",
   "gen.img2img.none": "Nothing (from the prompt alone)",

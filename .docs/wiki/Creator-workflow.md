@@ -42,6 +42,11 @@ on, and it always lands on a frame. Transcription appends captions to the track
 named in the caption picker, and if that track already holds clips across the
 caption span it creates a Captions track instead, so nothing is written over.
 
+Any picture or video can be seen full screen, on its own: View on a media library card (or Space on a focused
+card), View on the start screen's media, or a click on a result in Studio's image generator. The viewer sits above
+everything; Escape, a click outside its bar, or Close returns, and the arrow keys move through the pictures and videos
+beside it.
+
 Caption looks: fourteen ship with formcut, six of them animated, the spoken word
 fading in as the words arrive (reveal) or rising into place (rise) over its first
 0.15 s. After them comes every installed captions package, among them the ones

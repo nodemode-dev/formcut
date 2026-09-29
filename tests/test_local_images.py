@@ -896,3 +896,18 @@ def test_unticking_mid_picture_finishes_that_picture_not_the_one_before(tmp_path
     assert asked["after"] == 2
     ended = _until(client, job, lambda s: s["status"] != "running")
     assert ended["status"] == "done" and len(ended["result"]["media"]) == 2
+
+
+def test_a_report_without_a_value_leaves_the_bar_where_it_is():
+    from app import jobs
+
+    def work(_job, report, cancelled):
+        report(0.62, "Step 5 of 8")
+        report(None, "Picture 1 done in 10 s", made=[{"id": "x"}])
+        time.sleep(0.3)
+        return {}
+
+    job = jobs.submit("test-bar", work)["job_id"]
+    time.sleep(0.15)
+    status = jobs.status(job)
+    assert status["progress"] == 0.62 and status["message"] == "Picture 1 done in 10 s" and status["made"] == [{"id": "x"}]

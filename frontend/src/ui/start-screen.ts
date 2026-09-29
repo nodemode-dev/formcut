@@ -7,6 +7,7 @@
 // measured storage breakdown that says which parts are derived and so can be
 // deleted without losing anything.
 import { escapeHtml } from "./safe-text";
+import { mediaView, openViewer, type ViewItem } from "./viewer";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { loadDemoProject } from "../engine/demo";
@@ -513,6 +514,16 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
         }
       })());
       rename.dataset.act = "rename";
+      // View: the picture or video full screen, on its own, the home's other media one arrow away
+      const shown = mediaView(item);
+      if (shown) {
+        const view = chip(t("view.open"), () => {
+          const list = [...mediaRecords.values()].map(mediaView).filter((v): v is ViewItem => !!v);
+          openViewer(list, Math.max(0, list.findIndex((v) => v.src === shown.src)));
+        });
+        view.dataset.act = "view";
+        tools.append(view);
+      }
       const reveal = chip(t("home.reveal"), () => void (async () => {
         try {
           const result = await api(`/api/media/${item.id}/reveal`, {}) as { opened: boolean; path: string; detail?: string };
