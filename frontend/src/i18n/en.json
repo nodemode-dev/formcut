@@ -611,6 +611,7 @@
   "gen.seconds": "Seconds",
   "gen.count": "How many",
   "gen.go": "Generate",
+  "gen.sampler": "Sampler",
   "gen.memory": "Memory",
   "gen.memory.auto": "Automatic",
   "gen.memory.low": "Low memory (slower)",

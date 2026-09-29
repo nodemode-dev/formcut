@@ -260,6 +260,19 @@ Model: ..., width/height` or `Size: WxH` line. Steps, Seed and size are used (th
 schedule, clip skip and a negative prompt are not taken by these distilled models, and the result says so. A tag whose
 LoRA is not in the model's folder stops the picture and names the folder to put it in.
 
+### What formcut asks of mflux for Krea 2
+
+`mflux-generate-krea2` as mflux 0.20.0 parses it: `--model` the build's or checkpoint's folder (no `--base-model`,
+which the Krea 2 command does not need); `--prompt`; `--width`/`--height` in multiples of 16; `--seed` with every
+seed of a request, so several pictures come from one load of the model; `--steps` (8 unless asked); `--scheduler`
+`er_sde` (the default) or `euler`, the generator's Sampler (a Civitai "Euler ..." sampler becomes `euler`; mflux has
+no ancestral Euler); `--guidance` only when a CFG scale other than 1 is asked for (it turns CFG on, a second pass a
+step, slower), and then the negative prompt with `--negative-prompt`; each LoRA as `--lora PATH SCALE`, with
+`--no-bake-lora` for a 4-bit model (the 4-bit build, or a checkpoint whose folder name says q4 or 4bit) or when
+memory is short, as baking would turn a 4-bit model's LoRA layers to 8-bit; and for memory `--low-ram` (which tiles
+the decode), `--mlx-cache-limit-gb`, or `--vae-tiling` alone when the model fits but its untiled decode (about 7 GB
+at 1024 px) would not. Image-to-image (`--image`) and NVIDIA PiD decoding (`--pid-decode`) are not used.
+
 ### Your own checkpoints
 
 A Krea 2 or Klein 4B fine-tune runs as a model of its own once it is in mflux's MLX format, in a folder under

@@ -120,7 +120,11 @@ def test_a_flagged_picture_is_withheld_and_a_removed_filter_lets_krea_run(fresh,
     state = {"ready": True, "reason": None, "build": "mlx-q8", "filterInstalled": True}
     monkeypatch.setattr(krea2, "policy", lambda: state)
     script = "import sys; from PIL import Image; Image.new('RGB', (64, 64), 'red').save(sys.argv[1])"
-    monkeypatch.setattr(krea2, "_command", lambda build, prompt, out, *a: [sys.executable, "-c", script, str(out)])
+    monkeypatch.setattr(
+        krea2,
+        "_command",
+        lambda build, prompt, out, width, height, seed, *a: [sys.executable, "-c", script, str(out).replace("{seed}", str(seed))],
+    )
     out = tmp_path / "picture.png"
     monkeypatch.setattr(content_filter, "check", lambda rgb: {"nsfw": 0.97, "withheld": True, "threshold": 0.5})
     with pytest.raises(ValueError, match="withheld"):
@@ -157,7 +161,11 @@ def test_the_studio_generator_offers_krea_and_its_pictures_carry_the_notice(fres
     state = {"licenceAccepted": True, "ready": True, "reason": None, "build": "mlx-q8", "filterInstalled": False}
     monkeypatch.setattr(krea2, "policy", lambda: state)
     script = "import sys; from PIL import Image; Image.new('RGB', (64, 64), 'teal').save(sys.argv[1])"
-    monkeypatch.setattr(krea2, "_command", lambda build, prompt, out, *a: [sys.executable, "-c", script, str(out)])
+    monkeypatch.setattr(
+        krea2,
+        "_command",
+        lambda build, prompt, out, width, height, seed, *a: [sys.executable, "-c", script, str(out).replace("{seed}", str(seed))],
+    )
     assert next(g for g in client.get("/api/generate").json()["generators"] if g["id"] == "local:krea-2")["ready"]
     started = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "a teal square", "size": "1024x1024"})
     assert started.status_code == 202

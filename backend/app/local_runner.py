@@ -43,14 +43,25 @@ def plan(model_bytes: int, mode: str = "auto") -> dict:
     memory = total_memory()
     low = mode == "low" or (mode == "auto" and memory > 0 and model_bytes * 2 > memory)
     cache = max(1.0, round(memory / 1e9 * 0.1, 1)) if memory else 4.0
-    return {"lowRam": low, "cacheLimitGb": cache, "memoryGb": round(memory / 1e9, 1), "modelGb": round(model_bytes / 1e9, 1)}
+    # Krea 2's decode takes about 7 GB at 1024 px untiled and 3 GB tiled (mflux 0.20.0's notes): tiled when the
+    # model and an untiled decode would not fit together (--low-ram tiles already)
+    tiling = not low and mode != "normal" and memory > 0 and model_bytes + 8e9 > memory
+    return {
+        "lowRam": low,
+        "vaeTiling": tiling,
+        "cacheLimitGb": cache,
+        "memoryGb": round(memory / 1e9, 1),
+        "modelGb": round(model_bytes / 1e9, 1),
+    }
 
 
 def mflux_memory_flags(settings: dict) -> list[str]:
     return [*(["--low-ram"] if settings["lowRam"] else []), "--mlx-cache-limit-gb", f"{settings['cacheLimitGb']:g}"]
 
 
-def run(command: list[str], steps: int, report, cancelled, label: str, env: dict | None = None, time_limit: float = TIME_LIMIT) -> str:
+def run(
+    command: list[str], steps: int, report, cancelled, label: str, env: dict | None = None, time_limit: float = TIME_LIMIT, images: int = 1
+) -> str:
     """Run a model's process to its end, reporting progress; returns the end of its output. Raises InterruptedError
     on cancel and RuntimeError on a failure or a time-out."""
     say = _say(report)
@@ -60,7 +71,7 @@ def run(command: list[str], steps: int, report, cancelled, label: str, env: dict
             if cancelled():
                 raise InterruptedError("cancelled")
     try:
-        return _run(command, steps, say, cancelled, label, env, time_limit)
+        return _run(command, steps, say, cancelled, label, env, time_limit, images)
     finally:
         HEAVY.release()
 
@@ -75,7 +86,7 @@ def _say(report):
     return say
 
 
-def _run(command, steps, say, cancelled, label, env, time_limit) -> str:
+def _run(command, steps, say, cancelled, label, env, time_limit, images=1) -> str:
     say(0.02, f"Loading {label}")
     process = subprocess.Popen(
         command,
@@ -88,7 +99,7 @@ def _run(command, steps, say, cancelled, label, env, time_limit) -> str:
     reader = threading.Thread(target=_pump, args=(process.stdout, chunks), daemon=True)
     reader.start()
     tail: deque = deque(maxlen=60)
-    started, last_step, loading = time.time(), -1, 0.02
+    started, last_step, loading, image = time.time(), -1, 0.02, 0
     pending = b""
     try:
         while True:
@@ -108,8 +119,13 @@ def _run(command, steps, say, cancelled, label, env, time_limit) -> str:
                     for raw_done, raw_total in found:
                         done, total = int(raw_done), int(raw_total)
                         if total == steps and done != last_step:
+                            if done < last_step and image + 1 < images:
+                                image += 1  # the next seed's picture: mflux draws its steps again from 0
                             last_step = done
-                            say(0.1 + 0.85 * done / max(1, total), f"Step {done} of {total}" if done < total else "Finishing the picture")
+                            stage = f"Step {done} of {total}" if done < total else "Finishing the picture"
+                            if images > 1:
+                                stage = f"Picture {image + 1} of {images}: {stage}"
+                            say(0.1 + 0.85 * (image + done / max(1, total)) / images, stage)
             elif last_step < 0:
                 # loading can take a minute on the first run: the bar creeps so the page is seen to be alive
                 loading = min(0.09, loading + 0.0005)

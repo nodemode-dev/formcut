@@ -289,13 +289,36 @@ def _civitai_prompt(slot: dict, text: str, stack: list) -> tuple[dict, str, list
         found["height"] = max(256, min(2048, params["height"] // 16 * 16))
         if (found["width"], found["height"]) != (params["width"], params["height"]):
             notes.append(f"size {params['width']}x{params['height']} made {found['width']}x{found['height']} (a multiple of 16)")
+    krea = slot["runner"] == "krea-2"
     if params.get("cfg") not in (None, 1.0):
-        notes.append(f"CFG scale {params['cfg']:g} not used: these distilled models run at guidance 1.0")
-    for key, label in (("sampler", "Sampler"), ("schedule_type", "Schedule type"), ("clip_skip", "Clip skip")):
+        if krea:
+            # Krea 2 takes CFG: any guidance but 1.0 turns it on (an extra pass a step, slower), with the negative prompt
+            found["guidance"] = max(0.0, min(15.0, params["cfg"]))
+            notes.append(f"CFG scale {params['cfg']:g}: CFG on, which takes longer")
+        else:
+            notes.append(f"CFG scale {params['cfg']:g} not used: FLUX.2 [klein] 4B is distilled to guidance 1.0")
+    sampler = str(params.get("sampler") or "").lower()
+    if sampler:
+        if krea and "euler" in sampler:
+            found["scheduler"] = "euler"
+            notes.append(
+                f"Sampler {params['sampler']}: mflux's euler" + (" (it has no ancestral Euler)" if sampler.startswith("euler a") else "")
+            )
+        elif krea and ("er_sde" in sampler or "er sde" in sampler):
+            found["scheduler"] = "er_sde"
+        else:
+            notes.append(
+                f"Sampler {params['sampler']} not used: "
+                + ("Krea 2 has er_sde and euler" if krea else "mflux samples Klein with its own scheduler")
+            )
+    for key, label in (("schedule_type", "Schedule type"), ("clip_skip", "Clip skip")):
         if key in params and not (key == "clip_skip" and str(params[key]) == "1"):
-            notes.append(f"{label} {params[key]} not used: mflux samples with the model's own scheduler")
+            notes.append(f"{label} {params[key]} not used by mflux")
     if data["negative"]:
-        notes.append("the negative prompt is not used: Krea 2 and FLUX.2 [klein] take none")
+        if krea and found.get("guidance", 1.0) != 1.0:
+            found["negative"] = data["negative"]
+        else:
+            notes.append("the negative prompt is not used: it takes CFG, a CFG scale other than 1" + ("" if krea else " (Krea 2 only)"))
     if data["loras"]:
         notes.append(f"LoRAs from the prompt: {', '.join(f'{name} {weight:g}' for name, weight in data['loras'])}")
     return slot, data["prompt"] or text, stack, notes, found
@@ -321,9 +344,14 @@ def _generate_local(body: GenerateBody):
     kind = slot.get("kind", "image")
     extension = slot.get("extension") or (".mp4" if kind == "video" else ".png")
     # A prompt written as Civitai shows it: <lora:name:strength> tags and the generation data read into the request
-    prompt, stack, notes = body.prompt, list(body.options.get("loras") or []), []
+    prompt, stack, notes, sampling = body.prompt, list(body.options.get("loras") or []), [], {}
     if slot["runner"] in ("krea-2", "mflux-klein"):
         slot, prompt, stack, notes, found = _civitai_prompt(slot, body.prompt, stack)
+        # Krea 2's sampling, from the panel or the pasted generation data (which wins, as on Civitai)
+        sampling = {key: body.options[key] for key in ("scheduler", "negative") if body.options.get(key)}
+        if "guidance" in body.options:
+            sampling["guidance"] = guidance
+        sampling.update({key: found[key] for key in ("scheduler", "guidance", "negative") if key in found})
         steps = found.get("steps", steps)
         seed = found.get("seed", seed)
         width, height = found.get("width", width), found.get("height", height)
@@ -335,6 +363,7 @@ def _generate_local(body: GenerateBody):
         made = []
         timings = []
         extras: dict = {}  # what a model's licence sends with its pictures (Krea 2: its notice, the filter's warning)
+        batch: list | None = None  # Krea 2: every seed in one run of mflux, the model loaded once
         for index in range(count):
             staged = STAGING / f"{uuid.uuid4().hex}{extension}"
 
@@ -346,21 +375,32 @@ def _generate_local(body: GenerateBody):
             memory = str(body.options.get("memory") or "auto")
             checkpoint = Path(slot["checkpoint"]) if slot.get("checkpoint") else None
             if slot["runner"] == "krea-2":
-                from .krea2 import generate_to_file as krea2_generate
+                from .krea2 import generate_many
 
-                result = krea2_generate(
-                    prompt,
-                    staged,
-                    width=width,
-                    height=height,
-                    seed=this_seed,
-                    steps=steps,
-                    stack=stack,
-                    memory=memory,
-                    report=each,
-                    cancelled=cancelled,
-                    folder=checkpoint,
-                )
+                if batch is None:
+                    paths = [staged] + [STAGING / f"{uuid.uuid4().hex}{extension}" for _ in range(count - 1)]
+                    seeds = [(int(seed) + i) if seed is not None else None for i in range(count)]
+                    batch = generate_many(
+                        prompt,
+                        paths,
+                        seeds,
+                        width,
+                        height,
+                        steps=steps,
+                        stack=stack,
+                        memory=memory,
+                        report=report,
+                        cancelled=cancelled,
+                        folder=checkpoint,
+                        sampling=sampling,
+                    )
+                result = batch[index]
+                if result.get("withheld"):
+                    notes.append(
+                        f"picture {index + 1} (seed {result['seed']}) withheld by the content filter, NSFW score {result['nsfw']:.2f}"
+                    )
+                    continue
+                staged = Path(result["path"])
             elif slot["runner"] == "mflux-klein":
                 from .klein import generate_to_file as klein_generate
 

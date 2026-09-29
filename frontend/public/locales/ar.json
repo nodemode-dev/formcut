@@ -612,6 +612,7 @@
   "gen.seconds": "الثواني",
   "gen.count": "كم عددها",
   "gen.go": "توليد",
+  "gen.sampler": "أداة أخذ العينات",
   "gen.memory": "الذاكرة",
   "gen.memory.auto": "تلقائي",
   "gen.memory.low": "ذاكرة منخفضة (أبطأ)",

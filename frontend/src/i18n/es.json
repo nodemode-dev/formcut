@@ -611,6 +611,7 @@
   "gen.seconds": "Segundos",
   "gen.count": "Cuántos",
   "gen.go": "Generar",
+  "gen.sampler": "Muestreador",
   "gen.memory": "Memoria",
   "gen.memory.auto": "Automática",
   "gen.memory.low": "Poca memoria (más lento)",

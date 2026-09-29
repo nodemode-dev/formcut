@@ -46,6 +46,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             <label data-gen-size-row="${kind}">${t("gen.size")} <select data-gen-size="${kind}"></select></label>
             <label data-gen-seconds-row="${kind}" hidden>${t("gen.seconds")} <input data-gen-seconds="${kind}" type="number" min="1" max="22" value="5"></label>
             <label data-gen-count-row="${kind}">${t("gen.count")} <input data-gen-count="${kind}" type="number" min="1" max="4" value="1"></label>
+            <label data-gen-sampler-row="${kind}" hidden>${t("gen.sampler")} <select data-gen-sampler="${kind}"><option value="er_sde">ER-SDE</option><option value="euler">Euler</option></select></label>
             <label data-gen-memory-row="${kind}" hidden>${t("gen.memory")} <select data-gen-memory="${kind}"><option value="auto">${t("gen.memory.auto")}</option><option value="low">${t("gen.memory.low")}</option><option value="normal">${t("gen.memory.normal")}</option></select></label>
           </div>
           <small class="stock-note" data-gen-civitai="${kind}" hidden>${t("gen.civitai.hint")}</small>
@@ -880,6 +881,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         pick<HTMLElement>(`[data-gen-loras="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-civitai="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden = !(entry && "memory" in (entry.options ?? {}));
+        pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden = !(entry && "scheduler" in (entry.options ?? {}));
         if (base) void paintLoras(kind, base).catch(() => { /* offline engine */ });
       };
       select.onchange = refresh;
@@ -1013,6 +1015,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       const base = baseOf(kind);
       if (base) body.options.loras = (stacks.get(base) ?? []).filter((item) => item.enabled).map((item) => ({ id: item.id, scale: item.scale }));
       if (!pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden) body.options.memory = pick<HTMLSelectElement>(`[data-gen-memory="${kind}"]`).value;
+      if (!pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden) body.options.scheduler = pick<HTMLSelectElement>(`[data-gen-sampler="${kind}"]`).value;
       const progress = pick<HTMLElement>(`[data-gen-progress="${kind}"]`);
       const bar = pick<HTMLProgressElement>(`[data-gen-bar="${kind}"]`);
       const stage = pick<HTMLElement>(`[data-gen-stage="${kind}"]`);

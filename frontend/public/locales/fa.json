@@ -612,6 +612,7 @@
   "gen.seconds": "ثانیه",
   "gen.count": "چند تا",
   "gen.go": "ساختن",
+  "gen.sampler": "نمونه‌گیر",
   "gen.memory": "حافظه",
   "gen.memory.auto": "خودکار",
   "gen.memory.low": "حافظهٔ کم (کندتر)",

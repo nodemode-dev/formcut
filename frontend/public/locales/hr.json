@@ -612,6 +612,7 @@
   "gen.seconds": "Sekunde",
   "gen.count": "Koliko",
   "gen.go": "Stvori",
+  "gen.sampler": "Uzorkivač",
   "gen.memory": "Memorija",
   "gen.memory.auto": "Automatski",
   "gen.memory.low": "Malo memorije (sporije)",

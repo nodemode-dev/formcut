@@ -267,6 +267,28 @@ def test_a_civitai_link_chooses_the_folder_and_checks_the_hash(library, monkeypa
     assert "Flux.2 Klein 9B" in fetched({"url": "https://civitai.com/models/2324991"})["detail"]
 
 
+FAKE_KREA = """#!{python}
+import json, sys
+from PIL import Image
+calls = json.load(open({recorded!r} + ".calls")) if __import__("os").path.exists({recorded!r} + ".calls") else []
+calls.append(sys.argv[1:])
+json.dump(calls, open({recorded!r} + ".calls", "w"))
+json.dump(sys.argv[1:], open({recorded!r}, "w"))
+start = sys.argv.index("--seed") + 1
+seeds = []
+for token in sys.argv[start:]:
+    if token.startswith("--"):
+        break
+    seeds.append(token)
+steps = int(sys.argv[sys.argv.index("--steps") + 1])
+for seed in seeds:
+    for k in range(steps + 1):
+        sys.stderr.write("\\r" + str(k) + "/" + str(steps) + " [00:00<00:00]")
+        sys.stderr.flush()
+    Image.new("RGB", (64, 64), "pink").save(sys.argv[sys.argv.index("--output") + 1].replace("{{seed}}", seed))
+"""
+
+
 OWNERS_PROMPT = """stunning woman in her late 20's with brown long hair near the bed. A realistic RAW photograph of a bright pastel bedroom. Detailed Emotions and Expressions, bl00m
 <lora:Emotions V1:1.0> <lora:Detailer-KREA2_from -3 to 6:1.0> <lora:krea2_nose_slider_v1:-2.0>
 Steps: 9, CFG scale: 1, Sampler: Euler a beta, Seed: 1554, Model: silly_krea2, width: 840, height: 1256, Version: ComfyUI, Model hash: 637580F9D0, Clip skip: 1"""
@@ -335,10 +357,7 @@ def test_the_owners_civitai_prompt_runs_with_its_loras_checkpoint_steps_seed_and
     (runtime / "bin").mkdir(parents=True)
     recorded = tmp_path / "argv.json"
     fake = runtime / "bin" / "mflux-generate-krea2"
-    fake.write_text(
-        f"#!{sys.executable}\nimport json, sys\nfrom PIL import Image\njson.dump(sys.argv[1:], open({str(recorded)!r}, 'w'))\n"
-        "Image.new('RGB', (64, 64), 'pink').save(sys.argv[sys.argv.index('--output') + 1])\n"
-    )
+    fake.write_text(FAKE_KREA.format(python=sys.executable, recorded=str(recorded)))
     fake.chmod(0o755)
     monkeypatch.setattr(krea2, "RUNTIME", runtime)
     folder = loras.LIBRARY / "krea-2"
@@ -360,14 +379,120 @@ def test_the_owners_civitai_prompt_runs_with_its_loras_checkpoint_steps_seed_and
     value = lambda flag: argv[argv.index(flag) + 1]  # noqa: E731
     assert value("--model").endswith("checkpoints/krea-2/silly_krea2") and value("--prompt").endswith("bl00m")
     assert (value("--steps"), value("--seed"), value("--width"), value("--height")) == ("9", "1554", "832", "1248")
-    lora_paths = argv[argv.index("--lora-paths") + 1 : argv.index("--lora-scales")]
-    assert [p.rsplit("/", 1)[1] for p in lora_paths] == [
-        "Emotions V1.safetensors",
-        "Detailer-KREA2_from -3 to 6.safetensors",
-        "krea2_nose_slider_v1.safetensors",
+    loras_given = [(argv[i + 1].rsplit("/", 1)[1], argv[i + 2]) for i, flag in enumerate(argv) if flag == "--lora"]
+    assert loras_given == [
+        ("Emotions V1.safetensors", "1"),
+        ("Detailer-KREA2_from -3 to 6.safetensors", "1"),
+        ("krea2_nose_slider_v1.safetensors", "-2"),
     ]
-    assert argv[argv.index("--lora-scales") + 1 : argv.index("--lora-scales") + 4] == ["1", "1", "-2"]
+    assert "--base-model" not in argv and "--lora-paths" not in argv and value("--scheduler") == "euler" and "--guidance" not in argv
+    assert value("--output").endswith("-{seed}.png")
     notes = " | ".join(status["result"]["notes"])
-    assert "Model silly_krea2: the checkpoint" in notes and "Sampler Euler a beta not used" in notes and "made 832x1248" in notes
+    assert "Model silly_krea2: the checkpoint" in notes and "Sampler Euler a beta: mflux's euler" in notes and "made 832x1248" in notes
     missing = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "a room <lora:Nowhere:0.5>"})
     assert missing.status_code == 400 and "Nowhere" in missing.json()["detail"] and "krea-2" in missing.json()["detail"]
+
+
+def test_krea_2s_command_is_what_mflux_0_20_parses(tmp_path):
+    from pathlib import Path
+
+    from app import krea2
+
+    settings = {"lowRam": False, "vaeTiling": True, "cacheLimitGb": 2.4}
+    sampling = {"scheduler": "euler", "guidance": 3.5, "negative": "blurry", "bake": False}
+    argv = krea2._command(
+        "mlx-q4",
+        "a room",
+        tmp_path / "x-{seed}.png",
+        832,
+        1248,
+        1554,
+        9,
+        [("a.safetensors", 1.0), ("b.safetensors", -2.0)],
+        settings,
+        None,
+        [1554, 42, 7],
+        sampling,
+    )
+    assert argv[0].endswith("mflux-generate-krea2") and "--base-model" not in argv
+    joined = " ".join(argv[1:])
+    for part in (
+        "--seed 1554 42 7",
+        "--lora a.safetensors 1 --lora b.safetensors -2",
+        "--no-bake-lora",
+        "--scheduler euler",
+        "--guidance 3.5 --negative-prompt blurry",
+        "--vae-tiling",
+        "--mlx-cache-limit-gb 2.4",
+    ):
+        assert part in joined, part
+    plain = krea2._command(
+        "mlx-q8",
+        "a room",
+        tmp_path / "x.png",
+        1024,
+        1024,
+        1,
+        8,
+        [],
+        {"lowRam": True, "vaeTiling": False, "cacheLimitGb": 2.4},
+        None,
+        None,
+        {},
+    )
+    assert "--guidance" not in plain and "--negative-prompt" not in plain and "--low-ram" in plain and "--vae-tiling" not in plain
+    assert (
+        krea2._four_bit("mlx-q8", Path("silly-krea-2-mix-mlx-q4"))
+        and not krea2._four_bit("mlx-q8", Path("silly_krea2"))
+        and krea2._four_bit("mlx-q4", None)
+    )
+
+
+def test_the_decode_is_tiled_when_memory_is_short(monkeypatch):
+    monkeypatch.setattr(local_runner, "total_memory", lambda: 12 * 10**9)
+    assert local_runner.plan(4.6e9)["vaeTiling"] and not local_runner.plan(2e9)["vaeTiling"]
+    assert not local_runner.plan(4.6e9, "low")["vaeTiling"] and not local_runner.plan(4.6e9, "normal")["vaeTiling"]
+    # a model that takes over half the memory runs --low-ram, which tiles already
+    assert local_runner.plan(8e9)["lowRam"] and not local_runner.plan(8e9)["vaeTiling"]
+
+
+def test_several_krea_pictures_come_from_one_run_of_mflux(tmp_path, monkeypatch, library):
+    from app import krea2
+
+    monkeypatch.setattr(krea2, "CONSENT_FILE", tmp_path / "krea-2-consent.json")
+    state = {
+        "licenceAccepted": True,
+        "ready": True,
+        "reason": None,
+        "build": "mlx-q4",
+        "filterInstalled": False,
+        "filterRemoved": True,
+        "removalAcknowledged": False,
+        "warning": krea2.REMOVED_WARNING,
+    }
+    monkeypatch.setattr(krea2, "policy", lambda: state)
+    runtime = tmp_path / "runtime"
+    (runtime / "bin").mkdir(parents=True)
+    recorded = tmp_path / "argv.json"
+    fake = runtime / "bin" / "mflux-generate-krea2"
+    fake.write_text(FAKE_KREA.format(python=sys.executable, recorded=str(recorded)))
+    fake.chmod(0o755)
+    monkeypatch.setattr(krea2, "RUNTIME", runtime)
+    (loras.LIBRARY / "krea-2").mkdir(parents=True)
+    _safetensors(loras.LIBRARY / "krea-2" / "style.safetensors", ["a.lora_A.weight", "a.lora_B.weight"])
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    body = {"generator": "local:krea-2", "prompt": "a room <lora:style:0.7>", "count": 3, "options": {"seed": 40, "scheduler": "euler"}}
+    started = client.post("/api/generate", json=body)
+    assert started.status_code == 202, started.text
+    messages = set()
+    for _ in range(300):
+        status = client.get(f"/api/jobs/{started.json()['job_id']}").json()
+        messages.add(status.get("message"))
+        if status["status"] in ("done", "error"):
+            break
+        time.sleep(0.02)
+    assert status["status"] == "done", status
+    calls = json.loads((tmp_path / "argv.json.calls").read_text())
+    assert len(calls) == 1 and " ".join(calls[0]).count("--seed 40 41 42") == 1 and "--scheduler euler" in " ".join(calls[0])
+    assert "--no-bake-lora" in calls[0]  # the 4-bit build keeps its LoRA unbaked
+    assert len(status["result"]["media"]) == 3

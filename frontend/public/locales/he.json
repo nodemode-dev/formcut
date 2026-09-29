@@ -612,6 +612,7 @@
   "gen.seconds": "שניות",
   "gen.count": "כמה",
   "gen.go": "יצירה",
+  "gen.sampler": "דוגם",
   "gen.memory": "זיכרון",
   "gen.memory.auto": "אוטומטי",
   "gen.memory.low": "זיכרון נמוך (איטי יותר)",

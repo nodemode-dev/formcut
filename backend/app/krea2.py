@@ -364,8 +364,10 @@ def _command(
     pairs: list | None = None,
     settings: dict | None = None,
     checkpoint: Path | None = None,
+    seeds: list[int] | None = None,
+    sampling: dict | None = None,
 ) -> list[str]:
-    from . import local_runner, loras
+    from . import local_runner
     from .model_manager import ROOT
 
     folder = checkpoint or ROOT / BUILDS[build]["model"]
@@ -385,51 +387,68 @@ def _command(
             str(out),
             json.dumps(pairs),
         ]
-    extra = [*loras.mflux_flags(pairs), *(local_runner.mflux_memory_flags(settings) if settings else [])]
-    if BUILDS[build]["platform"] == "macos-arm64":
-        cli = RUNTIME / "bin" / "mflux-generate-krea2"
-        return [
-            str(cli),
-            "--model",
-            str(folder),
-            "--base-model",
-            "krea-2",
-            "--prompt",
-            prompt,
-            "--width",
-            str(width),
-            "--height",
-            str(height),
-            "--seed",
-            str(seed),
-            "--steps",
-            str(steps),
-            "--output",
-            str(out),
-            *extra,
-        ]
-    return []
+    # mflux-generate-krea2 as mflux 0.20.0 parses it (the owner's list, from its argument parser): a local folder needs
+    # no --base-model; several seeds render in one load; --lora PATH SCALE once per LoRA (negative for sliders);
+    # --no-bake-lora keeps a 4-bit model 4-bit; --scheduler is er_sde (default) or euler; --guidance other than 1.0
+    # turns CFG on, which is when --negative-prompt is used; --vae-tiling cuts the decode's memory
+    sampling = sampling or {}
+    command = [str(RUNTIME / "bin" / "mflux-generate-krea2"), "--model", str(folder), "--prompt", prompt]
+    command += ["--width", str(width), "--height", str(height), "--seed", *(str(s) for s in (seeds or [seed])), "--steps", str(steps)]
+    command += ["--output", str(out)]
+    if sampling.get("scheduler") in ("er_sde", "euler"):
+        command += ["--scheduler", sampling["scheduler"]]
+    guidance = float(sampling.get("guidance", 1.0))
+    if guidance != 1.0:
+        command += ["--guidance", f"{guidance:g}"]
+        if sampling.get("negative"):
+            command += ["--negative-prompt", sampling["negative"]]
+    for path, scale in pairs:
+        command += ["--lora", path, f"{scale:g}"]
+    if pairs and not sampling.get("bake", True):
+        command.append("--no-bake-lora")
+    if settings:
+        command += local_runner.mflux_memory_flags(settings)
+        if settings.get("vaeTiling") and not settings["lowRam"]:
+            command.append("--vae-tiling")
+    return command
 
 
-def generate_to_file(
+def _four_bit(build: str, folder: Path | None) -> bool:
+    """A 4-bit model: the q4 build, or a checkpoint whose folder says so (e.g. silly-krea-2-mix-mlx-q4)."""
+    if folder is not None:
+        return bool(re.search(r"(^|[-_ ])(q4|4bit|4-bit|int4)($|[-_ ])", folder.name.lower()))
+    return build == "mlx-q4"
+
+
+def generate_to_file(prompt: str, path: Path, width: int = 1024, height: int = 1024, seed: int | None = None, **options) -> dict:
+    """One picture (generate_many with one seed); a picture the filter withholds is refused."""
+    [result] = generate_many(prompt, [path], [seed], width, height, **options)
+    if result.get("withheld"):
+        raise ValueError(f"The content filter withheld this picture (NSFW score {result['nsfw']:.2f}).")
+    return result
+
+
+def generate_many(
     prompt: str,
-    path: Path,
+    paths: list[Path],
+    seeds: list[int | None],
     width: int = 1024,
     height: int = 1024,
-    seed: int | None = None,
     steps: int | None = None,
     stack: list | None = None,
     memory: str = "auto",
     report=lambda *_: None,
     cancelled=lambda: False,
     folder: Path | None = None,
+    sampling: dict | None = None,
     **_options,
-) -> dict:
-    """One picture, under the recorded choices: refused prompts never run, and with the filter enabled a picture it
-    scores as NSFW is deleted and reported instead of returned."""
+) -> list[dict]:
+    """Pictures from Krea 2 or a Krea 2 checkpoint, every seed in one run of mflux (the model loaded once), each
+    through the content filter: a withheld one is deleted and reported as withheld, the rest returned. The licence's
+    notice goes with each; without the filter, the warning."""
     from PIL import Image
 
-    from . import content_filter
+    from . import content_filter, local_runner, loras
 
     state = policy()
     if folder is not None:
@@ -445,45 +464,68 @@ def generate_to_file(
     if refusal:
         raise ValueError(refusal)
     started = time.time()
-    seed = int(seed) if seed is not None else int.from_bytes(os.urandom(4), "little")
-    # Krea 2 works in multiples of 16; the panel's sizes are
+    first = int.from_bytes(os.urandom(4), "little")
+    seeds = [int(s) if s is not None else (first + i) & 0xFFFFFFFF for i, s in enumerate(seeds)]
+    # Krea 2 works in multiples of 16
     width, height = max(256, int(width) // 16 * 16), max(256, int(height) // 16 * 16)
-    from . import local_runner, loras
-
     steps = int(steps or STEPS)
     size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file()) if folder else BUILDS[state["build"]]["size"]
     settings = local_runner.plan(int(size), memory)
     pairs = loras.resolve(stack, "krea-2")
+    sampling = {**(sampling or {})}
+    # baking a LoRA into a 4-bit model turns the layers it touches to 8-bit: kept 4-bit, the LoRA applied as it runs,
+    # when the model is 4-bit or memory is short
+    sampling.setdefault("bake", not (settings["lowRam"] or _four_bit(state["build"], folder)))
     label = f"Krea 2 checkpoint {folder.name}" if folder else "Krea 2"
-    local_runner.run(
-        _command(state["build"], prompt, path, width, height, seed, steps, pairs, settings, folder), steps, report, cancelled, label
-    )
-    if not path.is_file():
-        raise RuntimeError("Krea 2 finished without a picture")
-    verdict = None
+    pattern = paths[0].parent / f"{paths[0].stem}-{{seed}}.png"
+    if BUILDS[state["build"]]["platform"] == "macos-arm64" or folder is not None:
+        command = _command(state["build"], prompt, pattern, width, height, seeds[0], steps, pairs, settings, folder, seeds, sampling)
+        local_runner.run(command, steps, report, cancelled, label, images=len(seeds))
+        made = {seed: Path(str(pattern).replace("{seed}", str(seed))) for seed in seeds}
+    else:
+        made = {}
+        for index, seed in enumerate(seeds):  # diffusers: one picture a run
+            out = Path(str(pattern).replace("{seed}", str(seed)))
+            share = lambda f, m=None, i=index: report((i + f) / len(seeds), m)  # noqa: E731
+            local_runner.run(
+                _command(state["build"], prompt, out, width, height, seed, steps, pairs, settings), steps, share, cancelled, label
+            )
+            made[seed] = out
     if not state["filterInstalled"]:
         _note_run_without_filter()
-    if state["filterInstalled"]:
-        import numpy as np
+    results = []
+    for seed, target in zip(seeds, paths, strict=True):
+        produced = made[seed]
+        if not produced.is_file():
+            raise RuntimeError(f"{label} finished without the picture for seed {seed}")
+        produced.replace(target)
+        verdict = None
+        if state["filterInstalled"]:
+            import numpy as np
 
-        verdict = content_filter.check(np.asarray(Image.open(path).convert("RGB")))
-        if verdict["withheld"]:
-            path.unlink(missing_ok=True)
-            raise ValueError(f"The content filter withheld this picture (NSFW score {verdict['nsfw']:.2f}).")
-    with Image.open(path) as picture:
-        size = picture.size
-    return {
-        "path": str(path),
-        "model": "krea-2",
-        "provider": f"Krea 2 checkpoint {folder.name} (mflux)" if folder else BUILDS[state["build"]]["label"],
-        "seconds": round(time.time() - started, 1),
-        "width": size[0],
-        "height": size[1],
-        "seed": seed,
-        "contentFilter": verdict or "removed",
-        "warning": None if verdict else REMOVED_WARNING,
-        "notice": NOTICE,
-    }
+            verdict = content_filter.check(np.asarray(Image.open(target).convert("RGB")))
+            if verdict["withheld"]:
+                target.unlink(missing_ok=True)
+                results.append({"withheld": True, "nsfw": verdict["nsfw"], "seed": seed})
+                continue
+        with Image.open(target) as picture:
+            dims = picture.size
+        results.append(
+            {
+                "path": str(target),
+                "model": "krea-2",
+                "provider": f"Krea 2 checkpoint {folder.name} (mflux)" if folder else BUILDS[state["build"]]["label"],
+                "seconds": round((time.time() - started) / len(seeds), 1),
+                "width": dims[0],
+                "height": dims[1],
+                "seed": seed,
+                "memory": settings,
+                "contentFilter": verdict or "removed",
+                "warning": None if verdict else REMOVED_WARNING,
+                "notice": NOTICE,
+            }
+        )
+    return results
 
 
 class ConsentBody(BaseModel):
