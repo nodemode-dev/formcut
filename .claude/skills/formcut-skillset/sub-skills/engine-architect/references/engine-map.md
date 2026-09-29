@@ -34,11 +34,11 @@ The rest is written by hand.
 | demo.py | 59 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 780 | /api/generate | 4 |
+| generate.py | 796 | /api/generate | 4 |
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 108 | /api/jobs | 3 |
 | klein.py | 268 | /api/models/klein | 3 |
-| krea2.py | 707 | /api/models/krea-2 | 6 |
+| krea2.py | 725 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
