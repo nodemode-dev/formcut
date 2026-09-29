@@ -787,3 +787,33 @@ def test_the_previews_frames_are_let_go_before_a_model_runs():
     finally:
         with render_api._lock:
             render_api._sessions.pop("test-free", None)
+
+
+def test_unticking_continuous_finishes_the_picture_in_hand_then_stops(tmp_path, monkeypatch, library):
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "0.3")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    started = client.post(
+        "/api/generate",
+        json={"generator": "local:krea-2", "prompt": "a green room", "options": {"seed": -1, "steps": 4, "continuous": True}},
+    )
+    job = started.json()["job_id"]
+    for _ in range(400):
+        status = client.get(f"/api/jobs/{job}").json()
+        if status.get("made"):
+            break
+        time.sleep(0.05)
+    asked_with = len(status["made"])
+    assert client.post(f"/api/generate/sessions/{job}/finish").json() == {"finishing": True}
+    for _ in range(400):
+        status = client.get(f"/api/jobs/{job}").json()
+        if status["status"] != "running":
+            break
+        time.sleep(0.05)
+    # not cancelled: done, the picture in hand finished and saved, nothing after it
+    assert status["status"] == "done", status
+    made = status["result"]["media"]
+    assert asked_with <= len(made) <= asked_with + 1 and all(item["seed"] for item in made)
+    time.sleep(0.8)
+    assert len(json.loads((tmp_path / "argv.json.calls").read_text())) == 1
+    assert client.post(f"/api/generate/sessions/{job}/finish").status_code == 404

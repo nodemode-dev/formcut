@@ -654,6 +654,7 @@
   "gen.continuous.session": "متواصل: {n} صور، والنموذج يبقى محمّلًا",
   "gen.continuous.stopped": "توقف بعد {n} صور",
   "gen.continuous.prompt": "تستخدم الصورة التالية الوصف الجديد",
+  "gen.continuous.finishing": "يُنهي هذه الصورة ثم يتوقف",
   "gen.go": "توليد",
   "gen.img2img": "البدء من",
   "gen.img2img.none": "لا شيء (الوصف وحده)",

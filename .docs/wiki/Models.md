@@ -273,7 +273,8 @@ checkpoints, Continuous is a session in the engine: one run of mflux over hundre
 its LoRAs are loaded once and stay in memory between pictures; each picture joins the results as soon as it is made
 (through the content filter, with its recipe written into it); the prompt can be changed while it runs, and the next
 picture reads it (mflux's `--prompt-file`), while the LoRAs, size and steps stay as the session started. Unticking
-Continuous or Cancel ends the session and frees the memory. Each result's time is in the note.
+Continuous lets the picture in hand finish and be saved, then ends the session and frees the memory; Cancel stops at
+once, and nothing starts again until Generate is pressed. Each result's time is in the note.
 
 A result opens full screen with a click (or Enter): Escape, a click or Close returns; the arrow keys move through
 the results. While a picture is made, the terminal formcut was started from shows mflux's own output as it comes,

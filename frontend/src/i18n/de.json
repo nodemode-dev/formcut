@@ -653,6 +653,7 @@
   "gen.continuous.session": "Fortlaufend: {n} Bilder, das Modell bleibt geladen",
   "gen.continuous.stopped": "Nach {n} Bildern angehalten",
   "gen.continuous.prompt": "Das nächste Bild verwendet den neuen Prompt",
+  "gen.continuous.finishing": "Dieses Bild wird fertiggestellt, dann wird angehalten",
   "gen.go": "Erzeugen",
   "gen.img2img": "Ausgehen von",
   "gen.img2img.none": "Nichts (nur der Prompt)",

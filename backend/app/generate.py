@@ -14,6 +14,7 @@ Settings" and a stack trace.
 from __future__ import annotations
 
 import base64
+import threading
 import uuid
 from pathlib import Path
 
@@ -292,7 +293,9 @@ def _source_image(spec: dict, into: Path) -> Path:
     raise HTTPException(400, "give a media image, a media video and a time, or the project and a time to start from")
 
 
-_SESSIONS: dict[str, Path] = {}  # continuous sessions: their job and the prompt file mflux reads before each seed
+# continuous sessions by job: the prompt file mflux reads before each seed, and the request to finish the picture in
+# hand and stop (Continuous unticked), as against Cancel, which stops at once
+_SESSIONS: dict[str, dict] = {}
 
 
 def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling: dict, width: int, height: int, steps: int, notes: list):
@@ -312,7 +315,13 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
         STAGING.mkdir(parents=True, exist_ok=True)
         prompt_file = STAGING / f"prompt-{job_id}.txt"
         prompt_file.write_text(prompt, encoding="utf-8")
-        _SESSIONS[job_id] = prompt_file
+        finish = threading.Event()
+        _SESSIONS[job_id] = {"prompt": prompt_file, "finish": finish}
+        ending = {"now": False}  # set once the picture in hand is saved after a finish was asked for
+
+        def stop() -> bool:
+            return cancelled() or ending["now"]
+
         made, seeds_used, session_notes = [], [], list(notes)
         last = {"time": clock.time()}
         state = krea2.policy()
@@ -332,6 +341,8 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                     path.unlink(missing_ok=True)
                     session_notes.append(f"seed {seed_value} withheld by the content filter, NSFW score {verdict['nsfw']:.2f}")
                     report(0.1, "Next picture", notes=list(session_notes))
+                    if finish.is_set():
+                        ending["now"] = True
                     return
             with Image.open(path) as picture:
                 dims = picture.size
@@ -366,9 +377,11 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                 notes=list(session_notes),
                 warning=warning,
             )
+            if finish.is_set():
+                ending["now"] = True  # the picture in hand is saved: the session stops here
 
         try:
-            while not cancelled():
+            while not stop():
                 # the seeds of one session run out after hundreds of pictures: the next session loads the model again
                 krea2.run_continuous(
                     prompt_file,
@@ -380,10 +393,14 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                     stack=stack,
                     memory=memory,
                     report=report,
-                    cancelled=cancelled,
+                    cancelled=stop,
                     folder=checkpoint,
                     sampling=sampling,
                 )
+        except InterruptedError:
+            # Cancel stops at once and the job is cancelled; a finish asked for ends here once its picture is saved
+            if cancelled() or not ending["now"]:
+                raise
         finally:
             _SESSIONS.pop(job_id, None)
             prompt_file.unlink(missing_ok=True)
@@ -401,6 +418,17 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
     return jobs.submit("generate", operation)
 
 
+@router.post("/sessions/{job_id}/finish")
+def finish_session(job_id: str) -> dict:
+    """Continuous unticked: the picture in hand is finished and saved, then the session stops, the model's memory
+    returned. (Cancel, DELETE /api/jobs/<job>, stops at once.)"""
+    session = _SESSIONS.get(job_id)
+    if session is None:
+        raise HTTPException(404, "No continuous session by that id")
+    session["finish"].set()
+    return {"finishing": True}
+
+
 class SessionPrompt(BaseModel):
     prompt: str
 
@@ -411,9 +439,10 @@ def change_session_prompt(job_id: str, body: SessionPrompt) -> dict:
     stay as the session started; a <lora:> tag is taken out, as the loaded LoRAs cannot change mid-session."""
     from . import krea2, prompt_data
 
-    prompt_file = _SESSIONS.get(job_id)
-    if prompt_file is None:
+    session = _SESSIONS.get(job_id)
+    if session is None:
         raise HTTPException(404, "No continuous session by that id")
+    prompt_file = session["prompt"]
     text = prompt_data.parse(body.prompt)["prompt"] or body.prompt
     refusal = krea2.prompt_refusal(text)
     if refusal:

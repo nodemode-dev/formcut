@@ -1054,8 +1054,12 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     continuous.addEventListener("change", () => {
       if (continuous.checked) return;
       runs.set(kind, 0);
-      // unticked during a session: the session ends (the model's process with it)
-      if (sessionKinds.has(kind)) pick<HTMLButtonElement>(`[data-gen-cancel="${kind}"]`).click();
+      // unticked during a session: the picture in hand is finished and saved, then the session stops (Cancel stops
+      // at once)
+      const id = genJobIds.get(kind);
+      if (id && sessionKinds.has(kind)) {
+        void api(`/api/generate/sessions/${id}/finish`, {}).then(() => { note.textContent = t("gen.continuous.finishing"); }).catch(() => { /* already ended */ });
+      }
     });
     // the prompt changed during a session: the next picture reads it (its LoRAs, size and steps stay as started)
     let promptTimer = 0;
@@ -1184,7 +1188,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             const notes = ((status.result?.notes ?? []) as string[]).join(" · ");
             const seeds = ((status.result?.seeds ?? []) as number[]).join(", ");
             const took = ((status.result?.seconds ?? []) as number[]).map((value) => `${value} s`).join(", ");
-            note.textContent = [`${t("gen.done")}: ${made.length}`, took, seeds ? `${t("gen.seed")} ${seeds}` : "", notes, warning].filter(Boolean).join(". ");
+            const head = session ? t("gen.continuous.stopped").replace("{n}", String(made.length)) : `${t("gen.done")}: ${made.length}`;
+            note.textContent = [head, session ? "" : took, seeds && !session ? `${t("gen.seed")} ${seeds}` : "", notes, warning].filter(Boolean).join(". ");
             await bin.load();
             finished = true;
             break;

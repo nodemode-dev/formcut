@@ -654,6 +654,7 @@
   "gen.continuous.session": "Neprekidno: {n} slika, model ostaje učitan",
   "gen.continuous.stopped": "Zaustavljeno nakon {n} slika",
   "gen.continuous.prompt": "Sljedeća slika koristi novi upit",
+  "gen.continuous.finishing": "Dovršava se ova slika, zatim se zaustavlja",
   "gen.go": "Stvori",
   "gen.img2img": "Kreni od",
   "gen.img2img.none": "Ničega (samo upit)",
