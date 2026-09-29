@@ -40,20 +40,22 @@ The rest is written by hand.
 | klein.py | 267 | /api/models/klein | 3 |
 | krea2.py | 726 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
+| linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
-| main.py | 440 | /api/health | 13 |
-| media.py | 1065 | /api/media | 25 |
+| main.py | 444 | /api/health | 13 |
+| media.py | 1075 | /api/media | 25 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 620 | /api/presets | 9 |
+| project_files.py | 209 | /api/project-files | 4 |
 | project_packages.py | 312 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 175 | /api/projects | 9 |
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1258 | /api/render | 13 |
+| render_api.py | 1272 | /api/render | 13 |
 | render_stream.py | 80 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -115,7 +117,7 @@ the automation transports.
 - `security.py` (68L)
 - `segmentation.py` (323L)
 - `stabilise.py` (209L)
-- `store.py` (103L)
+- `store.py` (107L)
 - `subject.py` (220L)
 - `template_assets.py` (92L)
 - `template_library.py` (452L)
@@ -123,7 +125,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (271L)
 - `validation.py` (222L)
-- `video_source.py` (594L)
+- `video_source.py` (609L)
 - `windows_console.py` (43L)
 - `yuv.py` (225L)
 
