@@ -38,6 +38,13 @@ frame it needs. Stills are bounded to preview size, and a still whose effect
 stack is only colour grades is prepared once per renderer rather than every
 frame.
 
+Every state file in the data folder is kept the same careful way (`durable.py`): written whole to a temporary
+file and moved into place, the version it replaces kept as `<name>.bak`, and a file that cannot be read set aside
+as `<name>.damaged-<time>` (never overwritten) with its backup read in its place, rather than read as empty and saved
+over. That covers the projects (`projects.json`, each project also kept in `project-records/<id>.json`, which it is
+rebuilt from first), the API keys (`providers.json`, owner-only, its backup too), presets, the cloud, TikTok,
+Instagram, remote and webhook connections, and the Krea 2 and Klein licence records.
+
 The media library's index (`media.json` in the data folder) is not its only record. It is written whole to a
 temporary file and moved into place, the version before it kept as `media.json.bak`, and each item's own record
 kept in `media-records/<id>.json`. When the index is missing or unreadable it is rebuilt from those, and from the

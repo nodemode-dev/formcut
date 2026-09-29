@@ -55,6 +55,7 @@ def library(tmp_path, monkeypatch):
     monkeypatch.setattr(media, "_record_texts", {})
     monkeypatch.setattr(media, "DATA_DIR", data)
     monkeypatch.setattr(store, "PROJECTS_FILE", data / "projects.json")
+    monkeypatch.setattr(store, "RECORDS_DIR", data / "project-records")
     from app import renderer
 
     monkeypatch.setattr(renderer, "MEDIA_DIR", data / "media")

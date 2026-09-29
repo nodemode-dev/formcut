@@ -3,23 +3,53 @@ import json
 import threading
 import time
 
+from .durable import read_json, set_aside, write_json
 from .paths import DATA_DIR
 
 PROJECTS_FILE = DATA_DIR / "projects.json"
+# Every project also as a file of its own (v2.2.3): projects.json held them all, and a damaged one failed every
+# project. It is now durable (durable.py: written whole, the previous version kept, a damaged file set aside and its
+# backup read), and when it and its backup are both gone it is rebuilt from these.
+RECORDS_DIR = DATA_DIR / "project-records"
 _lock = threading.Lock()
+_record_texts: dict[str, str] = {}
 
 
 def _read() -> list[dict]:
-    if not PROJECTS_FILE.exists():
-        return []
-    return json.loads(PROJECTS_FILE.read_text())
+    """projects.json; when it is missing or damaged, the projects' own records (the latest word on each, a deleted
+    project's gone with it), else its backup (one save behind), else none."""
+    try:
+        projects = json.loads(PROJECTS_FILE.read_text(encoding="utf-8"))
+        if isinstance(projects, list):
+            return projects
+        raise ValueError("not a list of projects")
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError) as exc:
+        set_aside(PROJECTS_FILE, exc)
+    rebuilt = []
+    for path in sorted(RECORDS_DIR.glob("*.json")) if RECORDS_DIR.is_dir() else []:
+        with contextlib.suppress(OSError, ValueError):
+            project = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(project, dict) and project.get("id"):
+                rebuilt.append(project)
+    if rebuilt:
+        write_json(PROJECTS_FILE, rebuilt, keep_backup=False)
+        return rebuilt
+    return read_json(PROJECTS_FILE, [])
 
 
 def _write(projects: list[dict]) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    temporary = PROJECTS_FILE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(projects, indent=2))
-    temporary.replace(PROJECTS_FILE)
+    write_json(PROJECTS_FILE, projects)
+    RECORDS_DIR.mkdir(parents=True, exist_ok=True)
+    for project in projects:
+        project_id = str(project.get("id") or "")
+        if not project_id or "/" in project_id or "\\" in project_id or project_id.startswith("."):
+            continue
+        text = json.dumps(project)
+        if _record_texts.get(project_id) != text:
+            write_json(RECORDS_DIR / f"{project_id}.json", project, indent=None, keep_backup=False)
+            _record_texts[project_id] = text
 
 
 def list_projects() -> list[dict]:
@@ -68,4 +98,6 @@ def delete_project(project_id: str) -> bool:
         if len(remaining) == len(projects):
             return False
         _write(remaining)
+        (RECORDS_DIR / f"{project_id}.json").unlink(missing_ok=True)  # deleted: not to be rebuilt
+        _record_texts.pop(project_id, None)
         return True

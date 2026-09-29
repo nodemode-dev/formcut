@@ -23,6 +23,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from .durable import read_json, write_json
 from .media import DATA_DIR
 
 router = APIRouter(prefix="/api/presets", tags=["presets"])
@@ -34,17 +35,11 @@ MAX_PRESETS = 200
 
 
 def _read() -> list[dict]:
-    if not PRESETS_FILE.exists():
-        return []
-    try:
-        return json.loads(PRESETS_FILE.read_text())
-    except (OSError, json.JSONDecodeError):
-        return []
+    return read_json(PRESETS_FILE, [])  # a damaged file set aside and its backup read, not the presets lost
 
 
 def _write(items: list[dict]) -> None:
-    PRESETS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    PRESETS_FILE.write_text(json.dumps(items, indent=2))
+    write_json(PRESETS_FILE, items)
 
 
 def _clean_name(name: str) -> str:

@@ -35,6 +35,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from .durable import read_json, write_json
 from .paths import DATA_DIR
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
@@ -56,17 +57,11 @@ class WebhookChange(BaseModel):
 
 
 def _read() -> list[dict]:
-    try:
-        return json.loads(STORE.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
+    return read_json(STORE, [])  # durable.py: a damaged file set aside and its backup read
 
 
 def _write(hooks: list[dict]) -> None:
-    STORE.parent.mkdir(parents=True, exist_ok=True)
-    temporary = STORE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(hooks, indent=2), encoding="utf-8")
-    temporary.replace(STORE)
+    write_json(STORE, hooks, private=True)
 
 
 def _now() -> str:

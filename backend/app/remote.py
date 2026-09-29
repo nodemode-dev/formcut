@@ -20,7 +20,6 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import hmac
-import json
 import os
 import secrets
 import socket
@@ -33,6 +32,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from .durable import read_json, write_json
 from .paths import DATA_DIR
 
 router = APIRouter(tags=["remote"])
@@ -73,18 +73,11 @@ def port() -> int:
 
 
 def _read() -> dict:
-    try:
-        return json.loads(STORE.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+    return read_json(STORE, {})  # durable.py: a damaged file set aside and its backup read
 
 
 def _write(data: dict) -> None:
-    STORE.parent.mkdir(parents=True, exist_ok=True)
-    temporary = STORE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    os.chmod(temporary, 0o600)
-    temporary.replace(STORE)
+    write_json(STORE, data, private=True)
 
 
 def _hash(token: str) -> str:

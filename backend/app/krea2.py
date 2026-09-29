@@ -38,6 +38,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from . import jobs
+from .durable import read_json, write_json
 from .paths import MODELS_DIR
 
 router = APIRouter(prefix="/api/models/krea-2", tags=["models"])
@@ -165,7 +166,7 @@ def recommended() -> str | None:
 
 def consent() -> dict:
     try:
-        return json.loads(CONSENT_FILE.read_text(encoding="utf-8"))
+        return read_json(CONSENT_FILE, {})  # durable.py: set aside when damaged, the backup read
     except (OSError, ValueError):
         return {}
 
@@ -184,7 +185,7 @@ def record_consent(accept_licence: bool) -> dict:
         "filter": "installed with Krea 2",
     }
     CONSENT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    write_json(CONSENT_FILE, record, indent=1)
     FOLDER.mkdir(parents=True, exist_ok=True)
     (FOLDER / "NOTICE.txt").write_text(NOTICE + "\n", encoding="utf-8")
     return record
@@ -235,7 +236,7 @@ def acknowledge_removal() -> dict:
     """The person's acknowledgement of the warning, with the time and a hash of the wording they saw."""
     record = consent()
     record["removalAcknowledged"] = {"sha256": _warning_hash(), "text": REMOVED_WARNING, "acknowledgedAt": _now()}
-    CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    write_json(CONSENT_FILE, record, indent=1)
     return policy()
 
 
@@ -246,7 +247,7 @@ def _note_run_without_filter() -> None:
     runs["count"] = int(runs.get("count", 0)) + 1
     runs["last"] = _now()
     record["runsWithoutFilter"] = runs
-    CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    write_json(CONSENT_FILE, record, indent=1)
 
 
 # Refused whatever the settings: sexual content involving minors. The two lists are ordinary words, deliberately
@@ -326,7 +327,7 @@ def install(build: str, report, cancelled) -> dict:
     download(FILTER["id"], lambda f: report(f * 0.02), cancelled)
     download(BUILDS[build]["model"], lambda f: report(0.02 + f * 0.93), cancelled)
     install_runtime(build, lambda f: report(0.95 + f * 0.05))
-    CONSENT_FILE.write_text(json.dumps({**consent(), "build": build}, indent=1), encoding="utf-8")
+    write_json(CONSENT_FILE, {**consent(), "build": build}, indent=1)
     return policy()
 
 

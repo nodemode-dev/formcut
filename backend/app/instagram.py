@@ -17,7 +17,6 @@ upload.
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -29,6 +28,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from . import jobs, media
+from .durable import read_json, write_json
 from .paths import DATA_DIR
 
 router = APIRouter(tags=["instagram"])
@@ -61,18 +61,11 @@ def _graph() -> str:
 
 
 def _read() -> dict:
-    try:
-        return json.loads(STORE.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+    return read_json(STORE, {})  # durable.py: a damaged file set aside and its backup read
 
 
 def _write(data: dict) -> None:
-    STORE.parent.mkdir(parents=True, exist_ok=True)
-    temporary = STORE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    os.chmod(temporary, 0o600)
-    temporary.replace(STORE)
+    write_json(STORE, data, private=True)
 
 
 def _reply(response: httpx.Response) -> dict:

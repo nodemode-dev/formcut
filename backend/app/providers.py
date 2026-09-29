@@ -11,14 +11,13 @@ where it came from, and the last four characters, which is enough for a person
 to tell which key is loaded.
 """
 
-import contextlib
-import json
 import os
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from .durable import read_json, write_json
 from .paths import DATA_DIR
 
 router = APIRouter(prefix="/api/providers", tags=["providers"])
@@ -62,19 +61,14 @@ class KeyInput(BaseModel):
 
 
 def _read() -> dict[str, str]:
-    try:
-        return json.loads(STORE.read_text())
-    except (OSError, ValueError):
-        return {}
+    # the API keys: a damaged file set aside and its backup read, never read as no keys and saved over
+    return read_json(STORE, {})
 
 
 def _write(data: dict[str, str]) -> None:
-    STORE.parent.mkdir(parents=True, exist_ok=True)
-    STORE.write_text(json.dumps(data))
-    # The file holds credentials, so it is readable by its owner only. On
+    # The file holds credentials, so it (and its backup) is readable by its owner only. On
     # Windows this is a no-op and the platform ACL applies instead.
-    with contextlib.suppress(OSError):
-        STORE.chmod(0o600)
+    write_json(STORE, data, private=True, indent=None)
 
 
 def key_for(name: str) -> str:

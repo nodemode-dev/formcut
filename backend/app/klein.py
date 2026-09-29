@@ -13,7 +13,6 @@ pictures whenever it is installed. A prompt sexualising minors is refused before
 
 from __future__ import annotations
 
-import json
 import os
 import time
 from pathlib import Path
@@ -22,6 +21,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from . import jobs, krea2, local_runner, loras
+from .durable import read_json, write_json
 from .model_manager import ROOT as MODELS_DIR
 
 router = APIRouter(prefix="/api/models/klein", tags=["models"])
@@ -62,14 +62,13 @@ def _is_apple_silicon() -> bool:
 
 def consent() -> dict:
     try:
-        return json.loads(CONSENT_FILE.read_text(encoding="utf-8"))
+        return read_json(CONSENT_FILE, {})  # durable.py: set aside when damaged, the backup read
     except (OSError, ValueError):
         return {}
 
 
 def _save(record: dict) -> None:
-    CONSENT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CONSENT_FILE.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    write_json(CONSENT_FILE, record, indent=1)
 
 
 def record_consent(variant: str, accept_licence: bool) -> dict:
