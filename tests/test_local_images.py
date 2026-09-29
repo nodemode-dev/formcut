@@ -726,3 +726,36 @@ def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_
     with Image.open(stored) as picture:
         assert f"Seed: {later['made'][-1]['seed']}" in picture.text["parameters"]
     assert client.post(f"/api/generate/sessions/{job}/prompt", json={"prompt": "x"}).status_code == 404
+
+
+def test_a_session_takes_each_picture_before_the_next_is_made(tmp_path, monkeypatch, library):
+    from app import krea2
+
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "0.8")
+    prompt = tmp_path / "prompt.txt"
+    prompt.write_text("a room", encoding="utf-8")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    taken, stop, handed = [], {"now": False}, set()
+
+    def on_picture(seed, path):
+        # when a picture is handed over, the next one has not been written yet
+        pending = [p for p in staging.glob("*.png") if p != path and p not in handed]
+        handed.add(path)
+        taken.append((seed, path.is_file(), len(pending)))
+        if len(taken) == 3:
+            stop["now"] = True
+
+    import contextlib
+
+    with contextlib.suppress(InterruptedError):
+        krea2.run_continuous(prompt, staging, on_picture, 256, 256, steps=2, cancelled=lambda: stop["now"])
+    assert len(taken) >= 3 and all(whole and pending == 0 for _, whole, pending in taken[:3])
+
+
+def test_the_page_shows_session_pictures_by_id():
+    from pathlib import Path as P
+
+    source = (P(__file__).resolve().parents[1] / "frontend" / "src" / "ui" / "studio-tools.ts").read_text(encoding="utf-8")
+    assert "const fresh = partial.filter((item) => !shown.has(item.id));" in source and "partial.length > shown.size" not in source

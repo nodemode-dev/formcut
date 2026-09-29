@@ -1165,8 +1165,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         for (let waited = 0; (session || waited < 3600) && !controller.signal.aborted; waited += 1) {
           const status = await fetch(`/api/jobs/${started.job_id}`).then((r) => r.json());
           const partial = (status.made ?? []) as Array<{ id: string; name: string; seed?: number; steps?: number; seconds?: number }>;
-          if (partial.length > shown.size) {
-            addCards(partial.filter((item) => !shown.has(item.id)));
+          // each picture of a session as soon as the engine has it: by its id (the cards already shown hold earlier
+          // runs' pictures too, so their count says nothing about this session's)
+          const fresh = partial.filter((item) => !shown.has(item.id));
+          if (fresh.length) {
+            addCards(fresh);
             pictureStart = Date.now();
             const latest = partial[partial.length - 1];
             note.textContent = [t("gen.continuous.session").replace("{n}", String(partial.length)), latest?.seed !== undefined ? `${t("gen.seed")} ${latest.seed}` : "", latest?.seconds ? `${latest.seconds} s` : "", status.warning ?? ""].filter(Boolean).join(" · ");

@@ -70,6 +70,7 @@ def run(
     images: int = 1,
     on_tick=None,
     continuous: bool = False,
+    on_next=None,
 ) -> str:
     """on_tick is called several times a second while the model runs (a continuous session collects its pictures
     there); continuous shows each picture's own progress rather than the share of all, and has no time limit."""
@@ -97,6 +98,7 @@ def run(
             on_tick,
             continuous,
             terminal,
+            on_next,
         )
         outcome = "done"
         return text
@@ -170,7 +172,9 @@ def _say(report, terminal: _Terminal | None = None):
     return say
 
 
-def _run(command, steps, say, cancelled, label, env, time_limit, images=1, on_tick=None, continuous=False, terminal=None) -> str:
+def _run(
+    command, steps, say, cancelled, label, env, time_limit, images=1, on_tick=None, continuous=False, terminal=None, on_next=None
+) -> str:
     say(0.02, f"Loading {label}")
     process = subprocess.Popen(
         command,
@@ -225,6 +229,8 @@ def _run(command, steps, say, cancelled, label, env, time_limit, images=1, on_ti
                         if total == steps and done != last_step:
                             if done < last_step and image + 1 < images:
                                 image += 1  # the next seed's picture: mflux draws its steps again from 0
+                                if on_next is not None:
+                                    on_next()  # the picture before it is written: it is taken now, before this one goes on
                             last_step = done
                             stage = f"Step {done} of {total}" if done < total else "Finishing the picture"
                             extra = {"timing": timing} if timing else {}

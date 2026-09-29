@@ -477,17 +477,26 @@ def run_continuous(
     pattern = staging / f"session-{os.getpid()}-{int(time.time() * 1000)}-{{seed}}.png"
     label = f"Krea 2 checkpoint {folder.name}" if folder else "Krea 2"
     command = _command(state["build"], "", pattern, width, height, seeds[0], steps, pairs, settings, folder, seeds, sampling, prompt_file)
-    taken = {"next": 0, "size": -1, "ended": False}
+    taken = {"next": 0, "size": -1, "ended": False, "seen": set()}
+    prefix = pattern.name.split("{seed}")[0]
 
-    def collect() -> None:
-        # a picture is taken once its file is whole: there, the same size twice running, and readable (once the
-        # process has ended, whatever is on disk is whole)
+    def collect(force: bool = False) -> None:
+        # A picture is taken as soon as it is whole: when mflux begins the next seed (force: the one before is written),
+        # when the process ends, or, between, once its file is there, the same size twice running, and readable.
+        # By its seed's name; failing that, any new picture of this session (should mflux name it otherwise).
+        whole = force or taken["ended"]
         while taken["next"] < len(seeds):
             target = Path(str(pattern).replace("{seed}", str(seeds[taken["next"]])))
+            if not target.is_file() and whole:
+                others = sorted(
+                    (p for p in staging.glob(f"{prefix}*.png") if p.name not in taken["seen"]),
+                    key=lambda p: p.stat().st_mtime_ns,
+                )
+                target = others[0] if others else target
             if not target.is_file():
                 return
             size_now = target.stat().st_size
-            if not taken["ended"] and (size_now == 0 or size_now != taken["size"]):
+            if not whole and (size_now == 0 or size_now != taken["size"]):
                 taken["size"] = size_now
                 return
             try:
@@ -495,12 +504,23 @@ def run_continuous(
                     picture.verify()
             except (OSError, SyntaxError):
                 return
+            taken["seen"].add(target.name)
             on_picture(seeds[taken["next"]], target)
             taken["next"] += 1
             taken["size"] = -1
 
     try:
-        local_runner.run(command, steps, report, cancelled, label, images=len(seeds), on_tick=collect, continuous=True)
+        local_runner.run(
+            command,
+            steps,
+            report,
+            cancelled,
+            label,
+            images=len(seeds),
+            on_tick=collect,
+            continuous=True,
+            on_next=lambda: collect(force=True),
+        )
     except InterruptedError:
         taken["ended"] = True
         collect()
