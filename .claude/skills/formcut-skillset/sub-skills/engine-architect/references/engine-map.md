@@ -38,7 +38,7 @@ The rest is written by hand.
 | instagram.py | 213 | /api/connect/instagram | 4 |
 | jobs.py | 108 | /api/jobs | 3 |
 | klein.py | 268 | /api/models/klein | 3 |
-| krea2.py | 687 | /api/models/krea-2 | 6 |
+| krea2.py | 707 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
@@ -95,7 +95,7 @@ the automation transports.
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (361L)
-- `local_runner.py` (276L)
+- `local_runner.py` (282L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
 - `openh264.py` (410L)
