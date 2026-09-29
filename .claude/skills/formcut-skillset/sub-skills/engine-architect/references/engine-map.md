@@ -48,10 +48,10 @@ The rest is written by hand.
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 620 | /api/presets | 9 |
-| project_files.py | 209 | /api/project-files | 4 |
+| project_files.py | 308 | /api/project-files | 6 |
 | project_packages.py | 312 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
-| projects.py | 175 | /api/projects | 9 |
+| projects.py | 184 | /api/projects | 9 |
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
