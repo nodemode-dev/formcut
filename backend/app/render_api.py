@@ -137,6 +137,23 @@ def session_stats(session_id: str):
     return item["cache"].stats()
 
 
+def release_frames() -> int:
+    """The preview's cached frames let go, for a local image model that needs the memory more (up to 240 frames a
+    session, over a gigabyte at 1080p): the preview draws them again when they are asked for. Returns the bytes."""
+    import gc
+
+    freed = 0
+    with _lock:
+        items = list(_sessions.values())
+    for item in items:
+        cache = item["cache"]
+        with cache.lock:
+            freed += sum(int(getattr(frame, "nbytes", 0)) for frame in cache.frames.values())
+            cache.frames.clear()
+    gc.collect()
+    return freed
+
+
 @router.delete("/sessions/{session_id}", status_code=204)
 def delete_session(session_id: str):
     with _lock:

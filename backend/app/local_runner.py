@@ -38,14 +38,16 @@ def total_memory() -> int:
 
 
 def plan(model_bytes: int, mode: str = "auto") -> dict:
-    """Memory settings for one run. mode: "auto" (low-RAM when the model would take more than about half the memory),
-    "low" (always), or "normal" (never)."""
+    """Memory settings for one run, costing as little speed as the machine allows. mode "auto": mflux runs as it would
+    from the command line, with the decode tiled when the model and an untiled decode (about 7 GB at 1024 px for Krea
+    2) would not fit beside each other, and --low-ram (with a capped MLX cache) only when the model itself would not
+    fit, as both cost a great deal of time; "low": --low-ram and the capped cache always; "normal": neither, nor
+    tiling. (Until 2.1.7, auto took --low-ram whenever the model was over half the memory and always capped the cache
+    at a tenth of it: on a 24 GB Mac with a 4-bit Krea 2, a picture took nearly twice what mflux takes alone.)"""
     memory = total_memory()
-    low = mode == "low" or (mode == "auto" and memory > 0 and model_bytes * 2 > memory)
-    cache = max(1.0, round(memory / 1e9 * 0.1, 1)) if memory else 4.0
-    # Krea 2's decode takes about 7 GB at 1024 px untiled and 3 GB tiled (mflux 0.20.0's notes): tiled when the
-    # model and an untiled decode would not fit together (--low-ram tiles already)
-    tiling = not low and mode != "normal" and memory > 0 and model_bytes + 8e9 > memory
+    low = mode == "low" or (mode == "auto" and memory > 0 and model_bytes > memory * 0.75)
+    cache = max(1.0, round(memory / 1e9 * 0.1, 1)) if low and memory else None
+    tiling = not low and mode == "auto" and memory > 0 and model_bytes + 8e9 > memory * 0.9
     return {
         "lowRam": low,
         "vaeTiling": tiling,
@@ -56,7 +58,10 @@ def plan(model_bytes: int, mode: str = "auto") -> dict:
 
 
 def mflux_memory_flags(settings: dict) -> list[str]:
-    return [*(["--low-ram"] if settings["lowRam"] else []), "--mlx-cache-limit-gb", f"{settings['cacheLimitGb']:g}"]
+    flags = ["--low-ram"] if settings["lowRam"] else []
+    if settings.get("cacheLimitGb"):
+        flags += ["--mlx-cache-limit-gb", f"{settings['cacheLimitGb']:g}"]
+    return flags
 
 
 def run(
@@ -77,7 +82,7 @@ def run(
     """Run a model's process to its end, reporting progress; returns the end of its output. Raises InterruptedError
     on cancel and RuntimeError on a failure or a time-out."""
     terminal = _Terminal(label)
-    terminal.start()
+    terminal.start(command)
     say = _say(report, terminal)
     if not HEAVY.acquire(blocking=False):
         say(0.0, "Waiting for the picture before it to finish")
@@ -145,8 +150,12 @@ class _Terminal:
         except (OSError, ValueError):
             pass
 
-    def start(self) -> None:
-        self._write(f"formcut: {self.label}\n".encode())
+    def start(self, command: list[str] | None = None) -> None:
+        # the command itself, as it would be typed, so a run can be set beside mflux run by hand
+        import shlex
+
+        shown = f"\n  {shlex.join(command)}" if command else ""
+        self._write(f"formcut: {self.label}{shown}\n".encode())
 
     def show(self, chunk: bytes) -> None:
         self._write(chunk)

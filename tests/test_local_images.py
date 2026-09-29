@@ -53,10 +53,20 @@ def test_a_cancel_ends_the_models_process_and_a_failure_brings_its_output():
 
 def test_memory_is_planned_for_the_machine(monkeypatch):
     monkeypatch.setattr(local_runner, "total_memory", lambda: 32 * 10**9)
-    assert not local_runner.plan(8 * 10**9)["lowRam"] and local_runner.plan(22 * 10**9)["lowRam"]
-    assert local_runner.plan(8 * 10**9, "low")["lowRam"] and not local_runner.plan(22 * 10**9, "normal")["lowRam"]
-    flags = local_runner.mflux_memory_flags(local_runner.plan(22 * 10**9))
-    assert flags[0] == "--low-ram" and flags[1:] == ["--mlx-cache-limit-gb", "3.2"]
+    assert not local_runner.plan(22 * 10**9)["lowRam"] and local_runner.plan(26 * 10**9)["lowRam"]
+    assert local_runner.plan(8 * 10**9, "low")["lowRam"] and not local_runner.plan(26 * 10**9, "normal")["lowRam"]
+    assert local_runner.mflux_memory_flags(local_runner.plan(26 * 10**9)) == ["--low-ram", "--mlx-cache-limit-gb", "3.2"]
+    # only --low-ram caps MLX's cache: a cap costs time on every step
+    assert local_runner.mflux_memory_flags(local_runner.plan(8 * 10**9)) == []
+
+
+def test_the_owners_mac_runs_krea_2_as_mflux_does_alone(monkeypatch):
+    """A 24 GB Mac and a 4-bit Krea 2 checkpoint: until 2.1.7 formcut took --low-ram and capped MLX's cache at 2.4 GB,
+    and a picture took 6.85 minutes against mflux's 3.7 alone. Now it runs as mflux does, the decode tiled."""
+    monkeypatch.setattr(local_runner, "total_memory", lambda: 24 * 10**9)
+    settings = local_runner.plan(15.8e9)
+    assert not settings["lowRam"] and settings["vaeTiling"] and settings["cacheLimitGb"] is None
+    assert local_runner.mflux_memory_flags(settings) == []
 
 
 def _safetensors(path, names, metadata=None):
@@ -454,8 +464,8 @@ def test_the_decode_is_tiled_when_memory_is_short(monkeypatch):
     monkeypatch.setattr(local_runner, "total_memory", lambda: 12 * 10**9)
     assert local_runner.plan(4.6e9)["vaeTiling"] and not local_runner.plan(2e9)["vaeTiling"]
     assert not local_runner.plan(4.6e9, "low")["vaeTiling"] and not local_runner.plan(4.6e9, "normal")["vaeTiling"]
-    # a model that takes over half the memory runs --low-ram, which tiles already
-    assert local_runner.plan(8e9)["lowRam"] and not local_runner.plan(8e9)["vaeTiling"]
+    # a model that would not fit runs --low-ram, which tiles already
+    assert local_runner.plan(10e9)["lowRam"] and not local_runner.plan(10e9)["vaeTiling"]
 
 
 def test_several_krea_pictures_come_from_one_run_of_mflux(tmp_path, monkeypatch, library):
@@ -655,7 +665,8 @@ def test_the_terminal_shows_the_models_own_progress_bar(monkeypatch):
     local_runner.run([sys.executable, "-c", script], 4, lambda *a, **k: None, lambda: False, "Stand-in")
     text = out.getvalue()
     # the model's tqdm output itself, as it came, between formcut's opening and closing lines; no bar of formcut's
-    assert text.startswith("formcut: Stand-in\n") and "2/4 [00:02<00:04, 1.0it/s]" in text and "\r" in text
+    assert text.startswith("formcut: Stand-in\n  ") and "2/4 [00:02<00:04, 1.0it/s]" in text and "\r" in text
+    assert sys.executable in text.split("\n")[1]  # the command itself, to set beside mflux run by hand
     assert "formcut: Stand-in: done in" in text and "Stand-in  [" not in text
     assert "columns " in text and "columns ?" not in text  # tqdm is told the terminal's width
 
@@ -759,3 +770,20 @@ def test_the_page_shows_session_pictures_by_id():
 
     source = (P(__file__).resolve().parents[1] / "frontend" / "src" / "ui" / "studio-tools.ts").read_text(encoding="utf-8")
     assert "const fresh = partial.filter((item) => !shown.has(item.id));" in source and "partial.length > shown.size" not in source
+
+
+def test_the_previews_frames_are_let_go_before_a_model_runs():
+    import numpy as np
+    from app import render_api
+    from app.frame_cache import FrameCache
+
+    cache = FrameCache({"fps": 30}, limit=8)
+    for i in range(3):
+        cache.frames[(i, "orig")] = np.zeros((1080, 1920, 3), np.uint8)
+    with render_api._lock:
+        render_api._sessions["test-free"] = {"cache": cache}
+    try:
+        assert render_api.release_frames() >= 3 * 1080 * 1920 * 3 and not cache.frames
+    finally:
+        with render_api._lock:
+            render_api._sessions.pop("test-free", None)

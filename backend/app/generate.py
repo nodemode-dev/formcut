@@ -624,6 +624,11 @@ def _generate_local(body: GenerateBody):
     elif "<lora:" in body.prompt.lower():
         raise HTTPException(400, f"{slot.get('label', name)} takes no LoRAs; Krea 2, FLUX.2 [klein] 4B and their checkpoints do")
 
+    if slot["runner"] in ("krea-2", "mflux-klein"):
+        # the model needs the memory more than the preview's cached frames do
+        from .render_api import release_frames
+
+        release_frames()
     if body.options.get("continuous") and slot["runner"] == "krea-2":
         return _continuous(body, slot, name, prompt, stack, sampling, width, height, steps, notes)
 

@@ -326,7 +326,9 @@ Every file is checked from its header: LoRA and LyCORIS LoKr load; DoRA in the P
 it); a file that fails is listed with its reason and cannot be stacked. In the stack, each LoRA has a strength from -2
 to 2 and a switch; up to eight at once.
 
-Memory: Automatic uses mflux's low-memory mode when the model would take more than about half of this computer's
-memory, Low memory always does (slower), Normal never does; MLX's cache is capped at a tenth of the memory, and one
-local image model runs at a time. The generator shows the model's own progress (loading, each step, finishing), and
+Memory: Automatic runs mflux as it runs from the command line, tiling the decode (`--vae-tiling`) when the model
+and an untiled decode would not fit beside each other, and uses `--low-ram` with a capped MLX cache only when the
+model itself would not fit (both cost a great deal of time); Low memory always uses them (slower); Normal uses none.
+Before a model runs, the preview's cached frames are let go (drawn again when asked for), and one local image model
+runs at a time. The terminal's first line for a run is the exact mflux command, to set beside mflux run by hand. The generator shows the model's own progress (loading, each step, finishing), and
 Cancel ends the model's process.
