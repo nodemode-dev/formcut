@@ -31,7 +31,7 @@ The rest is written by hand.
 | clip_visuals.py | 165 | /api/media | 2 |
 | cloud.py | 441 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
-| demo.py | 59 | /api/demo | 2 |
+| demo.py | 68 | /api/demo | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 796 | /api/generate | 4 |
@@ -43,8 +43,9 @@ The rest is written by hand.
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 413 | /api/loras | 5 |
-| main.py | 444 | /api/health | 13 |
-| media.py | 1075 | /api/media | 25 |
+| main.py | 446 | /api/health | 13 |
+| media.py | 1038 | /api/media | 25 |
+| media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | presets.py | 620 | /api/presets | 9 |
@@ -56,7 +57,7 @@ The rest is written by hand.
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
 | render_api.py | 1272 | /api/render | 13 |
-| render_stream.py | 80 | /api/render | 1 |
+| render_stream.py | 87 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
 | subtitles.py | 109 | /api/subtitles | 2 |
@@ -110,7 +111,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1571L)
+- `renderer.py` (1672L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
@@ -125,7 +126,7 @@ the automation transports.
 - `timing.py` (269L)
 - `tools.py` (271L)
 - `validation.py` (222L)
-- `video_source.py` (609L)
+- `video_source.py` (622L)
 - `windows_console.py` (43L)
 - `yuv.py` (225L)
 
