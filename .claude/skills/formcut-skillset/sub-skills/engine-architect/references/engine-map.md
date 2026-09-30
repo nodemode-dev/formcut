@@ -35,16 +35,17 @@ The rest is written by hand.
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 796 | /api/generate | 4 |
+| generate.py | 984 | /api/generate | 5 |
+| generative.py | 152 | /api/generative | 5 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
 | jobs.py | 109 | /api/jobs | 3 |
 | klein.py | 267 | /api/models/klein | 3 |
-| krea2.py | 726 | /api/models/krea-2 | 6 |
+| krea2.py | 735 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 458 | /api/health | 13 |
+| main.py | 460 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
@@ -100,7 +101,7 @@ the automation transports.
 - `gpu_frame.py` (674L)
 - `local_diffusion.py` (243L)
 - `local_models.py` (361L)
-- `local_runner.py` (298L)
+- `local_runner.py` (314L)
 - `lora_audit.py` (263L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
