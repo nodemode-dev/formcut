@@ -48,3 +48,12 @@ def test_results_are_a_gallery_of_pictures_with_their_line_on_hover():
     css = (ROOT / "styles" / "app.css").read_text(encoding="utf-8")
     assert ".gen-tile { position: relative; aspect-ratio: 1;" in css and ".gen-tile-bar span { flex: 1; min-width: 0; white-space: nowrap;" in css
     assert 'data-gen-wrap-load="${kind}"' in SOURCE and "/api/generate/prompt-wrap" in SOURCE
+
+
+def test_generate_with_a_prompt_wrap_needs_no_prompt_of_its_own():
+    """2.3.1: the owner loaded a 31-prompt wrap, ticked Continuous and pressed Generate: "Write a prompt first", and
+    nothing ran. A loaded wrap brings its prompts; its first entry stands in for the prompt box."""
+    head = SOURCE[SOURCE.index('[data-gen-go="${kind}"]') :]
+    check = head.index('t("gen.needprompt")')
+    assert "const loadedWrap = wraps.get(kind);" in head[:check] and "const prompt = typed || firstOfWrap.trim();" in head[:check]
+    assert 't("gen.wrap.krea")' in head[:check]

@@ -1144,8 +1144,18 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     });
     pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).addEventListener("click", () => void (async () => {
       const generator = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`).value;
-      const prompt = pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).value.trim();
+      const typed = pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).value.trim();
       if (!generator) { note.textContent = t("gen.none"); return; }
+      // a loaded prompt wrap brings its own prompts: the prompt box may be empty (until 2.3.1 Generate stopped here
+      // with "Write a prompt first", the wrap never sent)
+      const loadedWrap = wraps.get(kind);
+      if (loadedWrap && !generators.find((g) => g.id === generator)?.options?.continuous) { note.textContent = t("gen.wrap.krea"); return; }
+      const firstOfWrap = (() => {
+        const list = loadedWrap ? (Array.isArray(loadedWrap.data) ? loadedWrap.data : (loadedWrap.data as { prompts?: unknown[] })?.prompts) : undefined;
+        const first = list?.[0] as string | { prompt?: string } | undefined;
+        return typeof first === "string" ? first : first?.prompt ?? "";
+      })();
+      const prompt = typed || firstOfWrap.trim();
       if (!prompt) { note.textContent = t("gen.needprompt"); return; }
       const body = {
         generator, prompt,
