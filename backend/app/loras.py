@@ -115,15 +115,81 @@ def _record(path: Path) -> dict:
         return {}
 
 
+_MFLUX: dict = {}
+
+
+def _runtime_python() -> Path | None:
+    """The Python of the mflux environment formcut installed (with Krea 2; Klein and checkpoints use it too)."""
+    from .krea2 import RUNTIME
+
+    python = RUNTIME / "bin" / "python"
+    return python if python.is_file() else None
+
+
+def _audited(folder: Path, base: str) -> dict[str, dict]:
+    """Each file's check against the installed mflux's own key mapping (lora_audit.py), remembered in its record by
+    the file's size and time and mflux's version; a copy renamed to the names mflux reads is written where that
+    helps, into .converted/ beside the files. Nothing is checked where mflux is not installed."""
+    from . import lora_audit
+
+    python = _runtime_python()
+    if python is None:
+        return {}
+    if str(python) not in _MFLUX:
+        _MFLUX[str(python)] = lora_audit.mflux_version(python)
+    version = _MFLUX[str(python)]
+    results, stale = {}, []
+    for path in sorted(folder.glob("*.safetensors")):
+        stat = path.stat()
+        mark = f"{stat.st_size}:{stat.st_mtime_ns}:{version}"
+        record = _record(path)
+        if (record.get("audit") or {}).get("mark") == mark:
+            results[path.name] = record["audit"]
+        else:
+            stale.append((path, mark))
+    if stale:
+        try:
+            found = lora_audit.run(python, [{"path": str(path), "model": base} for path, _ in stale])
+        except (OSError, RuntimeError, ValueError) as exc:
+            found = {str(path): {"error": str(exc)} for path, _ in stale}
+        for path, mark in stale:
+            result = found.get(str(path)) or {"error": "not checked"}
+            applies, said = lora_audit.summary(result, BASES[base])
+            converted = None
+            if applies and result.get("renames"):
+                target = folder / ".converted" / path.name
+                lora_audit.rewrite(path, target, result["renames"])
+                converted = target.name
+            audit = {
+                "mark": mark,
+                "applies": applies,
+                "summary": said,
+                "keys": result.get("keys"),
+                "matched": result.get("matched"),
+                "left": result.get("left"),
+                "converted": converted,
+            }
+            record = _record(path)
+            record["audit"] = audit
+            path.with_suffix(".json").write_text(json.dumps(record, indent=1), encoding="utf-8")
+            results[path.name] = audit
+    return results
+
+
 def entries(base: str | None = None) -> list[dict]:
-    """Every file in the models' LoRA folders, the dropped ones with the added, each with its check."""
+    """Every file in the models' LoRA folders, the dropped ones with the added, each with its check: the header's,
+    and where mflux is installed, its own mapping's (how many keys apply, what was renamed, what is left)."""
     _migrate()
     out = []
     for key in BASES if base is None else [base] if base in BASES else []:
         folder = LIBRARY / key
         folder.mkdir(parents=True, exist_ok=True)  # the folder is there to drop into
+        audits = _audited(folder, key)
         for path in sorted(folder.glob("*.safetensors")):
             record, check = _record(path), _checked(path)
+            audit = audits.get(path.name) or {}
+            if check["ok"] and audit and not audit.get("applies", True):
+                check = {**check, "ok": False, "problem": audit["summary"]}
             out.append(
                 {
                     "id": f"{key}/{path.stem}",
@@ -139,6 +205,7 @@ def entries(base: str | None = None) -> list[dict]:
                     "source": record.get("source") or "dropped into the folder",
                     "sha256": record.get("sha256"),
                     "originalFile": record.get("originalFile"),
+                    "audit": {k: audit.get(k) for k in ("applies", "summary", "keys", "matched", "converted")} if audit else None,
                 }
             )
     return out
@@ -205,7 +272,13 @@ def resolve(stack: list | None, base: str) -> list[tuple[str, float]]:
             raise ValueError(f"{entry['name']} cannot be used: {entry['problem']}")
         scale = max(SCALES[0], min(SCALES[1], float(item.get("scale", entry["scale"]))))
         if scale:
-            out.append((str(LIBRARY / entry["base"] / entry["file"]), round(scale, 3)))
+            # a copy renamed to the names mflux reads, where the check made one
+            converted = (entry.get("audit") or {}).get("converted")
+            folder = LIBRARY / entry["base"]
+            path = (
+                folder / ".converted" / converted if converted and (folder / ".converted" / converted).is_file() else folder / entry["file"]
+            )
+            out.append((str(path), round(scale, 3)))
     return out
 
 
@@ -410,4 +483,5 @@ def remove_lora(base: str, stem: str) -> dict:
     path = _file(base, stem)
     path.unlink()
     path.with_suffix(".json").unlink(missing_ok=True)
+    (path.parent / ".converted" / path.name).unlink(missing_ok=True)  # its renamed copy, if the check made one
     return {"removed": f"{base}/{stem}"}

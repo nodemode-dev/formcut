@@ -260,6 +260,21 @@ Model: ..., width/height` or `Size: WxH` line. Steps, Seed and size are used (th
 schedule, clip skip and a negative prompt are not taken by these distilled models, and the result says so. A tag whose
 LoRA is not in the model's folder stops the picture and names the folder to put it in.
 
+### LoRAs from OneTrainer, Civitai and other trainers
+
+mflux matches a LoRA's keys to its model by exact patterns, and trainers name the same weights differently. formcut
+checks each LoRA in the library against the installed mflux's own mapping for its model (it runs in formcut's mflux
+environment, so it is right for that mflux), once per file and mflux version, and shows the result under the LoRA's
+row in the generator: how many keys apply, what was renamed, and what is left and why. Where renaming makes keys
+apply, a copy with the renamed header (the tensors' bytes as they were) is written to `.converted/` beside the file,
+and mflux is given that copy. Renamed: OneTrainer's historical layout (`lora_transformer_…`, where mflux reads
+`lora_unet_…`), LyCORIS's `lycoris_…` and flat LoKr names (read into the dotted names mflux's Krea 2 mapping knows),
+and ComfyUI's `model.diffusion_model.`. Said, not fixable by renaming: text-encoder weights (mflux applies LoRAs to
+the image model only), a DoRA's magnitude (mflux applies only its LoRA part, so it will not look as trained), LoHa
+(`hada_`) and full-weight differences, which mflux does not load. A LoRA none of whose keys apply is marked unusable
+with the reason (made for another model, a LoHa, text-encoder weights only), rather than stopping a run. OneTrainer's
+DIFFUSERS, KOHYA, ORIGINAL and COMFY LoRA outputs all load as they are.
+
 ### Steps, seed, continuous runs, and what each picture carries
 
 For Krea 2, Klein 4B and their checkpoints the image generator has a Steps slider (1 to 50, starting at the model's

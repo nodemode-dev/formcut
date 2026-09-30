@@ -1577,3 +1577,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .export-actions { align-items: center; }
 .export-share { display: flex; gap: var(--sp-2); margin-right: auto; }
 .tool-chip, .btn-export { white-space: nowrap; }
+
+/* A LoRA's check against mflux's mapping, under its row (2.2.9): one line, the whole on hover */
+.lora-audit { display: block; color: var(--ink-faint); font-size: 11px; margin: -2px 0 var(--sp-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lora-audit.is-partial { color: var(--fault); }

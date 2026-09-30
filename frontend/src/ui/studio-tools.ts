@@ -933,7 +933,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   void refreshGenerators().catch(() => { /* offline engine */ });
 
   // LoRA stacks: one per model (a LoRA made for one does not load on another), each LoRA with its strength
-  type LoraEntry = { id: string; name: string; base: string; scale: number; triggers?: string; format?: string; usable?: boolean; problem?: string };
+  type LoraEntry = { id: string; name: string; base: string; scale: number; triggers?: string; format?: string; usable?: boolean; problem?: string; audit?: { applies?: boolean; summary?: string; converted?: string | null } | null };
   type StackItem = { id: string; scale: number; enabled: boolean };
   const stacks = new Map<string, StackItem[]>();
   const libraries = new Map<string, LoraEntry[]>();
@@ -982,6 +982,18 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       remove.onclick = () => { stack.splice(index, 1); void paintLoras(kind, base); };
       row.append(on, choice, slider, number, remove);
       rows.append(row);
+      // what mflux's own mapping made of it: how many keys apply, what was renamed, what is left
+      const said = document.createElement("small");
+      said.className = "lora-audit";
+      const sayFor = (id: string) => {
+        const entry = library.find((one) => one.id === id);
+        said.textContent = entry?.audit?.summary ?? "";
+        said.title = said.textContent;
+        said.classList.toggle("is-partial", !!entry?.audit && /not applied|not load|fit nothing/.test(entry.audit.summary ?? ""));
+      };
+      sayFor(item.id);
+      choice.addEventListener("change", () => sayFor(choice.value));
+      rows.append(said);
     });
   };
   // Image-to-image sources: the frame at the playhead, or an image or video in the media library
