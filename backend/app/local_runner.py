@@ -76,6 +76,7 @@ def run(
     on_tick=None,
     continuous: bool = False,
     on_next=None,
+    on_picture_start=None,
 ) -> str:
     """on_tick is called several times a second while the model runs (a continuous session collects its pictures
     there); continuous shows each picture's own progress rather than the share of all, and has no time limit."""
@@ -104,6 +105,7 @@ def run(
             continuous,
             terminal,
             on_next,
+            on_picture_start,
         )
         outcome = "done"
         return text
@@ -182,7 +184,19 @@ def _say(report, terminal: _Terminal | None = None):
 
 
 def _run(
-    command, steps, say, cancelled, label, env, time_limit, images=1, on_tick=None, continuous=False, terminal=None, on_next=None
+    command,
+    steps,
+    say,
+    cancelled,
+    label,
+    env,
+    time_limit,
+    images=1,
+    on_tick=None,
+    continuous=False,
+    terminal=None,
+    on_next=None,
+    on_picture_start=None,
 ) -> str:
     say(0.0, f"Loading {label}")
     process = subprocess.Popen(
@@ -225,6 +239,8 @@ def _run(
             share = done / max(1, total)
             value = share if continuous else (image + share) / images
             if done != last_step:
+                if on_picture_start is not None and (last_step < 0 or done < last_step):
+                    on_picture_start(image)  # its first step: mflux has read this picture's prompt
                 last_step = done
                 stage = f"Step {done} of {total}" if done < total else "Finishing the picture"
                 if continuous:

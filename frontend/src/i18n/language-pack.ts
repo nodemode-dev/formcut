@@ -407,6 +407,15 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Show older|Afficher les plus anciens|Mostra i precedenti|古いものを表示|이전 항목 보기|Mostrar anteriores|Показать старые|Eskileri göster|显示更早的|顯示更早的
+Add to media|Ajouter aux médias|Aggiungi ai media|メディアに追加|미디어에 추가|Adicionar à mídia|Добавить в медиа|Medyaya ekle|添加到媒体|加入媒體
+Added to the media library|Ajouté à la médiathèque|Aggiunto alla libreria media|メディアライブラリに追加しました|미디어 라이브러리에 추가됨|Adicionado à biblioteca de mídia|Добавлено в медиатеку|Medya kitaplığına eklendi|已添加到媒体库|已加入媒體庫
+Delete this generation?|Supprimer cette génération ?|Eliminare questa generazione?|この生成物を削除しますか？|이 생성물을 삭제할까요?|Excluir esta geração?|Удалить эту генерацию?|Bu üretim silinsin mi?|删除这个生成结果？|刪除這個生成結果？
+Load prompt wrap…|Charger une suite de prompts…|Carica sequenza di prompt…|プロンプトラップを読み込む…|프롬프트 랩 불러오기…|Carregar sequência de prompts…|Загрузить набор запросов…|İstem dizisi yükle…|载入提示词序列…|載入提示詞序列…
+Clear|Effacer|Cancella|クリア|지우기|Limpar|Очистить|Temizle|清除|清除
+{file}: {n} prompts, in turn|{file} : {n} prompts, tour à tour|{file}: {n} prompt, a turno|{file}：{n} 個のプロンプトを順番に|{file}: 프롬프트 {n}개를 차례로|{file}: {n} prompts, em sequência|{file}: {n} запросов по очереди|{file}: {n} istem, sırayla|{file}：{n} 个提示词，依次使用|{file}：{n} 個提示詞，依序使用
+That file is not JSON|Ce fichier n’est pas du JSON|Quel file non è JSON|そのファイルは JSON ではありません|그 파일은 JSON이 아닙니다|Esse arquivo não é JSON|Этот файл не в формате JSON|Bu dosya JSON değil|该文件不是 JSON|該檔案不是 JSON
+Generation|Génération|Generazione|生成物|생성물|Geração|Генерация|Üretim|生成结果|生成結果
 Cloud|Cloud|Cloud|クラウド|클라우드|Nuvem|Облако|Bulut|云端|雲端
 Collect files…|Rassembler les fichiers…|Raccogli file…|ファイルを収集…|파일 모으기…|Reunir arquivos…|Собрать файлы…|Dosyaları topla…|收集文件…|收集檔案…
 Collecting files…|Rassemblement des fichiers…|Raccolta dei file…|ファイルを収集しています…|파일을 모으는 중…|Reunindo arquivos…|Сбор файлов…|Dosyalar toplanıyor…|正在收集文件…|正在收集檔案…

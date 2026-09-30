@@ -40,3 +40,11 @@ def test_the_generator_has_steps_and_seed_sliders_continuous_and_a_viewer():
     assert "gen-viewer" in (ROOT / "ui" / "viewer.ts").read_text(encoding="utf-8") and "openViewer(" in SOURCE
     tokens = (ROOT / "styles" / "tokens.css").read_text(encoding="utf-8")
     assert "--z-viewer: 750;" in tokens
+
+
+def test_results_are_a_gallery_of_pictures_with_their_line_on_hover():
+    assert 'class="gen-gallery" data-gen-grid="${kind}"' in SOURCE and 'class="gen-tile' in SOURCE and 'class="gen-tile-bar"' in SOURCE
+    assert "data-gen-to-media" in SOURCE and "data-gen-delete" in SOURCE and "/api/generative?kind=" in SOURCE
+    css = (ROOT / "styles" / "app.css").read_text(encoding="utf-8")
+    assert ".gen-tile { position: relative; aspect-ratio: 1;" in css and ".gen-tile-bar span { flex: 1; min-width: 0; white-space: nowrap;" in css
+    assert 'data-gen-wrap-load="${kind}"' in SOURCE and "/api/generate/prompt-wrap" in SOURCE

@@ -445,6 +445,9 @@ def run_continuous(
     folder: Path | None = None,
     sampling: dict | None = None,
     on_begin=None,
+    count: int | None = None,
+    seeds: list | None = None,
+    on_started=None,
 ) -> int:
     """A continuous session: one run of mflux over many random seeds, so Krea 2 (or the checkpoint) and its LoRAs are
     loaded once and stay in memory between pictures. The prompt is read from prompt_file before each seed (mflux's
@@ -475,7 +478,12 @@ def run_continuous(
     pairs = loras.resolve(stack, "krea-2")
     sampling = {**(sampling or {})}
     sampling.setdefault("bake", not (settings["lowRam"] or _four_bit(state["build"], folder)))
-    seeds = [int.from_bytes(os.urandom(4), "little") for _ in range(SESSION_SEEDS)]
+    # the session's seeds: those asked for (a prompt wrap's entries may fix theirs), random for the rest
+    wanted = list(seeds or [])
+    seeds = [
+        int(wanted[i]) if i < len(wanted) and wanted[i] is not None else int.from_bytes(os.urandom(4), "little")
+        for i in range(count or SESSION_SEEDS)
+    ]
     # the session's own folder: every picture mflux writes in it is this session's, whatever mflux names it
     folder_out = staging / f"session-{os.getpid()}-{int(time.time() * 1000)}"
     folder_out.mkdir(parents=True, exist_ok=True)
@@ -535,6 +543,7 @@ def run_continuous(
             on_tick=collect,
             continuous=True,
             on_next=begun,
+            on_picture_start=on_started,
         )
     except InterruptedError:
         taken["ended"] = True

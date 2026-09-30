@@ -1,0 +1,26 @@
+{
+  "prompts": [
+    {
+      "prompt": "a quiet reading room at dawn, soft window light, film grain",
+      "width": 832,
+      "height": 1248,
+      "steps": 9,
+      "seed": -1,
+      "loras": [{ "name": "Emotions V1", "scale": 1.0 }]
+    },
+    {
+      "prompt": "the same room at noon, harsh sun across the floor",
+      "width": 832,
+      "height": 1248,
+      "steps": 9,
+      "loras": [{ "name": "Emotions V1", "scale": 0.8 }, { "name": "krea2_nose_slider_v1", "scale": -2.0 }]
+    },
+    {
+      "prompt": "the room at night, one lamp on <lora:Emotions V1:1.2>",
+      "width": 1024,
+      "height": 1024,
+      "steps": 8,
+      "sampler": "euler"
+    }
+  ]
+}

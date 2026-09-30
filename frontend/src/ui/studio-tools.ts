@@ -74,12 +74,19 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
             <button class="tool-chip is-primary" data-gen-go="${kind}">${icon("diamond")}${t("gen.go")}</button>
             <button class="tool-chip" data-gen-cancel="${kind}" hidden>${t("gen.stop")}</button>
           </div>
+          ${kind === "image" ? `<div class="gen-wrap" data-gen-wrap-row="${kind}" hidden>
+            <button type="button" class="tool-chip" data-gen-wrap-load="${kind}">${t("gen.wrap.load")}</button>
+            <input type="file" accept=".json,application/json" data-gen-wrap-file="${kind}" hidden>
+            <span class="gen-wrap-state" data-gen-wrap-state="${kind}"></span>
+            <button type="button" class="tool-chip" data-gen-wrap-clear="${kind}" hidden>${t("gen.wrap.clear")}</button>
+          </div>` : ""}
           <div class="gen-progress" data-gen-progress="${kind}" hidden><progress data-gen-bar="${kind}" max="1" value="0"></progress><small data-gen-stage="${kind}"></small></div>
           <p class="stock-note" data-gen-note="${kind}"></p>
         </div>
       </div>
       <div class="panel-section"><div class="panel-section-head"><span>${t("gen.results")}</span><small>${t("gen.results.hint")}</small></div>
-        <div class="card-grid stock-grid" data-gen-grid="${kind}"></div></div>
+        <div class="gen-gallery" data-gen-grid="${kind}"></div>
+        <button type="button" class="tool-chip gen-more" data-gen-more="${kind}" hidden>${t("gen.results.more")}</button></div>
     </section>`).join("")}
     <section data-view="recording" class="set-view" hidden></section>
     <section data-view="urldl" class="set-view" hidden>
@@ -871,12 +878,30 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const genJobs = new Map<string, AbortController>();
   const genJobIds = new Map<string, string>();
   const runs = new Map<string, number>();  // continuous runs so far, per kind
+  const wraps = new Map<string, { data: unknown; count: number; name: string }>();  // a loaded prompt wrap, per kind
+  let recentGenerations: Array<{ id: string; name: string; prompt?: string }> = [];
+  void fetch("/api/generative?kind=image&limit=20").then((r) => r.json()).then((reply) => { recentGenerations = reply.items ?? []; }).catch(() => {});
   const sessionKinds = new Set<string>();  // kinds with a continuous session running in the engine
   const finishing = new Set<string>();  // kinds whose session was asked to finish the picture in hand
+  // A generation's tile (2.3.0): the picture fills it; its seed and steps show on hover, on one line, with Add to
+  // media and Delete; the prompt is in the viewer's caption. A generation lives in the generative library, audio in
+  // the media library.
+  type GenItem = { id: string; name: string; kind?: string; library?: string; seed?: number; steps?: number; width?: number; height?: number; prompt?: string; wrapEntry?: number; wrapOf?: number };
+  const tile = (item: GenItem) => {
+    const generative = item.library === "generative" || item.kind === "image" && item.library !== "media";
+    const base = generative ? `/api/generative/${item.id}` : `/api/media/${item.id}`;
+    const line = [item.seed !== undefined ? `${t("gen.seed")} ${item.seed}` : "", item.steps ? `${t("gen.steps")} ${item.steps}` : "", item.width && item.height ? `${item.width}×${item.height}` : "", item.wrapEntry ? `${item.wrapEntry}/${item.wrapOf}` : ""].filter(Boolean).join(" · ");
+    const caption = [item.prompt ?? item.name, line].filter(Boolean).join(" · ");
+    return `<div class="gen-tile${item.kind === "video" ? " is-video" : ""}" role="button" tabindex="0" data-gen-view="${item.id}" data-gen-file="${base}/file" data-gen-kind="${item.kind ?? "image"}" data-gen-library="${generative ? "generative" : "media"}" data-gen-caption="${escapeHtml(caption)}" title="${escapeHtml(item.prompt ?? item.name)}">`
+      + `<img src="${base}/thumb" alt="" loading="lazy" draggable="false">`
+      + `<div class="gen-tile-bar"><span>${escapeHtml(line)}</span>`
+      + (generative ? `<button type="button" class="gen-tile-act" data-gen-to-media="${item.id}" title="${t("gen.results.toMedia")}" aria-label="${t("gen.results.toMedia")}">${icon("plus")}</button><button type="button" class="gen-tile-act" data-gen-delete="${item.id}" title="${t("gen.results.delete")}" aria-label="${t("gen.results.delete")}">${icon("trash")}</button>` : "")
+      + `</div></div>`;
+  };
   // a result opens in the platform's full-screen viewer (viewer.ts), the results beside it one arrow away
   const viewResults = (grid: HTMLElement, card: HTMLElement) => {
     const cards = [...grid.querySelectorAll<HTMLElement>("[data-gen-view]")];
-    openViewer(cards.map((one) => ({ src: `/api/media/${one.dataset.genView}/file`, kind: "image" as const, caption: one.dataset.genCaption ?? "" })), cards.indexOf(card));
+    openViewer(cards.map((one) => ({ src: one.dataset.genFile ?? `/api/media/${one.dataset.genView}/file`, kind: (one.dataset.genKind === "video" ? "video" : "image") as "image" | "video", caption: one.dataset.genCaption ?? "" })), cards.indexOf(card));
   };
   const pick = <T extends HTMLElement>(sel: string) => modal.querySelector<T>(sel)!;
   const paintGenerators = () => {
@@ -904,6 +929,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         pick<HTMLElement>(`[data-gen-civitai="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden = !(entry && "memory" in (entry.options ?? {}));
         pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden = !(entry && "scheduler" in (entry.options ?? {}));
+        const wrapRow = modal.querySelector<HTMLElement>(`[data-gen-wrap-row="${kind}"]`);
+        if (wrapRow) wrapRow.hidden = !(entry && "continuous" in (entry.options ?? {}));
         // steps and seed as sliders for the local models (Krea 2, Klein, checkpoints): steps start at the model's own
         const local = !!entry && entry.id.startsWith("local:") && "steps" in (entry.options ?? {});
         pick<HTMLElement>(`[data-gen-steps-row="${kind}"]`).hidden = !local;
@@ -1002,6 +1029,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     const chosen = select.value;
     const options = [`<option value="">${t("gen.img2img.none")}</option>`, `<option value="frame">${t("gen.img2img.frame")}</option>`];
     for (const item of bin.all.filter((m) => m.kind === "image" || m.kind === "video")) options.push(`<option value="media:${item.id}">${escapeHtml(item.name)}</option>`);
+    for (const item of recentGenerations) options.push(`<option value="generative:${item.id}">${escapeHtml(`${t("gen.img2img.generation")}: ${item.prompt ?? item.name}`.slice(0, 80))}</option>`);
     select.innerHTML = options.join("");
     if ([...select.options].some((option) => option.value === chosen)) select.value = chosen;
     const strength = pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`);
@@ -1102,10 +1130,10 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     })());
     const grid = pick<HTMLElement>(`[data-gen-grid="${kind}"]`);
     const shown = new Set<string>();
-    const addCards = (items: Array<{ id: string; name: string; seed?: number; steps?: number }>) => {
+    const addCards = (items: Array<GenItem>, where: InsertPosition = "afterbegin") => {
       for (const item of items) shown.add(item.id);
-      grid.insertAdjacentHTML("afterbegin", items.map((item) =>
-        `<div class="effect-card stock-card gen-result" role="button" tabindex="0" data-gen-view="${item.id}" data-gen-caption="${escapeHtml([item.name, item.seed !== undefined ? `${t("gen.seed")} ${item.seed}` : "", item.steps ? `${t("gen.steps")} ${item.steps}` : ""].filter(Boolean).join(" · "))}"><div class="effect-thumb has-image"><img src="/api/media/${item.id}/thumb" alt="" loading="lazy"></div><div class="effect-name">${escapeHtml(item.name)}</div>${item.seed !== undefined ? `<small class="gen-seed-used">${t("gen.seed")} ${item.seed}</small>` : ""}</div>`).join(""));
+      grid.insertAdjacentHTML(where, items.map((item) => tile(item)).join(""));
+
     };
     const cancel = pick<HTMLButtonElement>(`[data-gen-cancel="${kind}"]`);
     cancel.addEventListener("click", () => {
@@ -1139,7 +1167,9 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       if (source) {
         const snapshot = engine.snapshot;
         // the frame at the playhead is rendered from the project as it stands; a video in the library at the playhead too
-        body.options.image = source === "frame" ? { project: snapshot, time: snapshot.playhead } : { mediaId: source.slice(6), time: snapshot.playhead };
+        body.options.image = source === "frame" ? { project: snapshot, time: snapshot.playhead }
+          : source.startsWith("generative:") ? { generativeId: source.slice(11) }
+          : { mediaId: source.slice(6), time: snapshot.playhead };
         body.options.imageStrength = Number(pick<HTMLInputElement>(`[data-gen-strength="${kind}"]`).value);
       }
       const progress = pick<HTMLElement>(`[data-gen-progress="${kind}"]`);
@@ -1151,8 +1181,11 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       // a continuous session where the model takes one (Krea 2 and its checkpoints): the engine keeps the model and its
       // LoRAs loaded and makes picture after picture until stopped; elsewhere each run starts the next from here
       const ticked = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
-      const session = ticked.checked && !ticked.disabled && !!generators.find((g) => g.id === generator)?.options?.continuous;
-      if (session) body.options.continuous = true;
+      const takesSessions = !!generators.find((g) => g.id === generator)?.options?.continuous;
+      const wrap = takesSessions ? wraps.get(kind) : undefined;
+      const session = takesSessions && ((ticked.checked && !ticked.disabled) || !!wrap);
+      if (session && ticked.checked && !ticked.disabled) body.options.continuous = true;
+      if (wrap) body.options.wrap = wrap.data;  // each entry in turn; round and round with Continuous, once through without
       if (session) sessionKinds.add(kind); else sessionKinds.delete(kind);
       let pictureStart = Date.now();
       const controller = new AbortController();
@@ -1230,9 +1263,61 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     })());
     // a result opens full screen: the picture itself, its seed and steps; arrows move through the results
     grid.addEventListener("click", (event) => {
-      const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");
+      const target = event.target as HTMLElement;
+      const toMedia = target.closest<HTMLElement>("[data-gen-to-media]");
+      const remove = target.closest<HTMLElement>("[data-gen-delete]");
+      if (toMedia) {
+        // a copy into the media library, for the timeline; the generation stays here
+        event.stopPropagation();
+        void api(`/api/generative/${toMedia.dataset.genToMedia}/to-media`, {}).then(() => { note.textContent = t("gen.results.added"); return bin.load(); }).catch((error: Error) => { note.textContent = error.message; });
+        return;
+      }
+      if (remove) {
+        event.stopPropagation();
+        if (!window.confirm(t("gen.results.deleteAsk"))) return;
+        void fetch(`/api/generative/${remove.dataset.genDelete}`, { method: "DELETE" }).then((res) => { if (res.ok) remove.closest(".gen-tile")?.remove(); });
+        return;
+      }
+      const card = target.closest<HTMLElement>("[data-gen-view]");
       if (card) viewResults(grid, card);
     });
+    // the gallery's history from the generative library, the latest first, sixty at a time
+    let oldest = 0;
+    const more = pick<HTMLButtonElement>(`[data-gen-more="${kind}"]`);
+    const history = async () => {
+      if (kind === "audio") return;
+      const reply = await fetch(`/api/generative?kind=${kind}&limit=60${oldest ? `&before=${oldest}` : ""}`).then((r) => r.json()).catch(() => ({ items: [], more: false }));
+      const fresh = (reply.items as Array<GenItem & { created: number }>).filter((item) => !shown.has(item.id)).map((item) => ({ ...item, library: "generative" }));
+      if (fresh.length) oldest = Math.min(...fresh.map((item) => item.created));
+      addCards(fresh, "beforeend");
+      more.hidden = !reply.more;
+    };
+    more.addEventListener("click", () => void history());
+    void history();
+    // a prompt wrap (Krea 2 and its checkpoints): a JSON file of three prompts or more, each with its own size,
+    // steps and LoRA stack, taken in turn
+    if (kind === "image") {
+      const fileInput = pick<HTMLInputElement>(`[data-gen-wrap-file="${kind}"]`);
+      const state = pick<HTMLElement>(`[data-gen-wrap-state="${kind}"]`);
+      const clear = pick<HTMLButtonElement>(`[data-gen-wrap-clear="${kind}"]`);
+      pick<HTMLButtonElement>(`[data-gen-wrap-load="${kind}"]`).addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => void (async () => {
+        const file = fileInput.files?.[0];
+        fileInput.value = "";
+        if (!file) return;
+        try {
+          const data = JSON.parse(await file.text());
+          const generator = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`).value;
+          const checked = await api<{ count: number }>("/api/generate/prompt-wrap", { generator, wrap: data });
+          wraps.set(kind, { data, count: checked.count, name: file.name });
+          state.textContent = t("gen.wrap.loaded").replace("{n}", String(checked.count)).replace("{file}", file.name);
+          clear.hidden = false;
+        } catch (error) {
+          state.textContent = error instanceof SyntaxError ? t("gen.wrap.notJson") : error instanceof Error ? error.message : String(error);
+        }
+      })());
+      clear.addEventListener("click", () => { wraps.delete(kind); state.textContent = ""; clear.hidden = true; });
+    }
     grid.addEventListener("keydown", (event) => {
       const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");
       if (card && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); viewResults(grid, card); }

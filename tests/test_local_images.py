@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 import pytest
-from app import klein, local_runner, loras
+from app import generative, klein, local_runner, loras
 from app.main import app
 from fastapi.testclient import TestClient
 
@@ -615,7 +615,7 @@ def test_image_to_image_starts_from_a_library_picture_or_the_playheads_frame(tmp
 
 
 def test_seed_minus_one_is_random_and_the_seed_used_is_in_the_file_and_the_library(tmp_path, monkeypatch, library):
-    from app import krea2, media, prompt_data
+    from app import krea2, prompt_data
     from PIL import Image
 
     recorded = _krea_standin(tmp_path, monkeypatch)
@@ -635,7 +635,7 @@ def test_seed_minus_one_is_random_and_the_seed_used_is_in_the_file_and_the_libra
     assert done["result"]["seeds"] == [used] and argv[argv.index("--steps") + 1] == "6"
     [item] = done["result"]["media"]
     assert item["seed"] == used and item["steps"] == 6 and item["loras"] == [{"file": "Emotions V1", "scale": 0.8}]
-    stored = next(media.MEDIA_DIR.glob(f"{item['id']}.*"))
+    stored = generative.FOLDER / item["file"]  # the generative library (2.3.0)
     with Image.open(stored) as picture:
         parameters = picture.text["parameters"]
     assert f"Seed: {used}" in parameters and "Steps: 6" in parameters and "<lora:Emotions V1:0.8>" in parameters
@@ -694,7 +694,6 @@ sys.stderr.write("\n")
 
 
 def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_path, monkeypatch, library):
-    from app import media
     from PIL import Image
 
     _krea_standin(tmp_path, monkeypatch)
@@ -736,7 +735,7 @@ def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_
     assert len(seeds) == 500 and [str(s) for s in later["seeds"]] == seeds[: len(later["seeds"])]
     prompts = [item["prompt"] for item in later["made"]]
     assert prompts[0] == "a red room" and prompts[-1] == "a blue room"
-    stored = next(media.MEDIA_DIR.glob(f"{later['made'][-1]['id']}.*"))
+    stored = generative.FOLDER / later["made"][-1]["file"]
     with Image.open(stored) as picture:
         assert f"Seed: {later['made'][-1]['seed']}" in picture.text["parameters"]
     assert client.post(f"/api/generate/sessions/{job}/prompt", json={"prompt": "x"}).status_code == 404
@@ -911,3 +910,95 @@ def test_a_report_without_a_value_leaves_the_bar_where_it_is():
     time.sleep(0.15)
     status = jobs.status(job)
     assert status["progress"] == 0.62 and status["message"] == "Picture 1 done in 10 s" and status["made"] == [{"id": "x"}]
+
+
+def _wrap_finished(client, job, tries=800):
+    for _ in range(tries):
+        status = client.get(f"/api/jobs/{job}").json()
+        if status["status"] != "running":
+            return status
+        time.sleep(0.02)
+    return status
+
+
+def test_a_prompt_wrap_runs_each_entry_in_turn_sharing_the_model_where_the_setup_is_the_same(tmp_path, monkeypatch, library):
+    """2.3.0: a prompt-wrap.json, three prompts or more, each with its own size, steps and LoRAs, taken in turn;
+    entries in a row that share a setup share one mflux process (the model loaded once)."""
+    _krea_standin(tmp_path, monkeypatch)
+    (loras.LIBRARY / "krea-2").mkdir(parents=True)
+    _safetensors(loras.LIBRARY / "krea-2" / "Soft Light.safetensors", ["a.lora_A.weight", "a.lora_B.weight"])
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = {
+        "prompts": [
+            {"prompt": "a red room", "width": 512, "height": 512, "steps": 4, "loras": [{"name": "Soft Light", "scale": 0.6}]},
+            {"prompt": "a blue room", "width": 512, "height": 512, "steps": 4, "loras": [{"name": "Soft Light", "scale": 0.6}]},
+            {"prompt": "a green room <lora:Soft Light:1.2>", "width": 770, "height": 1000, "steps": 6},
+        ]
+    }
+    checked = client.post("/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": wrap}).json()
+    assert checked["count"] == 3 and checked["entries"][2]["width"] == 768 and checked["entries"][2]["height"] == 992
+    job = client.post("/api/generate", json={"generator": "local:krea-2", "prompt": "ignored", "options": {"wrap": wrap}}).json()["job_id"]
+    done = _wrap_finished(client, job)
+    assert done["status"] == "done", done
+    made = done["result"]["media"]
+    assert [m["prompt"] for m in made] == ["a red room", "a blue room", "a green room"]
+    assert [m["library"] for m in made] == ["generative"] * 3 and [m["wrapEntry"] for m in made] == [1, 2, 3]
+    assert made[2]["loras"] == [{"file": "Soft Light", "scale": 1.2}] and made[2]["steps"] == 6
+    calls = json.loads((tmp_path / "argv.json.calls").read_text())
+    assert len(calls) == 2  # the first two share size, steps and LoRAs: one load; the third its own
+    first, second = (" ".join(c) for c in calls)
+    assert "--width 512 --height 512" in first and "--steps 4" in first and "--width 768 --height 992" in second and "--steps 6" in second
+    assert "--prompt-file" in first and first.count("--seed") == 1
+
+
+def test_a_prompt_wrap_with_continuous_goes_round_again(tmp_path, monkeypatch, library):
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "0.05")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = [{"prompt": p, "steps": 2} for p in ("one", "two", "three")]
+    job = client.post(
+        "/api/generate", json={"generator": "local:krea-2", "prompt": "x", "options": {"wrap": wrap, "continuous": True, "seed": -1}}
+    ).json()["job_id"]
+    for _ in range(600):
+        status = client.get(f"/api/jobs/{job}").json()
+        if len(status.get("made") or []) >= 5:
+            break
+        time.sleep(0.02)
+    client.delete(f"/api/jobs/{job}")
+    _wrap_finished(client, job)
+    assert [m["prompt"] for m in status["made"][:5]] == ["one", "two", "three", "one", "two"]
+
+
+def test_a_prompt_wrap_is_read_or_refused_with_the_entry_named(tmp_path, monkeypatch, library):
+    _krea_standin(tmp_path, monkeypatch)
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    too_few = client.post("/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": ["a", "b"]})
+    assert too_few.status_code == 400 and "3 prompts or more" in too_few.json()["detail"]
+    missing = client.post("/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": ["a", {"prompt": ""}, "c"]})
+    assert missing.status_code == 400 and "entry 2 has no prompt" in missing.json()["detail"]
+    unknown = client.post(
+        "/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": ["a", "b", {"prompt": "c", "loras": [{"name": "Nowhere"}]}]}
+    )
+    assert unknown.status_code == 400 and "entry 3: no LoRA named 'Nowhere'" in unknown.json()["detail"]
+    plain = client.post("/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": ["a", "b", "c"]}).json()
+    assert plain["count"] == 3 and plain["entries"][0]["steps"] == 8  # what an entry leaves out, the model's own gives
+
+
+def test_the_generative_library_keeps_generations_out_of_media(tmp_path, library):
+    from app import media
+    from PIL import Image
+
+    picture = tmp_path / "made.png"
+    Image.new("RGB", (640, 360), "orange").save(picture)
+    item = generative.add(picture, "an orange field", "image", extra={"prompt": "an orange field", "seed": 7})
+    assert (generative.FOLDER / item["file"]).is_file() and (generative.THUMBS / f"{item['id']}.jpg").is_file()
+    assert item["id"] not in {m["id"] for m in media.list_media()}
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    listed = client.get("/api/generative?kind=image").json()["items"]
+    assert listed[0]["id"] == item["id"] and listed[0]["width"] == 640
+    assert client.get(f"/api/generative/{item['id']}/thumb").status_code == 200
+    assert client.get(f"/api/generative/{item['id']}/file").content == (generative.FOLDER / item["file"]).read_bytes()
+    copy = client.post(f"/api/generative/{item['id']}/to-media").json()
+    assert copy["generative"] == item["id"] and copy["prompt"] == "an orange field" and media.media_path(copy["id"]) is not None
+    assert client.delete(f"/api/generative/{item['id']}").status_code == 200
+    assert not (generative.FOLDER / item["file"]).exists() and media.media_path(copy["id"]) is not None  # the media copy stays

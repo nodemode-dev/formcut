@@ -260,6 +260,29 @@ Model: ..., width/height` or `Size: WxH` line. Steps, Seed and size are used (th
 schedule, clip skip and a negative prompt are not taken by these distilled models, and the result says so. A tag whose
 LoRA is not in the model's folder stops the picture and names the folder to put it in.
 
+### Prompt wraps
+
+With Krea 2 or one of its checkpoints, **Load prompt wrap…** in the image generator takes a JSON file of three prompts
+or more (`examples/prompt-wrap.json` shows one), each with its own size, steps, seed and LoRA stack, and Generate runs
+them in turn: once through, or, with Continuous ticked, round and round from the first again after the last. The file
+is `{"prompts": [...]}` or the list alone; an entry is a prompt string, or
+`{"prompt": "...", "width": 832, "height": 1248, "steps": 9, "seed": -1, "loras": [{"name": "Emotions V1", "scale": 1.0}], "sampler": "euler", "cfg": 1, "negative": "..."}`.
+LoRAs are named as the library names them (its file names, as a `<lora:>` tag does, which a prompt may carry too, with
+Civitai's generation data); scales run from -2 to 2, eight at most; sizes are made multiples of 16 from 256 to 2048;
+what an entry leaves out, the generator's own settings give. The file is checked when it is loaded, and an entry that
+cannot be read is named. Entries in a row that share size, steps, LoRAs and sampling share one mflux process, the model
+and LoRAs loaded once and the prompt file rewritten for each; an entry that changes those starts a new process. Each
+picture records which entry made it.
+
+### The generative library
+
+What the image and video generator makes is kept apart from the media library: files in `generative/`, thumbnails in
+`generative-thumbs/`, records (prompt, seed, steps, size, LoRAs, model, time) in `generative.json`, in the data folder.
+The Studio's results show it, latest first, as a gallery: the picture fills its tile, its seed, steps, size and wrap
+position show on hover with **Add to media** (a copy into the media library, for the timeline; the generation stays)
+and **Delete**; a click opens it full screen with its prompt. Image-to-image can start from a generation. Audio the
+generator makes (speech, music) still goes to the media library, as it is laid on the timeline at once.
+
 ### LoRAs from OneTrainer, Civitai and other trainers
 
 mflux matches a LoRA's keys to its model by exact patterns, and trainers name the same weights differently. formcut

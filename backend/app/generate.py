@@ -14,6 +14,7 @@ Settings" and a stack trace.
 from __future__ import annotations
 
 import base64
+import json
 import threading
 import uuid
 from pathlib import Path
@@ -220,13 +221,15 @@ def generate(body: GenerateBody):
             staged = STAGING / f"{uuid.uuid4().hex}{suffix}"
             staged.write_bytes(blob)
             try:
-                made.append(
-                    ingest_path(
-                        staged,
-                        f"{body.prompt[:48]} ({entry['label']})",
-                        extra={"source": "generated", "generator": body.generator, "prompt": body.prompt},
-                    )
-                )
+                label = f"{body.prompt[:48]} ({entry['label']})"
+                extra = {"source": "generated", "generator": body.generator, "prompt": body.prompt}
+                if entry["kind"] in ("image", "video"):
+                    # pictures and videos to the generative library (2.3.0); audio, laid on the timeline at once, to media
+                    from . import generative
+
+                    made.append({**generative.add(staged, label, entry["kind"], extra=extra), "library": "generative"})
+                else:
+                    made.append(ingest_path(staged, label, extra=extra))
             finally:
                 staged.unlink(missing_ok=True)
             report(0.6 + 0.4 * (index + 1) / len(blobs))
@@ -257,6 +260,12 @@ def _source_image(spec: dict, into: Path) -> Path:
 
     out = into / f"source-{uuid.uuid4().hex}.png"
     into.mkdir(parents=True, exist_ok=True)
+    if spec.get("generativeId"):
+        from . import generative
+
+        with Image.open(generative.path_of(generative.find(str(spec["generativeId"])))) as picture:
+            picture.convert("RGB").save(out)
+        return out
     if spec.get("mediaId"):
         item = media._find(str(spec["mediaId"]))
         matches = list(media.MEDIA_DIR.glob(f"{item['id']}.*"))
@@ -297,32 +306,173 @@ def _source_image(spec: dict, into: Path) -> Path:
 # hand and stop (Continuous unticked), as against Cancel, which stops at once
 _SESSIONS: dict[str, dict] = {}
 
+WRAP_LEAST = 3  # a prompt wrap has three entries or more (the owner's wording); one or two are a prompt and a stack
 
-def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling: dict, width: int, height: int, steps: int, notes: list):
-    """Krea 2 (or a checkpoint) generating picture after picture with the model and its LoRAs loaded once, until
-    cancelled: one mflux process over many random seeds (krea2.run_continuous). Each picture goes through the content
-    filter, has its recipe written into it, joins the library, and is published on the job as it is made; the prompt
-    can be changed between pictures (POST /api/generate/sessions/<job>/prompt)."""
+
+def wrap_entries(raw, slot: dict, defaults: dict) -> list[dict]:
+    """A prompt wrap's entries, each read into what a run takes: its prompt (Civitai-style <lora:> tags and generation
+    data inside it read as the generator reads them), width and height (multiples of 16, 256 to 2048), steps (1 to 50),
+    seed (-1 or none: random), LoRAs by the library's names (or ids) with their scales (-2 to 2, eight at most), and
+    sampler, CFG scale and negative prompt; what an entry leaves out, the generator's own settings give.
+
+    The file: {"prompts": [{...}, ...]} or the list alone; each entry {"prompt": "...", "width": 832, "height": 1248,
+    "steps": 9, "seed": -1, "loras": [{"name": "Emotions V1", "scale": 1.0}], "sampler": "euler", "cfg": 1,
+    "negative": "..."}. ValueError, naming the entry, when one cannot be read."""
+    from . import loras as library_mod
+    from . import prompt_data
+
+    items = raw.get("prompts") if isinstance(raw, dict) else raw
+    if not isinstance(items, list):
+        raise ValueError('a prompt wrap is a list of entries, or {"prompts": [...]}')
+    if len(items) < WRAP_LEAST:
+        raise ValueError(f"a prompt wrap has {WRAP_LEAST} prompts or more; this one has {len(items)}")
+    base = slot.get("base") or "krea-2"
+    library = library_mod.entries(base)
+    out = []
+    for number, given in enumerate(items, start=1):
+        item = {"prompt": given} if isinstance(given, str) else given
+        if not isinstance(item, dict) or not str(item.get("prompt") or "").strip():
+            raise ValueError(f"entry {number} has no prompt")
+        stack = []
+        for named in item.get("loras") or []:
+            lora = {"name": named} if isinstance(named, str) else named
+            wanted = str(lora.get("id") or lora.get("name") or "")
+            entry = next((e for e in library if e["id"] == wanted), None) or prompt_data.match_lora(wanted.split("/")[-1], library)
+            if entry is None:
+                raise ValueError(f"entry {number}: no LoRA named {wanted!r} in {library_mod.LIBRARY / base}")
+            scale = max(-2.0, min(2.0, float(lora.get("scale", lora.get("strength", entry.get("scale", 1.0))))))
+            stack.append({"id": entry["id"], "scale": scale})
+        try:
+            _, text, stack, _notes, found = _civitai_prompt(slot, str(item["prompt"]), stack)
+        except HTTPException as exc:
+            raise ValueError(f"entry {number}: {exc.detail}") from exc
+        if len(stack) > library_mod.MAX_STACK:
+            raise ValueError(f"entry {number}: {len(stack)} LoRAs; a stack holds {library_mod.MAX_STACK}")
+
+        def number_of(key, default, low, high, fallback=None, found=found, item=item, number=number):
+            value = item.get(key, found.get(fallback or key, default))
+            try:
+                return max(low, min(high, int(float(value))))
+            except (TypeError, ValueError):
+                raise ValueError(f"entry {number}: {key} {value!r} is not a number") from None
+
+        width = number_of("width", defaults["width"], 256, 2048) // 16 * 16
+        height = number_of("height", defaults["height"], 256, 2048) // 16 * 16
+        steps = number_of("steps", defaults["steps"], 1, 50)
+        seed = item.get("seed", found.get("seed"))
+        sampling = {k: v for k, v in defaults["sampling"].items() if k != "image"}
+        sampler = str(item.get("sampler") or item.get("scheduler") or found.get("scheduler") or "").lower()
+        if sampler:
+            sampling["scheduler"] = "euler" if "euler" in sampler else "er_sde"
+        cfg = item.get("cfg", item.get("guidance", found.get("guidance")))
+        if cfg not in (None, ""):
+            sampling["guidance"] = max(0.0, min(15.0, float(cfg)))
+        negative = item.get("negative") or found.get("negative")
+        if negative:
+            sampling["negative"] = str(negative)
+        if defaults["sampling"].get("image"):
+            sampling["image"] = defaults["sampling"]["image"]
+        out.append(
+            {
+                "prompt": text,
+                "width": width,
+                "height": height,
+                "steps": steps,
+                "stack": stack,
+                "sampling": sampling,
+                "seed": None if seed in (None, "", -1, "-1") else int(seed),
+            }
+        )
+    return out
+
+
+class WrapBody(BaseModel):
+    generator: str
+    wrap: dict | list
+
+
+@router.post("/prompt-wrap")
+def check_prompt_wrap(body: WrapBody) -> dict:
+    """A prompt-wrap.json read as a run will read it: its entries, or what is wrong with it."""
+    from . import krea2 as _krea2
+    from .local_models import resolve
+
+    slot = resolve(body.generator.split(":", 1)[1]) if body.generator.startswith("local:") else None
+    if slot is None or slot.get("runner") != "krea-2":
+        raise HTTPException(400, "A prompt wrap runs with Krea 2 and its checkpoints")
+    try:
+        entries = wrap_entries(body.wrap, slot, {"width": 1024, "height": 1024, "steps": _krea2.STEPS, "stack": [], "sampling": {}})
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"entries": [{**e, "loras": len(e["stack"])} for e in entries], "count": len(entries)}
+
+
+def _continuous(
+    body,
+    slot: dict,
+    name: str,
+    prompt: str,
+    stack: list,
+    sampling: dict,
+    width: int,
+    height: int,
+    steps: int,
+    notes: list,
+    wrap: list | None = None,
+    forever: bool = True,
+):
+    """Krea 2 (or a checkpoint) making picture after picture with the model and its LoRAs loaded: one mflux process
+    over many seeds (krea2.run_continuous), the prompt read from a file mflux rereads before each seed. Each picture
+    goes through the content filter, has its recipe written into it, joins the generative library and is published on
+    the job as it is made; the prompt can be changed between pictures (POST /api/generate/sessions/<job>/prompt).
+
+    With a prompt wrap (2.3.0), each entry has its own prompt, size, steps and LoRA stack, taken in turn and from the
+    first again after the last (forever, as Continuous does; once through, otherwise). Entries in a row that share size,
+    steps, LoRAs and sampling share one process, the model loaded once, the prompt file rewritten for each; a change
+    of those starts the next process with the model and LoRAs that entry asks for."""
     import time as clock
 
-    from . import content_filter, krea2
-    from .media import ingest_path
+    from . import content_filter, generative, krea2
 
     checkpoint = Path(slot["checkpoint"]) if slot.get("checkpoint") else None
     memory = str(body.options.get("memory") or "auto")
+    entries = wrap or [{"prompt": prompt, "width": width, "height": height, "steps": steps, "stack": stack, "sampling": sampling}]
+
+    def setup(entry: dict) -> str:
+        return json.dumps(
+            [entry["width"], entry["height"], entry["steps"], entry["stack"], {k: v for k, v in entry["sampling"].items() if k != "image"}],
+            sort_keys=True,
+        )
 
     def operation(job_id, report, cancelled):
         STAGING.mkdir(parents=True, exist_ok=True)
         prompt_file = STAGING / f"prompt-{job_id}.txt"
-        prompt_file.write_text(prompt, encoding="utf-8")
+        prompt_file.write_text(entries[0]["prompt"], encoding="utf-8")
         finish = threading.Event()
         # "started": pictures begun so far; "finishAfter": how many were begun when a finish was asked for, the one
         # then in hand included: the session stops once that many are saved (or withheld), not at the next saved
         # "ending" is set once the picture in hand when the finish was asked for is saved, or at once when none was
-        session = {"prompt": prompt_file, "finish": finish, "started": 0, "finishAfter": None, "handled": 0}
+        session = {
+            "prompt": prompt_file,
+            "finish": finish,
+            "started": 0,
+            "finishAfter": None,
+            "handled": 0,
+            "wrap": len(entries) if wrap else 0,
+        }
         ending = {"now": False}
         session["ending"] = ending
         _SESSIONS[job_id] = session
+
+        def stop() -> bool:
+            return cancelled() or ending["now"]
+
+        made, seeds_used, session_notes = [], [], list(notes)
+        last = {"time": clock.time()}
+        state = krea2.policy()
+        warning = None if state["filterInstalled"] or state.get("removalAcknowledged") else krea2.REMOVED_WARNING
+        position = {"at": 0}  # the entry the next picture takes, counted from the first, round and round
+        run: dict = {"from": 0, "count": 0, "seeds": []}
 
         def begun() -> None:
             session["started"] += 1
@@ -332,19 +482,19 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
             if session["finishAfter"] is not None and session["handled"] >= session["finishAfter"]:
                 ending["now"] = True
 
-        def stop() -> bool:
-            return cancelled() or ending["now"]
-
-        made, seeds_used, session_notes = [], [], list(notes)
-        last = {"time": clock.time()}
-        state = krea2.policy()
-        warning = None if state["filterInstalled"] or state.get("removalAcknowledged") else krea2.REMOVED_WARNING
+        def started(index: int) -> None:
+            # mflux has read picture <index>'s prompt: the file now holds the next picture's
+            following = index + 1
+            if wrap and following < run["count"]:
+                prompt_file.write_text(entries[(run["from"] + following) % len(entries)]["prompt"], encoding="utf-8")
 
         def on_picture(seed_value: int, path: Path) -> None:
             from PIL import Image
 
             seconds = round(clock.time() - last["time"], 1)
             last["time"] = clock.time()
+            index = session["handled"] - run.get("handled_before", 0)
+            entry = entries[(run["from"] + index) % len(entries)]
             verdict = None
             if state["filterInstalled"]:
                 import numpy as np
@@ -358,28 +508,27 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
                     return
             with Image.open(path) as picture:
                 dims = picture.size
-            current = prompt_file.read_text(encoding="utf-8")
+            current = entry["prompt"] if wrap else prompt_file.read_text(encoding="utf-8")
             result = {"seed": seed_value, "width": dims[0], "height": dims[1], "seconds": seconds}
-            recipe = _recipe(current, result, steps, stack, sampling, slot)
+            recipe = _recipe(current, result, entry["steps"], entry["stack"], entry["sampling"], slot)
             _stamp(path, recipe["parameters"])
-            try:
-                item = ingest_path(
-                    path,
-                    f"{current[:48]} ({name}, local)",
-                    extra={
-                        "source": "generated",
-                        "generator": body.generator,
-                        "prompt": current,
-                        "seconds": seconds,
-                        "provider": f"Krea 2 checkpoint {checkpoint.name} (mflux)" if checkpoint else "Krea 2 (mflux, continuous)",
-                        "notice": krea2.NOTICE,
-                        "contentFilter": verdict or "removed",
-                        **recipe,
-                    },
-                )
-            finally:
-                path.unlink(missing_ok=True)
-            made.append(item)
+            item = generative.add(
+                path,
+                f"{current[:48]} ({name}, local)",
+                "image",
+                extra={
+                    "source": "generated",
+                    "generator": body.generator,
+                    "prompt": current,
+                    "seconds": seconds,
+                    "provider": f"Krea 2 checkpoint {checkpoint.name} (mflux)" if checkpoint else "Krea 2 (mflux, continuous)",
+                    "notice": krea2.NOTICE,
+                    "contentFilter": verdict or "removed",
+                    **({"wrapEntry": (run["from"] + index) % len(entries) + 1, "wrapOf": len(entries)} if wrap else {}),
+                    **recipe,
+                },
+            )
+            made.append({**item, "library": "generative"})
             seeds_used.append(seed_value)
             report(
                 None,  # the bar stays where the picture left it; the next picture's steps move it
@@ -393,22 +542,49 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
 
         try:
             while not stop():
-                # the seeds of one session run out after hundreds of pictures: the next session loads the model again
+                # one process for the entries in a row that share a setup (all of them, without a wrap: its seeds run
+                # out after hundreds of pictures and the next process loads the model again)
+                first = entries[position["at"] % len(entries)]
+                count = 1
+                while count < krea2.SESSION_SEEDS and setup(entries[(position["at"] + count) % len(entries)]) == setup(first):
+                    count += 1
+                    if len(entries) == 1 or (not forever and position["at"] + count >= len(entries)):
+                        break
+                if not forever:
+                    count = min(count, len(entries) - position["at"])
+                    if count <= 0:
+                        break
+                if len(entries) == 1 and forever:
+                    count = krea2.SESSION_SEEDS
+                run.update({"from": position["at"], "count": count, "handled_before": session["handled"]})
+                prompt_file.write_text(entries[position["at"] % len(entries)]["prompt"], encoding="utf-8")
+                seeds = [
+                    int(entries[(position["at"] + i) % len(entries)].get("seed"))
+                    if entries[(position["at"] + i) % len(entries)].get("seed") not in (None, -1)
+                    else None
+                    for i in range(count)
+                ]
                 krea2.run_continuous(
                     prompt_file,
                     STAGING,
                     on_picture,
-                    width,
-                    height,
-                    steps=steps,
-                    stack=stack,
+                    first["width"],
+                    first["height"],
+                    steps=first["steps"],
+                    stack=first["stack"],
                     memory=memory,
                     report=report,
                     cancelled=stop,
                     folder=checkpoint,
-                    sampling=sampling,
+                    sampling=first["sampling"],
                     on_begin=begun,
+                    count=count,
+                    seeds=seeds,
+                    on_started=started,
                 )
+                position["at"] += count
+                if not forever and position["at"] >= len(entries):
+                    break
         except InterruptedError:
             # Cancel stops at once and the job is cancelled; a finish asked for ends here once its picture is saved
             if cancelled() or not ending["now"]:
@@ -421,6 +597,7 @@ def _continuous(body, slot: dict, name: str, prompt: str, stack: list, sampling:
         return {
             "media": made,
             "kind": "image",
+            "library": "generative",
             "seeds": seeds_used,
             "notes": session_notes,
             "model": slot.get("id", name),
@@ -674,8 +851,18 @@ def _generate_local(body: GenerateBody):
         from .render_api import release_frames
 
         release_frames()
-    if body.options.get("continuous") and slot["runner"] == "krea-2":
-        return _continuous(body, slot, name, prompt, stack, sampling, width, height, steps, notes)
+    wrap_raw = body.options.get("wrap")
+    if wrap_raw and slot["runner"] != "krea-2":
+        raise HTTPException(400, "A prompt wrap runs with Krea 2 and its checkpoints, the model kept loaded between entries")
+    if (body.options.get("continuous") or wrap_raw) and slot["runner"] == "krea-2":
+        wrap = (
+            wrap_entries(wrap_raw, slot, {"width": width, "height": height, "steps": steps, "stack": stack, "sampling": sampling})
+            if wrap_raw
+            else None
+        )
+        return _continuous(
+            body, slot, name, prompt, stack, sampling, width, height, steps, notes, wrap=wrap, forever=bool(body.options.get("continuous"))
+        )
 
     def operation(job_id, report, cancelled):
         STAGING.mkdir(parents=True, exist_ok=True)
@@ -764,21 +951,22 @@ def _generate_local(body: GenerateBody):
                 _stamp(staged, recipe["parameters"])
                 seeds_used.append(result["seed"])
             try:
-                made.append(
-                    ingest_path(
-                        staged,
-                        f"{body.prompt[:48]} ({name}, local)",
-                        extra={
-                            "source": "generated",
-                            "generator": body.generator,
-                            "prompt": body.prompt,
-                            "seconds": result["seconds"],
-                            "provider": result["provider"],
-                            **{key: result[key] for key in ("notice", "contentFilter") if result.get(key) is not None},
-                            **recipe,
-                        },
-                    )
-                )
+                local_extra = {
+                    "source": "generated",
+                    "generator": body.generator,
+                    "prompt": body.prompt,
+                    "seconds": result["seconds"],
+                    "provider": result["provider"],
+                    **{key: result[key] for key in ("notice", "contentFilter") if result.get(key) is not None},
+                    **recipe,
+                }
+                label = f"{body.prompt[:48]} ({name}, local)"
+                if kind in ("image", "video"):
+                    from . import generative
+
+                    made.append({**generative.add(staged, label, kind, extra=local_extra), "library": "generative"})
+                else:
+                    made.append(ingest_path(staged, label, extra=local_extra))
             finally:
                 staged.unlink(missing_ok=True)
         if sampling.get("image"):
