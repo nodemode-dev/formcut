@@ -43,7 +43,7 @@ The rest is written by hand.
 | library.py | 2506 | /api/library | 5 |
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
-| loras.py | 413 | /api/loras | 5 |
+| loras.py | 487 | /api/loras | 5 |
 | main.py | 458 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
@@ -101,6 +101,7 @@ the automation transports.
 - `local_diffusion.py` (243L)
 - `local_models.py` (361L)
 - `local_runner.py` (298L)
+- `lora_audit.py` (263L)
 - `matte_cache.py` (126L)
 - `multicam_sync.py` (158L)
 - `openh264.py` (410L)
