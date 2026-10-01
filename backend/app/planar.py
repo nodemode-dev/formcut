@@ -32,6 +32,7 @@ import numpy as np
 
 MOTIONS = ("translation", "scale", "rotation", "shear", "perspective")
 MATCH_LIGHT = True  # the light matched to the reference before the flow (see _refine)
+FAINT_POINTS = 3.0  # a faint surface's points, times the usual: it has less in each
 NORMALISE = False  # both pictures in local contrast before the flow, instead of matching the light
 SWITCH_TO_CONTRAST = True  # a large change of light read as local contrast instead (see _refine)
 
@@ -131,6 +132,15 @@ def _apply(h: np.ndarray, pts: np.ndarray) -> np.ndarray:
     return cv2.perspectiveTransform(np.asarray(pts, np.float64).reshape(-1, 1, 2), h).reshape(-1, 2)
 
 
+def _faint(gray: np.ndarray, matte: np.ndarray) -> bool:
+    """A surface with little texture: its mean gradient under 25 levels a pixel."""
+    inside = matte > 0
+    if not inside.any():
+        return False
+    grad = cv2.magnitude(cv2.Sobel(gray, cv2.CV_32F, 1, 0), cv2.Sobel(gray, cv2.CV_32F, 0, 1))
+    return float(grad[inside].mean()) <= 25
+
+
 def _local_contrast(gray: np.ndarray, sigma: float = 6.0) -> np.ndarray:
     """Each pixel as its difference from the local mean over the local spread: indifferent to gain and offset, even
     varying across the surface, and to the contrast a blur takes away."""
@@ -201,6 +211,7 @@ class _Reference:
         area = int((matte > 0).sum())
         share = settings.min_pixels if settings.min_pixels is not None else max(1.0, min(30.0, 60000.0 / max(1, area) * 3))
         count = int(np.clip(area * share / 100.0 / 4.0, 300, 2000))  # a point for every few pixels of the share asked
+        count = int(count * FAINT_POINTS) if _faint(gray, matte) else count
         found = cv2.goodFeaturesToTrack(gray, count, 0.004, 5, mask=matte)
         if found is None or len(found) < count // 2:
             # a surface with little texture: a lower bar finds the detail it has
