@@ -35,12 +35,12 @@ The rest is written by hand.
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 1033 | /api/generate | 6 |
+| generate.py | 1113 | /api/generate | 6 |
 | generative.py | 152 | /api/generative | 5 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
 | jobs.py | 109 | /api/jobs | 3 |
 | klein.py | 267 | /api/models/klein | 3 |
-| krea2.py | 735 | /api/models/krea-2 | 6 |
+| krea2.py | 797 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
@@ -104,6 +104,7 @@ the automation transports.
 - `local_runner.py` (314L)
 - `lora_audit.py` (263L)
 - `matte_cache.py` (126L)
+- `mflux_worker.py` (147L)
 - `multicam_sync.py` (158L)
 - `openh264.py` (410L)
 - `package_registry.py` (80L)
