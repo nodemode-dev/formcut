@@ -35,7 +35,7 @@ The rest is written by hand.
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
 | fonts.py | 93 | /api/assets | 1 |
-| generate.py | 984 | /api/generate | 5 |
+| generate.py | 1033 | /api/generate | 6 |
 | generative.py | 152 | /api/generative | 5 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
 | jobs.py | 109 | /api/jobs | 3 |
