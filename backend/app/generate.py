@@ -320,12 +320,16 @@ def wrap_entries(raw, slot: dict, defaults: dict) -> list[dict]:
     "negative": "..."}. ValueError, naming the entry, when one cannot be read."""
     from . import loras as library_mod
     from . import prompt_data
+    from .krea2 import prompt_refusal
 
     items = raw.get("prompts") if isinstance(raw, dict) else raw
     if not isinstance(items, list):
         raise ValueError('a prompt wrap is a list of entries, or {"prompts": [...]}')
     if len(items) < WRAP_LEAST:
         raise ValueError(f"a prompt wrap has {WRAP_LEAST} prompts or more; this one has {len(items)}")
+    # {"defaults": {...}} beside the prompts: what every entry takes unless it says otherwise (2.3.2), the file itself
+    # the only other place a wrap's settings come from
+    shared = raw.get("defaults") if isinstance(raw, dict) and isinstance(raw.get("defaults"), dict) else {}
     base = slot.get("base") or "krea-2"
     library = library_mod.entries(base)
     out = []
@@ -333,6 +337,12 @@ def wrap_entries(raw, slot: dict, defaults: dict) -> list[dict]:
         item = {"prompt": given} if isinstance(given, str) else given
         if not isinstance(item, dict) or not str(item.get("prompt") or "").strip():
             raise ValueError(f"entry {number} has no prompt")
+        item = {**{k: v for k, v in shared.items() if k != "prompt"}, **item}
+        refusal = prompt_refusal(str(item["prompt"]))
+        if refusal:
+            # every entry through the guard: a session rewrites the prompt file between pictures, past the check
+            # mflux's start makes of the first
+            raise ValueError(f"entry {number}: {refusal}")
         stack = []
         for named in item.get("loras") or []:
             lora = {"name": named} if isinstance(named, str) else named
@@ -370,8 +380,6 @@ def wrap_entries(raw, slot: dict, defaults: dict) -> list[dict]:
         negative = item.get("negative") or found.get("negative")
         if negative:
             sampling["negative"] = str(negative)
-        if defaults["sampling"].get("image"):
-            sampling["image"] = defaults["sampling"]["image"]
         out.append(
             {
                 "prompt": text,
@@ -384,6 +392,52 @@ def wrap_entries(raw, slot: dict, defaults: dict) -> list[dict]:
             }
         )
     return out
+
+
+def _wrap_run(generator: str, wrap, forever: bool, memory: str = "auto"):
+    """A prompt wrap run on its own (2.3.2): the model and the wrap, nothing else. Each entry's prompt, size, steps, seed,
+    LoRAs, sampler, CFG and negative prompt are its own; what an entry leaves out comes from the file's "defaults", then
+    from the model's own (1024 x 1024, its steps, its sampler, CFG off, a random seed), never from the generator's panel.
+    Until 2.3.2 a wrap went through Generate, which needed a prompt typed and filled what an entry left out from the
+    panel's size, steps, sampler, CFG, negative prompt and even its Start from picture."""
+    from types import SimpleNamespace
+
+    from . import krea2
+    from .local_models import resolve
+
+    name = generator.split(":", 1)[1] if generator.startswith("local:") else generator
+    slot = resolve(name)
+    if slot is None:
+        raise HTTPException(404, f"No local model {name!r}")
+    if slot.get("runner") != "krea-2":
+        raise HTTPException(400, "A prompt wrap runs with Krea 2 and its checkpoints, the model kept loaded between entries")
+    if not slot.get("ready"):
+        raise HTTPException(409, f"{name} is not ready: {slot.get('reason') or 'see models/local_models.json'}")
+    try:
+        entries = wrap_entries(wrap, slot, {"width": 1024, "height": 1024, "steps": krea2.STEPS, "stack": [], "sampling": {}})
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    from .render_api import release_frames
+
+    release_frames()  # the model needs the memory more than the preview's cached frames do
+    first = entries[0]
+    request = SimpleNamespace(generator=generator if generator.startswith("local:") else f"local:{name}", options={"memory": memory})
+    return _continuous(
+        request, slot, name, first["prompt"], [], {}, first["width"], first["height"], first["steps"], [], wrap=entries, forever=forever
+    )
+
+
+class WrapRunBody(BaseModel):
+    generator: str
+    wrap: dict | list
+    continuous: bool = False  # round and round; once through otherwise
+    memory: str = "auto"
+
+
+@router.post("/wrap-run", status_code=202)
+def run_prompt_wrap(body: WrapRunBody):
+    """A prompt-wrap.json run on its own: the model chosen and the wrap, and nothing of the generator's panel."""
+    return _wrap_run(body.generator, body.wrap, body.continuous, body.memory)
 
 
 class WrapBody(BaseModel):
@@ -797,6 +851,11 @@ def _civitai_prompt(slot: dict, text: str, stack: list) -> tuple[dict, str, list
 
 def _generate_local(body: GenerateBody):
     """A local slot: the same job shape as a provider, run in the engine, one result per count."""
+    if body.options.get("wrap"):
+        # a prompt wrap is its own run: nothing of the panel's settings reaches it (2.3.2)
+        return _wrap_run(
+            body.generator, body.options["wrap"], bool(body.options.get("continuous")), str(body.options.get("memory") or "auto")
+        )
     from .local_diffusion import generate_to_file
     from .local_models import resolve, run_command_slot
 
@@ -851,18 +910,8 @@ def _generate_local(body: GenerateBody):
         from .render_api import release_frames
 
         release_frames()
-    wrap_raw = body.options.get("wrap")
-    if wrap_raw and slot["runner"] != "krea-2":
-        raise HTTPException(400, "A prompt wrap runs with Krea 2 and its checkpoints, the model kept loaded between entries")
-    if (body.options.get("continuous") or wrap_raw) and slot["runner"] == "krea-2":
-        wrap = (
-            wrap_entries(wrap_raw, slot, {"width": width, "height": height, "steps": steps, "stack": stack, "sampling": sampling})
-            if wrap_raw
-            else None
-        )
-        return _continuous(
-            body, slot, name, prompt, stack, sampling, width, height, steps, notes, wrap=wrap, forever=bool(body.options.get("continuous"))
-        )
+    if body.options.get("continuous") and slot["runner"] == "krea-2":
+        return _continuous(body, slot, name, prompt, stack, sampling, width, height, steps, notes, forever=True)
 
     def operation(job_id, report, cancelled):
         STAGING.mkdir(parents=True, exist_ok=True)

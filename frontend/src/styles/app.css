@@ -1599,3 +1599,14 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .gen-more { margin-top: var(--sp-2); }
 .gen-wrap { display: flex; align-items: center; gap: var(--sp-2); }
 .gen-wrap-state { color: var(--ink-soft); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* The prompt wrap as its own run (2.3.2): its section between Generate and the results, its entries as the engine read
+   them, its own Run wrap and Round and round; progress, the note and Stop in a strip both runs share */
+.gen-wrap-list { list-style: decimal; margin: var(--sp-2) 0; padding: 0 0 0 28px; max-height: 240px; overflow: auto; color: var(--ink-soft); }
+.gen-wrap-list li { padding: 3px 0; }
+.gen-wrap-list li > span { display: inline-block; vertical-align: bottom; }
+.gen-wrap-prompt { max-width: calc(100% - 220px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.gen-wrap-meta { margin-left: var(--sp-3); white-space: nowrap; font-size: 12px; font-variant-numeric: tabular-nums; }
+.gen-status { margin: var(--sp-2) 0; }
+.gen-status-row { display: flex; align-items: center; gap: var(--sp-3); }
+.gen-status-row .stock-note { flex: 1; min-width: 0; margin: 0; }

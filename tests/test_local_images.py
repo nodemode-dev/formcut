@@ -1002,3 +1002,48 @@ def test_the_generative_library_keeps_generations_out_of_media(tmp_path, library
     assert copy["generative"] == item["id"] and copy["prompt"] == "an orange field" and media.media_path(copy["id"]) is not None
     assert client.delete(f"/api/generative/{item['id']}").status_code == 200
     assert not (generative.FOLDER / item["file"]).exists() and media.media_path(copy["id"]) is not None  # the media copy stays
+
+
+def test_a_wrap_runs_on_its_own_with_nothing_from_the_panel(tmp_path, monkeypatch, library):
+    """2.3.2: a prompt wrap is its own run: the model and the wrap. Until then it went through Generate, which needed a
+    prompt typed (2.3.1 slipped the first entry's in) and filled what an entry left out from the panel."""
+    _krea_standin(tmp_path, monkeypatch)
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = {
+        "defaults": {"width": 640, "height": 640, "steps": 5},
+        "prompts": ["one", {"prompt": "two", "steps": 3}, {"prompt": "three", "width": 800}],
+    }
+    job = client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap}).json()["job_id"]  # no prompt at all
+    done = _wrap_finished(client, job)
+    assert done["status"] == "done", done
+    made = done["result"]["media"]
+    assert [(m["prompt"], m["steps"]) for m in made] == [("one", 5), ("two", 3), ("three", 5)]
+    calls = [" ".join(c) for c in json.loads((tmp_path / "argv.json.calls").read_text())]
+    assert "--width 640 --height 640" in calls[0] and "--width 800 --height 640" in calls[-1]
+    # the panel's settings sent beside a wrap through Generate reach nothing: size, steps, sampler, picture to start from
+    (tmp_path / "argv.json.calls").unlink()
+    panel = {
+        "generator": "local:krea-2",
+        "prompt": "a panel prompt",
+        "size": "512x512",
+        "options": {"wrap": ["a", "b", "c"], "steps": 30, "scheduler": "euler", "image": {"mediaId": "0" * 32}},
+    }
+    done = _wrap_finished(client, client.post("/api/generate", json=panel).json()["job_id"])
+    assert done["status"] == "done", done
+    assert [m["prompt"] for m in done["result"]["media"]] == ["a", "b", "c"]
+    argv = " ".join(json.loads((tmp_path / "argv.json.calls").read_text())[0])
+    assert (
+        "--width 1024 --height 1024" in argv and "--steps 8" in argv and "--scheduler" not in argv and "--image" not in argv
+    )  # the model's own
+
+
+def test_every_wrap_entry_passes_the_prompt_guard(tmp_path, monkeypatch, library):
+    from app import krea2
+
+    _krea_standin(tmp_path, monkeypatch)
+    monkeypatch.setattr(krea2, "prompt_refusal", lambda text: "refused" if "REFUSE-ME" in text else None)
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = ["fine", "also fine", "REFUSE-ME please"]
+    refused = client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap})
+    assert refused.status_code == 400 and refused.json()["detail"] == "entry 3: refused"
+    assert client.post("/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": wrap}).status_code == 400

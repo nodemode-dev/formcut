@@ -72,17 +72,26 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           </div>
           <div class="studio-actions">
             <button class="tool-chip is-primary" data-gen-go="${kind}">${icon("diamond")}${t("gen.go")}</button>
-            <button class="tool-chip" data-gen-cancel="${kind}" hidden>${t("gen.stop")}</button>
           </div>
-          ${kind === "image" ? `<div class="gen-wrap" data-gen-wrap-row="${kind}" hidden>
-            <button type="button" class="tool-chip" data-gen-wrap-load="${kind}">${t("gen.wrap.load")}</button>
-            <input type="file" accept=".json,application/json" data-gen-wrap-file="${kind}" hidden>
-            <span class="gen-wrap-state" data-gen-wrap-state="${kind}"></span>
-            <button type="button" class="tool-chip" data-gen-wrap-clear="${kind}" hidden>${t("gen.wrap.clear")}</button>
-          </div>` : ""}
-          <div class="gen-progress" data-gen-progress="${kind}" hidden><progress data-gen-bar="${kind}" max="1" value="0"></progress><small data-gen-stage="${kind}"></small></div>
-          <p class="stock-note" data-gen-note="${kind}"></p>
         </div>
+      </div>
+      ${kind === "image" ? `<div class="panel-section gen-wrap-section" data-gen-wrap-section="${kind}" hidden>
+        <div class="panel-section-head"><span>${t("gen.wrap.title")}</span><small>${t("gen.wrap.hint")}</small></div>
+        <div class="gen-wrap">
+          <button type="button" class="tool-chip" data-gen-wrap-load="${kind}">${t("gen.wrap.load")}</button>
+          <input type="file" accept=".json,application/json" data-gen-wrap-file="${kind}" hidden>
+          <span class="gen-wrap-state" data-gen-wrap-state="${kind}"></span>
+          <button type="button" class="tool-chip" data-gen-wrap-clear="${kind}" hidden>${t("gen.wrap.clear")}</button>
+        </div>
+        <ol class="gen-wrap-list" data-gen-wrap-list="${kind}" hidden></ol>
+        <div class="studio-actions">
+          <button class="tool-chip is-primary" data-gen-wrap-go="${kind}" disabled>${icon("play")}${t("gen.wrap.run")}</button>
+          <label class="gen-continuous"><input type="checkbox" data-gen-wrap-loop="${kind}" checked> ${t("gen.wrap.loop")}</label>
+        </div>
+      </div>` : ""}
+      <div class="gen-status" data-gen-status="${kind}">
+        <div class="gen-progress" data-gen-progress="${kind}" hidden><progress data-gen-bar="${kind}" max="1" value="0"></progress><small data-gen-stage="${kind}"></small></div>
+        <div class="gen-status-row"><p class="stock-note" data-gen-note="${kind}"></p><button class="tool-chip" data-gen-cancel="${kind}" hidden>${t("gen.stop")}</button></div>
       </div>
       <div class="panel-section"><div class="panel-section-head"><span>${t("gen.results")}</span><small>${t("gen.results.hint")}</small></div>
         <div class="gen-gallery" data-gen-grid="${kind}"></div>
@@ -879,6 +888,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   const genJobIds = new Map<string, string>();
   const runs = new Map<string, number>();  // continuous runs so far, per kind
   const wraps = new Map<string, { data: unknown; count: number; name: string }>();  // a loaded prompt wrap, per kind
+  type WrapEntry = { prompt: string; width: number; height: number; steps: number; loras: number; seed: number | null };
   let recentGenerations: Array<{ id: string; name: string; prompt?: string }> = [];
   void fetch("/api/generative?kind=image&limit=20").then((r) => r.json()).then((reply) => { recentGenerations = reply.items ?? []; }).catch(() => {});
   const sessionKinds = new Set<string>();  // kinds with a continuous session running in the engine
@@ -929,8 +939,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         pick<HTMLElement>(`[data-gen-civitai="${kind}"]`).hidden = !base;
         pick<HTMLElement>(`[data-gen-memory-row="${kind}"]`).hidden = !(entry && "memory" in (entry.options ?? {}));
         pick<HTMLElement>(`[data-gen-sampler-row="${kind}"]`).hidden = !(entry && "scheduler" in (entry.options ?? {}));
-        const wrapRow = modal.querySelector<HTMLElement>(`[data-gen-wrap-row="${kind}"]`);
-        if (wrapRow) wrapRow.hidden = !(entry && "continuous" in (entry.options ?? {}));
+        const wrapSection = modal.querySelector<HTMLElement>(`[data-gen-wrap-section="${kind}"]`);
+        if (wrapSection) wrapSection.hidden = !(entry && "continuous" in (entry.options ?? {}));
         // steps and seed as sliders for the local models (Krea 2, Klein, checkpoints): steps start at the model's own
         const local = !!entry && entry.id.startsWith("local:") && "steps" in (entry.options ?? {});
         pick<HTMLElement>(`[data-gen-steps-row="${kind}"]`).hidden = !local;
@@ -1142,21 +1152,21 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       if (id) void fetch(`/api/jobs/${id}`, { method: "DELETE", headers: { "x-formcut-local": "1" } });
       genJobs.get(kind)?.abort(); genJobs.delete(kind); cancel.hidden = true; finishing.delete(kind); note.textContent = t("gen.stopped");
     });
-    pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).addEventListener("click", () => void (async () => {
+    // Two kinds of run (2.3.2). Generate: the panel's prompt and settings, as ever; a loaded wrap plays no part in it.
+    // Run wrap: the model chosen and the loaded prompt-wrap.json, and nothing of the panel above (each entry's own prompt,
+    // size, steps, seed and LoRAs; what an entry leaves out, the file's defaults, then the model's own).
+    const go = (mode: "panel" | "wrap") => void (async () => {
       const generator = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`).value;
-      const typed = pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).value.trim();
+      const prompt = pick<HTMLTextAreaElement>(`[data-gen-prompt="${kind}"]`).value.trim();
       if (!generator) { note.textContent = t("gen.none"); return; }
-      // a loaded prompt wrap brings its own prompts: the prompt box may be empty (until 2.3.1 Generate stopped here
-      // with "Write a prompt first", the wrap never sent)
+      const takesSessions = !!generators.find((g) => g.id === generator)?.options?.continuous;
+      const wrapMode = mode === "wrap";
       const loadedWrap = wraps.get(kind);
-      if (loadedWrap && !generators.find((g) => g.id === generator)?.options?.continuous) { note.textContent = t("gen.wrap.krea"); return; }
-      const firstOfWrap = (() => {
-        const list = loadedWrap ? (Array.isArray(loadedWrap.data) ? loadedWrap.data : (loadedWrap.data as { prompts?: unknown[] })?.prompts) : undefined;
-        const first = list?.[0] as string | { prompt?: string } | undefined;
-        return typeof first === "string" ? first : first?.prompt ?? "";
-      })();
-      const prompt = typed || firstOfWrap.trim();
-      if (!prompt) { note.textContent = t("gen.needprompt"); return; }
+      if (wrapMode && !loadedWrap) { note.textContent = t("gen.wrap.none"); return; }
+      if (wrapMode && !takesSessions) { note.textContent = t("gen.wrap.krea"); return; }
+      if (!wrapMode && !prompt) { note.textContent = t("gen.needprompt"); return; }
+      const wrapLoop = modal.querySelector<HTMLInputElement>(`[data-gen-wrap-loop="${kind}"]`);
+      const wrapBody = wrapMode ? { generator, wrap: loadedWrap!.data, continuous: !!wrapLoop?.checked } : null;
       const body = {
         generator, prompt,
         negative: pick<HTMLInputElement>(`[data-gen-negative="${kind}"]`).value,
@@ -1191,18 +1201,15 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       // a continuous session where the model takes one (Krea 2 and its checkpoints): the engine keeps the model and its
       // LoRAs loaded and makes picture after picture until stopped; elsewhere each run starts the next from here
       const ticked = pick<HTMLInputElement>(`[data-gen-continuous="${kind}"]`);
-      const takesSessions = !!generators.find((g) => g.id === generator)?.options?.continuous;
-      const wrap = takesSessions ? wraps.get(kind) : undefined;
-      const session = takesSessions && ((ticked.checked && !ticked.disabled) || !!wrap);
-      if (session && ticked.checked && !ticked.disabled) body.options.continuous = true;
-      if (wrap) body.options.wrap = wrap.data;  // each entry in turn; round and round with Continuous, once through without
+      const session = wrapMode || (takesSessions && ticked.checked && !ticked.disabled);
+      if (!wrapMode && session) body.options.continuous = true;
       if (session) sessionKinds.add(kind); else sessionKinds.delete(kind);
       let pictureStart = Date.now();
       const controller = new AbortController();
       genJobs.set(kind, controller);
       let finished = false;
       try {
-        const started = await api("/api/generate", body);
+        const started = await api(wrapMode ? "/api/generate/wrap-run" : "/api/generate", wrapBody ?? body);
         genJobIds.set(kind, started.job_id);
         note.textContent = "";
         for (let waited = 0; (session || waited < 3600) && !controller.signal.aborted; waited += 1) {
@@ -1270,7 +1277,16 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
           setTimeout(() => { if (again.checked && !genJobs.has(kind)) pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).click(); }, 400);
         } else if (!again.checked) runs.set(kind, 1);
       }
-    })());
+    })();
+    pick<HTMLButtonElement>(`[data-gen-go="${kind}"]`).addEventListener("click", () => go("panel"));
+    modal.querySelector<HTMLButtonElement>(`[data-gen-wrap-go="${kind}"]`)?.addEventListener("click", () => go("wrap"));
+    // Round and round unticked during a wrap run: the picture in hand is finished, then it stops, as Continuous does
+    modal.querySelector<HTMLInputElement>(`[data-gen-wrap-loop="${kind}"]`)?.addEventListener("change", (event) => {
+      const id = genJobIds.get(kind);
+      if ((event.target as HTMLInputElement).checked || !id || !sessionKinds.has(kind)) return;
+      finishing.add(kind);
+      void api(`/api/generate/sessions/${id}/finish`, {}).then(() => { note.textContent = t("gen.continuous.finishing"); }).catch(() => { finishing.delete(kind); });
+    });
     // a result opens full screen: the picture itself, its seed and steps; arrows move through the results
     grid.addEventListener("click", (event) => {
       const target = event.target as HTMLElement;
@@ -1310,6 +1326,14 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
       const fileInput = pick<HTMLInputElement>(`[data-gen-wrap-file="${kind}"]`);
       const state = pick<HTMLElement>(`[data-gen-wrap-state="${kind}"]`);
       const clear = pick<HTMLButtonElement>(`[data-gen-wrap-clear="${kind}"]`);
+      // the entries as the engine read them: what each picture will be
+      const list = pick<HTMLOListElement>(`[data-gen-wrap-list="${kind}"]`);
+      const runWrap = pick<HTMLButtonElement>(`[data-gen-wrap-go="${kind}"]`);
+      const listWrap = (entries: WrapEntry[]) => {
+        list.hidden = !entries.length;
+        runWrap.disabled = !entries.length;
+        list.innerHTML = entries.map((entry) => `<li><span class="gen-wrap-prompt" title="${escapeHtml(entry.prompt)}">${escapeHtml(entry.prompt)}</span><span class="gen-wrap-meta">${entry.width}×${entry.height}, ${entry.steps} ${t("gen.steps").toLowerCase()}${entry.loras ? `, ${entry.loras} LoRA${entry.loras === 1 ? "" : "s"}` : ""}${entry.seed !== null && entry.seed !== undefined ? `, ${t("gen.seed").toLowerCase()} ${entry.seed}` : ""}</span></li>`).join("");
+      };
       pick<HTMLButtonElement>(`[data-gen-wrap-load="${kind}"]`).addEventListener("click", () => fileInput.click());
       fileInput.addEventListener("change", () => void (async () => {
         const file = fileInput.files?.[0];
@@ -1318,15 +1342,16 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
         try {
           const data = JSON.parse(await file.text());
           const generator = pick<HTMLSelectElement>(`[data-gen-model="${kind}"]`).value;
-          const checked = await api<{ count: number }>("/api/generate/prompt-wrap", { generator, wrap: data });
+          const checked = await api<{ count: number; entries: WrapEntry[] }>("/api/generate/prompt-wrap", { generator, wrap: data });
           wraps.set(kind, { data, count: checked.count, name: file.name });
           state.textContent = t("gen.wrap.loaded").replace("{n}", String(checked.count)).replace("{file}", file.name);
           clear.hidden = false;
+          listWrap(checked.entries);
         } catch (error) {
           state.textContent = error instanceof SyntaxError ? t("gen.wrap.notJson") : error instanceof Error ? error.message : String(error);
         }
       })());
-      clear.addEventListener("click", () => { wraps.delete(kind); state.textContent = ""; clear.hidden = true; });
+      clear.addEventListener("click", () => { wraps.delete(kind); state.textContent = ""; clear.hidden = true; listWrap([]); });
     }
     grid.addEventListener("keydown", (event) => {
       const card = (event.target as HTMLElement).closest<HTMLElement>("[data-gen-view]");

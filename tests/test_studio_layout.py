@@ -46,14 +46,26 @@ def test_results_are_a_gallery_of_pictures_with_their_line_on_hover():
     assert 'class="gen-gallery" data-gen-grid="${kind}"' in SOURCE and 'class="gen-tile' in SOURCE and 'class="gen-tile-bar"' in SOURCE
     assert "data-gen-to-media" in SOURCE and "data-gen-delete" in SOURCE and "/api/generative?kind=" in SOURCE
     css = (ROOT / "styles" / "app.css").read_text(encoding="utf-8")
-    assert ".gen-tile { position: relative; aspect-ratio: 1;" in css and ".gen-tile-bar span { flex: 1; min-width: 0; white-space: nowrap;" in css
+    assert (
+        ".gen-tile { position: relative; aspect-ratio: 1;" in css
+        and ".gen-tile-bar span { flex: 1; min-width: 0; white-space: nowrap;" in css
+    )
     assert 'data-gen-wrap-load="${kind}"' in SOURCE and "/api/generate/prompt-wrap" in SOURCE
 
 
-def test_generate_with_a_prompt_wrap_needs_no_prompt_of_its_own():
-    """2.3.1: the owner loaded a 31-prompt wrap, ticked Continuous and pressed Generate: "Write a prompt first", and
-    nothing ran. A loaded wrap brings its prompts; its first entry stands in for the prompt box."""
-    head = SOURCE[SOURCE.index('[data-gen-go="${kind}"]') :]
+def test_a_wrap_needs_no_prompt_and_generate_needs_one():
+    """2.3.1 let Generate run a wrap by slipping its first entry into the prompt box; 2.3.2 makes the wrap its own run.
+    Run wrap asks for a loaded wrap and a model that runs one, and no prompt; Generate still asks for its prompt."""
+    head = SOURCE[SOURCE.index("const go = (mode") :]
     check = head.index('t("gen.needprompt")')
-    assert "const loadedWrap = wraps.get(kind);" in head[:check] and "const prompt = typed || firstOfWrap.trim();" in head[:check]
-    assert 't("gen.wrap.krea")' in head[:check]
+    assert (
+        "if (!wrapMode && !prompt)" in head[: check + 40] and 't("gen.wrap.none")' in head[:check] and 't("gen.wrap.krea")' in head[:check]
+    )
+
+
+def test_the_prompt_wrap_is_its_own_run_in_its_own_section():
+    assert (
+        'data-gen-wrap-section="${kind}"' in SOURCE and 'data-gen-wrap-go="${kind}"' in SOURCE and 'data-gen-wrap-loop="${kind}"' in SOURCE
+    )
+    assert '"/api/generate/wrap-run"' in SOURCE and 'go("wrap")' in SOURCE and 'go("panel")' in SOURCE
+    assert "body.options.wrap" not in SOURCE and "firstOfWrap" not in SOURCE  # Generate sends no wrap, and no stand-in prompt

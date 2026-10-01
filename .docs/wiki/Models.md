@@ -262,17 +262,24 @@ LoRA is not in the model's folder stops the picture and names the folder to put 
 
 ### Prompt wraps
 
-With Krea 2 or one of its checkpoints, **Load prompt wrap…** in the image generator takes a JSON file of three prompts
-or more (`examples/prompt-wrap.json` shows one), each with its own size, steps, seed and LoRA stack, and Generate runs
-them in turn: once through, or, with Continuous ticked, round and round from the first again after the last. The file
-is `{"prompts": [...]}` or the list alone; an entry is a prompt string, or
-`{"prompt": "...", "width": 832, "height": 1248, "steps": 9, "seed": -1, "loras": [{"name": "Emotions V1", "scale": 1.0}], "sampler": "euler", "cfg": 1, "negative": "..."}`.
+A prompt wrap is its own kind of run, beside Generate. With Krea 2 or one of its checkpoints chosen, the image
+generator shows a **Prompt wrap** section under the settings: **Load prompt wrap…** takes a JSON file of three prompts
+or more (`examples/prompt-wrap.json` shows one) and lists its entries as the engine read them; **Run wrap** runs them in
+turn, and with **Round and round** ticked, from the first again after the last until stopped (unticking it lets the
+picture in hand finish, then stops; Stop stops at once). Nothing of the settings above reaches a wrap: not the prompt
+box (which may be empty), the size, steps, seed, sampler, CFG, negative prompt, LoRA stack or Start from picture. Each
+entry brings its own; what an entry leaves out comes from the file's `"defaults"`, then from the model's own (1024 × 1024,
+its steps, its sampler, CFG off, a random seed). Generate, for its part, never runs the wrap.
+
+The file is `{"defaults": {...}, "prompts": [...]}`, `{"prompts": [...]}` or the list alone; an entry, or the
+defaults, may say `{"prompt": "...", "width": 832, "height": 1248, "steps": 9, "seed": -1, "loras": [{"name":
+"Emotions V1", "scale": 1.0}], "sampler": "euler", "cfg": 1, "negative": "..."}`, and a string entry is its prompt.
 LoRAs are named as the library names them (its file names, as a `<lora:>` tag does, which a prompt may carry too, with
-Civitai's generation data); scales run from -2 to 2, eight at most; sizes are made multiples of 16 from 256 to 2048;
-what an entry leaves out, the generator's own settings give. The file is checked when it is loaded, and an entry that
+Civitai's generation data); scales run from -2 to 2, eight at most; sizes are made multiples of 16 from 256 to 2048.
+Every entry passes the same prompt guard a single prompt does. The file is checked when it is loaded, and an entry that
 cannot be read is named. Entries in a row that share size, steps, LoRAs and sampling share one mflux process, the model
 and LoRAs loaded once and the prompt file rewritten for each; an entry that changes those starts a new process. Each
-picture records which entry made it.
+picture records which entry made it. The engine's endpoint is POST /api/generate/wrap-run {generator, wrap, continuous}.
 
 ### The generative library
 
