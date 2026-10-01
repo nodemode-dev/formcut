@@ -45,11 +45,12 @@ The rest is written by hand.
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 460 | /api/health | 13 |
+| main.py | 462 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
+| planar_api.py | 316 | /api/planar | 3 |
 | presets.py | 620 | /api/presets | 9 |
 | project_files.py | 308 | /api/project-files | 6 |
 | project_packages.py | 312 | /api/projects | 4 |
@@ -110,7 +111,7 @@ the automation transports.
 - `package_registry.py` (80L)
 - `paths.py` (32L)
 - `pixel_effects.py` (1056L)
-- `planar.py` (456L)
+- `planar.py` (467L)
 - `planar_bench.py` (244L)
 - `processes.py` (22L)
 - `prompt_data.py` (119L)
