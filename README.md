@@ -52,7 +52,7 @@ A complete video editor that runs entirely on your machine: multi-track timeline
 
 Each release carries a zip for macOS (Apple silicon), Windows and Linux that runs with nothing else installed, formcut's ffmpeg included; the release notes say how to open each. On an Intel Mac, build it with `setup/build_macos_app --intel`. The Android and iOS apps in a release are companions, not editors: each is one screen that pairs with the formcut running on your computer and shows its interface over your own network, so the desktop must be running. To run from source instead, read on.
 
-**Tested so far:** the macOS (Apple silicon) and Linux builds have been tested on real machines and work. The Windows build, and the Android and iOS companion apps, are built and published with every release but have not been tested on real devices yet; reports are welcome in the issues.
+**Tested so far:** the macOS (Apple silicon), Linux and Windows builds have been tested on real machines and work; on Windows the maintainer built the desktop app as an .exe from 2.3.3 and ran it (1 October 2026). The Android and iOS companion apps are built and published with every release but have not been tested on real devices yet; reports are welcome in the issues.
 
 **Opening the macOS app:** it is signed but not notarized, so the first time macOS says it cannot verify formcut; open System Settings, Privacy & Security, and choose Open Anyway. A download from 1.41.2 or earlier may instead be called damaged, because those builds were not sealed: run `xattr -dr com.apple.quarantine formcut.app` once, then open it.
 
