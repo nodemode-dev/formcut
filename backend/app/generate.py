@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import threading
 import uuid
 from pathlib import Path
@@ -394,6 +395,38 @@ def wrap_entries(raw, slot: dict, defaults: dict) -> list[dict]:
     return out
 
 
+def _lora_budget(checkpoint: Path | None) -> int:
+    """The bytes of LoRAs one load of the wrap may carry beside the model: four fifths of the memory, less the model and
+    3 GB for the picture being made, and never under 1 GB."""
+    from . import krea2, local_runner
+
+    memory = local_runner.total_memory() or 24 * 10**9
+    if checkpoint is not None:
+        model = sum(p.stat().st_size for p in checkpoint.rglob("*") if p.is_file())
+    else:
+        model = int(krea2.BUILDS.get(krea2.policy().get("build") or "mlx-q8", {}).get("size", 16 * 10**9))
+    return max(10**9, int(memory * 0.8) - model - 3 * 10**9)
+
+
+def _fits(entries: list[dict], start: int, count: int, budget: int) -> int:
+    """How many pictures from start (round the wrap) one load can make before the LoRAs they use outgrow the budget;
+    at least one."""
+    from . import loras
+
+    sizes = {entry["id"]: entry.get("bytes") or 0 for entry in loras.entries("krea-2")}
+    used: set[str] = set()
+    total = 0
+    for index in range(count):
+        entry = entries[(start + index) % len(entries)]
+        new = {item["id"] for item in entry["stack"]} - used
+        extra = sum(sizes.get(lora_id, 0) for lora_id in new)
+        if index and total + extra > budget:
+            return index
+        used |= new
+        total += extra
+    return count
+
+
 def _wrap_run(generator: str, wrap, forever: bool, memory: str = "auto"):
     """A prompt wrap run on its own (2.3.2): the model and the wrap, nothing else. Each entry's prompt, size, steps, seed,
     LoRAs, sampler, CFG and negative prompt are its own; what an entry leaves out comes from the file's "defaults", then
@@ -594,8 +627,55 @@ def _continuous(
             )
             handled()
 
+        # A wrap runs in formcut's mflux worker (2.3.3): the model and every LoRA the wrap uses loaded once, each picture
+        # with its own prompt, size, steps, seed, sampler, CFG and LoRA scales. Until 2.3.3 an entry whose LoRAs, size
+        # or steps differed from the one before started mflux again, a full load of the model; with a LoRA taking turns
+        # that was every entry, and the owner's run stalled loading and took the browser down.
+        use_worker = bool(wrap) and os.environ.get("FORMCUT_WRAP_WORKER", "1") != "0"
+        budget = _lora_budget(checkpoint) if use_worker else 0
         try:
             while not stop():
+                if use_worker:
+                    count = krea2.SESSION_SEEDS if forever else len(entries) - position["at"]
+                    if count <= 0:
+                        break
+                    # as many pictures as the memory holds the LoRAs of: the model and every LoRA one load carries sit
+                    # in memory together, and a wrap naming many LoRAs is split into as few loads as fit
+                    count = _fits(entries, position["at"], count, budget)
+                    jobs = [entries[(position["at"] + i) % len(entries)] for i in range(count)]
+                    run.update({"from": position["at"], "count": count, "handled_before": session["handled"]})
+                    try:
+                        krea2.run_continuous(
+                            prompt_file,
+                            STAGING,
+                            on_picture,
+                            jobs[0]["width"],
+                            jobs[0]["height"],
+                            steps=jobs[0]["steps"],
+                            memory=memory,
+                            report=report,
+                            cancelled=stop,
+                            folder=checkpoint,
+                            on_begin=begun,
+                            count=count,
+                            seeds=[None if job.get("seed") in (None, -1) else int(job["seed"]) for job in jobs],
+                            worker_jobs=jobs,
+                        )
+                    except (RuntimeError, OSError) as exc:
+                        if stop() or session["handled"] > run["handled_before"]:
+                            raise
+                        # the worker could not run with this mflux: the wrap goes on the way 2.3.2 ran it, a load at
+                        # each change of setup, and says so
+                        use_worker = False
+                        session_notes.append(
+                            f"the model could not be kept loaded across the wrap ({str(exc)[:160]}); it is loaded again where an entry's LoRAs, size or steps change"
+                        )
+                        report(None, "Running the wrap a setup at a time", notes=list(session_notes))
+                        continue
+                    position["at"] += count
+                    if not forever and position["at"] >= len(entries):
+                        break  # once through: the last load's pictures were the wrap's last
+                    continue
                 # one process for the entries in a row that share a setup (all of them, without a wrap: its seeds run
                 # out after hundreds of pictures and the next process loads the model again)
                 first = entries[position["at"] % len(entries)]

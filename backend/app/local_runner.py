@@ -230,8 +230,8 @@ def _run(
             }
         for raw_done, raw_total in STEP.findall(line):
             done, total = int(raw_done), int(raw_total)
-            if total != steps:
-                continue
+            if steps and total not in (steps if isinstance(steps, (set, frozenset, tuple, list)) else (steps,)):
+                continue  # another bar (a load, a download): only the pictures' steps count
             if done < last_step and image + 1 < images:
                 image += 1  # the next seed's picture: mflux draws its steps again from 0
                 if on_next is not None:

@@ -1047,3 +1047,116 @@ def test_every_wrap_entry_passes_the_prompt_guard(tmp_path, monkeypatch, library
     refused = client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap})
     assert refused.status_code == 400 and refused.json()["detail"] == "entry 3: refused"
     assert client.post("/api/generate/prompt-wrap", json={"generator": "local:krea-2", "wrap": wrap}).status_code == 400
+
+
+FAKE_WORKER = """#!{python}
+import json, os, sys, time
+from PIL import Image
+plan = json.load(open(sys.argv[1]))
+with open({calls!r}, "a") as log:
+    log.write(json.dumps({{"argv": plan["argv"], "loras": plan["loras"], "jobs": [{{k: j[k] for k in ("prompt", "steps", "width", "height", "scales")}} for j in plan["jobs"]]}}) + "\\n")
+if os.environ.get("FAKE_WORKER_FAILS") == "1":
+    sys.stderr.write("ImportError: cannot import name 'build_parser'\\n")
+    sys.exit(1)
+sys.stderr.write("formcut worker: the model loaded once\\n")
+for job in plan["jobs"]:
+    time.sleep(float(os.environ.get("FAKE_DELAY", "0")))
+    for k in range(job["steps"] + 1):
+        sys.stderr.write("\\r" + str(k) + "/" + str(job["steps"]) + " [00:00<00:00]"); sys.stderr.flush()
+    Image.new("RGB", (64, 64), "teal").save(job["output"])
+"""
+
+
+def _worker_standin(tmp_path, monkeypatch):
+    from app import krea2
+
+    calls = tmp_path / "worker.calls"
+    script = tmp_path / "fake_worker.py"
+    script.write_text(FAKE_WORKER.format(python=sys.executable, calls=str(calls)))
+    (krea2.RUNTIME / "bin" / "python").symlink_to(sys.executable)
+    monkeypatch.setattr(krea2, "WORKER", script)
+    return calls
+
+
+def test_a_wrap_whose_entries_all_differ_loads_the_model_once(tmp_path, monkeypatch, library):
+    """2.3.3: the owner's wrap stalled at loading and took the browser down: each entry whose LoRAs, size or steps
+    differed started mflux again. Now the worker loads the model and every LoRA of the wrap once."""
+    _krea_standin(tmp_path, monkeypatch)
+    calls = _worker_standin(tmp_path, monkeypatch)
+    (loras.LIBRARY / "krea-2").mkdir(parents=True)
+    for name in ("Style A", "Style B"):
+        _safetensors(loras.LIBRARY / "krea-2" / f"{name}.safetensors", ["a.lora_A.weight", "a.lora_B.weight"])
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = [
+        {"prompt": "one", "width": 512, "height": 512, "steps": 4, "loras": [{"name": "Style A", "scale": 0.7}]},
+        {"prompt": "two", "width": 768, "height": 512, "steps": 6, "loras": [{"name": "Style B", "scale": 1.1}]},
+        {"prompt": "three", "width": 512, "height": 768, "steps": 3},
+        {
+            "prompt": "four",
+            "width": 512,
+            "height": 512,
+            "steps": 5,
+            "loras": [{"name": "Style A", "scale": -1}, {"name": "Style B", "scale": 0.5}],
+        },
+    ]
+    done = _wrap_finished(client, client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap}).json()["job_id"])
+    assert done["status"] == "done", done
+    made = done["result"]["media"]
+    assert [(m["prompt"], m["steps"]) for m in made] == [("one", 4), ("two", 6), ("three", 3), ("four", 5)]
+    runs = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert len(runs) == 1  # one load for every entry, however they differ
+    run = runs[0]
+    assert len(run["loras"]) == 2 and "--no-bake-lora" in run["argv"] and run["argv"].count("--lora") == 2
+    by_name = {Path(p).stem: p for p in run["loras"]}
+    assert run["jobs"][0]["scales"] == {by_name["Style A"]: 0.7} and run["jobs"][2]["scales"] == {}
+    assert run["jobs"][3]["scales"] == {by_name["Style A"]: -1.0, by_name["Style B"]: 0.5}
+    assert [(j["width"], j["height"]) for j in run["jobs"]] == [(512, 512), (768, 512), (512, 768), (512, 512)]
+
+
+def test_a_wrap_goes_on_a_setup_at_a_time_when_the_worker_cannot_run(tmp_path, monkeypatch, library):
+    _krea_standin(tmp_path, monkeypatch)
+    _worker_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_WORKER_FAILS", "1")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = [{"prompt": p, "steps": 2} for p in ("a", "b", "c")]
+    done = _wrap_finished(client, client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap}).json()["job_id"])
+    assert done["status"] == "done", done
+    assert [m["prompt"] for m in done["result"]["media"]] == ["a", "b", "c"]
+    assert any("could not be kept loaded across the wrap" in note for note in done["result"]["notes"])
+
+
+def test_a_wrap_naming_more_loras_than_memory_holds_is_split_into_few_loads(tmp_path, monkeypatch, library):
+    from app import generate
+
+    _krea_standin(tmp_path, monkeypatch)
+    calls = _worker_standin(tmp_path, monkeypatch)
+    (loras.LIBRARY / "krea-2").mkdir(parents=True)
+    for name in ("L1", "L2", "L3"):
+        _safetensors(loras.LIBRARY / "krea-2" / f"{name}.safetensors", ["a.lora_A.weight", "a.lora_B.weight"])
+    size = (loras.LIBRARY / "krea-2" / "L1.safetensors").stat().st_size
+    monkeypatch.setattr(generate, "_lora_budget", lambda checkpoint: size * 2)  # room for two of the three LoRAs a load
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = [{"prompt": f"p{n}", "steps": 2, "loras": [{"name": name, "scale": 1}]} for n, name in enumerate(["L1", "L2", "L1", "L3", "L2"])]
+    done = _wrap_finished(client, client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap}).json()["job_id"])
+    assert done["status"] == "done", done
+    assert [m["prompt"] for m in done["result"]["media"]] == ["p0", "p1", "p2", "p3", "p4"]
+    runs = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [len(r["jobs"]) for r in runs] == [3, 2] and all(len(r["loras"]) <= 2 for r in runs)  # two loads, not five
+
+
+def test_a_wrap_round_and_round_in_one_load(tmp_path, monkeypatch, library):
+    _krea_standin(tmp_path, monkeypatch)
+    calls = _worker_standin(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_DELAY", "0.05")
+    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
+    wrap = [{"prompt": p, "steps": 2, "width": w} for p, w in (("one", 512), ("two", 768), ("three", 640))]
+    job = client.post("/api/generate/wrap-run", json={"generator": "local:krea-2", "wrap": wrap, "continuous": True}).json()["job_id"]
+    for _ in range(600):
+        status = client.get(f"/api/jobs/{job}").json()
+        if len(status.get("made") or []) >= 5:
+            break
+        time.sleep(0.02)
+    client.delete(f"/api/jobs/{job}")
+    _wrap_finished(client, job)
+    assert [m["prompt"] for m in status["made"][:5]] == ["one", "two", "three", "one", "two"]
+    assert len(calls.read_text().splitlines()) == 1  # round and round, the model loaded once

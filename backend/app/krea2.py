@@ -431,6 +431,58 @@ def _four_bit(build: str, folder: Path | None) -> bool:
 SESSION_SEEDS = 500  # a continuous session's seeds; a new session starts when they run out
 
 
+WORKER = Path(__file__).with_name("mflux_worker.py")
+
+
+def _worker_command(state: dict, folder: Path | None, out: Path, settings: dict, jobs: list[dict], seeds: list[int]):
+    """The worker's command and the steps its pictures take: a plan of the wrap's pictures, the model and the union of
+    their LoRAs given as mflux-generate-krea2 would be given them (unbaked, so each picture sets its own scales)."""
+    from . import loras
+
+    union, scales_of = [], []
+    for job in jobs:
+        pairs = loras.resolve(job["stack"], "krea-2")
+        scales_of.append({str(Path(path).resolve()): scale for path, scale in pairs})
+        union += [path for path, _ in pairs if str(Path(path).resolve()) not in {str(Path(p).resolve()) for p in union}]
+    first = jobs[0]
+    argv = _command(
+        state["build"],
+        "formcut prompt wrap",
+        out / "unused.png",
+        first["width"],
+        first["height"],
+        seeds[0],
+        first["steps"],
+        [(p, 1.0) for p in union],
+        settings,
+        folder,
+        [seeds[0]],
+        {"bake": False},
+    )
+    plan = {
+        "argv": argv[1:],
+        "loras": [str(Path(p).resolve()) for p in union],
+        "jobs": [
+            {
+                "prompt": job["prompt"],
+                "seed": seeds[index],
+                "steps": job["steps"],
+                "width": job["width"],
+                "height": job["height"],
+                "guidance": float(job["sampling"].get("guidance", 1.0)),
+                "negative": job["sampling"].get("negative") if float(job["sampling"].get("guidance", 1.0)) != 1.0 else None,
+                "scheduler": job["sampling"].get("scheduler"),
+                "scales": scales_of[index],
+                "output": str(out / f"{seeds[index]}.png"),
+            }
+            for index, job in enumerate(jobs)
+        ],
+    }
+    plan_path = out / "plan.json"
+    plan_path.write_text(json.dumps(plan, indent=1), encoding="utf-8")
+    return [str(_runtime_python()), str(WORKER), str(plan_path)], {int(job["steps"]) for job in jobs}
+
+
 def run_continuous(
     prompt_file: Path,
     staging: Path,
@@ -448,6 +500,7 @@ def run_continuous(
     count: int | None = None,
     seeds: list | None = None,
     on_started=None,
+    worker_jobs: list | None = None,
 ) -> int:
     """A continuous session: one run of mflux over many random seeds, so Krea 2 (or the checkpoint) and its LoRAs are
     loaded once and stay in memory between pictures. The prompt is read from prompt_file before each seed (mflux's
@@ -468,9 +521,10 @@ def run_continuous(
         raise RuntimeError(f"Krea 2 cannot run: {state['reason']}")
     if BUILDS[state["build"]]["platform"] != "macos-arm64" and folder is None:
         raise RuntimeError("A continuous session keeps the model loaded through mflux, on Apple silicon")
-    refusal = prompt_refusal(prompt_file.read_text(encoding="utf-8"))
-    if refusal:
-        raise ValueError(refusal)
+    if not worker_jobs:
+        refusal = prompt_refusal(prompt_file.read_text(encoding="utf-8"))
+        if refusal:
+            raise ValueError(refusal)
     width, height = max(256, int(width) // 16 * 16), max(256, int(height) // 16 * 16)
     steps = int(steps or STEPS)
     size = sum(p.stat().st_size for p in folder.rglob("*") if p.is_file()) if folder else BUILDS[state["build"]]["size"]
@@ -489,7 +543,15 @@ def run_continuous(
     folder_out.mkdir(parents=True, exist_ok=True)
     pattern = folder_out / "{seed}.png"
     label = f"Krea 2 checkpoint {folder.name}" if folder else "Krea 2"
-    command = _command(state["build"], "", pattern, width, height, seeds[0], steps, pairs, settings, folder, seeds, sampling, prompt_file)
+    if worker_jobs:
+        # a prompt wrap (2.3.3): mflux_worker.py loads the model and every LoRA the wrap uses once, unbaked, and makes
+        # each picture with its own prompt, size, steps, seed, sampler, CFG and LoRA scales
+        command, steps = _worker_command(state, folder, folder_out, settings, worker_jobs, seeds)
+        count = len(worker_jobs)
+    else:
+        command = _command(
+            state["build"], "", pattern, width, height, seeds[0], steps, pairs, settings, folder, seeds, sampling, prompt_file
+        )
     taken = {"next": 0, "ended": False, "seen": set(), "last": {}}
 
     def collect(force: bool = False) -> None:

@@ -277,8 +277,15 @@ defaults, may say `{"prompt": "...", "width": 832, "height": 1248, "steps": 9, "
 LoRAs are named as the library names them (its file names, as a `<lora:>` tag does, which a prompt may carry too, with
 Civitai's generation data); scales run from -2 to 2, eight at most; sizes are made multiples of 16 from 256 to 2048.
 Every entry passes the same prompt guard a single prompt does. The file is checked when it is loaded, and an entry that
-cannot be read is named. Entries in a row that share size, steps, LoRAs and sampling share one mflux process, the model
-and LoRAs loaded once and the prompt file rewritten for each; an entry that changes those starts a new process. Each
+cannot be read is named. The model is loaded once for the whole wrap, however its entries differ: formcut's mflux
+worker (`backend/app/mflux_worker.py`, run in formcut's mflux environment) builds the model the way
+mflux-generate-krea2 does, with every LoRA the wrap uses applied unbaked, then makes each picture with mflux's own
+`generate_image`, its prompt, size, steps, seed, sampler and CFG, each LoRA at that entry's scale and the LoRAs it
+does not use set aside. One load carries only as many LoRAs as the memory holds beside the model (four fifths of the
+memory, less the model and 3 GB); a wrap naming more is split into as few loads as fit. Should the worker not run with
+the installed mflux, the wrap goes on a setup at a time (a load where an entry's LoRAs, size or steps change) and says
+so. (Until 2.3.3 every change of setup was a new load: with a LoRA taking turns, every entry, and the owner's run stalled
+at loading and took the browser down.) Each
 picture records which entry made it. The engine's endpoint is POST /api/generate/wrap-run {generator, wrap, continuous}.
 
 ### The generative library
