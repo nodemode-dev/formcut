@@ -165,5 +165,16 @@ grown past three times its reference's size. Windows are sized to the tracked ar
 
 `backend/app/planar_bench.py` scores it on synthetic shots with known corners:
 `backend/venv/bin/python -m app.planar_bench --size 1920x1080 --frames 300`. P0's bar (1080p): unoccluded mean
-under 0.5 px, worst under 1.5 px, the same through an excluded occluder, no drift. Nothing in the interface uses it
-yet: the Track workspace is P2 (DEV_PLAN_planar_tracking.md in the planning docs).
+under 0.5 px, worst under 1.5 px, the same through an excluded occluder, no drift. A faint surface (mean gradient under 25 levels a pixel) gets three times the points.
+
+`backend/app/planar_api.py` (P1) runs it through the engine. A layer is its shapes (polygons in the frame's unit
+square, each adding or cutting), the frame they are drawn on (its reference, source seconds) and its settings.
+POST /api/planar/track {media_id, layer, start, stop, above} tracks it as a job, forwards or backwards from its
+reference or any frame it already has a track for, as far as stop (one frame: a step); layers in `above` exclude
+what they cover on each frame, carried by their own tracks or where they are drawn. Each frame's homography from the
+reference and its confidence are kept in `planar-tracks/<layer>.json` in the data folder as they come, so a stopped
+job keeps its frames and the next carries on. GET /api/planar/track/<layer>?surface=x0,y0,...,x3,y3 reads them back
+with the surface's corners on every frame; DELETE clears all or a range (start, stop). A layer whose media, shapes,
+reference or settings change starts a fresh track. Frames are read at full size by ffmpeg (backwards in chunks read
+forwards). Nothing in the interface uses it yet: the Track workspace is P2 (DEV_PLAN_planar_tracking.md in the
+planning docs).
