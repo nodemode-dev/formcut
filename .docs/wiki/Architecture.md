@@ -149,3 +149,21 @@ Effects can be added as data packages with a filter allowlist; templates carry t
 
 ### v1.56.0 to v1.60.0 (the repository's own numbering, which diverged from the plan's)
 Capture remuxes browser recordings in `media.py`; GIF exports go through an ffv1 intermediate into `gif_export.py`'s two-pass palette; HEIC, AVIF and TIFF stills import through Pillow and pi-heif with the fast paths refusing what their ffmpeg cannot decode; HDR sources are tone-mapped in `video_source.py`'s one decode chain so preview and export agree, and the fast paths refuse HDR; a clip's `audioStream` is mapped at the one decode site in `audio_render.py` and keyed into the clip-audio cache. Every registry file is pinned in `model_manager.PINNED`; `model_file()` resolves the model folder first, then `app/bundled_models`, where the build ships U2NetP; `segmentation.cutout_ready` admits the `auto` arbitration; `brush.py` maps strokes to source space for the plain brush and resolves smart strokes through SAM 2 into region outlines that `feathered()` fills; every ONNX Runtime session takes `model_manager.providers()`, platform accelerator first, CPU floor.
+
+## Planar tracking (P0: the engine)
+
+`backend/app/planar.py` follows a layer's plane against its reference frame, never chained frame to frame: per frame
+a homography from the reference and a confidence, in the motion types Mocha names (translation, scale, rotation,
+shear, perspective; rotation brings scale, as in Mocha), with its track parameters (input channel, Min % Pixels Used,
+smoothing, Large, Small or Manual motion, search area, angle, zoom). Each frame: a prediction from the last two;
+for large motion a rough estimate by ORB features of the reference's matte matched near the prediction and fitted
+by MAGSAC in the motion model; then the frame warped back into the reference by that estimate, the light matched
+(a robust gain and offset fitted to pairs of smooth pixels, or local contrast where the light has changed a lot), and
+the reference's points followed into it by sub-pixel Lucas-Kanade checked both ways, the residual fitted in the model
+and composed, twice. Points under an exclusion matte are left out. A new reference only when the plane has shrunk or
+grown past three times its reference's size. Windows are sized to the tracked area.
+
+`backend/app/planar_bench.py` scores it on synthetic shots with known corners:
+`backend/venv/bin/python -m app.planar_bench --size 1920x1080 --frames 300`. P0's bar (1080p): unoccluded mean
+under 0.5 px, worst under 1.5 px, the same through an excluded occluder, no drift. Nothing in the interface uses it
+yet: the Track workspace is P2 (DEV_PLAN_planar_tracking.md in the planning docs).
