@@ -110,6 +110,8 @@ the automation transports.
 - `package_registry.py` (80L)
 - `paths.py` (32L)
 - `pixel_effects.py` (1056L)
+- `planar.py` (456L)
+- `planar_bench.py` (244L)
 - `processes.py` (22L)
 - `prompt_data.py` (119L)
 - `prompt_space.py` (74L)
