@@ -50,7 +50,7 @@ The rest is written by hand.
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| planar_api.py | 663 | /api/planar | 9 |
+| planar_api.py | 716 | /api/planar | 9 |
 | presets.py | 620 | /api/presets | 9 |
 | project_files.py | 308 | /api/project-files | 6 |
 | project_packages.py | 312 | /api/projects | 4 |
@@ -113,13 +113,14 @@ the automation transports.
 - `pixel_effects.py` (1056L)
 - `planar.py` (502L)
 - `planar_bench.py` (244L)
+- `planar_green.py` (224L)
 - `planar_shapes.py` (114L)
 - `processes.py` (22L)
 - `prompt_data.py` (119L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1823L)
+- `renderer.py` (1829L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
