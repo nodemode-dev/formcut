@@ -93,6 +93,8 @@ export interface ClipKey {
   color: string;
   similarity: number;
   blend: number;
+  spill?: number;  // spill suppression, 0 to 1: the key colour's cast taken off what remains (P7)
+  holdout?: string[];  // planar layers inside which the key takes nothing away: a tracked hold-out matte (P7)
 }
 
 export interface Clip {

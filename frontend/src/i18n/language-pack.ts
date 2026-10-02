@@ -407,6 +407,11 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Spill|Débordement|Fuoriuscita|スピル|스필|Vazamento|Засветка|Taşma|溢色|溢色
+Key hold-out for this clip|Protection de l'incrustation pour ce clip|Protezione del keying per questa clip|このクリップのキー保護|이 클립의 키 보호|Proteção do chroma para este clipe|Защита ключа для этого клипа|Bu klip için anahtar koruması|此片段的抠像保护|此片段的去背保護
+Turn on this clip's chroma key first|Activez d'abord l'incrustation de ce clip|Attiva prima il chroma key di questa clip|まずこのクリップのクロマキーをオンにしてください|먼저 이 클립의 크로마 키를 켜세요|Ative primeiro o chroma key deste clipe|Сначала включите хромакей этого клипа|Önce bu klibin renk anahtarını açın|请先开启此片段的色度抠像|請先開啟此片段的色度去背
+Hold-out applied to this clip's key|Protection appliquée à l'incrustation de ce clip|Protezione applicata al keying di questa clip|このクリップのキーに保護を適用しました|이 클립의 키에 보호를 적용했습니다|Proteção aplicada ao chroma deste clipe|Защита применена к ключу клипа|Koruma bu klibin anahtarına uygulandı|已将保护应用到此片段的抠像|已將保護套用到此片段的去背
+Remove key hold-out|Retirer la protection de l'incrustation|Rimuovi protezione del keying|キー保護を外す|키 보호 제거|Remover proteção do chroma|Убрать защиту ключа|Anahtar korumasını kaldır|移除抠像保护|移除去背保護
 Click an object to outline it (SAM 2.1)|Cliquez sur un objet pour le détourer (SAM 2.1)|Fai clic su un oggetto per contornarlo (SAM 2.1)|オブジェクトをクリックして輪郭を作成 (SAM 2.1)|개체를 클릭해 윤곽을 만듭니다 (SAM 2.1)|Clique em um objeto para contorná-lo (SAM 2.1)|Щёлкните объект, чтобы обвести его (SAM 2.1)|Bir nesneye tıklayıp çevresini çizin (SAM 2.1)|点击对象以勾勒轮廓（SAM 2.1）|點按物件以勾勒輪廓（SAM 2.1）
 Outlining…|Détourage…|Contornando…|輪郭を作成中…|윤곽 만드는 중…|Contornando…|Обводка…|Çevre çiziliyor…|正在勾勒…|正在勾勒…
 Add key|Ajouter une clé|Aggiungi chiave|キーを追加|키 추가|Adicionar chave|Добавить ключ|Anahtar ekle|添加关键帧|新增關鍵影格

@@ -945,6 +945,8 @@ export class ProjectEngine {
             color: p.key.color.toLowerCase(),
             similarity: Math.min(1, Math.max(0.01, p.key.similarity)),
             blend: Math.min(1, Math.max(0, p.key.blend)),
+            ...(p.key.spill ? { spill: Math.min(1, Math.max(0, p.key.spill)) } : {}),
+            ...(p.key.holdout?.length ? { holdout: p.key.holdout.filter((id) => typeof id === "string") } : {}),
           };
         } else {
           found.clip.key = undefined;

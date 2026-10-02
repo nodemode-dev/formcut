@@ -14,6 +14,11 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
     toggle.classList.toggle("is-on", follow[key]);
     toggle.addEventListener("click", () => { follow[key] = toggle.classList.toggle("is-on"); });
   }
+  root.querySelector<HTMLElement>('[data-ref="holdout-remove"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    const key = id ? engine.findClip(id)?.clip.key : undefined;
+    if (id && key) engine.dispatch("clip.key", { clipId: id, key: { ...key, holdout: undefined } });
+  });
   root.querySelector<HTMLElement>('[data-ref="matte-remove"]')?.addEventListener("click", () => {
     const id = engine.snapshot.selectedClipId;
     if (id) engine.dispatch("clip.planarMatte", { clipId: id, planarMatte: null });

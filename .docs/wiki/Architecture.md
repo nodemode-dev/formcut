@@ -231,3 +231,12 @@ adds one (the shape as it is on this frame) and deletes one (the last kept as th
 edge in the select tool adds a point there on every keyframe (told from two presses, since a press re-draws the
 overlay and Chromium then sends no double click), and Delete point takes one off every keyframe (three kept at least).
 
+The key with tracked mattes (P7): a clip's tracked matte (P3) is the key's garbage matte, multiplied after it. The
+key's hold-out (key.holdout: planar layer ids) is its core matte: inside those layers' shapes, carried by their
+tracks through planar_alpha, the key takes nothing away. Its spill suppression (key.spill, 0 to 1) takes off the part
+of each pixel's chroma (its colour less its mean) along the key colour's own chroma direction, where it leans that
+way; that direction has no mean, so brightness is kept, and a colour leaning away from the key is left alone. A clip
+whose key has either is keyed on the CPU side (the device's key pass has neither). The inspector's key section has
+Spill; the workspace's Apply to a clip has Key hold-out for this clip (the key must be on); Remove key hold-out is in
+the Track section.
+

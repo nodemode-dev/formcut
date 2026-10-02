@@ -154,7 +154,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         <section class="pw-panel">
           <div class="pw-head"><span>${t("planar.apply")}</span></div>
           <div class="pw-row"><span>${t("planar.applyTo")}</span><select data-ref="target"></select></div>
-          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option></select></div>
+          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
         </section>
@@ -892,6 +892,18 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("kind").addEventListener("change", () => { $("matte-row").hidden = $<HTMLSelectElement>("kind").value !== "matte"; });
   $("apply").addEventListener("click", () => void (async () => {
     const l = layer(), target = $<HTMLSelectElement>("target").value, kind = $<HTMLSelectElement>("kind").value;
+    if (kind === "holdout") {
+      // this clip's layers as its key's hold-out (P7): inside them the chroma key takes nothing away
+      const key = engine.findClip(clipId)?.clip.key;
+      if (!key) { say(t("planar.needKey")); return; }
+      const chosen = layers.filter((one) => one.visible && one.shapes.length).map((one) => one.id);
+      if (!chosen.length) { say(t("planar.needShape")); return; }
+      engine.dispatch("clip.planar", { clipId, planar: { version: 1, layers } });
+      engine.dispatch("clip.key", { clipId, key: { ...key, holdout: chosen } });
+      changed = false;
+      say(t("planar.holdoutApplied"));
+      return;
+    }
     if (kind === "matte") {
       // this clip's own layers as its matte, carried by their tracks (Mocha's Apply Matte); the target is this clip
       const chosen = layers.filter((one) => one.visible && one.shapes.length).map((one) => one.id);

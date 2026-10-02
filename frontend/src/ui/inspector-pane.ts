@@ -58,6 +58,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   const selected = engine.snapshot.selectedClipId ? engine.findClip(engine.snapshot.selectedClipId)?.clip : undefined;
   const pinned = !!selected?.cornerPin;
   const matted = !!selected?.planarMatte;
+  const heldOut = !!selected?.key?.holdout?.length;
   const el = document.createElement("section");
   el.className = "pane pane-inspector";
   el.dataset.empty = String(!engine.snapshot.selectedClipId);
@@ -215,6 +216,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         <div class="prop-row"><label>${t("track.followRotation")}</label><button class="toggle" data-ref="track-rotation" aria-label="${t("track.followRotation")}"></button></div>
         <button class="tool-chip" data-ref="track-btn">${icon("search")}${t("track.btn")}</button>
         <button class="tool-chip" data-ref="planar-btn">${icon("layers")}${t("planar.open")}</button>
+        ${heldOut ? `<button class="tool-chip" data-ref="holdout-remove">${icon("close")}${t("holdout.remove")}</button>` : ""}
         ${matted ? `<button class="tool-chip" data-ref="matte-remove">${icon("close")}${t("matte.remove")}</button>` : ""}
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
@@ -435,6 +437,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         </div>
         ${propRow(t("row.similarity"), "keySim", 25, "%")}
         ${propRow(t("row.keyblend"), "keyBlend", 5, "%")}
+        ${propRow(t("row.keyspill"), "keySpill", 0, "%")}
         <div class="text-add-hint">${t("key.note")}</div>
       </div>
     </div>`;
@@ -1483,9 +1486,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     if (!state.selectedClipId) return;
     const sim = Number(inputs.get("keySim")?.value ?? 25) / 100;
     const kb = Number(inputs.get("keyBlend")?.value ?? 5) / 100;
+    const spill = Number(inputs.get("keySpill")?.value ?? 0) / 100;
+    const holdout = engine.findClip(state.selectedClipId)?.clip.key?.holdout;  // a tracked hold-out stays as it is
     engine.dispatch("clip.key", {
       clipId: state.selectedClipId,
-      key: enabled ? { color: keyColor.value, similarity: sim || 0.25, blend: kb } : null,
+      key: enabled ? { color: keyColor.value, similarity: sim || 0.25, blend: kb, spill, holdout } : null,
     });
     keyOn.classList.toggle("is-on", enabled);
   };
@@ -1493,7 +1498,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   keyColor.addEventListener("change", () => {
     if (keyOn.classList.contains("is-on")) dispatchKey(true);
   });
-  for (const ref of ["keySim", "keyBlend"]) {
+  for (const ref of ["keySim", "keyBlend", "keySpill"]) {
     inputs.get(ref)?.addEventListener("change", () => {
       if (keyOn.classList.contains("is-on")) dispatchKey(true);
     });
@@ -1505,7 +1510,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     applyTab();
     const t = selectedTransform(engine);
     for (const [key, input] of inputs) {
-      if (key === "keySim" || key === "keyBlend" || key.startsWith("mask")) continue;
+      if (key === "keySim" || key === "keyBlend" || key === "keySpill" || key.startsWith("mask")) continue;
       const next = String(t[key as keyof ClipTransform]);
       if (document.activeElement !== input && input.value !== next) input.value = next;
       const slider = sliders.get(key);
@@ -1561,6 +1566,11 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       const bNext = String(Math.round(clip.key.blend * 100));
       if (blInput && document.activeElement !== blInput && blInput.value !== bNext) {
         blInput.value = bNext;
+      }
+      const spInput = inputs.get("keySpill");
+      const sNext = String(Math.round((clip.key.spill ?? 0) * 100));
+      if (spInput && document.activeElement !== spInput && spInput.value !== sNext) {
+        spInput.value = sNext;
       }
     }
     for (const input of el.querySelectorAll<HTMLInputElement>("input[data-tkey]")) {

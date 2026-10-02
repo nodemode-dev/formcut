@@ -1247,7 +1247,23 @@ class FrameRenderer:
             target = color - color.mean()
             distance = np.linalg.norm(chroma - target, axis=2) / math.sqrt(2)
             similarity, blend = float(key.get("similarity", 0.25)), max(0.001, float(key.get("blend", 0.05)))
-            out[:, :, 3] = np.round(out[:, :, 3] * np.clip((distance - similarity) / blend, 0, 1)).astype(out.dtype)
+            keep = np.clip((distance - similarity) / blend, 0, 1)
+            if key.get("holdout"):
+                # P7: a hold-out (core) matte: inside the chosen tracked layers the key takes nothing away
+                held = self.planar_alpha({**original, "planarMatte": {"layers": list(key["holdout"]), "feather": 0, "invert": False}}, w, h)
+                if held is not None:
+                    keep = np.maximum(keep, held)
+            out[:, :, 3] = np.round(out[:, :, 3] * keep).astype(out.dtype)
+            spill = float(key.get("spill", 0) or 0)
+            if spill > 0:
+                # P7: spill suppression: the part of each pixel's colour along the key colour's own direction (its
+                # chroma, the colour less its mean) taken off, as much as the amount asks; brightness is untouched
+                # because that direction has no mean, and a pixel leaning away from the key is left alone
+                top = 65535.0 if out.dtype == np.uint16 else 255.0
+                rgb = out[:, :, :3].astype(np.float32) / top
+                lean = (rgb - rgb.mean(2, keepdims=True)) @ (target / max(1e-6, float(np.linalg.norm(target))))
+                cleaned = rgb - spill * np.maximum(lean, 0)[..., None] * (target / max(1e-6, float(np.linalg.norm(target))))
+                out[:, :, :3] = np.round(np.clip(cleaned, 0, 1) * top).astype(out.dtype)
         mask = clip.get("mask")
         if mask:
             alpha = self.mask_alpha(mask, w, h)
@@ -1492,6 +1508,9 @@ class FrameRenderer:
         on the device, so such a layer costs its effect and no readback."""
         if any(clip.get(key) for key in CPU_STEPS):
             return False
+        keyed = clip.get("key") or {}
+        if keyed.get("spill") or keyed.get("holdout"):
+            return False  # the device's key pass has no spill or hold-out: the key is made on this side (P7)
         # A transition and a push change the layer only while they run; the
         # rest of the clip's frames stay on the device.
         entering = clip.get("transitionIn") or {}

@@ -257,6 +257,12 @@ def test_the_workspace_in_the_real_app(tmp_path):
             page.click('.pw [data-ref="apply"]')
             page.wait_for_function("b => document.querySelector('.pw [data-ref=status]').textContent !== b", arg=before, timeout=10000)
             assert "Matte" in page.inner_text(".pw [data-ref=status]"), page.inner_text(".pw [data-ref=status]")
+            # P7: a key hold-out asks for the clip's chroma key first (the demo clip has none)
+            page.select_option('.pw [data-ref="kind"]', "holdout")
+            page.click('.pw [data-ref="apply"]')
+            page.wait_for_function(
+                "() => document.querySelector('.pw [data-ref=status]').textContent.includes('chroma key')", timeout=10000
+            )
             if shots:
                 page.screenshot(path=f"{shots}/workspace.png")
             page.click('.pw [data-ref="done"]')
