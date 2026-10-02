@@ -630,3 +630,34 @@ def auto_nudge(body: NudgeBody) -> dict:
     dy = by + subpixel(scores[:, bx], by) - reach
     place = [(gx + dx) / width, (gy + dy) / height]
     return {"at": [round(float(v), 6) for v in place], "score": round(float(best), 3)}
+
+
+# ---- click to spline (P6): an object outlined by SAM 2.1 as a shape to edit ----
+
+
+class SegmentBody(BaseModel):
+    media_id: str
+    frame: int = Field(ge=0)
+    points: list[dict] = Field(min_length=1, max_length=16)  # {x, y} in the frame's unit square; keep: false excludes
+    detail: int = Field(default=24, ge=6, le=96)  # how many points the outline may have
+
+
+@router.post("/segment")
+def segment(body: SegmentBody) -> dict:
+    """Click to spline: the object at the clicked points outlined by SAM 2.1 (formcut's click-select model, the one its
+    cutout uses) on one frame of the media, its largest region traced and simplified into a shape's points (the
+    frame's unit square), as editable as a drawn one. Refused plainly when the model is not downloaded yet."""
+    from .segmentation import cutout_ready, outline, raw_alpha
+
+    if not cutout_ready("click-select"):
+        raise HTTPException(409, "click-select (SAM 2 Hiera Tiny) is not downloaded yet: get it from the model manager")
+    source, fps, width, height, count = _video(body.media_id)
+    frame = next(_read(source, fps, width, height, min(body.frame, count - 1), 1), None)
+    if frame is None:
+        raise HTTPException(404, "that frame could not be read")
+    clicks = [{"x": float(p.get("x", 0)), "y": float(p.get("y", 0)), "keep": p.get("keep", True) is not False} for p in body.points]
+    alpha = raw_alpha(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), "click-select", points=clicks)
+    traced = outline(alpha, body.detail)
+    if len(traced) < 3:
+        raise HTTPException(422, "nothing was found at that point: click inside the object")
+    return {"points": [[p["x"], p["y"]] for p in traced], "area": round(float((alpha > 0.5).mean()), 4)}

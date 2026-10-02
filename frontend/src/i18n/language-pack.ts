@@ -407,6 +407,11 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Click an object to outline it (SAM 2.1)|Cliquez sur un objet pour le détourer (SAM 2.1)|Fai clic su un oggetto per contornarlo (SAM 2.1)|オブジェクトをクリックして輪郭を作成 (SAM 2.1)|개체를 클릭해 윤곽을 만듭니다 (SAM 2.1)|Clique em um objeto para contorná-lo (SAM 2.1)|Щёлкните объект, чтобы обвести его (SAM 2.1)|Bir nesneye tıklayıp çevresini çizin (SAM 2.1)|点击对象以勾勒轮廓（SAM 2.1）|點按物件以勾勒輪廓（SAM 2.1）
+Outlining…|Détourage…|Contornando…|輪郭を作成中…|윤곽 만드는 중…|Contornando…|Обводка…|Çevre çiziliyor…|正在勾勒…|正在勾勒…
+Add key|Ajouter une clé|Aggiungi chiave|キーを追加|키 추가|Adicionar chave|Добавить ключ|Anahtar ekle|添加关键帧|新增關鍵影格
+Delete key|Supprimer la clé|Elimina chiave|キーを削除|키 삭제|Excluir chave|Удалить ключ|Anahtarı sil|删除关键帧|刪除關鍵影格
+Double-click a shape's edge to add a point|Double-cliquez sur un bord pour ajouter un point|Doppio clic su un bordo per aggiungere un punto|シェイプの辺をダブルクリックでポイント追加|셰이프 가장자리를 더블클릭해 포인트 추가|Clique duplo na borda para adicionar um ponto|Двойной щелчок по краю добавляет точку|Nokta eklemek için kenara çift tıklayın|双击形状边缘添加点|雙擊形狀邊緣以新增點
 Smooth (X-Spline)|Lisse (X-Spline)|Morbido (X-Spline)|スムーズ (X-Spline)|부드럽게 (X-Spline)|Suave (X-Spline)|Гладкая (X-Spline)|Yumuşak (X-Spline)|平滑（X-Spline）|平滑（X-Spline）
 Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey
 Tension|Tension|Tensione|テンション|장력|Tensão|Натяжение|Gerginlik|张力|張力

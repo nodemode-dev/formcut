@@ -203,6 +203,38 @@ def test_the_workspace_in_the_real_app(tmp_path):
             page.mouse.move(handle["x"] - 15, handle["y"] - 10, steps=4)
             page.mouse.up()
             assert not page.locator('.pw [data-ref="roto-hint"]').is_hidden()
+            # keyframes: one more a frame back, stepped between, one deleted
+            keyed = int(re.sub(r"[^0-9]", "", page.inner_text(".pw [data-ref=frame]")))
+            page.keyboard.press("ArrowLeft")
+            page.click('.pw [data-ref="key-add"]')
+            page.click('.pw [data-ref="key-next"]')
+            assert int(re.sub(r"[^0-9]", "", page.inner_text(".pw [data-ref=frame]"))) == keyed
+            page.click('.pw [data-ref="key-prev"]')
+            assert int(re.sub(r"[^0-9]", "", page.inner_text(".pw [data-ref=frame]"))) == keyed - 1
+            page.click('.pw [data-ref="key-delete"]')
+            page.click('.pw [data-ref="key-add"]')
+            # a point added on the X-Spline's own edge (the middle of its first side, read from the drawn curve), taken
+            # off, added again
+            edge = page.evaluate("""() => {
+                const shape = document.querySelector('.pw svg polygon[data-layer="0"][data-shape="0"]');
+                const p = shape.points.getItem(6), m = shape.getScreenCTM();
+                return [p.x * m.a + p.y * m.c + m.e, p.x * m.b + p.y * m.d + m.f];
+            }""")
+            page.mouse.dblclick(edge[0], edge[1])
+            time.sleep(0.5)
+            assert page.locator(".pw svg .pw-handle").count() == 5
+            page.click('.pw [data-ref="delete-point"]')
+            assert page.locator(".pw svg .pw-handle").count() == 4
+            page.mouse.dblclick(edge[0], edge[1])
+            time.sleep(0.5)
+            assert page.locator(".pw svg .pw-handle").count() == 5
+            # click to spline: without SAM downloaded (this sandbox) the page says so rather than failing
+            page.click('.pw [data-tool="segment"]')
+            page.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
+            page.wait_for_function(
+                "() => document.querySelector('.pw [data-ref=status]').textContent.includes('not downloaded')", timeout=15000
+            )
+            page.click('.pw [data-tool="select"]')
             for view in ("grid", "trace", "stabilise"):
                 page.click(f'.pw [data-view="{view}"]')
             assert page.locator(".pw svg .pw-grid").count() > 0 and page.locator(".pw svg .pw-trace").count() == 4
@@ -255,6 +287,8 @@ def test_the_workspace_in_the_real_app(tmp_path):
         tracked_layer = next(one for one in saved[0]["layers"] if not one.get("link"))
         assert roto["link"] == tracked_layer["id"] and roto["tracking"] is False and tracked_layer["surface"]
         assert roto["shapes"][0]["kind"] == "xspline" and roto["shapes"][0].get("keys"), json.dumps(roto)[:900]
+        assert len(roto["shapes"][0]["points"]) == 5 and len(roto["shapes"][0]["keys"]) == 2
+        assert all(len(points) == 5 for points in roto["shapes"][0]["keys"].values()) and len(roto["shapes"][0]["tension"]) == 5
         saved[0]["layers"] = [tracked_layer]
         adjust = saved[0]["layers"][0].get("adjust") or []
         assert len(adjust) == 4 and any(point["keys"] for point in adjust), adjust

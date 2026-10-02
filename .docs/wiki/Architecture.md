@@ -222,3 +222,12 @@ X-Splines; a selected point's tension and edge feather are set in the shapes pan
 shape's keyframes. A tracked layer's shapes stay its search area (editing them starts its track afresh, asked; a
 point's feather is the matte's and leaves the track alone).
 
+Click to spline (P6): POST /api/planar/segment {media_id, frame, points} runs formcut's click-select model (SAM 2 Hiera
+Tiny, the cutout's) on that frame at the clicked points and traces its largest region into a shape's points
+(segmentation.outline, the same simplified path the cutout's convert-to-mask gives); refused plainly when the model
+is not downloaded. The workspace's Segment tool adds it to the current layer as an X-Spline at half tension, mapped
+into the layer's reference like a drawn shape. The shapes panel also steps between the selected shape's keyframes,
+adds one (the shape as it is on this frame) and deletes one (the last kept as the shape); a double press on a shape's
+edge in the select tool adds a point there on every keyframe (told from two presses, since a press re-draws the
+overlay and Chromium then sends no double click), and Delete point takes one off every keyframe (three kept at least).
+

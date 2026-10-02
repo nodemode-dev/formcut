@@ -74,7 +74,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   let shapeIndex = -1;
   let media: Media | null = null;
   let frame = 0, first = 0, last = 0;
-  let tool: "select" | "draw" | "rect" = "draw";
+  let tool: "select" | "draw" | "rect" | "segment" = "draw";
   let mode: "add" | "subtract" = "add";
   const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false, adjust: false };
   let pointIndex = 0;  // the reference point selected in AdjustTrack
@@ -110,6 +110,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button data-tool="select" title="${t("planar.select")}" aria-label="${t("planar.select")}">${icon("pointer")}</button>
             <button data-tool="draw" title="${t("planar.draw")}" aria-label="${t("planar.draw")}">${icon("curve")}</button>
             <button data-tool="rect" title="${t("planar.rect")}" aria-label="${t("planar.rect")}">${icon("fit")}</button>
+            <button data-tool="segment" title="${t("planar.tool.segment")}" aria-label="${t("planar.tool.segment")}">${icon("sparkles")}</button>
           </div>
           <div class="pw-seg" data-ref="mode" role="group">
             <button data-mode="add">${t("planar.add")}</button><button data-mode="subtract">${t("planar.subtract")}</button>
@@ -119,7 +120,15 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button class="tool-chip" data-ref="uberkey">${t("planar.uberkey")}</button>
             <button class="tool-chip" data-ref="delete-shape">${icon("trash")}${t("planar.deleteShape")}</button>
           </div>
+          <div class="pw-buttons-row" data-ref="keys-row">
+            <button class="icon-btn" data-ref="key-prev" title="${t("planar.keyPrev")}" aria-label="${t("planar.keyPrev")}">${icon("chevL")}</button>
+            <button class="tool-chip" data-ref="key-add">${icon("diamond")}${t("planar.keyAdd")}</button>
+            <button class="tool-chip" data-ref="key-delete">${t("planar.keyDelete")}</button>
+            <button class="icon-btn" data-ref="key-next" title="${t("planar.keyNext")}" aria-label="${t("planar.keyNext")}">${icon("chevR")}</button>
+          </div>
           <div data-ref="point-panel" hidden>
+            <p class="pw-hint">${t("planar.edgeHint")}</p>
+            <button class="tool-chip" data-ref="delete-point">${icon("trash")}${t("planar.adjust.delete")}</button>
             <div class="pw-row"><span>${t("planar.tension")}</span><input type="range" data-ref="tension" min="0" max="1" step="0.05"></div>
             <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="0" max="500" step="1"></div>
           </div>
@@ -431,7 +440,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     return h ? unit(apply(invert(h), x, y)) : null;
   };
 
-  async function addShape(points: number[][]): Promise<void> {
+  async function addShape(points: number[][], spline?: number): Promise<void> {
     let l = layer();
     if (!l || l.locked) l = newLayer();
     if (!l.shapes.length) l.reference = frame / media!.fps;  // the first shape sets the frame it is drawn on
@@ -439,7 +448,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     if (mapped.some((p) => !p)) { say(t("planar.needTracked")); return; }
     if (!(await invalidate(l))) return;
     const placed = (mapped as number[][]).map((p) => [Number(p[0].toFixed(6)), Number(p[1].toFixed(6))]);
-    l.shapes.push(smooth ? { points: placed, mode, kind: "xspline", tension: placed.map(() => 1) } : { points: placed, mode });
+    const curved = spline ?? (smooth ? 1 : undefined);  // an X-Spline at this tension, or straight sides
+    l.shapes.push(curved !== undefined ? { points: placed, mode, kind: "xspline", tension: placed.map(() => curved) } : { points: placed, mode });
     if (!l.surface) {
       // the surface starts at the first shape's bounds, as a place to put the corners from
       const xs = l.shapes[0].points.map((p) => p[0]), ys = l.shapes[0].points.map((p) => p[1]);
@@ -467,8 +477,26 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     }
     if (target.dataset.corner !== undefined && l) { drag = { kind: "corner", a: Number(target.dataset.corner), b: 0, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
     if (tool === "select") {
+      const now = performance.now();
+      if (!target.dataset.point && lastPress && now - lastPress.at < 400 && Math.hypot(event.clientX - lastPress.x, event.clientY - lastPress.y) < 6) {
+        lastPress = null;
+        void addPointAt(x, y);
+        return;
+      }
+      lastPress = { at: now, x: event.clientX, y: event.clientY };
       if (target.dataset.point && l) { const [si, pi] = target.dataset.point.split(":").map(Number); picked = { shape: si, point: pi }; shapeIndex = si; paintPoint(); drag = { kind: "point", a: si, b: pi, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
       if (target.dataset.shape !== undefined) { current = Number(target.dataset.layer); shapeIndex = Number(target.dataset.shape); paintSettings(); render(); }
+      return;
+    }
+    if (tool === "segment") {
+      say(t("planar.segmenting"));
+      void (async () => {
+        try {
+          const found = await api<{ points: number[][] }>("/api/planar/segment", { media_id: mediaId, frame, points: [{ x: x / media!.width, y: y / media!.height }] });
+          await addShape(found.points.map(px), 0.5);  // SAM's traced outline, as an X-Spline at half tension
+          render();
+        } catch (error) { say(error instanceof Error ? error.message : String(error)); }
+      })();
       return;
     }
     if (tool === "rect") { drag = { kind: "rect", a: 0, b: 0, start: [x, y] }; drawing = [[x, y], [x, y], [x, y], [x, y], [x, y]]; svg.setPointerCapture(event.pointerId); return; }
@@ -476,6 +504,34 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     render();
   });
   // a double click closes the shape (its second press added the same point again: dropped)
+  // a double press in the select tool adds a point on the nearest shape's edge. It is told here from two presses
+  // (400 ms, 6 px) rather than from the browser's double click: a press re-draws the overlay, the element it began
+  // on is gone, and Chromium then sends no click and no double click at all.
+  let lastPress: { at: number; x: number; y: number } | null = null;
+  async function addPointAt(x: number, y: number): Promise<void> {
+    const l = layer();
+    if (!l || l.locked) return;
+    // the shape whose drawn outline passes nearest the pointer, within 8 screen pixels
+    const h = homography(carrierOf(l), frame);
+    if (!h) return;
+    const reach = 8 * (media!.width / Math.max(1, svg.getBoundingClientRect().width));
+    let nearest = -1, closest = reach;
+    l.shapes.forEach((shape, si) => {
+      const drawn = outlineOf(pointsAt(shape, frame), shape).map((p) => apply(h, ...(px(p) as [number, number])));
+      drawn.forEach((a, i) => {
+        const b = drawn[(i + 1) % drawn.length], dx = b[0] - a[0], dy = b[1] - a[1];
+        const f = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / Math.max(1e-9, dx * dx + dy * dy)));
+        const distance = Math.hypot(a[0] + dx * f - x, a[1] + dy * f - y);
+        if (distance < closest) { closest = distance; nearest = si; }
+      });
+    });
+    const ref = toReference(l, x, y);
+    if (nearest < 0 || !ref || (l.tracking && !(await invalidate(l)))) return;
+    shapeIndex = nearest;
+    insertPoint(l.shapes[nearest], ref);
+    changed = true;
+    render();
+  }
   svg.addEventListener("dblclick", () => {
     if (tool !== "draw" || job) return;
     drawing = drawing.slice(0, -1);
@@ -608,6 +664,60 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     tension.value = String(shape.tension?.[picked.point] ?? (shape.kind === "xspline" ? 1 : 0));
     $<HTMLInputElement>("edge").value = String(shape.feather?.[picked.point] ?? 0);
   }
+  // a point added on a shape's edge, on every keyframe and the base shape alike (where it lies along that side now)
+  function insertPoint(shape: PlanarShape, ref: number[]): void {
+    const now = pointsAt(shape, frame), n = now.length;
+    let best = 0, bestDistance = Infinity, along = 0;
+    for (let i = 0; i < n; i += 1) {
+      const a = now[i], b = now[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1];
+      const f = Math.max(0, Math.min(1, ((ref[0] - a[0]) * dx + (ref[1] - a[1]) * dy) / Math.max(1e-12, dx * dx + dy * dy)));
+      const distance = Math.hypot(a[0] + dx * f - ref[0], a[1] + dy * f - ref[1]);
+      if (distance < bestDistance) { bestDistance = distance; best = i; along = f; }
+    }
+    const at = best + 1, next = (best + 1) % n;
+    for (const pts of [shape.points, ...Object.values(shape.keys ?? {})]) {
+      const placed = [pts[best][0] + (pts[next][0] - pts[best][0]) * along, pts[best][1] + (pts[next][1] - pts[best][1]) * along];
+      pts.splice(at, 0, placed);
+    }
+    for (const values of [shape.tension, shape.feather]) if (values) values.splice(at, 0, (values[best] + values[next]) / 2);
+    picked = { shape: shape === layer()?.shapes[shapeIndex] ? shapeIndex : picked?.shape ?? 0, point: at };
+  }
+  $("delete-point").addEventListener("click", () => void (async () => {
+    // a point taken off the shape on every keyframe (a shape keeps three at least)
+    const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
+    if (!l || !shape || !picked || shape.points.length <= 3) return;
+    if (l.tracking && !(await invalidate(l))) return;
+    for (const pts of [shape.points, ...Object.values(shape.keys ?? {})]) pts.splice(picked.point, 1);
+    for (const values of [shape.tension, shape.feather]) values?.splice(picked.point, 1);
+    picked = null;
+    changed = true;
+    paintPoint();
+    render();
+  })());
+  // the selected shape's keyframes: to the one before or after, one added here as the shape now is, this one taken off
+  const keyFrames = (): number[] => {
+    const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
+    return Object.keys(shape?.keys ?? {}).map(Number).sort((a, b) => a - b);
+  };
+  $("key-prev").addEventListener("click", () => { const before = keyFrames().filter((k) => k < frame); if (before.length) showFrame(before[before.length - 1]); });
+  $("key-next").addEventListener("click", () => { const after = keyFrames().find((k) => k > frame); if (after !== undefined) showFrame(after); });
+  $("key-add").addEventListener("click", () => {
+    const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
+    if (!shape) { say(t("planar.needShape")); return; }
+    (shape.keys ??= {})[String(frame)] = pointsAt(shape, frame).map((p) => [...p]);
+    changed = true;
+    render();
+  });
+  $("key-delete").addEventListener("click", () => {
+    const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
+    if (!shape?.keys?.[String(frame)]) return;
+    const left = Object.keys(shape.keys).length;
+    if (left === 1) shape.points = shape.keys[String(frame)];  // the last key: the shape stays as it was keyed
+    delete shape.keys[String(frame)];
+    if (left === 1) delete shape.keys;
+    changed = true;
+    render();
+  });
   $("smooth").addEventListener("click", () => { smooth = !smooth; paintPoint(); });
   $("uberkey").addEventListener("click", () => { uberkey = !uberkey; paintPoint(); });
   $("tension").addEventListener("change", () => void (async () => {
@@ -828,6 +938,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     else if (event.key === "Enter" && drawing.length >= 3) { event.preventDefault(); void addShape(drawing).then(() => { drawing = []; render(); }); }
     else if (event.key === "ArrowRight" && !job) { event.preventDefault(); showFrame(frame + 1); }
     else if (event.key === "ArrowLeft" && !job) { event.preventDefault(); showFrame(frame - 1); }
+    else if ((event.key === "Delete" || event.key === "Backspace") && picked) { event.preventDefault(); $("delete-point").click(); }
     else if ((event.key === "Delete" || event.key === "Backspace") && shapeIndex >= 0) { event.preventDefault(); $("delete-shape").click(); }
     else return;
     event.stopPropagation();
