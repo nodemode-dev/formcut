@@ -191,6 +191,24 @@ def corners_of(h: np.ndarray, corners: np.ndarray) -> np.ndarray:
     return _apply(h, corners)
 
 
+def _sound(h: np.ndarray | None, box: tuple[int, int, int, int]) -> bool:
+    """Whether an estimate can be believed at all: finite, the plane's box still a convex quadrilateral the same way
+    round (not folded or mirrored), between a twentieth and twenty times its area. A plane lost (footage that is not
+    planar, a surface gone from view) gives estimates that fail this; they are not used."""
+    if h is None or not np.all(np.isfinite(h)) or abs(h[2, 2]) < 1e-12:
+        return False
+    x0, y0, x1, y1 = box
+    quad = _apply(h, np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float))
+    if not np.all(np.isfinite(quad)):
+        return False
+    edges = np.roll(quad, -1, axis=0) - quad
+    turns = edges[:, 0] * np.roll(edges, -1, axis=0)[:, 1] - edges[:, 1] * np.roll(edges, -1, axis=0)[:, 0]
+    if not np.all(turns > 0):  # every corner turning the way the box's own do: convex, not folded or mirrored
+        return False
+    area = 0.5 * abs(np.dot(quad[:, 0], np.roll(quad[:, 1], 1)) - np.dot(quad[:, 1], np.roll(quad[:, 0], 1)))
+    return 0.05 < area / max(1.0, float((x1 - x0) * (y1 - y0))) < 20
+
+
 def _plane_scale(h: np.ndarray, box: tuple[int, int, int, int]) -> float:
     """How much the plane has grown or shrunk since its reference: the area of its reference box carried by the
     homography over the box's own area. (Read from the homography's linear part at the image origin until P0's last
@@ -270,7 +288,10 @@ class PlanarTracker:
         if len(self.history) < 2:
             return self.history[-1]
         last, before = self.history[-1], self.history[-2]
-        step = last @ np.linalg.inv(before)
+        try:
+            step = last @ np.linalg.inv(before)
+        except np.linalg.LinAlgError:
+            return last
         guess = step @ last
         return guess / guess[2, 2]
 
@@ -304,7 +325,7 @@ class PlanarTracker:
         a = np.float32([ref.keys[m.queryIdx].pt for m in good])
         b = np.float32([keys[m.trainIdx].pt for m in good])
         found, inliers = fit(self.model, a, b, threshold=2.5)
-        if found is None or inliers.sum() < 8:
+        if found is None or inliers.sum() < 8 or not _sound(found, ref.box):
             return guess
         return found
 
@@ -392,12 +413,26 @@ class PlanarTracker:
             if residual is None:
                 break
             # residual maps reference-box points to the back-warped picture's points; back(x) = frame(h shift x)
-            h = h @ shift @ residual @ np.linalg.inv(shift)
-            h = h / h[2, 2]
+            composed = h @ shift @ residual @ np.linalg.inv(shift)
+            composed = composed / composed[2, 2]
+            if not _sound(composed, ref.box):
+                break
+            h = composed
             held = float(inliers.sum()) / max(1, len(local))
         return h, held
 
     def step(self, frame: np.ndarray, exclude: np.ndarray | None = None) -> tuple[np.ndarray, float]:
+        """A step that cannot be made (the numbers of a lost plane failing somewhere) gives the prediction with no
+        confidence rather than an error: in the owner's first run of the workspace a lost plane stopped the whole job
+        with "Singular matrix"."""
+        try:
+            return self._step(frame, exclude)
+        except (np.linalg.LinAlgError, cv2.error, ValueError, FloatingPointError, ZeroDivisionError):
+            guess = self.history[-1]
+            self.history = [*self.history, guess][-3:]
+            return guess, 0.0
+
+    def _step(self, frame: np.ndarray, exclude: np.ndarray | None = None) -> tuple[np.ndarray, float]:
         """The next frame (in the direction being tracked): its homography from the first reference, and the confidence
         (0 to 1). exclude, where given, is a matte in the frame's own coordinates of what must not be tracked."""
         gray = self._gray(frame)
