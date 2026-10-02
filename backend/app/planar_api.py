@@ -714,3 +714,40 @@ def segment(body: SegmentBody) -> dict:
     if len(traced) < 3:
         raise HTTPException(422, "nothing was found at that point: click inside the object")
     return {"points": [[p["x"], p["y"]] for p in traced], "area": round(float((alpha > 0.5).mean()), 4)}
+
+
+class OutlineBody(BaseModel):
+    media_id: str
+    frame: int = Field(ge=0)
+    screen: str = "green"  # or "blue"
+    insert_media_id: str | None = None  # the replacement: its average colour, the new screen's light
+
+
+@router.post("/screen-outline")
+def screen_outline_of(body: OutlineBody) -> dict:
+    """Screen replacement's shape: the screen's own outline on a frame (rounded corners and notch as they are, in the
+    frame's unit square), traced from its colour, and the replacement's average colour as the new screen's light."""
+    from .planar_green import screen_outline
+
+    if body.screen not in ("green", "blue"):
+        raise HTTPException(400, "screen is green or blue")
+    source, fps, width, height, count = _video(body.media_id)
+    frame = next(_read(source, fps, width, height, min(body.frame, count - 1), 1), None)
+    outline = screen_outline(frame, body.screen) if frame is not None else None
+    if outline is None or len(outline) < 3:
+        raise HTTPException(422, f"no {body.screen} screen found on that frame: choose a frame where the screen is clear")
+    light = "#808080"
+    if body.insert_media_id:
+        from .media import media_path
+
+        path = media_path(body.insert_media_id)
+        picture = cv2.imread(str(path)) if path else None
+        if picture is None and path:
+            capture = cv2.VideoCapture(str(path))
+            ok, picture = capture.read()
+            capture.release()
+            picture = picture if ok else None
+        if picture is not None:
+            b, g, r = (float(v) for v in picture.reshape(-1, 3).mean(axis=0))
+            light = f"#{round(r):02x}{round(g):02x}{round(b):02x}"
+    return {"points": (outline / [width, height]).round(6).tolist(), "light": light}

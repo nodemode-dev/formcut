@@ -407,6 +407,10 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Screen replacement (with its glare)|Remplacement d'écran (avec son reflet)|Sostituzione schermo (con il riflesso)|画面の差し替え（映り込みを保持）|화면 교체(반사 유지)|Substituição de tela (com o reflexo)|Замена экрана (с бликами)|Ekran değiştirme (yansımasıyla)|屏幕替换（保留反光）|螢幕替換（保留反光）
+Screen replaced: {clip} is on the screen, its glare kept|Écran remplacé : {clip} est à l'écran, son reflet conservé|Schermo sostituito: {clip} è sullo schermo, il riflesso resta|画面を差し替えました：{clip} を表示、映り込みは保持|화면 교체됨: {clip}이(가) 화면에 있고 반사는 유지됨|Tela substituída: {clip} está na tela, com o reflexo|Экран заменён: {clip} на экране, блики сохранены|Ekran değiştirildi: {clip} ekranda, yansıma korundu|屏幕已替换：{clip} 在屏幕上，保留反光|螢幕已替換：{clip} 在螢幕上，保留反光
+Screen outline|Contour de l'écran|Contorno schermo|画面の輪郭|화면 윤곽|Contorno da tela|Контур экрана|Ekran dış hattı|屏幕轮廓|螢幕輪廓
+Remove screen replacement|Retirer le remplacement d'écran|Rimuovi sostituzione schermo|画面の差し替えを外す|화면 교체 제거|Remover substituição de tela|Убрать замену экрана|Ekran değiştirmeyi kaldır|移除屏幕替换|移除螢幕替換
 Key by|Incruster selon|Keying per|キーの方式|키 방식|Recortar por|Ключ по|Anahtar ölçütü|抠像依据|去背依據
 Hue distance|Distance de teinte|Distanza di tinta|色相の距離|색조 거리|Distância de matiz|Расстояние оттенка|Ton uzaklığı|色相距离|色相距離
 Colour difference (screens)|Différence de couleur (écrans)|Differenza di colore (schermi)|色差（画面）|색상 차이(화면)|Diferença de cor (telas)|Разность цветов (экраны)|Renk farkı (ekranlar)|色差（屏幕）|色差（螢幕）
