@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1157L)
+- `engine/project.ts` (1169L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
-- `engine/types.ts` (289L)
+- `engine/types.ts` (316L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1289L)
+- `i18n/language-pack.ts` (1337L)
 - `i18n/text.ts` (29L)
 - `main.ts` (96L)
 - `types/assets.d.ts` (6L)
@@ -52,7 +52,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
 - `ui/icons.ts` (55L)
-- `ui/inspector-pane.ts` (1712L)
+- `ui/inspector-pane.ts` (1713L)
 - `ui/instagram.ts` (185L)
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
@@ -60,6 +60,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/media-pane.ts` (1433L)
 - `ui/missing-media.ts` (103L)
 - `ui/mode-popout.ts` (157L)
+- `ui/planar-workspace.ts` (507L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
 - `ui/recorder.ts` (344L)
@@ -80,7 +81,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/track-controls.ts` (39L)
 - `ui/track-height.ts` (80L)
 - `ui/track-keyframes.ts` (715L)
-- `ui/tracking.ts` (49L)
+- `ui/tracking.ts` (59L)
 - `ui/upscale-dialog.ts` (254L)
 - `ui/viewer.ts` (96L)
 - `ui/webhooks-settings.ts` (124L)
@@ -111,6 +112,7 @@ and a UI module that mutates state directly is a defect.
 - `clip.mask-track`
 - `clip.move`
 - `clip.mute`
+- `clip.planar`
 - `clip.remove`
 - `clip.remove-range`
 - `clip.select`
