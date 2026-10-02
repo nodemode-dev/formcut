@@ -46,7 +46,7 @@ LEGACY = {
 # layer's own passes. Nothing is left: every layer can stay on the device.
 # a clip carrying any of these is placed on this side, not left on the device: a corner pin is a perspective warp,
 # which neither the device's affine pass nor the native warp-and-blend kernel makes (P3 of the planar tracking plan)
-CPU_STEPS: tuple[str, ...] = ("cornerPin",)
+CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare")
 
 
 def pin_at(clip: dict, local: float) -> list[tuple[float, float]] | None:
@@ -1233,11 +1233,22 @@ class FrameRenderer:
         # Only a key, a mask or a cutout changes the picture below; without them
         # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
         # one caller replaces its frame with the result, so no one shares it.
-        if not (clip.get("key") or clip.get("mask") or clip.get("cutout") or clip.get("planarMatte")):
+        if not (
+            clip.get("key")
+            or clip.get("mask")
+            or clip.get("cutout")
+            or clip.get("planarMatte")
+            or clip.get("screenCut")
+            or clip.get("glare")
+        ):
             return image
         out = image.copy()
         h, w = out.shape[:2]
         original = clip  # the tracked matte reads the crop itself; the crop-adjusted copy is the mask's
+        if clip.get("glare"):
+            return self.glare_layer(out, clip, w, h)
+        if clip.get("screenCut"):
+            out = self.screen_cut(out, clip, w, h)
         clip = self.masking_clip(clip)
         key = clip.get("key")
         if key:
@@ -1310,6 +1321,79 @@ class FrameRenderer:
         if planar is not None:
             out[:, :, 3] = np.round(out[:, :, 3] * planar).astype(out.dtype)
         return out
+
+    def _screen_parts(self, rgb: np.ndarray, matte: np.ndarray, screen: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """A screen's pixels, told from what is in front of it: the screen's channel's lead over the other two, and the
+        light a reflection adds (white light raises the other two together, over their floor on the screen)."""
+        r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+        lead, one, two = (b, r, g) if screen == "blue" else (g, r, b)
+        lead_over = lead - np.maximum(one, two)
+        inside = matte > 0.5
+        floor = np.percentile(np.stack([one, two], -1)[inside], 20, axis=0) if inside.any() else np.zeros(2, np.float32)
+        ea, eb = one - floor[0], two - floor[1]
+        # white light: its two rise alike, within a few levels on compressed video (skin: red well above blue); fully
+        # even up to 5 levels, as compositing in linear light shows a tenth of a bright pixel left at a third of its
+        # brightness (a hotspot judged 90% screen for 2 levels of difference stayed a pale blotch)
+        even = np.clip(1 - np.maximum(np.abs(ea - eb) - 0.02, 0) / 0.06, 0, 1)
+        light = np.clip(np.minimum(ea, eb), 0, 1) * even
+        # the screen: its colour leads (glare washed or not), or inside it a bright even pixel (the glare's hottest part)
+        # (a screen leads by 0.9, washed by glare by 0.3; skin lit by it by 0.1 at most, so the screen's range is 0.15
+        # to 0.25: from 0.04 a green-lit finger came out a quarter see-through)
+        # and inside it, a pixel whose other two rise evenly by any real amount is glare on the glass (the brightest
+        # glare's lead drops into that range; asking it to be brighter left the owner's upright phone's hotspot as a pale
+        # green blotch), where something in front is warm or cool, not even
+        screenness = np.maximum(np.clip((lead_over - 0.15) / 0.1, 0, 1), even * np.clip((np.minimum(ea, eb) - 0.08) / 0.08, 0, 1) * inside)
+        return screenness, light, lead_over
+
+    def screen_cut(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
+        """A screen cut out of the clip by its tracked outline, a vector path (screenCut: layer, screen, grow, band,
+        spill): the outline, drawn anti-aliased and grown by a pixel so no green edge is left, is where the screen is;
+        within a band inside its edge the path alone decides (a key on video whose colour is stored at half size steps
+        along every edge); deeper in, what is in front of the screen (a finger) is told by its colour and kept, and the
+        screen's colour taken off what is kept near it. The picture below is pinned a little larger than the screen."""
+        spec = clip.get("screenCut") or {}
+        top = 65535.0 if out.dtype == np.uint16 else 255.0
+        matte = self.planar_alpha({**clip, "planarMatte": {"layers": [spec.get("layer")], "feather": 0, "invert": False}}, w, h)
+        if matte is None:
+            return out
+        grow = max(0, round(float(spec.get("grow", 1.0))))
+        grown = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * grow + 1, 2 * grow + 1))) if grow else matte
+        band_px = max(1, round(float(spec.get("band", 3.0))))
+        band = np.clip(grown - cv2.erode(grown, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * band_px + 1, 2 * band_px + 1))), 0, 1)
+        rgb = out[:, :, :3].astype(np.float32) / top
+        screenness, _, lead_over = self._screen_parts(rgb, grown, str(spec.get("screen", "green")))
+        cut = grown * np.maximum(screenness, band)
+        near = np.clip(cv2.GaussianBlur(grown, (0, 0), max(4.0, 0.03 * max(w, h))) * 3.0, 0, 1)
+        thrown = np.clip(lead_over, 0, 1) * near * (1 - cut) * float(spec.get("spill", 1.0))
+        channel = 2 if spec.get("screen") == "blue" else 1
+        rgb[:, :, channel] -= thrown
+        out[:, :, :3] = np.round(np.clip(rgb, 0, 1) * top).astype(out.dtype)
+        out[:, :, 3] = np.round(out[:, :, 3].astype(np.float32) * (1 - cut)).astype(out.dtype)
+        return out
+
+    def glare_layer(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
+        """A screen's reflection as light of its own (glare: layer, screen, strength, smooth): what white light adds to
+        the screen's other two channels, smoothed within the screen (finer than that is the video's compression), as a
+        neutral grey on the screen and nothing elsewhere, kept off what is in front; the clip is meant to go on top with
+        the Screen blend, which adds light as a reflection on glass does and keeps the picture's contrast (the glare
+        left as the plate's own washed pixels over the picture read as a grey film, fake)."""
+        spec = clip.get("glare") or {}
+        top = 65535.0 if out.dtype == np.uint16 else 255.0
+        matte = self.planar_alpha({**clip, "planarMatte": {"layers": [spec.get("layer")], "feather": 0, "invert": False}}, w, h)
+        result = np.zeros_like(out)
+        if matte is None:
+            return result
+        rgb = out[:, :, :3].astype(np.float32) / top
+        screenness, light, _ = self._screen_parts(rgb, matte, str(spec.get("screen", "green")))
+        weight = matte * screenness
+        soft = float(spec.get("smooth", 0) or 0) or max(3.0, 0.015 * max(w, h))
+        spread = cv2.GaussianBlur(weight, (0, 0), soft)
+        glare = cv2.GaussianBlur(light * weight, (0, 0), soft) / np.maximum(spread, 1e-4)
+        glare = np.clip(glare * float(spec.get("strength", 0.8)), 0, 1) * np.clip(spread * 2, 0, 1)
+        grey = np.round(glare * matte * screenness * top).astype(out.dtype)
+        result[:, :, 0] = result[:, :, 1] = result[:, :, 2] = grey
+        result[:, :, 3] = np.round(matte * top).astype(out.dtype)
+        return result
 
     def _planar_track(self, layer_id: str) -> tuple[list[int], dict, float, tuple[int, int]] | None:
         """A planar layer's track from the engine's store (planar-tracks/<layer>.json), read again only when it

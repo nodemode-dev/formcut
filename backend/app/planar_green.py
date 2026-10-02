@@ -178,6 +178,36 @@ def _refined(
     return np.array([x0, y0], float), np.array([vx, vy], float)
 
 
+def screen_outline(frame: np.ndarray, screen: str = "green", points: int = 480) -> np.ndarray | None:
+    """The screen's own outline on a frame as a smooth path, rounded corners and a notch as they are: its keyed edge at
+    half its local level traced at four times the size, the pixel staircase smoothed out along it, and resampled to an
+    even spacing (points of them), in the frame's pixels. Taken from a frame without glare, it is where the screen is
+    on every frame its track reaches, drawn as a vector path."""
+    green = _greenness(frame, screen)
+    big = cv2.resize(green, None, fx=4, fy=4, interpolation=cv2.INTER_LINEAR)
+    plateau = cv2.dilate(big, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (61, 61)))
+    mask = ((big > 0.5 * np.maximum(plateau, 2 * GREEN_LEVEL)) & (big > GREEN_LEVEL / 3)).astype(np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+    found, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if not found:
+        return None
+    outline = max(found, key=cv2.contourArea)
+    if cv2.contourArea(outline) < 16000:
+        return None
+    pts = outline.reshape(-1, 2).astype(np.float32)
+    # the staircase smoothed along the closed path (a few of the four-times map's pixels), then even spacing
+    taps = np.exp(-0.5 * (np.arange(-9, 10) / 3.0) ** 2)
+    taps /= taps.sum()
+    wrapped = np.vstack([pts[-9:], pts, pts[:9]])  # a closed path: its ends meet
+    smooth = np.stack([np.convolve(wrapped[:, k], taps, mode="valid") for k in (0, 1)], -1)
+    step = np.linalg.norm(np.diff(np.vstack([smooth, smooth[:1]]), axis=0), axis=1)
+    along = np.concatenate([[0], np.cumsum(step)])
+    wanted = np.linspace(0, along[-1], points, endpoint=False)
+    closed = np.vstack([smooth, smooth[:1]])
+    even = np.stack([np.interp(wanted, along, closed[:, k]) for k in (0, 1)], -1)
+    return even / 4.0 - 0.375  # the four-times map's pixel centres back to the frame's
+
+
 def measure(path: str, frames: int | None = None) -> tuple[list[np.ndarray], list[np.ndarray | None]]:
     """The shot's frames and the green screen's measured corners on each."""
     capture = cv2.VideoCapture(path)

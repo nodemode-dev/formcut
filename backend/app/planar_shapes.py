@@ -86,11 +86,14 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
             media = carry(pts)
             local = to_pixels(media)
             polygon = np.round(local).astype(np.int32)
+            # drawn as a vector path: at a sixteenth of a pixel, its edge anti-aliased (a whole-pixel fill stepped
+            # along every edge and corner, plain on the owner's screen replacements)
+            fine = np.round(local * 16).astype(np.int32)
             if wanted == "subtract":
-                cv2.fillPoly(solid, [polygon], 0)
+                cv2.fillPoly(solid, [fine], 0, lineType=cv2.LINE_AA, shift=4)
                 soft[cv2.fillPoly(np.zeros((h, w), np.uint8), [polygon], 1) > 0] = 0
                 continue
-            cv2.fillPoly(solid, [polygon], 255)
+            cv2.fillPoly(solid, [fine], 255, lineType=cv2.LINE_AA, shift=4)
             feathers = feather_along(shape, where)
             if feathers.max() <= 0:
                 continue
