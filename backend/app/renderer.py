@@ -46,7 +46,7 @@ LEGACY = {
 # layer's own passes. Nothing is left: every layer can stay on the device.
 # a clip carrying any of these is placed on this side, not left on the device: a corner pin is a perspective warp,
 # which neither the device's affine pass nor the native warp-and-blend kernel makes (P3 of the planar tracking plan)
-CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenReplace")
+CPU_STEPS: tuple[str, ...] = ("cornerPin",)
 
 
 def pin_at(clip: dict, local: float) -> list[tuple[float, float]] | None:
@@ -1233,13 +1233,11 @@ class FrameRenderer:
         # Only a key, a mask or a cutout changes the picture below; without them
         # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
         # one caller replaces its frame with the result, so no one shares it.
-        if not (clip.get("key") or clip.get("mask") or clip.get("cutout") or clip.get("planarMatte") or clip.get("screenReplace")):
+        if not (clip.get("key") or clip.get("mask") or clip.get("cutout") or clip.get("planarMatte")):
             return image
         out = image.copy()
         h, w = out.shape[:2]
         original = clip  # the tracked matte reads the crop itself; the crop-adjusted copy is the mask's
-        if clip.get("screenReplace"):
-            out = self.screen_replace(out, clip, w, h)
         clip = self.masking_clip(clip)
         key = clip.get("key")
         if key:
@@ -1301,81 +1299,6 @@ class FrameRenderer:
         planar = self.planar_alpha(original, w, h)
         if planar is not None:
             out[:, :, 3] = np.round(out[:, :, 3] * planar).astype(out.dtype)
-        return out
-
-    def screen_replace(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
-        """A green (or blue) screen replaced, its glare kept: the clip's screenReplace names a planar layer whose shape is
-        the screen's own outline (rounded corners, a notch), carried by its track, so where the screen is comes from
-        the track and not from a key, and its edges hold whatever a reflection does over them. Inside it:
-        - the reflection, measured: the screen gives no red or blue (no red or green for a blue one), so what red and
-          blue there is on it is light reflected off its glass; the reflection is that light, its missing channel
-          between the two it has, less the screen's own floor (the lowest fifth of it on the frame), so it is neutral
-          where the plate's glare is green. It goes over what lies below (the new screen) as light: its brightness its
-          opacity, and stronger glare washes the picture as glare on glass does
-        - what is in front of the screen (a finger) is told by its colour difference falling away (skin has more red
-          than green, the screen far more green than either) and kept, in front
-        The screen's light on what is near it (a hand over it, the bezel) is replaced: the green it threw, the colour
-        difference left on them, is taken out and as much light put back in the new screen's colour (light, a hex
-        colour: the replacement's average), fading with distance from the screen. On the owner's shots a key alone
-        left the glare green and the edges ragged under it, and a finger lit green."""
-        spec = clip.get("screenReplace") or {}
-        top = 65535.0 if out.dtype == np.uint16 else 255.0
-        screen = self.planar_alpha(
-            {**clip, "planarMatte": {"layers": [spec.get("layer")], "feather": float(spec.get("feather", 1.0)), "invert": False}}, w, h
-        )
-        if screen is None:
-            return out
-        rgb = out[:, :, :3].astype(np.float32) / top
-        r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-        if spec.get("screen") == "blue":
-            lead, a_, b_ = b, r, g
-        else:
-            lead, a_, b_ = g, r, b
-        inside = screen > 0.5
-        # the reflection: the two channels the screen does not give, its own channel between them, less the floor
-        floor = np.percentile(np.stack([a_, b_], -1)[inside], 20, axis=0) if inside.any() else np.zeros(2, np.float32)
-        ra, rb = np.clip(a_ - floor[0], 0, 1), np.clip(b_ - floor[1], 0, 1)
-        reflection = np.stack([ra, (ra + rb) / 2, rb], -1) if spec.get("screen") != "blue" else np.stack([ra, rb, (ra + rb) / 2], -1)
-        # smoothed within the screen (a blur of it over a blur of the screen, so the bezel does not bleed in): the
-        # light a soft source puts on glass is smooth, and what the screen's red and blue carry finer than that is the
-        # video's compression, in 8 and 16 pixel blocks (on the owner's upright phone, blotches in the glare)
-        soft = max(2.0, 0.012 * max(w, h))
-        weight = cv2.GaussianBlur(inside.astype(np.float32), (0, 0), soft)
-        reflection = cv2.GaussianBlur(reflection * inside[..., None], (0, 0), soft) / np.maximum(weight, 1e-4)[..., None]
-        reflection *= float(spec.get("reflection", 0.6))
-        glare = np.clip(reflection.max(axis=2), 0, 1)
-        glare_colour = reflection / np.maximum(glare, 1e-4)[..., None]
-        # what is in front of the screen: its colour difference falls away (skin, a pen: the screen's channel no lead)
-        lead_over = lead - np.maximum(a_, b_)
-        screenness = np.clip((lead_over - 0.03) / 0.09, 0, 1)
-        front = 1 - screenness
-        # a couple of pixels past the traced outline, what is still clearly the screen's colour is the screen (the
-        # outline's edge against the bezel), not light on the bezel: it goes, not lit (a bright rim, once)
-        screen = np.maximum(screen, cv2.dilate(screen, np.ones((5, 5), np.uint8)) * screenness)
-        # the screen's light on what is near it, replaced by the new screen's colour
-        light = str(spec.get("light") or "#808080").lstrip("#")
-        light_rgb = np.array([int(light[i : i + 2], 16) for i in (0, 2, 4)], np.float32) / 255
-        luma = float(light_rgb @ np.array([0.299, 0.587, 0.114], np.float32))
-        light_unit = light_rgb / max(luma, 1e-3)
-        reach = max(6.0, 0.04 * max(w, h))
-        near = np.clip(cv2.GaussianBlur(screen.astype(np.float32), (0, 0), reach) * 3.0, 0, 1)
-        # spill is a tint: a slight lead of the screen's channel, not the screen's own colour
-        tint = np.clip((0.2 - lead_over) / 0.08, 0, 1)
-        thrown = np.clip(lead_over, 0, 1) * tint * near * float(spec.get("spill", 1.0))
-        thrown = np.where(inside, thrown * front, thrown)  # on the screen itself only what is in front of it is lit by it
-        lit = rgb.copy()
-        channel = 2 if spec.get("screen") == "blue" else 1
-        lit[:, :, channel] -= thrown
-        lit += (thrown * (0.114 if channel == 2 else 0.587))[..., None] * light_unit[None, None, :]
-        lit = np.clip(lit, 0, 1)
-        # inside the screen: what is in front over the reflection's light, the rest of the clip as it was
-        alpha_in = front + (1 - front) * glare
-        colour_in = (front[..., None] * lit + ((1 - front) * glare)[..., None] * glare_colour) / np.maximum(alpha_in, 1e-4)[..., None]
-        alpha = out[:, :, 3].astype(np.float32) / top
-        colour = lit * (1 - screen[..., None]) + colour_in * screen[..., None]
-        alpha = alpha * ((1 - screen) + screen * alpha_in)
-        out[:, :, :3] = np.round(np.clip(colour, 0, 1) * top).astype(out.dtype)
-        out[:, :, 3] = np.round(np.clip(alpha, 0, 1) * top).astype(out.dtype)
         return out
 
     def _planar_track(self, layer_id: str) -> tuple[list[int], dict, float, tuple[int, int]] | None:

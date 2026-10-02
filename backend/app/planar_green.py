@@ -178,26 +178,6 @@ def _refined(
     return np.array([x0, y0], float), np.array([vx, vy], float)
 
 
-def screen_outline(frame: np.ndarray, screen: str = "green", tolerance: float = 0.5) -> np.ndarray | None:
-    """The screen's own outline on a frame, rounded corners and a notch as they are (its keyed region's edge at half its
-    local level, traced at twice the size), simplified to within tolerance pixels: the shape screen replacement
-    carries by the track. Taken from a frame without glare, it is where the screen is on every frame the track
-    reaches."""
-    green = _greenness(frame, screen)
-    big = cv2.resize(green, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-    plateau = cv2.dilate(big, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31)))
-    mask = ((big > 0.5 * np.maximum(plateau, 2 * GREEN_LEVEL)) & (big > GREEN_LEVEL / 3)).astype(np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
-    found, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    if not found:
-        return None
-    outline = max(found, key=cv2.contourArea)
-    if cv2.contourArea(outline) < 4000:
-        return None
-    simple = cv2.approxPolyDP(outline, 2 * tolerance, True).reshape(-1, 2).astype(float)
-    return simple / 2.0 - 0.25  # the twice-size map's pixel centres back to the frame's
-
-
 def measure(path: str, frames: int | None = None) -> tuple[list[np.ndarray], list[np.ndarray | None]]:
     """The shot's frames and the green screen's measured corners on each."""
     capture = cv2.VideoCapture(path)
