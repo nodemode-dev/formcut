@@ -46,7 +46,7 @@ def test_spill_suppression_takes_the_green_cast_off_and_keeps_brightness(tmp_pat
     plain = _render(tmp_path, KEY)
     cleaned = _render(tmp_path, {**KEY, "spill": 1.0})
     assert plain[50, 50].sum() == 0 and cleaned[50, 50].sum() == 0  # the screen keyed out either way
-    before, after = plain[20, 104], cleaned[20, 104]  # beside the screen, where its spill is
+    before, after = plain[20, 101], cleaned[20, 101]  # right beside the screen: spill reaches a bezel's width
     assert before[1] - after[1] > 15  # the green cast taken off the subject
     assert abs(before.mean() - after.mean()) < 3  # its brightness kept
     assert after[0] > before[0] and after[2] > before[2]
@@ -187,3 +187,21 @@ def test_spill_reaches_a_large_glare_the_key_left_inside_the_screen(tmp_path):
     edge = out[170, 690]
     assert edge[1] <= max(edge[0], edge[2]) + 3, edge  # the hotspot at the screen's edge: neutral too
     assert np.abs(out[200, 1100] - [60, 140, 140]).max() <= 2  # the wall far from the screen: its own colour
+
+
+def test_a_refined_key_follows_the_brightness_edge_smoothly():
+    """Video stores colour at half size: a key on it steps in 2 x 2 blocks along a slanted edge; refined against the
+    full-size brightness (a guided filter), the matte follows the true edge."""
+    import cv2
+    from app.renderer import _guided
+
+    h, w = 120, 160
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    truth = np.clip(0.5 + (xx - (40 + 0.6 * yy)), 0, 1)  # the true coverage of a slanted edge, anti-aliased
+    luma = 0.05 + 0.55 * (1 - truth)  # the screen bright where it is not covered, the bezel dark
+    blocky = cv2.resize(cv2.resize(truth, (w // 2, h // 2), interpolation=cv2.INTER_AREA), (w, h), interpolation=cv2.INTER_NEAREST)
+    refined = _guided(luma, blocky, 3, 1e-4)
+    band = (truth > 0.02) & (truth < 0.98) | (np.abs(blocky - truth) > 0.02)
+    before = np.abs(blocky - truth)[band].mean()
+    after = np.abs(refined - truth)[band].mean()
+    assert after < 0.4 * before, (before, after)

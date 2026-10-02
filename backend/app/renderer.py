@@ -49,6 +49,19 @@ LEGACY = {
 CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare")
 
 
+def _guided(guide: np.ndarray, source: np.ndarray, radius: int, eps: float) -> np.ndarray:
+    """He, Sun and Tang's guided filter: source (a matte) fitted to guide (the picture's brightness) by a local linear
+    model within radius pixels; eps smooths where the guide is flat. Kept between 0 and 1."""
+    size = (2 * radius + 1, 2 * radius + 1)
+    mean = lambda x: cv2.boxFilter(x, cv2.CV_32F, size, borderType=cv2.BORDER_REFLECT)  # noqa: E731
+    m_i, m_p = mean(guide), mean(source)
+    var = mean(guide * guide) - m_i * m_i
+    cov = mean(guide * source) - m_i * m_p
+    a = cov / (var + eps)
+    b = m_p - a * m_i
+    return np.clip(mean(a) * guide + mean(b), 0, 1)
+
+
 def pin_at(clip: dict, local: float) -> list[tuple[float, float]] | None:
     """A clip's corner pin at a local time: its image's four corners (top left, top right, bottom right, bottom left)
     on the canvas, as fractions of the canvas, or None. A pin is four fixed corners ({"points": [[x, y] x 4]}) or a
@@ -1277,6 +1290,33 @@ class FrameRenderer:
             else:
                 distance = np.linalg.norm(chroma - target, axis=2) / math.sqrt(2)
                 keep = np.clip((distance - similarity) / blend, 0, 1)
+            refine = int(key.get("refine", 0) or 0)
+            if refine > 0:
+                # the key's matte refined against the picture's brightness, which video keeps at full size where it
+                # keeps colour at half: a guided filter (He, Sun and Tang) fits the matte to the brightness edge within
+                # refine pixels, so the edge is smooth and where the picture's edge is on every frame (a key on the
+                # colour alone stepped in 2 x 2 blocks along every edge and corner of the owner's screens; a vector
+                # outline carried from one frame drifted off the real edge as the phone turned)
+                keep = _guided(rgb @ np.array([0.299, 0.587, 0.114], np.float32), keep.astype(np.float32), refine, 1e-4)
+            glare_region = key.get("glare")
+            if isinstance(glare_region, dict) and glare_region.get("layer"):
+                # the screen's glare taken too: inside the tracked screen, kept clear of its edges by inset pixels (a
+                # carried outline may drift a pixel), a bright pixel whose two other channels rise evenly is glare on
+                # the glass, which no key tells by colour (its lead all but washed out); a glare layer gives its light
+                # back smoothly (left in the plate, the near-white core of the owner's upright phone's reflection was
+                # an opaque white smudge)
+                region = self.planar_alpha(
+                    {**original, "planarMatte": {"layers": [glare_region["layer"]], "feather": 0, "invert": False}}, w, h
+                )
+                if region is not None:
+                    inset = int(glare_region.get("inset", 6))
+                    region = cv2.GaussianBlur(
+                        cv2.erode(region, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * inset + 1, 2 * inset + 1))),
+                        (0, 0),
+                        max(1.0, inset / 3),
+                    )
+                    screenness, _, _ = self._screen_parts(rgb, region, "blue" if np.argmax(color) == 2 else "green")
+                    keep = np.minimum(keep, 1 - screenness * region)
             if key.get("holdout"):
                 # P7: a hold-out (core) matte: inside the chosen tracked layers the key takes nothing away
                 held = self.planar_alpha({**original, "planarMatte": {"layers": list(key["holdout"]), "feather": 0, "invert": False}}, w, h)
@@ -1305,7 +1345,9 @@ class FrameRenderer:
                     if cv2.contourArea(region) > 0.005 * w * h:
                         cv2.fillConvexPoly(taken, cv2.convexHull(region), 1)
                 taken = taken.astype(np.float32)
-                reach = max(8.0, 0.03 * max(w, h))
+                # (as far as a phone's bezel, about a hundredth of the frame: reaching 3% turned the teal wall round the
+                # owner's upright phone blue; glare on the screen is reached by the fill above, not by the reach)
+                reach = max(4.0, 0.008 * max(w, h))
                 near = np.clip(cv2.GaussianBlur(taken, (0, 0), reach) * 4.0, 0, 1) if taken.any() else taken
                 cleaned = rgb - (spill * near * np.maximum(lean, 0))[..., None] * (target / max(1e-6, float(np.linalg.norm(target))))
                 out[:, :, :3] = np.round(np.clip(cleaned, 0, 1) * top).astype(out.dtype)
@@ -1346,33 +1388,53 @@ class FrameRenderer:
         return screenness, light, lead_over
 
     def screen_cut(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
-        """A screen cut out of the clip by its tracked outline, a vector path (screenCut: layer, screen, grow, band,
-        spill): the outline, drawn anti-aliased and grown by a pixel so no green edge is left, is where the screen is;
-        within a band inside its edge the path alone decides (a key on video whose colour is stored at half size steps
-        along every edge); deeper in, what is in front of the screen (a finger) is told by its colour and kept, and the
-        screen's colour taken off what is kept near it. The picture below is pinned a little larger than the screen."""
+        """A phone's screen cut out of the clip (screenCut: layer, grow, dark, bright, spill): a screen is bright inside
+        a black bezel, and the picture's brightness is kept at full size (its colour at half). Inside the screen's
+        tracked outline, grown by grow pixels so a pixel of drift never leaves screen outside it, everything brighter
+        than the bezel goes: the screen, its glare, a glare's white core and the glass's pale rim alike, the edge being
+        the picture's own brightness edge, smooth and where it is on every frame; the dark bezel and notch stay. What is
+        in front of the screen stays too: skin and the like are warm or cool, where the screen and white glare are
+        even in red and blue. The screen's green is taken off what stays near it. The reflection comes back as light
+        from a glare layer. (Telling glare by colour per pixel flickered across the video's 8 x 8 blocks into specks;
+        a vector outline alone drifted off the real edge as the phone turned.)"""
         spec = clip.get("screenCut") or {}
         top = 65535.0 if out.dtype == np.uint16 else 255.0
         matte = self.planar_alpha({**clip, "planarMatte": {"layers": [spec.get("layer")], "feather": 0, "invert": False}}, w, h)
         if matte is None:
             return out
-        grow = max(0, round(float(spec.get("grow", 1.0))))
-        grown = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * grow + 1, 2 * grow + 1))) if grow else matte
-        band_px = max(1, round(float(spec.get("band", 3.0))))
-        band = np.clip(grown - cv2.erode(grown, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * band_px + 1, 2 * band_px + 1))), 0, 1)
+        grow = max(0, round(float(spec.get("grow", 2.0))))
+        inside = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * grow + 1, 2 * grow + 1))) if grow else matte
         rgb = out[:, :, :3].astype(np.float32) / top
-        screenness, _, lead_over = self._screen_parts(rgb, grown, str(spec.get("screen", "green")))
-        # the band makes the screen's edge the path's, over the bezel and the green's edge pixels, but never over what is
-        # clearly in front: skin and the like are uneven in the screen's two other channels (a fingertip crossing the
-        # screen's edge was cut along its outline on the owner's perspective shot)
-        r_, g_, b_ = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-        one, two = (r_, g_) if spec.get("screen") == "blue" else (r_, b_)
-        uneven = np.clip((np.abs(one - two) - 0.06) / 0.06, 0, 1)
-        cut = grown * np.maximum(screenness, band * (1 - uneven))
-        near = np.clip(cv2.GaussianBlur(grown, (0, 0), max(4.0, 0.03 * max(w, h))) * 3.0, 0, 1)
-        thrown = np.clip(lead_over, 0, 1) * near * (1 - cut) * float(spec.get("spill", 1.0))
-        channel = 2 if spec.get("screen") == "blue" else 1
-        rgb[:, :, channel] -= thrown
+        r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+        luma = rgb @ np.array([0.299, 0.587, 0.114], np.float32)
+        dark, bright = float(spec.get("dark", 0.12)), float(spec.get("bright", 0.28))
+        lit = np.clip((luma - dark) / max(1e-3, bright - dark), 0, 1)
+        lit = lit * lit * (3 - 2 * lit)  # smoothstep: a soft, even edge
+        green_screen = spec.get("screen") != "blue"
+        one, two = (r, b) if green_screen else (r, g)
+        lead = (g if green_screen else b) - np.maximum(one, two)
+        # in front: uneven in red and blue (skin), or not led by the screen's colour at all (a nail, a highlight on skin:
+        # on a green screen even white glare keeps green at or above red and blue; a fingernail's pale pink does not,
+        # and was cut through on the owner's perspective shot)
+        in_front = np.maximum(np.clip((np.abs(one - two) - 0.06) / 0.06, 0, 1), np.clip((0.005 - lead) / 0.03, 0, 1))
+        cut = inside * lit * (1 - in_front)
+        # the screen's light on what stays, taken off and given back in the new screen's colour (light: a hex, the
+        # replacement's average): only a lead of the screen's own colour is touched, so a teal wall, a wooden desk or a
+        # white one are left as they are however far it reaches, and fingers over the screen lose their green (a reach
+        # of a bezel's width left the fingers above the owner's perspective phone lit green)
+        reach = float(spec.get("reach", 0) or 0) or max(6.0, 0.04 * max(w, h))
+        near = np.clip(cv2.GaussianBlur(inside, (0, 0), reach) * 3.0, 0, 1)
+        # despill: "max" holds the screen's colour to the larger of the other two (a teal wall untouched), "average" to
+        # their mean, which takes the yellow a green screen casts on skin (green risen, still below red) as well
+        limit = (one + two) / 2 if spec.get("despill") == "average" else np.maximum(one, two)
+        thrown = np.clip((g if green_screen else b) - limit, 0, 1) * near * (1 - cut) * float(spec.get("spill", 1.0))
+        rgb[:, :, 1 if green_screen else 2] -= thrown
+        light = str(spec.get("light") or "").lstrip("#")
+        if len(light) == 6:
+            colour = np.array([int(light[k : k + 2], 16) for k in (0, 2, 4)], np.float32) / 255
+            luma_of = float(colour @ np.array([0.299, 0.587, 0.114], np.float32))
+            weight = 0.587 if green_screen else 0.114  # the luminance of the light taken off
+            rgb += (thrown * weight)[..., None] * (colour / max(luma_of, 1e-3))[None, None, :]
         out[:, :, :3] = np.round(np.clip(rgb, 0, 1) * top).astype(out.dtype)
         out[:, :, 3] = np.round(out[:, :, 3].astype(np.float32) * (1 - cut)).astype(out.dtype)
         return out
@@ -1389,6 +1451,11 @@ class FrameRenderer:
         result = np.zeros_like(out)
         if matte is None:
             return result
+        inset = int(spec.get("inset", 0) or 0)
+        if inset > 0:
+            # kept inside the screen by inset pixels and faded there: the glare is light on the glass, never the edge's
+            k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * inset + 1, 2 * inset + 1))
+            matte = cv2.GaussianBlur(cv2.erode(matte, k), (0, 0), inset / 2)
         rgb = out[:, :, :3].astype(np.float32) / top
         screenness, light, _ = self._screen_parts(rgb, matte, str(spec.get("screen", "green")))
         weight = matte * screenness
@@ -1633,7 +1700,7 @@ class FrameRenderer:
         if any(clip.get(key) for key in CPU_STEPS):
             return False
         keyed = clip.get("key") or {}
-        if keyed.get("spill") or keyed.get("holdout") or keyed.get("mode") == "difference":
+        if keyed.get("spill") or keyed.get("holdout") or keyed.get("mode") == "difference" or keyed.get("refine"):
             return False  # the device's key pass has no spill, hold-out or colour difference: the key is made on this side
         # A transition and a push change the layer only while they run; the
         # rest of the clip's frames stay on the device.

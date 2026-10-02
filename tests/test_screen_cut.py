@@ -34,6 +34,7 @@ def _plate(tmp_path):
     plate[90:130, 120:170] = (170, 250, 170)  # glare: the screen's green with white light over it
     plate[150:200, 220:250] = (190, 205, 150)  # a finger over the screen, lit green by it
     plate[160:190, 120:160] = (222, 248, 220)  # the glare's hottest part: the screen's lead all but gone
+    plate[205:225, 220:250] = (232, 222, 218)  # a fingernail: pale and nearly even, but not led by green
     path = tmp_path / "plate.png"
     Image.fromarray(plate).save(path)
     layer = {"id": "screen", "shapes": [{"points": screen.round(6).tolist()}], "reference": 0, "settings": {}}
@@ -68,6 +69,7 @@ def test_the_screen_is_cut_by_its_outline_and_what_is_in_front_stays(tmp_path):
     assert out[175, 140].max() <= 3  # its hottest part too
     finger = out[175, 235]
     assert finger[0] > 150 and finger[1] <= max(finger[0], finger[2]) + 2  # the finger kept, its green taken off
+    assert out[215, 235][0] > 200  # the fingernail kept
     assert np.abs(out[10, 10] - [116, 186, 198]).max() <= 2  # the wall
     assert "screenCut" in CPU_STEPS and "glare" in CPU_STEPS
 
