@@ -438,6 +438,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${propRow(t("row.similarity"), "keySim", 25, "%")}
         ${propRow(t("row.keyblend"), "keyBlend", 5, "%")}
         ${propRow(t("row.keyspill"), "keySpill", 0, "%")}
+        <div class="prop-row"><label>${t("row.keymode")}</label><select data-ref="key-mode" aria-label="${t("row.keymode")}"><option value="distance">${t("keymode.distance")}</option><option value="difference">${t("keymode.difference")}</option></select></div>
         <div class="text-add-hint">${t("key.note")}</div>
       </div>
     </div>`;
@@ -1488,14 +1489,18 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     const kb = Number(inputs.get("keyBlend")?.value ?? 5) / 100;
     const spill = Number(inputs.get("keySpill")?.value ?? 0) / 100;
     const holdout = engine.findClip(state.selectedClipId)?.clip.key?.holdout;  // a tracked hold-out stays as it is
+    const mode = (el.querySelector<HTMLSelectElement>('[data-ref="key-mode"]')?.value === "difference" ? "difference" : undefined) as "difference" | undefined;
     engine.dispatch("clip.key", {
       clipId: state.selectedClipId,
-      key: enabled ? { color: keyColor.value, similarity: sim || 0.25, blend: kb, spill, holdout } : null,
+      key: enabled ? { color: keyColor.value, similarity: sim || 0.25, blend: kb, spill, holdout, mode } : null,
     });
     keyOn.classList.toggle("is-on", enabled);
   };
   keyOn.addEventListener("click", () => dispatchKey(!keyOn.classList.contains("is-on")));
   keyColor.addEventListener("change", () => {
+    if (keyOn.classList.contains("is-on")) dispatchKey(true);
+  });
+  el.querySelector<HTMLSelectElement>('[data-ref="key-mode"]')?.addEventListener("change", () => {
     if (keyOn.classList.contains("is-on")) dispatchKey(true);
   });
   for (const ref of ["keySim", "keyBlend", "keySpill"]) {
@@ -1567,6 +1572,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       if (blInput && document.activeElement !== blInput && blInput.value !== bNext) {
         blInput.value = bNext;
       }
+      const modeSelect = el.querySelector<HTMLSelectElement>('[data-ref="key-mode"]');
+      if (modeSelect && document.activeElement !== modeSelect) modeSelect.value = clip.key.mode ?? "distance";
       const spInput = inputs.get("keySpill");
       const sNext = String(Math.round((clip.key.spill ?? 0) * 100));
       if (spInput && document.activeElement !== spInput && spInput.value !== sNext) {

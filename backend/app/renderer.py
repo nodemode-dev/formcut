@@ -1245,9 +1245,27 @@ class FrameRenderer:
             rgb = out[:, :, :3].astype(np.float32) / 255
             chroma = rgb - rgb.mean(2, keepdims=True)
             target = color - color.mean()
-            distance = np.linalg.norm(chroma - target, axis=2) / math.sqrt(2)
             similarity, blend = float(key.get("similarity", 0.25)), max(0.001, float(key.get("blend", 0.05)))
-            keep = np.clip((distance - similarity) / blend, 0, 1)
+            if key.get("mode") == "difference":
+                # a colour-difference key, as screen replacements use: how far the key colour's own channel stands
+                # above the larger of the other two, against how far it stands in the key colour itself; similarity and
+                # blend are shares of that. Black, grey and white have no difference and a colour leaning away from
+                # the key has less than none, so neither can be keyed however wide the key: on the owner's upright
+                # phone the hue distance, widened to take a reflection, took the notch, the bezel and the wall by the
+                # phone's rounded corners as well (all sit about 0.55 from green in hue), where this key leaves them
+                # whole. (A near-white hotspot of a reflection has little difference left, as little as the bezel:
+                # no key tells them apart by colour; a tracked matte over the screen's inside does.) The map is
+                # softened by a pixel first: compressed video carries its colour at half size, and a key on it alone
+                # steps along its edges in 2 x 2 blocks
+                lead = int(np.argmax(color))
+                others = [c for c in range(3) if c != lead]
+                own = float(color[lead] - max(color[others[0]], color[others[1]]))
+                excess = (rgb[:, :, lead] - np.maximum(rgb[:, :, others[0]], rgb[:, :, others[1]])) / max(own, 1e-3)
+                excess = cv2.GaussianBlur(excess.astype(np.float32), (0, 0), 0.8)
+                keep = 1 - np.clip((excess - similarity) / blend, 0, 1)
+            else:
+                distance = np.linalg.norm(chroma - target, axis=2) / math.sqrt(2)
+                keep = np.clip((distance - similarity) / blend, 0, 1)
             if key.get("holdout"):
                 # P7: a hold-out (core) matte: inside the chosen tracked layers the key takes nothing away
                 held = self.planar_alpha({**original, "planarMatte": {"layers": list(key["holdout"]), "feather": 0, "invert": False}}, w, h)
@@ -1515,8 +1533,8 @@ class FrameRenderer:
         if any(clip.get(key) for key in CPU_STEPS):
             return False
         keyed = clip.get("key") or {}
-        if keyed.get("spill") or keyed.get("holdout"):
-            return False  # the device's key pass has no spill or hold-out: the key is made on this side (P7)
+        if keyed.get("spill") or keyed.get("holdout") or keyed.get("mode") == "difference":
+            return False  # the device's key pass has no spill, hold-out or colour difference: the key is made on this side
         # A transition and a push change the layer only while they run; the
         # rest of the clip's frames stay on the device.
         entering = clip.get("transitionIn") or {}

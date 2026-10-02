@@ -79,7 +79,7 @@ def test_the_key_command_and_the_inspector_keep_spill_and_the_hold_out():
     project = (root / "engine" / "project.ts").read_text(encoding="utf-8")
     assert "spill: Math.min(1, Math.max(0, p.key.spill))" in project and "holdout: p.key.holdout.filter" in project
     inspector = (root / "ui" / "inspector-pane.ts").read_text(encoding="utf-8")
-    assert '"keySpill"' in inspector and "spill, holdout }" in inspector
+    assert '"keySpill"' in inspector and "spill, holdout, mode }" in inspector
 
 
 def test_spill_fades_with_distance_from_what_the_key_took(tmp_path):
@@ -111,3 +111,42 @@ def test_spill_fades_with_distance_from_what_the_key_took(tmp_path):
         renderer.close()
     assert np.abs(out[150, 1100] - [60, 140, 140]).max() <= 2  # a thousand pixels away: its own colour
     assert out[150, 105][1] < 135  # beside the screen: the green lean taken off
+
+
+def test_a_colour_difference_key_takes_the_screen_and_leaves_black_and_teal_whole(tmp_path):
+    """The owner's upright phone: a hue-distance key widened to take a reflection also took the notch, the bezel and the
+    teal wall by the rounded corners (all about 0.55 from green in hue). A colour-difference key keys by how far green
+    stands above the larger of red and blue: a reflection's pale green still stands well above, black and teal do not.
+    (A near-white hotspot does not, no more than the bezel: that is a tracked matte's work, not a key's.)"""
+    from app.media import ingest_path
+
+    picture = np.zeros((100, 400, 3), np.uint8)
+    picture[:, 0:80] = (20, 255, 20)  # the screen
+    picture[:, 80:160] = (160, 255, 160)  # the screen under a reflection: pale, still green well above the others
+    picture[:, 160:240] = (12, 12, 12)  # the bezel and notch
+    picture[:, 240:320] = (116, 186, 198)  # the teal wall
+    picture[:, 320:400] = (225, 225, 225)  # a white highlight on the bezel
+    path = tmp_path / "parts.png"
+    Image.fromarray(picture).save(path)
+    key = {"color": "#00ff00", "similarity": 0.15, "blend": 0.15, "mode": "difference"}
+    clip = {
+        "id": "c",
+        "kind": "image",
+        "label": "parts",
+        "start": 0,
+        "duration": 1,
+        "mediaId": ingest_path(path, "parts.png")["id"],
+        "key": key,
+    }
+    project = validate_document(
+        {"width": 400, "height": 100, "fps": 30, "activeTimeline": 0, "timelines": [{"tracks": [{"clips": [clip]}]}]}
+    )
+    renderer = FrameRenderer(project, 400)
+    try:
+        out = renderer.frame(0.5)[:, :, :3].astype(int)
+    finally:
+        renderer.close()
+    assert out[50, 40].sum() == 0 and out[50, 120].sum() == 0  # the screen and its reflection keyed out
+    assert np.abs(out[50, 200] - [12, 12, 12]).max() <= 2 and np.abs(out[50, 280] - [116, 186, 198]).max() <= 2
+    assert np.abs(out[50, 360] - [225, 225, 225]).max() <= 2  # black, teal and white whole
+    assert FrameRenderer._device_resident({"key": key}, []) is False
