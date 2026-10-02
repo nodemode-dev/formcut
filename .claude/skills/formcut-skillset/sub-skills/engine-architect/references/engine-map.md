@@ -50,7 +50,7 @@ The rest is written by hand.
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| planar_api.py | 632 | /api/planar | 8 |
+| planar_api.py | 663 | /api/planar | 9 |
 | presets.py | 620 | /api/presets | 9 |
 | project_files.py | 308 | /api/project-files | 6 |
 | project_packages.py | 312 | /api/projects | 4 |
