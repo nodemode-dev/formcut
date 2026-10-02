@@ -1233,10 +1233,11 @@ class FrameRenderer:
         # Only a key, a mask or a cutout changes the picture below; without them
         # this returned an unchanged copy, 9 ms a 1080p frame for nothing. The
         # one caller replaces its frame with the result, so no one shares it.
-        if not (clip.get("key") or clip.get("mask") or clip.get("cutout")):
+        if not (clip.get("key") or clip.get("mask") or clip.get("cutout") or clip.get("planarMatte")):
             return image
         out = image.copy()
         h, w = out.shape[:2]
+        original = clip  # the tracked matte reads the crop itself; the crop-adjusted copy is the mask's
         clip = self.masking_clip(clip)
         key = clip.get("key")
         if key:
@@ -1255,7 +1256,76 @@ class FrameRenderer:
             matte = self.cutout_alpha(clip, out)
             if matte is not None:
                 out[:, :, 3] = np.round(out[:, :, 3] * matte).astype(out.dtype)
+        planar = self.planar_alpha(original, w, h)
+        if planar is not None:
+            out[:, :, 3] = np.round(out[:, :, 3] * planar).astype(out.dtype)
         return out
+
+    def _planar_track(self, layer_id: str) -> tuple[list[int], dict, float, tuple[int, int]] | None:
+        """A planar layer's track from the engine's store (planar-tracks/<layer>.json), read again only when it
+        changes: its frames in order, their homographies, the media's frame rate and size."""
+        from .planar_api import STORE
+
+        path = STORE / f"{layer_id}.json"
+        try:
+            stamp = path.stat().st_mtime_ns
+        except OSError:
+            return None
+        cache = self.__dict__.setdefault("planar_tracks", {})
+        known = cache.get(layer_id)
+        if known is None or known[0] != stamp:
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                frames = {int(i): np.array(v, float).reshape(3, 3) for i, v in data["frames"].items()}
+                known = (stamp, sorted(frames), frames, float(data["fps"]), tuple(data["size"]))
+            except (OSError, ValueError, KeyError, TypeError):
+                return None
+            cache[layer_id] = known
+        return known[1], known[2], known[3], known[4]
+
+    def planar_alpha(self, clip: dict, w: int, h: int) -> np.ndarray | None:
+        """A clip's tracked matte, as Mocha AE's Apply Matte gives it (P3 of the planar tracking plan): the chosen
+        planar layers' shapes (each adding to or cutting from its layer) carried by their tracks to the clip's source
+        frame (self.matte_time; the nearest tracked frame held outside the track), in the decoded image's own pixels
+        (its crop and decode scale accounted for), the layers together, feathered, inverted if asked. None without
+        one."""
+        spec = clip.get("planarMatte")
+        if not isinstance(spec, dict):
+            return None
+        wanted = set(spec.get("layers") or [])
+        layers = [one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") in wanted and one.get("shapes")]
+        if not layers:
+            return None
+        left, top, right, bottom = crop_box(clip) or (0.0, 0.0, 0.0, 0.0)
+        full_w, full_h = w / max(1e-6, 1 - left - right), h / max(1e-6, 1 - top - bottom)
+        matte = np.zeros((h, w), np.uint8)
+        scale = 1.0
+        for layer in layers:
+            track = self._planar_track(str(layer["id"]))
+            homography = np.eye(3)
+            media_w, media_h = full_w, full_h
+            if track is not None:
+                order, frames, fps, (media_w, media_h) = track
+                index = round(self.matte_time * fps)
+                at = bisect.bisect_left(order, index)
+                nearest = min((order[k] for k in (at - 1, at) if 0 <= k < len(order)), key=lambda f: abs(f - index))
+                homography = frames[nearest]
+            scale = full_w / max(1.0, float(media_w))
+            layer_matte = np.zeros((h, w), np.uint8)
+            for wanted_mode in ("add", "subtract"):
+                for shape in layer["shapes"]:
+                    if (shape.get("mode") == "subtract") != (wanted_mode == "subtract"):
+                        continue
+                    pts = np.array(shape["points"], float) * [media_w, media_h]
+                    carried = cv2.perspectiveTransform(pts.reshape(-1, 1, 2), homography).reshape(-1, 2)
+                    local = carried * scale - [left * full_w, top * full_h]
+                    cv2.fillPoly(layer_matte, [np.round(local).astype(np.int32)], 0 if wanted_mode == "subtract" else 255)
+            matte = np.maximum(matte, layer_matte)
+        alpha = matte.astype(np.float32) / 255.0
+        feather = float(spec.get("feather", 0) or 0) * scale
+        if feather > 0:
+            alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
+        return 1.0 - alpha if spec.get("invert") else alpha
 
     def transition(self, image: np.ndarray, clip: dict, local: float) -> np.ndarray:
         if not image.flags.writeable:
@@ -1395,6 +1465,10 @@ class FrameRenderer:
             matte = self.cutout_alpha(adjusted, image)
             if matte is not None:
                 fields["matte"] = matte
+        planar = self.planar_alpha(clip, w, h)
+        if planar is not None:
+            # the tracked matte joins the mask the device already takes as one alpha
+            fields["mask"] = planar * fields["mask"] if "mask" in fields else planar
         return fields
 
     def _shader_of(self, clip: dict, local: float) -> tuple[str, float, list | None] | None:
@@ -1536,6 +1610,7 @@ class FrameRenderer:
                 image = self.prepared[key].copy()
                 if gpu.stack_active() and self._device_resident(clip, [], local):
                     transform = transform_at(clip, local)
+                    self.matte_time = source_time(clip, local)
                     fields = self._layer_fields(clip, image)
                     placed, alpha = self._matrix(image, transform), self._alpha(clip, local, transform)
                     staged = gpu_effects.effects_and_warp(
@@ -1614,6 +1689,7 @@ class FrameRenderer:
                     if clip.get("lutId"):
                         table, low, high = load_cube(clip["lutId"])
                         lut = (table, low, high, float(clip.get("lutIntensity", 1)))
+                    self.matte_time = source_time(clip, local)
                     fields = self._layer_fields(clip, image)
                     placed, alpha = self._matrix(image, transform), self._alpha(clip, local, transform)
                     shader = self._shader_of(clip, local)

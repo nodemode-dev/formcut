@@ -254,6 +254,17 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.planarMatte": {
+        const p = payload as { clipId: string; planarMatte: { layers: string[]; feather: number; invert: boolean } | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.planarMatte && p.planarMatte.layers.length) found.clip.planarMatte = structuredClone(p.planarMatte);
+        else delete found.clip.planarMatte;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.cornerPin": {
         const p = payload as { clipId: string; cornerPin: { points: number[][]; times?: number[] } | null };
         const found = this.findClip(p.clipId);

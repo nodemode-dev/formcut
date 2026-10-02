@@ -407,6 +407,9 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Matte for this clip|Cache pour ce clip|Maschera per questa clip|このクリップのマット|이 클립의 매트|Matte para este clipe|Маска для этого клипа|Bu klip için matte|此片段的遮罩|此片段的遮罩
+Matte applied to this clip|Cache appliqué à ce clip|Maschera applicata a questa clip|このクリップにマットを適用しました|이 클립에 매트를 적용했습니다|Matte aplicado a este clipe|Маска применена к этому клипу|Matte bu klibe uygulandı|已将遮罩应用到此片段|已將遮罩套用到此片段
+Remove tracked matte|Retirer le cache suivi|Rimuovi maschera tracciata|トラッキングマットを外す|트래킹 매트 제거|Remover matte rastreado|Убрать отслеженную маску|İzlenen matte'ı kaldır|移除跟踪遮罩|移除追蹤遮罩
 Apply to a clip|Appliquer à un clip|Applica a una clip|クリップに適用|클립에 적용|Aplicar a um clipe|Применить к клипу|Bir klibe uygula|应用到片段|套用到片段
 Clip|Clip|Clip|クリップ|클립|Clipe|Клип|Klip|片段|片段
 As|En tant que|Come|方式|방식|Como|Как|Biçim|方式|方式

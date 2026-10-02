@@ -119,9 +119,9 @@ def test_the_workspace_in_the_real_app(tmp_path):
                 time.sleep(1.5)
             page.click('[data-act="demo"]', timeout=20000)
             page.wait_for_selector(".clip.k-video", timeout=60000)
-            # the title dragged to the timeline's start, so it is on screen at the frames tracked below (the demo's
-            # video shows its media from 2 s at timeline 0; its swirl loses the plane within a dozen frames)
-            title = page.locator(".clip.k-text").first.bounding_box()
+            # the demo's picture dragged to the timeline's start, so it is on screen at the frames tracked below (the
+            # demo's video shows its media from 2 s at timeline 0; its swirl loses the plane within a dozen frames)
+            title = page.locator(".clip.k-image").first.bounding_box()
             page.mouse.move(title["x"] + title["width"] / 2, title["y"] + title["height"] / 2)
             page.mouse.down()
             page.mouse.move(title["x"] - 600, title["y"] + title["height"] / 2, steps=10)
@@ -176,9 +176,9 @@ def test_the_workspace_in_the_real_app(tmp_path):
             assert "matrix3d" in page.eval_on_selector(".pw [data-ref=inner]", "e => e.style.transform")
             shots = os.environ.get("FORMCUT_BROWSER_SHOTS")
             # P3: the track applied to another of the demo's clips as a corner pin
-            # the demo's title (0.5 to 3 s) is on screen at the tracked frames (about 2 s); its second video, at 8 s, is not
+            # the picture, now at the timeline's start, is on screen at the tracked frames
             targets = page.eval_on_selector_all('.pw [data-ref="target"] option', "els => els.map(e => [e.value, e.textContent])")
-            title = next((value for value, text in targets if "formcut demo" in text), None)
+            title = next((value for value, text in targets if "effect-example-image" in text), None)
             assert title, targets
             page.select_option('.pw [data-ref="target"]', title)
             page.select_option('.pw [data-ref="kind"]', "corner-pin")
@@ -186,6 +186,12 @@ def test_the_workspace_in_the_real_app(tmp_path):
             page.click('.pw [data-ref="apply"]')
             page.wait_for_function("b => document.querySelector('.pw [data-ref=status]').textContent !== b", arg=before, timeout=30000)
             assert "Applied" in page.inner_text(".pw [data-ref=status]"), page.inner_text(".pw [data-ref=status]")
+            # and the tracked clip's own layers as its matte
+            page.select_option('.pw [data-ref="kind"]', "matte")
+            before = page.inner_text(".pw [data-ref=status]")
+            page.click('.pw [data-ref="apply"]')
+            page.wait_for_function("b => document.querySelector('.pw [data-ref=status]').textContent !== b", arg=before, timeout=10000)
+            assert "Matte" in page.inner_text(".pw [data-ref=status]"), page.inner_text(".pw [data-ref=status]")
             if shots:
                 page.screenshot(path=f"{shots}/workspace.png")
             page.click('.pw [data-ref="done"]')
@@ -193,6 +199,12 @@ def test_the_workspace_in_the_real_app(tmp_path):
             time.sleep(3)
             if shots:
                 page.screenshot(path=f"{shots}/editor.png")
+                # a second in, where the demo's picture has faded in (its fade-in is half a second); the pin holds its
+                # last tracked corners past the tracked frames. The sandbox's one core takes seconds for a new frame.
+                for _ in range(30):
+                    page.keyboard.press("ArrowRight")
+                time.sleep(8)
+                page.screenshot(path=f"{shots}/editor-1s.png")
             browser.close()
         saved = []
         listing = json.loads(urllib.request.urlopen(base + "/api/projects").read())  # noqa: S310 - the test's own local engine
@@ -214,6 +226,14 @@ def test_the_workspace_in_the_real_app(tmp_path):
             if c.get("cornerPin")
         ]
         assert pins and len(pins[0]["times"]) == len(pins[0]["points"]) > 0 and len(pins[0]["points"][0]) == 8
+        mattes = [
+            c["planarMatte"]
+            for tl in doc.get("timelines", [])
+            for tr in tl.get("tracks", [])
+            for c in tr.get("clips", [])
+            if c.get("planarMatte")
+        ]
+        assert mattes and mattes[0]["layers"] and mattes[0]["feather"] == 2 and mattes[0]["invert"] is False
         assert not errors, errors
     finally:
         server.terminate()

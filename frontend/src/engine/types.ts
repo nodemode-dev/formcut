@@ -137,6 +137,8 @@ export interface Clip {
   // a corner pin: the clip's image corners onto four canvas points (fractions), fixed or as a track of samples timed in
   // the clip's local seconds (from a planar layer's surface, P3); its place, size and turn give way to it
   cornerPin?: { points: number[][]; times?: number[] };
+  // the clip's own planar layers as its matte (Mocha's Apply Matte, P3): their shapes carried by their tracks
+  planarMatte?: { layers: string[]; feather: number; invert: boolean };
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;

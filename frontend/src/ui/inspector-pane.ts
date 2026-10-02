@@ -55,7 +55,9 @@ function bareRow(label: string, key: string, value: number, unit: string): strin
 
 export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLElement {
   const sel = selectedTransform(engine);
-  const pinned = !!(engine.snapshot.selectedClipId && engine.findClip(engine.snapshot.selectedClipId)?.clip.cornerPin);
+  const selected = engine.snapshot.selectedClipId ? engine.findClip(engine.snapshot.selectedClipId)?.clip : undefined;
+  const pinned = !!selected?.cornerPin;
+  const matted = !!selected?.planarMatte;
   const el = document.createElement("section");
   el.className = "pane pane-inspector";
   el.dataset.empty = String(!engine.snapshot.selectedClipId);
@@ -213,6 +215,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         <div class="prop-row"><label>${t("track.followRotation")}</label><button class="toggle" data-ref="track-rotation" aria-label="${t("track.followRotation")}"></button></div>
         <button class="tool-chip" data-ref="track-btn">${icon("search")}${t("track.btn")}</button>
         <button class="tool-chip" data-ref="planar-btn">${icon("layers")}${t("planar.open")}</button>
+        ${matted ? `<button class="tool-chip" data-ref="matte-remove">${icon("close")}${t("matte.remove")}</button>` : ""}
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
       </div>

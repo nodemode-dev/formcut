@@ -1663,3 +1663,4 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pw-buttons progress { flex: 1; max-width: 320px; }
 @media (max-width: 860px) { .pw-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); } .pw-side { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--edge); } }
 .pw-up svg { transform: rotate(180deg); }
+.pw-check { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }

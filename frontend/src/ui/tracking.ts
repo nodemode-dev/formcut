@@ -14,6 +14,10 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
     toggle.classList.toggle("is-on", follow[key]);
     toggle.addEventListener("click", () => { follow[key] = toggle.classList.toggle("is-on"); });
   }
+  root.querySelector<HTMLElement>('[data-ref="matte-remove"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    if (id) engine.dispatch("clip.planarMatte", { clipId: id, planarMatte: null });
+  });
   // a clip's corner pin (from a planar layer, P3) taken off: its own place, size and turn back in charge
   root.querySelector<HTMLElement>('[data-ref="pin-remove"]')?.addEventListener("click", () => {
     const id = engine.snapshot.selectedClipId;

@@ -41,6 +41,7 @@ ABSENT = (
     "cutout",
     "key",
     "cornerPin",  # a perspective warp: only the frame renderer places it (both graph paths refuse it here)
+    "planarMatte",  # a tracked matte: the frame renderer's mask
     "stabilise",
     "colour",
     "colorGrade",
