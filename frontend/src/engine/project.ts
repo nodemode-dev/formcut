@@ -254,6 +254,18 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.planar": {
+        // the Track workspace's layers on the clip, kept with the project (the tracks themselves are the engine's)
+        const p = payload as { clipId: string; planar: import("./types").ClipPlanar | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.planar && p.planar.layers.length) found.clip.planar = structuredClone(p.planar);
+        else delete found.clip.planar;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.cutout": {
         // There was no such command. Everything that dispatched it, the brush
         // clear and the cutout flow, did nothing at all and said nothing, which

@@ -211,6 +211,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         <div class="prop-row"><label>${t("track.followScale")}</label><button class="toggle" data-ref="track-scale" aria-label="${t("track.followScale")}"></button></div>
         <div class="prop-row"><label>${t("track.followRotation")}</label><button class="toggle" data-ref="track-rotation" aria-label="${t("track.followRotation")}"></button></div>
         <button class="tool-chip" data-ref="track-btn">${icon("search")}${t("track.btn")}</button>
+        <button class="tool-chip" data-ref="planar-btn">${icon("layers")}${t("planar.open")}</button>
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
       </div>
       <div class="section" data-section="mask" data-feature="section.mask">

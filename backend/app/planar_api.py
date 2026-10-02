@@ -24,6 +24,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from . import jobs
@@ -241,11 +242,23 @@ def track_layer(body: TrackBody) -> dict:
             if (matte > 0).sum() < 64:
                 raise ValueError("the layer's shapes cover almost nothing on the frame tracked from")
             tracker = PlanarTracker(frame, matte, settings)
-            done = 0
+            done, faint, lost = 0, 0, None
+            report(0.0, f"Tracking from frame {first}")
             for index, frame in frames:
                 if cancelled():
                     break
                 h, confidence = tracker.step(frame, exclude_at(index) if exclude_at else None)
+                # a plane lost: twelve frames running with almost no confidence end the track there, what came
+                # before it kept (Mocha drifts on; stopping says where it went wrong)
+                faint = faint + 1 if confidence < 0.05 and settings.motion != "manual" else 0
+                if faint >= 12:
+                    way = 1 if last >= first else -1
+                    lost = index - 11 * way  # the first of the twelve, in the order tracked
+                    for drop in range(min(lost, index), max(lost, index) + 1):
+                        data["frames"].pop(str(drop), None)
+                        data["confidence"].pop(str(drop), None)
+                    done -= 11
+                    break
                 full = h @ start_h  # reference to frame: the frame tracked from, then on from it
                 full = full / full[2, 2]
                 data["frames"][str(index)] = full.ravel().round(9).tolist()
@@ -260,7 +273,8 @@ def track_layer(body: TrackBody) -> dict:
                     confidence=round(confidence, 3),
                 )
             write_json(path_of, data)
-            return {"layer": body.layer.id, "tracked": done, "from": first, "to": first + (done if last >= first else -done)}
+            out = {"layer": body.layer.id, "tracked": done, "from": first, "to": first + (done if last >= first else -done)}
+            return {**out, "lost": lost} if lost is not None else out
         finally:
             lock.release()
 
@@ -314,3 +328,25 @@ def clear_track(layer_id: str, start: int | None = None, stop: int | None = None
         data["confidence"].pop(i, None)
     write_json(path, data)
     return {"cleared": len(gone)}
+
+
+@router.get("/media/{media_id}")
+def media_frames(media_id: str) -> dict:
+    """What the Track workspace needs of a media file: its frame rate, size and frame count."""
+    _, fps, width, height, count = _video(media_id)
+    return {"fps": fps, "width": width, "height": height, "frames": count}
+
+
+@router.get("/frame/{media_id}")
+def media_frame(media_id: str, index: int = 0, width: int = 0) -> Response:
+    """One frame of a media file as a JPEG, at its own size or scaled down to width (the workspace's viewer)."""
+    source, fps, full_w, full_h, count = _video(media_id)
+    frame = next(_read(source, fps, full_w, full_h, max(0, min(count - 1, index)), 1), None)
+    if frame is None:
+        raise HTTPException(404, "that frame could not be read")
+    if 0 < width < full_w:
+        frame = cv2.resize(frame, (width, max(2, round(full_h * width / full_w))), interpolation=cv2.INTER_AREA)
+    ok, data = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    if not ok:
+        raise HTTPException(500, "the frame could not be encoded")
+    return Response(data.tobytes(), media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})

@@ -131,6 +131,9 @@ export interface Clip {
   transitionIn?: ClipTransition;
   keyframes?: Keyframe[];
   key?: ClipKey;
+  // the Track workspace's layers (planar tracking): shapes, the frame they are drawn on, settings, a surface; the
+  // per-frame track itself is kept by the engine per layer (planar-tracks/<layer id>.json)
+  planar?: ClipPlanar;
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;
@@ -287,3 +290,27 @@ export function defaultTransform(): ClipTransform {
     flipV: false,
   };
 }
+
+export interface PlanarShape {
+  points: number[][];  // x, y in the frame's unit square, on the layer's reference frame
+  mode: "add" | "subtract";
+}
+
+export interface PlanarLayer {
+  id: string;
+  name: string;
+  color: string;
+  shapes: PlanarShape[];
+  reference: number;  // source seconds: the frame the shapes are drawn on
+  settings: Record<string, unknown>;  // as planar.Settings names them
+  surface?: number[][];  // four corners in the reference frame's unit square
+  visible: boolean;
+  tracking: boolean;
+  locked: boolean;
+}
+
+export interface ClipPlanar {
+  version: 1;
+  layers: PlanarLayer[];
+}
+

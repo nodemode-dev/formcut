@@ -407,6 +407,54 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Stopped at frame|Arrêté à l'image|Fermato al fotogramma|停止したフレーム:|멈춘 프레임:|Parado no quadro|Остановлено на кадре|Şu karede durdu:|停止于帧|停止於影格
+Lost the plane at frame|Plan perdu à l'image|Piano perso al fotogramma|平面を見失ったフレーム:|평면을 놓친 프레임:|Plano perdido no quadro|Плоскость потеряна на кадре|Düzlem şu karede kayboldu:|平面丢失于帧|平面遺失於影格
+Layers|Calques|Livelli|レイヤー|레이어|Camadas|Слои|Katmanlar|图层|圖層
+New layer|Nouveau calque|Nuovo livello|新規レイヤー|새 레이어|Nova camada|Новый слой|Yeni katman|新建图层|新增圖層
+Select and move points|Sélectionner et déplacer des points|Seleziona e sposta i punti|ポイントを選択して移動|포인트 선택 및 이동|Selecionar e mover pontos|Выбрать и двигать точки|Noktaları seç ve taşı|选择并移动点|選取並移動點
+Draw a shape (double-click or Enter closes it)|Dessiner une forme (double-clic ou Entrée la ferme)|Disegna una forma (doppio clic o Invio la chiude)|シェイプを描く（ダブルクリックまたは Enter で閉じる）|셰이프 그리기(더블클릭 또는 Enter로 닫기)|Desenhar uma forma (clique duplo ou Enter a fecha)|Нарисовать фигуру (двойной щелчок или Enter замыкает)|Şekil çiz (çift tıklama veya Enter kapatır)|绘制形状（双击或回车闭合）|繪製形狀（雙擊或 Enter 閉合）
+Draw a rectangle|Dessiner un rectangle|Disegna un rettangolo|長方形を描く|사각형 그리기|Desenhar um retângulo|Нарисовать прямоугольник|Dikdörtgen çiz|绘制矩形|繪製矩形
+Delete shape|Supprimer la forme|Elimina forma|シェイプを削除|셰이프 삭제|Excluir forma|Удалить фигуру|Şekli sil|删除形状|刪除形狀
+Surface|Surface|Superficie|サーフェス|서피스|Superfície|Поверхность|Yüzey|平面|平面
+Grid|Grille|Griglia|グリッド|그리드|Grade|Сетка|Izgara|网格|網格
+Trace|Trace|Traccia|軌跡|궤적|Rastro|След|İz|轨迹|軌跡
+Stabilised|Stabilisé|Stabilizzato|スタビライズ|안정화|Estabilizado|Стабилизировано|Sabitlenmiş|稳定视图|穩定檢視
+Align surface|Aligner la surface|Allinea superficie|サーフェスを合わせる|서피스 맞추기|Alinhar superfície|Выровнять поверхность|Yüzeyi hizala|对齐平面|對齊平面
+Track backwards|Suivre en arrière|Traccia all'indietro|逆方向にトラッキング|뒤로 트래킹|Rastrear para trás|Трекинг назад|Geriye izle|向后跟踪|向後追蹤
+Track one frame back|Suivre une image en arrière|Traccia un fotogramma indietro|1フレーム戻ってトラッキング|한 프레임 뒤로 트래킹|Rastrear um quadro para trás|Трекинг на кадр назад|Bir kare geri izle|向后跟踪一帧|向後追蹤一格
+Track one frame forward|Suivre une image en avant|Traccia un fotogramma avanti|1フレーム進んでトラッキング|한 프레임 앞으로 트래킹|Rastrear um quadro para frente|Трекинг на кадр вперёд|Bir kare ileri izle|向前跟踪一帧|向前追蹤一格
+Track forwards|Suivre en avant|Traccia in avanti|順方向にトラッキング|앞으로 트래킹|Rastrear para frente|Трекинг вперёд|İleri izle|向前跟踪|向前追蹤
+Layer name|Nom du calque|Nome del livello|レイヤー名|레이어 이름|Nome da camada|Имя слоя|Katman adı|图层名称|圖層名稱
+Visible|Visible|Visibile|表示|표시|Visível|Видимый|Görünür|可见|可見
+Track this layer|Suivre ce calque|Traccia questo livello|このレイヤーをトラッキング|이 레이어 트래킹|Rastrear esta camada|Трекинг этого слоя|Bu katmanı izle|跟踪此图层|追蹤此圖層
+Locked|Verrouillé|Bloccato|ロック|잠김|Bloqueada|Заблокирован|Kilitli|已锁定|已鎖定
+Move in front|Mettre devant|Porta davanti|前面へ移動|앞으로 이동|Trazer para frente|Переместить вперёд|Öne taşı|移到前面|移到前面
+Delete layer|Supprimer le calque|Elimina livello|レイヤーを削除|레이어 삭제|Excluir camada|Удалить слой|Katmanı sil|删除图层|刪除圖層
+Draw a shape around a flat surface to track: a screen, a sign, a wall|Dessinez une forme autour d'une surface plane : un écran, un panneau, un mur|Disegna una forma attorno a una superficie piana: uno schermo, un cartello, un muro|平らな面を囲むシェイプを描きます：画面、看板、壁|평평한 면을 둘러싸는 셰이프를 그리세요: 화면, 간판, 벽|Desenhe uma forma em volta de uma superfície plana: uma tela, uma placa, uma parede|Нарисуйте фигуру вокруг плоской поверхности: экрана, вывески, стены|Düz bir yüzeyin çevresine şekil çizin: ekran, tabela, duvar|围绕要跟踪的平面绘制形状：屏幕、招牌、墙面|圍繞要追蹤的平面繪製形狀：螢幕、招牌、牆面
+Layer|Calque|Livello|レイヤー|레이어|Camada|Слой|Katman|图层|圖層
+Changing a tracked layer's shapes or settings starts its track afresh. Go ahead?|Modifier les formes ou les réglages d'un calque suivi recommence son suivi. Continuer ?|Cambiare le forme o le impostazioni di un livello tracciato ne ricomincia il tracciamento. Procedere?|トラッキング済みレイヤーのシェイプや設定を変えると、トラッキングはやり直しになります。続けますか？|트래킹된 레이어의 셰이프나 설정을 바꾸면 트래킹이 처음부터 다시 시작됩니다. 계속할까요?|Alterar as formas ou ajustes de uma camada rastreada reinicia o rastreamento. Continuar?|Изменение фигур или настроек отслеженного слоя начинает трекинг заново. Продолжить?|İzlenmiş bir katmanın şekillerini veya ayarlarını değiştirmek izlemeyi baştan başlatır. Devam edilsin mi?|更改已跟踪图层的形状或设置会让跟踪重新开始。继续吗？|變更已追蹤圖層的形狀或設定會讓追蹤重新開始。要繼續嗎？
+Delete this layer and its track?|Supprimer ce calque et son suivi ?|Eliminare questo livello e il suo tracciamento?|このレイヤーとトラッキングを削除しますか？|이 레이어와 트래킹을 삭제할까요?|Excluir esta camada e seu rastreamento?|Удалить этот слой и его трекинг?|Bu katman ve izi silinsin mi?|删除此图层及其跟踪？|刪除此圖層及其追蹤？
+Auto|Auto|Auto|自動|자동|Auto|Авто|Otomatik|自动|自動
+Translation|Translation|Traslazione|位置|이동|Translação|Смещение|Öteleme|平移|平移
+Shear|Cisaillement|Inclinazione|シアー|기울이기|Cisalhamento|Сдвиг|Eğme|错切|錯切
+Perspective|Perspective|Prospettiva|パース|원근|Perspectiva|Перспектива|Perspektif|透视|透視
+Input channel|Canal d'entrée|Canale di ingresso|入力チャンネル|입력 채널|Canal de entrada|Входной канал|Giriş kanalı|输入通道|輸入通道
+Luminance|Luminance|Luminanza|輝度|휘도|Luminância|Яркость|Parlaklık|亮度|亮度
+Auto channel|Canal automatique|Canale automatico|自動チャンネル|자동 채널|Canal automático|Авто-канал|Otomatik kanal|自动通道|自動通道
+Min % pixels used|% min. de pixels utilisés|% min. di pixel usati|使用ピクセルの最小 %|사용 픽셀 최소 %|% mín. de pixels usados|Мин. % используемых пикселей|Kullanılan en az piksel %|最小像素使用率 %|最小像素使用率 %
+Smoothing level|Niveau de lissage|Livello di smussatura|スムージング|스무딩 수준|Nível de suavização|Уровень сглаживания|Yumuşatma düzeyi|平滑级别|平滑等級
+Large motion|Grand mouvement|Movimento ampio|大きな動き|큰 움직임|Movimento grande|Большое движение|Büyük hareket|大幅运动|大幅運動
+Small motion|Petit mouvement|Movimento piccolo|小さな動き|작은 움직임|Movimento pequeno|Малое движение|Küçük hareket|小幅运动|小幅運動
+Manual|Manuel|Manuale|手動|수동|Manual|Вручную|Elle|手动|手動
+Search area|Zone de recherche|Area di ricerca|検索範囲|검색 영역|Área de busca|Область поиска|Arama alanı|搜索区域|搜尋區域
+Zoom %|Zoom %|Zoom %|ズーム %|확대 %|Zoom %|Зум %|Yakınlaştırma %|缩放 %|縮放 %
+Go to the layer's reference frame or a tracked frame|Allez à l'image de référence du calque ou à une image suivie|Vai al fotogramma di riferimento del livello o a uno tracciato|レイヤーの基準フレームかトラッキング済みフレームへ移動してください|레이어의 기준 프레임이나 트래킹된 프레임으로 이동하세요|Vá ao quadro de referência da camada ou a um quadro rastreado|Перейдите к опорному кадру слоя или к отслеженному кадру|Katmanın referans karesine veya izlenmiş bir kareye gidin|请转到图层的参考帧或已跟踪的帧|請移到圖層的參考影格或已追蹤的影格
+Draw a shape on the layer first|Dessinez d'abord une forme sur le calque|Disegna prima una forma sul livello|まずレイヤーにシェイプを描いてください|먼저 레이어에 셰이프를 그리세요|Desenhe primeiro uma forma na camada|Сначала нарисуйте фигуру на слое|Önce katmana bir şekil çizin|请先在图层上绘制形状|請先在圖層上繪製形狀
+Tracking frame|Suivi de l'image|Tracciamento del fotogramma|フレームをトラッキング中|프레임 트래킹 중|Rastreando o quadro|Трекинг кадра|Kare izleniyor|正在跟踪帧|正在追蹤影格
+Frames tracked:|Images suivies :|Fotogrammi tracciati:|トラッキングしたフレーム:|트래킹한 프레임:|Quadros rastreados:|Отслежено кадров:|İzlenen kareler:|已跟踪帧数：|已追蹤影格：
+This clip's media cannot be read|Le média de ce clip est illisible|Il media di questa clip non è leggibile|このクリップのメディアを読み込めません|이 클립의 미디어를 읽을 수 없습니다|A mídia deste clipe não pode ser lida|Медиа этого клипа не читается|Bu klibin medyası okunamıyor|无法读取此片段的媒体|無法讀取此片段的媒體
+Track surface…|Suivre une surface…|Traccia superficie…|サーフェスをトラッキング…|서피스 트래킹…|Rastrear superfície…|Трекинг поверхности…|Yüzey izle…|跟踪平面…|追蹤平面…
+Select a video clip to track|Sélectionnez un clip vidéo à suivre|Seleziona una clip video da tracciare|トラッキングするビデオクリップを選んでください|트래킹할 비디오 클립을 선택하세요|Selecione um clipe de vídeo para rastrear|Выберите видеоклип для трекинга|İzlemek için bir video klibi seçin|请选择要跟踪的视频片段|請選取要追蹤的影片片段
 Prompt wrap|Suite de prompts|Sequenza di prompt|プロンプトラップ|프롬프트 랩|Sequência de prompts|Набор запросов|İstem dizisi|提示词序列|提示詞序列
 Runs a prompt-wrap.json on its own: each entry's prompt, size, steps, seed and LoRAs, nothing from the settings above|Exécute un prompt-wrap.json seul : le prompt, la taille, les étapes, la graine et les LoRA de chaque entrée, rien des réglages ci-dessus|Esegue un prompt-wrap.json da solo: prompt, dimensioni, passi, seed e LoRA di ogni voce, nulla delle impostazioni sopra|prompt-wrap.json を単独で実行します：各項目のプロンプト、サイズ、ステップ、シード、LoRA を使い、上の設定は使いません|prompt-wrap.json을 단독으로 실행합니다. 각 항목의 프롬프트, 크기, 단계, 시드, LoRA를 쓰며 위의 설정은 쓰지 않습니다|Executa um prompt-wrap.json sozinho: prompt, tamanho, passos, semente e LoRAs de cada entrada, nada dos ajustes acima|Запускает prompt-wrap.json сам по себе: запрос, размер, шаги, сид и LoRA каждой записи, ничего из настроек выше|Bir prompt-wrap.json'ı tek başına çalıştırır: her girdinin istemi, boyutu, adımları, tohumu ve LoRA'ları; yukarıdaki ayarlardan hiçbir şey|单独运行 prompt-wrap.json：使用每个条目的提示词、尺寸、步数、种子和 LoRA，不使用上面的任何设置|單獨執行 prompt-wrap.json：使用每個項目的提示詞、尺寸、步數、種子和 LoRA，不使用上面的任何設定
 Run wrap|Lancer la suite|Esegui sequenza|ラップを実行|랩 실행|Executar sequência|Запустить набор|Diziyi çalıştır|运行序列|執行序列

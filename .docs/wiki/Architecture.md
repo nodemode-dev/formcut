@@ -176,5 +176,21 @@ reference and its confidence are kept in `planar-tracks/<layer>.json` in the dat
 job keeps its frames and the next carries on. GET /api/planar/track/<layer>?surface=x0,y0,...,x3,y3 reads them back
 with the surface's corners on every frame; DELETE clears all or a range (start, stop). A layer whose media, shapes,
 reference or settings change starts a fresh track. Frames are read at full size by ffmpeg (backwards in chunks read
-forwards). Nothing in the interface uses it yet: the Track workspace is P2 (DEV_PLAN_planar_tracking.md in the
-planning docs).
+forwards). Every estimate is checked as sound before use
+(finite, the plane's box still convex and the same way round, a twentieth to twenty times its area); a step that
+fails anywhere gives the prediction with no confidence, and twelve frames running near zero end the job there with
+`lost` in its result, the frames before kept. The job reports `frame` and `confidence` as it goes. GET
+/api/planar/media/<id> gives a media file's frame rate, size and count; GET /api/planar/frame/<id>?index=&width= one
+frame as a JPEG.
+
+The Track workspace (`frontend/src/ui/planar-workspace.ts`, P2) opens from the inspector's Track section (Animation
+tab: Track surface) for the selected video clip, full screen at the viewer's level. A side panel: layers (visibility,
+tracking, lock, name, moving in front, delete; higher is in front and excludes what it covers from the layers below),
+shape tools (select and move points, draw a polygon that a double click or Enter closes, rectangle; add or subtract),
+and the track settings as Mocha names them (rotation brings scale, shear rotation, perspective all). The viewer draws
+the frame (fetched from the engine) with the layers' shapes and surfaces carried by their tracks, in the media's own
+pixels: surface, grid, corner trace, matte, and a stabilised view that moves the picture by the inverse track. The
+transport tracks backwards, a frame back, stops, a frame forward and forwards, following the job frame by frame, with
+a confidence strip under the scrubber. Shapes and the surface are kept in the reference frame's coordinates; changing
+a tracked layer's shapes or settings starts its track afresh, asked first. Done keeps the layers on the clip
+(`clip.planar`, a project command with undo); the per-frame tracks stay the engine's.

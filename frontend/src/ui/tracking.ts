@@ -1,6 +1,7 @@
 import type { ProjectEngine } from "../engine/project";
 import { api } from "../engine/api";
 import { t } from "../i18n";
+import { openPlanarWorkspace } from "./planar-workspace";
 
 // Whether a pinned clip also grows and turns with the subject; kept while the
 // inspector redraws, so the choice holds from one clip to the next.
@@ -13,6 +14,15 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
     toggle.classList.toggle("is-on", follow[key]);
     toggle.addEventListener("click", () => { follow[key] = toggle.classList.toggle("is-on"); });
   }
+  // the Track workspace: planar tracking of the selected video clip (planar-workspace.ts)
+  root.querySelector<HTMLElement>('[data-ref="planar-btn"]')?.addEventListener("click", () => {
+    const project = engine.snapshot;
+    const clip = project.selectedClipId ? engine.findClip(project.selectedClipId)?.clip : undefined;
+    const hint = root.querySelector<HTMLElement>('[data-ref="track-hint"]');
+    if (!clip || clip.kind !== "video" || !clip.mediaId) { if (hint) hint.textContent = t("planar.needVideo"); return; }
+    engine.pause();
+    openPlanarWorkspace(engine, clip.id);
+  });
   const button = root.querySelector<HTMLElement>('[data-ref="track-btn"]')!;
   const hint = root.querySelector<HTMLElement>('[data-ref="track-hint"]')!;
   let pick: AbortController | undefined;

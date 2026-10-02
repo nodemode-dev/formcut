@@ -182,3 +182,69 @@ def test_bad_requests_are_named(shot):
     )
     assert client.post("/api/planar/track", json={"media_id": "0" * 32, "layer": layer, "start": 0, "stop": 1}).status_code == 404
     assert client.get("/api/planar/track/nothing-here").status_code == 404
+
+
+def test_a_plane_that_vanishes_ends_the_track_there_not_in_an_error(tmp_path):
+    """2.3.6: in the workspace's first run a lost plane stopped the job with "Singular matrix". Now a step that cannot
+    be made gives no confidence, and twelve such frames end the track where the plane went, the frames before kept."""
+    from app.media import ingest_path
+
+    s = planar_bench.Scenario(**{**planar_bench.SCENARIOS["moderate"].__dict__, "frames": 12})
+    frames, truth, _ = planar_bench.shot(s)
+    rng = np.random.default_rng(5)
+    frames += [(rng.random((s.height, s.width, 3)) * 255).astype(np.uint8) for _ in range(24)]  # the plane gone
+    path = tmp_path / "gone.mkv"
+    encode = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "bgr24",
+            "-s",
+            f"{s.width}x{s.height}",
+            "-r",
+            "30",
+            "-i",
+            "-",
+            "-c:v",
+            "ffv1",
+            "-pix_fmt",
+            "bgr0",
+            str(path),
+        ],
+        stdin=subprocess.PIPE,
+    )
+    for frame in frames:
+        encode.stdin.write(frame.tobytes())
+    encode.stdin.close()
+    assert encode.wait() == 0
+    media_id = ingest_path(path, "gone.mkv")["id"]
+    client = _client()
+    done = _finish(
+        client,
+        client.post(
+            "/api/planar/track",
+            json={"media_id": media_id, "layer": _layer(truth, (s.width, s.height), layer_id="gone"), "start": 0, "stop": 35 / 30},
+        ).json()["job_id"],
+    )
+    assert done["status"] == "done", done
+    assert 11 <= done["result"]["lost"] <= 14, done["result"]
+    kept = client.get("/api/planar/track/gone").json()["frames"]
+    assert kept[0] == 0 and max(kept) < done["result"]["lost"]
+
+
+def test_a_step_on_noise_has_no_confidence_and_raises_nothing():
+    from app.planar import PlanarTracker, Settings
+
+    rng = np.random.default_rng(3)
+    first = (rng.random((180, 320, 3)) * 255).astype(np.uint8)
+    matte = np.zeros((180, 320), np.uint8)
+    matte[40:140, 80:240] = 255
+    tracker = PlanarTracker(first, matte, Settings(perspective=True))
+    for _ in range(5):
+        h, confidence = tracker.step((rng.random((180, 320, 3)) * 255).astype(np.uint8))
+        assert np.all(np.isfinite(h)) and confidence < 0.3
