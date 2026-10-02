@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import subprocess
 import threading
@@ -350,3 +351,111 @@ def media_frame(media_id: str, index: int = 0, width: int = 0) -> Response:
     if not ok:
         raise HTTPException(500, "the frame could not be encoded")
     return Response(data.tobytes(), media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+
+class ApplyBody(BaseModel):
+    project: dict
+    tracked_clip: str  # the clip whose media the layer was tracked on
+    layer_id: str
+    target_clip: str  # the clip the result goes on
+    kind: str = "corner-pin"  # "corner-pin" or "transform"
+
+
+def _surface_on_canvas(project: dict, tracked: dict, layer: dict, data: dict) -> list[tuple[float, list[list[float]]]]:
+    """The layer's surface on the canvas at every tracked frame inside the tracked clip: (timeline seconds, four
+    corners in canvas pixels), through the tracked clip's own placement (fit, scale, position, turn, flips) and crop,
+    the same placement the renderer gives it."""
+    from types import SimpleNamespace
+
+    from .renderer import FrameRenderer, crop_box, transform_at
+    from .timing import timeline_time
+
+    width, height = data["size"]
+    fps = float(data["fps"])
+    left, top, right, bottom = crop_box(tracked) or (0.0, 0.0, 0.0, 0.0)
+    image = SimpleNamespace(shape=(round(height * (1 - top - bottom)), round(width * (1 - left - right))))
+    canvas = SimpleNamespace(width=int(project["width"]), height=int(project["height"]))
+    surface = np.array(layer["surface"], float) * [width, height]
+    start, duration = float(tracked["start"]), float(tracked["duration"])
+    source_in = float(tracked.get("sourceIn") or 0)
+    out = []
+    for index in sorted(data["frames"], key=int):
+        seconds = int(index) / fps
+        if seconds < source_in - 1e-6:
+            continue
+        local = timeline_time(tracked, seconds)
+        if local < 0 or local > duration:
+            continue
+        corners = corners_of(_matrix(data["frames"][index]), surface) - [left * width, top * height]
+        place = FrameRenderer._matrix(canvas, image, transform_at(tracked, local))
+        on_canvas = corners @ np.asarray(place, float)[:, :2].T + np.asarray(place, float)[:, 2]
+        out.append((start + local, on_canvas.tolist()))
+    return out
+
+
+@router.post("/apply")
+def apply_track(body: ApplyBody) -> dict:
+    """A layer's track put to use on a clip, as Mocha AE's exports are (P3): "corner-pin", the surface's four corners
+    on the canvas at every tracked frame, timed for the target clip (its image's corners go onto them); or
+    "transform", position, scale and rotation keyframes on the target clip, from the surface's centre, size and the
+    turn of its top edge against the layer's reference frame. The result is returned for the page to put on the clip
+    (one project command, with undo)."""
+    from .render_document import flatten, validate_document
+    from .renderer import DEFAULTS
+
+    if body.kind not in ("corner-pin", "transform"):
+        raise HTTPException(400, "kind is corner-pin or transform")
+    try:
+        project = validate_document(body.project)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    clips = {c["id"]: c for c in flatten(project)}
+    tracked, target = clips.get(body.tracked_clip), clips.get(body.target_clip)
+    if tracked is None or target is None:
+        raise HTTPException(404, "the tracked clip or the target clip is not on the active timeline")
+    layer = next((one for one in (tracked.get("planar") or {}).get("layers", []) if one.get("id") == body.layer_id), None)
+    if layer is None or not layer.get("surface"):
+        raise HTTPException(400, "that layer has no surface on the tracked clip: place its surface in the Track workspace")
+    data = _load(body.layer_id)
+    if not data or data.get("media") != tracked.get("mediaId"):
+        raise HTTPException(409, "that layer has no track on this clip's media yet")
+    samples = _surface_on_canvas(project, tracked, layer, data)
+    width, height = int(project["width"]), int(project["height"])
+    timed = [(t - float(target["start"]), c) for t, c in samples if -1e-6 <= t - float(target["start"]) <= float(target["duration"]) + 1e-6]
+    if not timed:
+        raise HTTPException(409, "no tracked frame falls inside the target clip's time on the timeline")
+    if body.kind == "corner-pin":
+        return {
+            "cornerPin": {
+                "times": [round(t, 6) for t, _ in timed],
+                "points": [[round(v, 6) for x, y in c for v in (x / width, y / height)] for _, c in timed],
+            },
+            "frames": len(timed),
+        }
+    # transform: against the layer's reference, carried through the tracked clip's own placement at its first sample
+    base = {**DEFAULTS, **(target.get("transform") or {})}
+    # the reference: the surface on the layer's reference frame where the tracked clip shows it, else the first sample
+    at_reference = _surface_on_canvas(
+        project, tracked, layer, {**data, "frames": {str(data["reference"]): data["frames"][str(data["reference"])]}}
+    )
+    reference = np.array(at_reference[0][1] if at_reference else timed[0][1], float)
+    size = lambda c: (np.linalg.norm(c[1] - c[0]) + np.linalg.norm(c[3] - c[0])) / 2  # noqa: E731
+    angle = lambda c: math.degrees(math.atan2(c[1][1] - c[0][1], c[1][0] - c[0][0]))  # noqa: E731
+    ref_size, ref_angle = size(reference), angle(reference)
+    keyframes = []
+    for t, listed in timed:
+        c = np.array(listed, float)
+        centre = c.mean(axis=0)
+        keyframes.append(
+            {
+                "t": round(t, 6),
+                "interp": "linear",
+                "props": {
+                    "posX": round((centre[0] / width - 0.5) * 100, 4),
+                    "posY": round((centre[1] / height - 0.5) * 100, 4),
+                    "scale": round(float(base["scale"]) * size(c) / max(1e-9, ref_size), 4),
+                    "rotation": round(float(base["rotation"]) + angle(c) - ref_angle, 4),
+                },
+            }
+        )
+    return {"keyframes": keyframes, "frames": len(keyframes)}

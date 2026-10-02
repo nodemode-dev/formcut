@@ -248,3 +248,56 @@ def test_a_step_on_noise_has_no_confidence_and_raises_nothing():
     for _ in range(5):
         h, confidence = tracker.step((rng.random((180, 320, 3)) * 255).astype(np.uint8))
         assert np.all(np.isfinite(h)) and confidence < 0.3
+
+
+def test_a_track_applied_as_a_corner_pin_and_as_transform_keys(shot):
+    """P3: the layer's surface carried to the canvas through the tracked clip's own placement lands on the plane's
+    true corners; as Transform, the target's position follows the surface's centre."""
+    media_id, truth, size, fps = shot
+    client = _client()
+    layer = _layer(truth, size)
+    _finish(
+        client, client.post("/api/planar/track", json={"media_id": media_id, "layer": layer, "start": 0, "stop": 39 / fps}).json()["job_id"]
+    )
+    surface = (truth[0] / size).round(6).tolist()
+    tracked = {
+        "id": "plate",
+        "kind": "video",
+        "label": "plate",
+        "start": 0,
+        "duration": 40 / fps,
+        "mediaId": media_id,
+        "planar": {"version": 1, "layers": [{**layer, "surface": surface}]},
+    }
+    target = {"id": "insert", "kind": "image", "label": "insert", "start": 0, "duration": 40 / fps}
+    project = {
+        "width": size[0],
+        "height": size[1],
+        "fps": 30,
+        "activeTimeline": 0,
+        "timelines": [{"tracks": [{"clips": [target]}, {"clips": [tracked]}]}],
+    }
+    pin = client.post(
+        "/api/planar/apply",
+        json={"project": project, "tracked_clip": "plate", "layer_id": "screen", "target_clip": "insert", "kind": "corner-pin"},
+    ).json()
+    assert pin["frames"] == 40
+    points = np.array(pin["cornerPin"]["points"]).reshape(-1, 4, 2) * size
+    errors = [float(np.linalg.norm(points[k] - truth[k], axis=1).mean()) for k in range(40)]
+    assert max(errors) < 0.5, errors  # the project is the media's size and the plate fills it: corners on the truth
+    keys = client.post(
+        "/api/planar/apply",
+        json={"project": project, "tracked_clip": "plate", "layer_id": "screen", "target_clip": "insert", "kind": "transform"},
+    ).json()["keyframes"]
+    assert (
+        len(keys) == 40
+        and keys[0]["props"]["scale"] == pytest.approx(100, abs=0.5)
+        and keys[0]["props"]["rotation"] == pytest.approx(0, abs=0.1)
+    )
+    centre = truth[20].mean(axis=0)
+    assert keys[20]["props"]["posX"] == pytest.approx((centre[0] / size[0] - 0.5) * 100, abs=0.2)
+    assert keys[20]["props"]["posY"] == pytest.approx((centre[1] / size[1] - 0.5) * 100, abs=0.2)
+    refused = client.post(
+        "/api/planar/apply", json={"project": project, "tracked_clip": "plate", "layer_id": "nothing", "target_clip": "insert"}
+    )
+    assert refused.status_code == 400

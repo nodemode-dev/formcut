@@ -134,6 +134,9 @@ export interface Clip {
   // the Track workspace's layers (planar tracking): shapes, the frame they are drawn on, settings, a surface; the
   // per-frame track itself is kept by the engine per layer (planar-tracks/<layer id>.json)
   planar?: ClipPlanar;
+  // a corner pin: the clip's image corners onto four canvas points (fractions), fixed or as a track of samples timed in
+  // the clip's local seconds (from a planar layer's surface, P3); its place, size and turn give way to it
+  cornerPin?: { points: number[][]; times?: number[] };
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;

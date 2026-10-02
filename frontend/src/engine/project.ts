@@ -254,6 +254,17 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.cornerPin": {
+        const p = payload as { clipId: string; cornerPin: { points: number[][]; times?: number[] } | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.cornerPin && p.cornerPin.points.length) found.clip.cornerPin = structuredClone(p.cornerPin);
+        else delete found.clip.cornerPin;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.planar": {
         // the Track workspace's layers on the clip, kept with the project (the tracks themselves are the engine's)
         const p = payload as { clipId: string; planar: import("./types").ClipPlanar | null };

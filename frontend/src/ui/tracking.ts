@@ -14,6 +14,11 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
     toggle.classList.toggle("is-on", follow[key]);
     toggle.addEventListener("click", () => { follow[key] = toggle.classList.toggle("is-on"); });
   }
+  // a clip's corner pin (from a planar layer, P3) taken off: its own place, size and turn back in charge
+  root.querySelector<HTMLElement>('[data-ref="pin-remove"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    if (id) engine.dispatch("clip.cornerPin", { clipId: id, cornerPin: null });
+  });
   // the Track workspace: planar tracking of the selected video clip (planar-workspace.ts)
   root.querySelector<HTMLElement>('[data-ref="planar-btn"]')?.addEventListener("click", () => {
     const project = engine.snapshot;

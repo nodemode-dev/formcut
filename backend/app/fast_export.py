@@ -40,6 +40,7 @@ ABSENT = (
     "mask",
     "cutout",
     "key",
+    "cornerPin",  # a perspective warp: only the frame renderer places it (both graph paths refuse it here)
     "stabilise",
     "colour",
     "colorGrade",

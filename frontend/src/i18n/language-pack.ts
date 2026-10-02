@@ -407,6 +407,16 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Apply to a clip|Appliquer à un clip|Applica a una clip|クリップに適用|클립에 적용|Aplicar a um clipe|Применить к клипу|Bir klibe uygula|应用到片段|套用到片段
+Clip|Clip|Clip|クリップ|클립|Clipe|Клип|Klip|片段|片段
+As|En tant que|Come|方式|방식|Como|Как|Biçim|方式|方式
+Corner pin|Épinglage des coins|Pin degli angoli|コーナーピン|코너 핀|Pin de cantos|Угловая привязка|Köşe sabitleme|四角定位|四角定位
+Position, scale and rotation|Position, échelle et rotation|Posizione, scala e rotazione|位置、スケール、回転|위치, 크기, 회전|Posição, escala e rotação|Положение, масштаб и поворот|Konum, ölçek ve döndürme|位置、缩放和旋转|位置、縮放和旋轉
+Apply|Appliquer|Applica|適用|적용|Aplicar|Применить|Uygula|应用|套用
+Applied to {clip}: {n} frames|Appliqué à {clip} : {n} images|Applicato a {clip}: {n} fotogrammi|{clip} に適用: {n} フレーム|{clip}에 적용: {n} 프레임|Aplicado a {clip}: {n} quadros|Применено к {clip}: {n} кадров|{clip} klibine uygulandı: {n} kare|已应用到 {clip}：{n} 帧|已套用到 {clip}：{n} 個影格
+Place the layer's surface first|Placez d'abord la surface du calque|Posiziona prima la superficie del livello|まずレイヤーのサーフェスを配置してください|먼저 레이어의 서피스를 배치하세요|Posicione primeiro a superfície da camada|Сначала разместите поверхность слоя|Önce katmanın yüzeyini yerleştirin|请先放置图层的平面|請先放置圖層的平面
+No other clip to apply to|Aucun autre clip auquel appliquer|Nessun'altra clip a cui applicare|適用できる他のクリップがありません|적용할 다른 클립이 없습니다|Nenhum outro clipe para aplicar|Нет другого клипа для применения|Uygulanacak başka klip yok|没有其他可应用的片段|沒有其他可套用的片段
+Remove corner pin|Retirer l'épinglage des coins|Rimuovi pin degli angoli|コーナーピンを外す|코너 핀 제거|Remover pin de cantos|Убрать угловую привязку|Köşe sabitlemeyi kaldır|移除四角定位|移除四角定位
 Stopped at frame|Arrêté à l'image|Fermato al fotogramma|停止したフレーム:|멈춘 프레임:|Parado no quadro|Остановлено на кадре|Şu karede durdu:|停止于帧|停止於影格
 Lost the plane at frame|Plan perdu à l'image|Piano perso al fotogramma|平面を見失ったフレーム:|평면을 놓친 프레임:|Plano perdido no quadro|Плоскость потеряна на кадре|Düzlem şu karede kayboldu:|平面丢失于帧|平面遺失於影格
 Layers|Calques|Livelli|レイヤー|레이어|Camadas|Слои|Katmanlar|图层|圖層

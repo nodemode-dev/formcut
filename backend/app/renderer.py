@@ -1,3 +1,4 @@
+import bisect
 import contextlib
 import json
 import math
@@ -43,7 +44,39 @@ LEGACY = {
 # the LUT and the mask out and made the transitions and the push a matter of
 # time; R6 took the key, the cutout and the shader, which is chained into the
 # layer's own passes. Nothing is left: every layer can stay on the device.
-CPU_STEPS: tuple[str, ...] = ()
+# a clip carrying any of these is placed on this side, not left on the device: a corner pin is a perspective warp,
+# which neither the device's affine pass nor the native warp-and-blend kernel makes (P3 of the planar tracking plan)
+CPU_STEPS: tuple[str, ...] = ("cornerPin",)
+
+
+def pin_at(clip: dict, local: float) -> list[tuple[float, float]] | None:
+    """A clip's corner pin at a local time: its image's four corners (top left, top right, bottom right, bottom left)
+    on the canvas, as fractions of the canvas, or None. A pin is four fixed corners ({"points": [[x, y] x 4]}) or a
+    track of them ({"times": [local seconds], "points": [[eight numbers] per time]}), interpolated linearly between
+    its samples and held before the first and after the last."""
+    pin = clip.get("cornerPin")
+    if not isinstance(pin, dict):
+        return None
+    points, times = pin.get("points"), pin.get("times")
+    try:
+        if not times:
+            corners = [(float(x), float(y)) for x, y in points]
+            return corners if len(corners) == 4 else None
+        if len(times) != len(points) or not times:
+            return None
+        if local <= times[0]:
+            flat = points[0]
+        elif local >= times[-1]:
+            flat = points[-1]
+        else:
+            i = bisect.bisect_right(times, local) - 1
+            t0, t1 = float(times[i]), float(times[i + 1])
+            f = (local - t0) / (t1 - t0) if t1 > t0 else 0.0
+            flat = [a + (b - a) * f for a, b in zip(points[i], points[i + 1], strict=True)]
+        return [(float(flat[k]), float(flat[k + 1])) for k in range(0, 8, 2)]
+    except (TypeError, ValueError, IndexError):
+        return None
+
 
 DEFAULTS = {
     "scale": 100,
@@ -1634,6 +1667,26 @@ class FrameRenderer:
             matrix = np.float32([[a, b, cx - a * w / 2 - b * h / 2], [d, e, cy - d * w / 2 - e * h / 2]])
             visual_fade = {**clip, "extendOut": 0}
             alpha = max(0, min(1, transform["opacity"] / 100)) * fade_at(visual_fade, min(local, clip["duration"]))
+            pinned = pin_at(clip, local)
+            if pinned is not None:
+                # a corner pin: the image's corners onto the four canvas points by a homography (the clip's own place,
+                # size and turn give way to it, as a corner pin does; its opacity, fades and blend stay)
+                src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+                dst = np.float32([[x * self.width, y * self.height] for x, y in pinned])
+                image = image if image.flags.writeable else image.copy()
+                image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(image.dtype)
+                layer = cv2.warpPerspective(
+                    image,
+                    cv2.getPerspectiveTransform(src, dst),
+                    (self.width, self.height),
+                    flags=cv2.INTER_LINEAR,
+                    borderMode=cv2.BORDER_CONSTANT,
+                    borderValue=0,
+                )
+                layer = self.transition(layer, clip, local)
+                layer = self.transition_out(layer, clip, local)
+                canvas = self._blend(canvas, layer, str(transform["blendMode"]))
+                continue
             native = _native()
             # The Rust warp-and-blend kernel blends in gamma; since R24 every blend is in light, so the kernel is
             # used only once a build says it blends in light (LINEAR_LIGHT), and never on a deep (sixteen-bit)

@@ -80,6 +80,12 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <button class="tool-chip" data-ref="delete-shape">${icon("trash")}${t("planar.deleteShape")}</button>
         </section>
         <section class="pw-panel" data-ref="settings"></section>
+        <section class="pw-panel">
+          <div class="pw-head"><span>${t("planar.apply")}</span></div>
+          <div class="pw-row"><span>${t("planar.applyTo")}</span><select data-ref="target"></select></div>
+          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option></select></div>
+          <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
+        </section>
       </aside>
       <main class="pw-main">
         <div class="pw-views" data-ref="views">
@@ -465,6 +471,33 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("stop").addEventListener("click", () => { if (job) void fetch(`/api/jobs/${job}`, { method: "DELETE" }); });
   scrub.addEventListener("input", () => { if (!job) showFrame(Number(scrub.value)); });
 
+  // ---- applying a layer's track to a clip (P3): a corner pin, or position, scale and rotation keyframes ----
+  function paintTargets(): void {
+    const timeline = engine.snapshot.timelines[engine.snapshot.activeTimeline];
+    const clips = timeline.tracks.flatMap((tr) => tr.clips).filter((c) => c.id !== clipId && (c.kind === "video" || c.kind === "image" || c.kind === "text"));
+    $<HTMLSelectElement>("target").innerHTML = clips.map((c) => `<option value="${c.id}">${esc(c.label)}</option>`).join("") || `<option value="">${t("planar.noTarget")}</option>`;
+  }
+  $("apply").addEventListener("click", () => void (async () => {
+    const l = layer(), target = $<HTMLSelectElement>("target").value, kind = $<HTMLSelectElement>("kind").value;
+    if (!l || !l.surface) { say(t("planar.needSurface")); return; }
+    if (!target) { say(t("planar.noTarget")); return; }
+    // the layers go on the clip first: the engine reads the surface from the project
+    engine.dispatch("clip.planar", { clipId, planar: { version: 1, layers } });
+    changed = false;
+    try {
+      const out = await api<{ cornerPin?: { points: number[][]; times: number[] }; keyframes?: Array<{ t: number; interp: string; props: Record<string, number> }>; frames: number }>("/api/planar/apply", { project: engine.snapshot, tracked_clip: clipId, layer_id: l.id, target_clip: target, kind });
+      if (out.cornerPin) engine.dispatch("clip.cornerPin", { clipId: target, cornerPin: out.cornerPin });
+      else if (out.keyframes) {
+        // the target's other keyframes kept; its position, scale and rotation keys replaced by the track's
+        const moved = new Set(["posX", "posY", "scale", "rotation"]);
+        const kept = (engine.findClip(target)?.clip.keyframes ?? []).map((k) => ({ ...k, props: Object.fromEntries(Object.entries(k.props).filter(([p]) => !moved.has(p))) })).filter((k) => Object.keys(k.props).length);
+        engine.dispatch("clip.keyframes.replace", { clipId: target, keyframes: [...kept, ...out.keyframes].sort((a, b) => a.t - b.t) });
+      }
+      const name = engine.findClip(target)?.clip.label ?? "";
+      say(t("planar.applied").replace("{clip}", name).replace("{n}", String(out.frames)));
+    } catch (error) { say(error instanceof Error ? error.message : String(error)); }
+  })());
+
   // ---- closing: the layers saved on the clip ----
   function close(): void {
     if (job) void fetch(`/api/jobs/${job}`, { method: "DELETE" });
@@ -501,6 +534,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     $("stage").style.setProperty("--ar", `${media!.width} / ${media!.height}`);
     await loadTracks();
     paintSettings();
+    paintTargets();
     say(layers.length ? "" : t("planar.hint"));
     showFrame(layers.length ? refFrame(layers[0]) : first);
   })();

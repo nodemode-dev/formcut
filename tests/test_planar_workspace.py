@@ -119,6 +119,14 @@ def test_the_workspace_in_the_real_app(tmp_path):
                 time.sleep(1.5)
             page.click('[data-act="demo"]', timeout=20000)
             page.wait_for_selector(".clip.k-video", timeout=60000)
+            # the title dragged to the timeline's start, so it is on screen at the frames tracked below (the demo's
+            # video shows its media from 2 s at timeline 0; its swirl loses the plane within a dozen frames)
+            title = page.locator(".clip.k-text").first.bounding_box()
+            page.mouse.move(title["x"] + title["width"] / 2, title["y"] + title["height"] / 2)
+            page.mouse.down()
+            page.mouse.move(title["x"] - 600, title["y"] + title["height"] / 2, steps=10)
+            page.mouse.up()
+            time.sleep(0.5)
             page.locator(".clip.k-video").first.click()
             page.wait_for_selector('[data-ref="planar-btn"]', state="attached", timeout=10000)
             for tab in ("animation", "adjust", "speed", "repair"):
@@ -166,9 +174,25 @@ def test_the_workspace_in_the_real_app(tmp_path):
                 page.click(f'.pw [data-view="{view}"]')
             assert page.locator(".pw svg .pw-grid").count() > 0 and page.locator(".pw svg .pw-trace").count() == 4
             assert "matrix3d" in page.eval_on_selector(".pw [data-ref=inner]", "e => e.style.transform")
+            shots = os.environ.get("FORMCUT_BROWSER_SHOTS")
+            # P3: the track applied to another of the demo's clips as a corner pin
+            # the demo's title (0.5 to 3 s) is on screen at the tracked frames (about 2 s); its second video, at 8 s, is not
+            targets = page.eval_on_selector_all('.pw [data-ref="target"] option', "els => els.map(e => [e.value, e.textContent])")
+            title = next((value for value, text in targets if "formcut demo" in text), None)
+            assert title, targets
+            page.select_option('.pw [data-ref="target"]', title)
+            page.select_option('.pw [data-ref="kind"]', "corner-pin")
+            before = page.inner_text(".pw [data-ref=status]")
+            page.click('.pw [data-ref="apply"]')
+            page.wait_for_function("b => document.querySelector('.pw [data-ref=status]').textContent !== b", arg=before, timeout=30000)
+            assert "Applied" in page.inner_text(".pw [data-ref=status]"), page.inner_text(".pw [data-ref=status]")
+            if shots:
+                page.screenshot(path=f"{shots}/workspace.png")
             page.click('.pw [data-ref="done"]')
             page.wait_for_selector(".pw", state="detached", timeout=5000)
             time.sleep(3)
+            if shots:
+                page.screenshot(path=f"{shots}/editor.png")
             browser.close()
         saved = []
         listing = json.loads(urllib.request.urlopen(base + "/api/projects").read())  # noqa: S310 - the test's own local engine
@@ -182,6 +206,14 @@ def test_the_workspace_in_the_real_app(tmp_path):
                 if c.get("planar")
             ]
         assert saved and saved[0]["version"] == 1 and len(saved[0]["layers"]) == 1 and saved[0]["layers"][0]["surface"]
+        pins = [
+            c["cornerPin"]
+            for tl in doc.get("timelines", [])
+            for tr in tl.get("tracks", [])
+            for c in tr.get("clips", [])
+            if c.get("cornerPin")
+        ]
+        assert pins and len(pins[0]["times"]) == len(pins[0]["points"]) > 0 and len(pins[0]["points"][0]) == 8
         assert not errors, errors
     finally:
         server.terminate()
