@@ -352,6 +352,7 @@ def test_every_clip_key_the_renderer_reads_is_known_to_the_native_path():
         "textStyle",
         "volume",
         "volumeKeys",
+        "planar",  # a clip's planar layers draw nothing by themselves: planarMatte (refused above) draws them
     }
     app = ROOT / "backend" / "app"
     read = clip_keys(app / "renderer.py") | clip_keys(app / "timing.py")
