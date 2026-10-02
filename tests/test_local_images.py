@@ -806,7 +806,8 @@ def test_unticking_continuous_finishes_the_picture_in_hand_then_stops(tmp_path, 
             break
         time.sleep(0.05)
     asked_with = len(status["made"])
-    assert client.post(f"/api/generate/sessions/{job}/finish").json()["finishing"] is True
+    finishing = client.post(f"/api/generate/sessions/{job}/finish").json()
+    assert finishing["finishing"] is True
     for _ in range(400):
         status = client.get(f"/api/jobs/{job}").json()
         if status["status"] != "running":
@@ -815,7 +816,10 @@ def test_unticking_continuous_finishes_the_picture_in_hand_then_stops(tmp_path, 
     # not cancelled: done, the picture in hand finished and saved, nothing after it
     assert status["status"] == "done", status
     made = status["result"]["media"]
-    assert asked_with <= len(made) <= asked_with + 1 and all(item["seed"] for item in made)
+    # every picture begun by the time the finish took effect is finished (finishing["after"], the one in hand among
+    # them) and none after: counting from before the request raced the stand-in on a loaded machine, where a slow
+    # request let one more begin (three made where two were allowed, twice in the full suite)
+    assert asked_with <= len(made) <= finishing["after"] and all(item["seed"] for item in made)
     time.sleep(0.8)
     assert len(json.loads((tmp_path / "argv.json.calls").read_text())) == 1
     assert client.post(f"/api/generate/sessions/{job}/finish").status_code == 404
