@@ -252,3 +252,10 @@ frames where the screen cannot be read (a finger over it) are filled from the re
 to a second, confidence 0.5. The key's spill suppression fades with distance from what the key took away (a blurred map
 of it reaching about 3% of the frame): spill is the screen's light, near it.
 
+Input channel max (the brightest of the three channels, HSV value): a reflection adds white light, and on a saturated
+screen colour only the other two channels can rise, so the screen's luminance climbs under glare while its brightest
+channel stays put. On the owner's upright phone it took the planar track from 0.72 to 0.39 px RMS by sides (worst 6.1 to
+2.8 px). `planar_green` measures each side from greenness profiles across it (their halfway crossings) and scores the
+tracker by its sides; the corners are reported too, but in strong perspective the far ones are ill-conditioned for any
+measurement.
+
