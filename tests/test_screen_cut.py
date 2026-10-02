@@ -93,3 +93,37 @@ def test_a_screens_outline_is_traced_as_a_smooth_path():
     assert outline is not None and len(outline) == 480
     assert abs(outline[:, 0].min() - 199.5) < 0.6 and abs(outline[:, 0].max() - 440.5) < 0.6
     assert abs(outline[:, 1].min() - 59.5) < 0.6 and abs(outline[:, 1].max() - 300.5) < 0.6
+
+
+def test_the_edge_band_never_cuts_what_is_in_front(tmp_path):
+    """A fingertip crossing the screen's edge keeps its outline: the band where the path alone decides the edge spares
+    what is clearly in front (skin is uneven in red and blue; the bezel and the screen's green are not)."""
+    from app.media import ingest_path
+
+    plate = np.zeros((300, 400, 3), np.uint8)
+    plate[:] = (12, 12, 12)
+    plate[60:240, 80:320] = (10, 245, 10)  # the screen
+    plate[40:80, 180:220] = (205, 160, 130)  # a fingertip across the screen's top edge (y = 60)
+    path = tmp_path / "edge.png"
+    Image.fromarray(plate).save(path)
+    layer = {"id": "screen", "shapes": [{"points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]}], "reference": 0, "settings": {}}
+    clip = {
+        "id": "p",
+        "kind": "image",
+        "label": "edge",
+        "start": 0,
+        "duration": 1,
+        "mediaId": ingest_path(path, "edge.png")["id"],
+        "planar": {"version": 1, "layers": [layer]},
+        "screenCut": {"layer": "screen", "screen": "green"},
+    }
+    project = validate_document(
+        {"width": 400, "height": 300, "fps": 30, "activeTimeline": 0, "timelines": [{"tracks": [{"clips": [clip]}]}]}
+    )
+    renderer = FrameRenderer(project, 400)
+    try:
+        out = renderer.frame(0.5)[:, :, :3].astype(int)
+    finally:
+        renderer.close()
+    assert out[62, 200][0] > 180  # the fingertip just inside the screen's edge, in the band: kept
+    assert out[150, 200].max() <= 3  # the screen: gone

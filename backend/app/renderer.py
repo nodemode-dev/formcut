@@ -1362,7 +1362,13 @@ class FrameRenderer:
         band = np.clip(grown - cv2.erode(grown, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * band_px + 1, 2 * band_px + 1))), 0, 1)
         rgb = out[:, :, :3].astype(np.float32) / top
         screenness, _, lead_over = self._screen_parts(rgb, grown, str(spec.get("screen", "green")))
-        cut = grown * np.maximum(screenness, band)
+        # the band makes the screen's edge the path's, over the bezel and the green's edge pixels, but never over what is
+        # clearly in front: skin and the like are uneven in the screen's two other channels (a fingertip crossing the
+        # screen's edge was cut along its outline on the owner's perspective shot)
+        r_, g_, b_ = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+        one, two = (r_, g_) if spec.get("screen") == "blue" else (r_, b_)
+        uneven = np.clip((np.abs(one - two) - 0.06) / 0.06, 0, 1)
+        cut = grown * np.maximum(screenness, band * (1 - uneven))
         near = np.clip(cv2.GaussianBlur(grown, (0, 0), max(4.0, 0.03 * max(w, h))) * 3.0, 0, 1)
         thrown = np.clip(lead_over, 0, 1) * near * (1 - cut) * float(spec.get("spill", 1.0))
         channel = 2 if spec.get("screen") == "blue" else 1
