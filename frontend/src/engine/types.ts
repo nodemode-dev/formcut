@@ -309,6 +309,8 @@ export interface PlanarLayer {
   reference: number;  // source seconds: the frame the shapes are drawn on
   settings: Record<string, unknown>;  // as planar.Settings names them
   surface?: number[][];  // four corners in the reference frame's unit square
+  // AdjustTrack's reference points (P4): each with its master frame, its place there and its keyed places (unit square)
+  adjust?: Array<{ master: number; home: number[]; keys: Record<string, number[]> }>;
   visible: boolean;
   tracking: boolean;
   locked: boolean;

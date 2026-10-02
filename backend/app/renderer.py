@@ -1276,7 +1276,8 @@ class FrameRenderer:
         if known is None or known[0] != stamp:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-                frames = {int(i): np.array(v, float).reshape(3, 3) for i, v in data["frames"].items()}
+                follow = data.get("adjusted") or data["frames"]  # the adjusted track where the layer has one (P4)
+                frames = {int(i): np.array(v, float).reshape(3, 3) for i, v in follow.items()}
                 known = (stamp, sorted(frames), frames, float(data["fps"]), tuple(data["size"]))
             except (OSError, ValueError, KeyError, TypeError):
                 return None

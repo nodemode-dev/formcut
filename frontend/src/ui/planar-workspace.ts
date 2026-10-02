@@ -13,7 +13,8 @@ import { api } from "../engine/api";
 import { t } from "../i18n";
 import { icon } from "./icons";
 
-type Track = { frames: Map<number, number[]>; confidence: Map<number, number> };
+type Track = { frames: Map<number, number[]>; confidence: Map<number, number>; adjusted: Map<number, number[]> };
+type AdjustPoint = { master: number; home: number[]; keys: Record<string, number[]> };
 type Media = { fps: number; width: number; height: number; frames: number };
 const COLORS = ["#4b82f0", "#e25085", "#50e2a5", "#ffae2b", "#9e50e2", "#50cae2", "#e2a050", "#c9e250"];
 const MOTIONS = ["translation", "scale", "rotation", "shear", "perspective"] as const;
@@ -45,7 +46,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   let frame = 0, first = 0, last = 0;
   let tool: "select" | "draw" | "rect" = "draw";
   let mode: "add" | "subtract" = "add";
-  const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false };
+  const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false, adjust: false };
+  let pointIndex = 0;  // the reference point selected in AdjustTrack
+  let placing = false;  // the next click on the frame places a new reference point
+  let adjustTimer = 0;
   const tracks = new Map<string, Track>();
   let drawing: number[][] = [];  // points being drawn, in the current frame's pixels
   let job: string | null = null;
@@ -79,6 +83,22 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           </div>
           <button class="tool-chip" data-ref="delete-shape">${icon("trash")}${t("planar.deleteShape")}</button>
         </section>
+        <section class="pw-panel" data-ref="adjust-panel" hidden>
+          <div class="pw-head"><span>${t("planar.adjust.title")}</span></div>
+          <p class="pw-hint">${t("planar.adjust.hint")}</p>
+          <div class="pw-buttons-row">
+            <button class="tool-chip" data-ref="adj-new">${icon("plus")}${t("planar.adjust.new")}</button>
+            <button class="tool-chip" data-ref="adj-next">${t("planar.adjust.next")}</button>
+            <button class="tool-chip" data-ref="adj-master">${t("planar.adjust.master")}</button>
+            <button class="tool-chip" data-ref="adj-delete">${icon("trash")}${t("planar.adjust.delete")}</button>
+          </div>
+          <div class="pw-row"><span>${t("planar.adjust.nudge")}</span><span class="pw-nudge">
+            <button class="icon-btn" data-nudge="-1,0" aria-label="${t("planar.adjust.nudge")}">${icon("chevL")}</button><button class="icon-btn pw-up" data-nudge="0,-1" aria-label="${t("planar.adjust.nudge")}">${icon("chevD")}</button><button class="icon-btn" data-nudge="0,1" aria-label="${t("planar.adjust.nudge")}">${icon("chevD")}</button><button class="icon-btn" data-nudge="1,0" aria-label="${t("planar.adjust.nudge")}">${icon("chevR")}</button>
+          </span></div>
+          <div class="pw-row"><span>${t("planar.adjust.patch")}</span><input type="number" data-ref="adj-patch" min="7" max="101" step="2" value="21"></div>
+          <div class="pw-row"><span>${t("planar.adjust.motion")}</span><input type="number" data-ref="adj-motion" min="1" max="200" value="16"></div>
+          <button class="tool-chip" data-ref="adj-auto">${icon("search")}${t("planar.adjust.auto")}</button>
+        </section>
         <section class="pw-panel" data-ref="settings"></section>
         <section class="pw-panel">
           <div class="pw-head"><span>${t("planar.apply")}</span></div>
@@ -90,7 +110,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       </aside>
       <main class="pw-main">
         <div class="pw-views" data-ref="views">
-          ${(["surface", "grid", "trace", "matte", "stabilise"] as const).map((v) => `<button class="tool-chip" data-view="${v}">${t(`planar.view.${v}`)}</button>`).join("")}
+          ${(["surface", "grid", "trace", "matte", "stabilise", "adjust"] as const).map((v) => `<button class="tool-chip" data-view="${v}">${t(`planar.view.${v}`)}</button>`).join("")}
           <button class="tool-chip" data-ref="align">${t("planar.align")}</button>
         </div>
         <div class="pw-view" data-ref="view"><div class="pw-stage" data-ref="stage"><div class="pw-inner" data-ref="inner">
@@ -117,9 +137,14 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
 
   const layer = () => (current >= 0 ? layers[current] : undefined);
   const refFrame = (l: PlanarLayer) => Math.round(l.reference * (media?.fps ?? 30));
+  const rawHomography = (l: PlanarLayer, index: number): number[] | null => {
+    const h = tracks.get(l.id)?.frames.get(index);
+    if (h) return h;
+    return index === refFrame(l) ? [1, 0, 0, 0, 1, 0, 0, 0, 1] : null;
+  };
   const homography = (l: PlanarLayer, index: number): number[] | null => {
     const tr = tracks.get(l.id);
-    const h = tr?.frames.get(index);
+    const h = tr?.adjusted.get(index) ?? tr?.frames.get(index);
     if (h) return h;
     return index === refFrame(l) ? [1, 0, 0, 0, 1, 0, 0, 0, 1] : null;
   };
@@ -173,6 +198,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         }
       }
     });
+    if (views.adjust) out += paintPoints();
     if (drawing.length) out += `<polyline class="pw-drawing" points="${drawing.map((p) => p.join(",")).join(" ")}" vector-effect="non-scaling-stroke"/>`;
     svg.innerHTML = out;
     // the stabilised view: the picture moved so the current layer's tracked plane holds still
@@ -308,7 +334,12 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("mode").addEventListener("click", (event) => { const b = (event.target as HTMLElement).closest<HTMLElement>("[data-mode]"); if (b) { mode = b.dataset.mode as typeof mode; paintLayers(); } });
   $("views").addEventListener("click", (event) => {
     const b = (event.target as HTMLElement).closest<HTMLElement>("[data-view]");
-    if (b) { const v = b.dataset.view as keyof typeof views; views[v] = !views[v]; render(); }
+    if (b) {
+      const v = b.dataset.view as keyof typeof views;
+      views[v] = !views[v];
+      if (v === "adjust") startAdjust();
+      render();
+    }
   });
   $("align").addEventListener("click", () => {
     // the surface fitted to the whole frame on the current frame, kept in the reference's coordinates
@@ -359,12 +390,20 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     say("");
   }
 
-  let drag: { kind: "point" | "corner" | "rect"; a: number; b: number; start: [number, number] } | null = null;
+  let drag: { kind: "point" | "corner" | "rect" | "ref"; a: number; b: number; start: [number, number] } | null = null;
   svg.addEventListener("pointerdown", (event) => {
     if (job) return;
     const [x, y] = pointer(event);
     const target = event.target as SVGElement;
     const l = layer();
+    if (views.adjust && placing && l) { placePoint(l, x, y); return; }
+    if (views.adjust && target.dataset.refpoint !== undefined && l) {
+      pointIndex = Number(target.dataset.refpoint);
+      drag = { kind: "ref", a: pointIndex, b: 0, start: [x, y] };
+      svg.setPointerCapture(event.pointerId);
+      render();
+      return;
+    }
     if (target.dataset.corner !== undefined && l) { drag = { kind: "corner", a: Number(target.dataset.corner), b: 0, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
     if (tool === "select") {
       if (target.dataset.point && l) { const [si, pi] = target.dataset.point.split(":").map(Number); drag = { kind: "point", a: si, b: pi, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
@@ -391,6 +430,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     } else if (l && drag.kind === "corner" && l.surface) {
       const p = toReference(l, x, y);
       if (p) { l.surface[drag.a] = p; changed = true; }
+    } else if (l && drag.kind === "ref") {
+      movePoint(l, drag.a, x, y);
     } else if (l && drag.kind === "point") {
       const p = toReference(l, x, y);
       if (p) { l.shapes[drag.a].points[drag.b] = p; changed = true; }
@@ -418,8 +459,12 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   async function loadTrack(l: PlanarLayer): Promise<void> {
     const reply = await fetch(`/api/planar/track/${l.id}`);
     if (!reply.ok) { tracks.delete(l.id); return; }
-    const data = await reply.json() as { frames: number[]; matrices: number[][]; confidence: number[] };
-    tracks.set(l.id, { frames: new Map(data.frames.map((f, i) => [f, data.matrices[i]])), confidence: new Map(data.frames.map((f, i) => [f, data.confidence[i]])) });
+    const data = await reply.json() as { frames: number[]; matrices: number[][]; confidence: number[]; adjusted?: number[][] };
+    tracks.set(l.id, {
+      frames: new Map(data.frames.map((f, i) => [f, data.matrices[i]])),
+      confidence: new Map(data.frames.map((f, i) => [f, data.confidence[i]])),
+      adjusted: new Map((data.adjusted ?? []).map((m, i) => [data.frames[i], m])),
+    });
   }
   const loadTracks = () => Promise.all(layers.map((l) => loadTrack(l)));
 
@@ -471,6 +516,153 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("back-one").addEventListener("click", () => void track(-1, true));
   $("stop").addEventListener("click", () => { if (job) void fetch(`/api/jobs/${job}`, { method: "DELETE" }); });
   scrub.addEventListener("input", () => { if (!job) showFrame(Number(scrub.value)); });
+
+  // ---- AdjustTrack (P4): reference points that remove drift, as Mocha's ----
+  // A point's place on a frame is the raw track carrying it from its master frame plus its correction there, linear
+  // between the frames it is keyed on (nothing at the master, held past the last key): the engine's own arithmetic
+  // (planar_api.adjusted_track), so the point is drawn where the engine will put it.
+  const carry = (l: PlanarLayer, p: AdjustPoint, index: number): number[] | null => {
+    const at = rawHomography(l, index), from = rawHomography(l, p.master);
+    if (!at || !from) return null;
+    const [mx, my] = px(p.home);
+    const [rx, ry] = apply(invert(from), mx, my);
+    return apply(at, rx, ry);
+  };
+  function placeOf(l: PlanarLayer, p: AdjustPoint, index: number): number[] | null {
+    const carried = carry(l, p, index);
+    if (!carried) return null;
+    const keys = new Map<number, number[]>([[p.master, [0, 0]]]);
+    for (const [k, place] of Object.entries(p.keys)) {
+      const c = carry(l, p, Number(k));
+      if (c && Number(k) !== p.master) { const [x, y] = px(place); keys.set(Number(k), [x - c[0], y - c[1]]); }
+    }
+    const order = [...keys.keys()].sort((a, b) => a - b);
+    let d = keys.get(order[0])!;
+    if (index >= order[order.length - 1]) d = keys.get(order[order.length - 1])!;
+    else if (index > order[0]) {
+      const after = order.findIndex((k) => k > index), a = order[after - 1], b = order[after];
+      const f = (index - a) / (b - a), da = keys.get(a)!, db = keys.get(b)!;
+      d = [da[0] + (db[0] - da[0]) * f, da[1] + (db[1] - da[1]) * f];
+    }
+    return [carried[0] + d[0], carried[1] + d[1]];
+  }
+  function paintPoints(): string {
+    const l = layer();
+    if (!l?.adjust?.length) return "";
+    const places = l.adjust.map((p) => placeOf(l, p, frame));
+    const shown = places.filter((q): q is number[] => !!q);
+    // the points' spread: the nearer the closest two against the farthest two, the worse a correction is conditioned
+    let quality = "pw-q-red";
+    if (shown.length >= 2) {
+      let near = Infinity, far = 0;
+      for (let i = 0; i < shown.length; i += 1) for (let j = i + 1; j < shown.length; j += 1) {
+        const dist = Math.hypot(shown[i][0] - shown[j][0], shown[i][1] - shown[j][1]);
+        near = Math.min(near, dist); far = Math.max(far, dist);
+      }
+      const ratio = far ? near / far : 0;
+      quality = ratio >= 0.35 ? "pw-q-green" : ratio >= 0.15 ? "pw-q-yellow" : "pw-q-red";
+    }
+    let out = shown.length >= 2 ? `<polygon class="pw-refline ${quality}" points="${shown.map((q) => q.join(",")).join(" ")}" vector-effect="non-scaling-stroke"/>` : "";
+    l.adjust.forEach((p, i) => {
+      const q = places[i];
+      if (!q) return;
+      const chosen = i === pointIndex ? " is-chosen" : "";
+      out += p.master === frame
+        ? `<path class="pw-refx${chosen}" d="M${q[0] - 7},${q[1] - 7}L${q[0] + 7},${q[1] + 7}M${q[0] + 7},${q[1] - 7}L${q[0] - 7},${q[1] + 7}" vector-effect="non-scaling-stroke"/>`
+        : "";
+      out += `<circle class="pw-refpoint${chosen}" cx="${q[0]}" cy="${q[1]}" r="${p.master === frame ? 9 : 5}" data-refpoint="${i}" vector-effect="non-scaling-stroke"/>`;
+    });
+    return out;
+  }
+  function startAdjust(): void {
+    ($("adjust-panel") as HTMLElement).hidden = !views.adjust;
+    const l = layer();
+    if (!views.adjust || !l) return;
+    if (!l.adjust?.length && l.surface) {
+      // the first time: four points on the surface's corners, this frame their master
+      const h = homography(l, frame);
+      if (!h) { say(t("planar.needTracked")); return; }
+      l.adjust = l.surface.map((corner) => ({ master: frame, home: unit(apply(h, ...(px(corner) as [number, number]))), keys: {} }));
+      pointIndex = 0;
+      changed = true;
+      sendAdjust(l);
+    }
+  }
+  function sendAdjust(l: PlanarLayer): void {
+    // the engine makes the adjusted track a moment after the last change, then the overlays follow it
+    window.clearTimeout(adjustTimer);
+    adjustTimer = window.setTimeout(() => void (async () => {
+      try {
+        await api(`/api/planar/adjust/${l.id}`, { points: l.adjust ?? [] });
+        await loadTrack(l);
+        render();
+      } catch (error) { say(error instanceof Error ? error.message : String(error)); }
+    })(), 250);
+  }
+  function movePoint(l: PlanarLayer, i: number, x: number, y: number): void {
+    const p = l.adjust?.[i];
+    if (!p) return;
+    if (p.master === frame) p.home = unit([x, y]);  // on its master frame: where it is, no correction
+    else p.keys[String(frame)] = unit([x, y]);  // anywhere else: a correction keyed on this frame
+    changed = true;
+    sendAdjust(l);
+  }
+  function placePoint(l: PlanarLayer, x: number, y: number): void {
+    placing = false;
+    if (!rawHomography(l, frame)) { say(t("planar.needTracked")); return; }
+    (l.adjust ??= []).push({ master: frame, home: unit([x, y]), keys: {} });
+    pointIndex = l.adjust.length - 1;
+    changed = true;
+    say("");
+    sendAdjust(l);
+    render();
+  }
+  $("adj-new").addEventListener("click", () => { placing = true; say(t("planar.adjust.placing")); });
+  $("adj-next").addEventListener("click", () => { const n = layer()?.adjust?.length ?? 0; if (n) { pointIndex = (pointIndex + 1) % n; render(); } });
+  $("adj-master").addEventListener("click", () => {
+    const l = layer(), p = l?.adjust?.[pointIndex];
+    if (!l || !p) return;
+    const q = placeOf(l, p, frame);
+    if (!q) { say(t("planar.needTracked")); return; }
+    p.home = unit(q);
+    p.master = frame;
+    delete p.keys[String(frame)];
+    changed = true;
+    sendAdjust(l);
+    render();
+  });
+  $("adj-delete").addEventListener("click", () => {
+    const l = layer();
+    if (!l?.adjust?.length) return;
+    l.adjust.splice(pointIndex, 1);
+    pointIndex = Math.max(0, Math.min(pointIndex, l.adjust.length - 1));
+    changed = true;
+    sendAdjust(l);
+    render();
+  });
+  $("adjust-panel").addEventListener("click", (event) => {
+    // a tenth of a media pixel a press, as Mocha's nudge
+    const b = (event.target as HTMLElement).closest<HTMLElement>("[data-nudge]");
+    const l = layer(), p = l?.adjust?.[pointIndex];
+    if (!b || !l || !p) return;
+    const q = placeOf(l, p, frame);
+    if (!q) return;
+    const [dx, dy] = b.dataset.nudge!.split(",").map(Number);
+    movePoint(l, pointIndex, q[0] + dx * 0.1, q[1] + dy * 0.1);
+    render();
+  });
+  $("adj-auto").addEventListener("click", () => void (async () => {
+    const l = layer(), p = l?.adjust?.[pointIndex];
+    if (!l || !p || p.master === frame) return;
+    try {
+      const found = await api<{ at: number[]; score: number }>("/api/planar/nudge", { media_id: mediaId, layer_id: l.id, master: p.master, home: p.home, frame, patch: Number($<HTMLInputElement>("adj-patch").value) || 21, motion: Number($<HTMLInputElement>("adj-motion").value) || 16 });
+      p.keys[String(frame)] = found.at;
+      changed = true;
+      sendAdjust(l);
+      say(`${t("planar.adjust.auto")}: ${found.score.toFixed(2)}`);
+      render();
+    } catch (error) { say(error instanceof Error ? error.message : String(error)); }
+  })());
 
   // ---- applying a layer's track to a clip (P3): a corner pin, or position, scale and rotation keyframes ----
   function paintTargets(): void {

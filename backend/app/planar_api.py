@@ -273,6 +273,7 @@ def track_layer(body: TrackBody) -> dict:
                     frame=index,
                     confidence=round(confidence, 3),
                 )
+            _readjust(data)  # the reference points' corrections carried onto the frames just tracked
             write_json(path_of, data)
             out = {"layer": body.layer.id, "tracked": done, "from": first, "to": first + (done if last >= first else -done)}
             return {**out, "lost": lost} if lost is not None else out
@@ -302,13 +303,20 @@ def read_track(layer_id: str, surface: str = "") -> dict:
         "matrices": [data["frames"][i] for i in order],
         "confidence": [data["confidence"].get(i, 0.0) for i in order],
     }
+    adjusted = data.get("adjusted") or {}
+    if adjusted:
+        out["adjusted"] = [adjusted.get(i, data["frames"][i]) for i in order]
+        out["adjust"] = data.get("adjust") or []
     if surface:
         values = [float(v) for v in surface.split(",")]
         if len(values) != 8:
             raise HTTPException(400, "a surface is four corners: eight numbers")
         width, height = data["size"]
         corners = np.array(values, float).reshape(4, 2) * [width, height]
-        out["corners"] = [(corners_of(_matrix(data["frames"][i]), corners) / [width, height]).round(6).tolist() for i in order]
+        follow = data.get("adjusted") or data["frames"]  # the adjusted track where there is one, as Mocha links to it
+        out["corners"] = [
+            (corners_of(_matrix(follow.get(i, data["frames"][i])), corners) / [width, height]).round(6).tolist() for i in order
+        ]
     return out
 
 
@@ -419,6 +427,8 @@ def apply_track(body: ApplyBody) -> dict:
     data = _load(body.layer_id)
     if not data or data.get("media") != tracked.get("mediaId"):
         raise HTTPException(409, "that layer has no track on this clip's media yet")
+    if data.get("adjusted"):
+        data = {**data, "frames": data["adjusted"]}  # the adjusted track where there is one
     samples = _surface_on_canvas(project, tracked, layer, data)
     width, height = int(project["width"]), int(project["height"])
     timed = [(t - float(target["start"]), c) for t, c in samples if -1e-6 <= t - float(target["start"]) <= float(target["duration"]) + 1e-6]
@@ -459,3 +469,159 @@ def apply_track(body: ApplyBody) -> dict:
             }
         )
     return {"keyframes": keyframes, "frames": len(keyframes)}
+
+
+# ---- AdjustTrack (P4): reference points that remove drift, as Mocha's AdjustTrack does ----
+
+
+def _interpolate(keys: dict[int, np.ndarray], frame: int) -> np.ndarray:
+    """A point's correction at a frame: linear between its keyed frames, held before the first and after the last."""
+    order = sorted(keys)
+    if frame <= order[0]:
+        return keys[order[0]]
+    if frame >= order[-1]:
+        return keys[order[-1]]
+    import bisect
+
+    at = bisect.bisect_right(order, frame)
+    a, b = order[at - 1], order[at]
+    f = (frame - a) / (b - a)
+    return keys[a] + (keys[b] - keys[a]) * f
+
+
+def adjusted_track(frames: dict, points: list[dict], size: tuple[int, int]) -> dict[str, list]:
+    """The adjusted track: on every tracked frame, the raw homography corrected by the reference points.
+
+    A point has a master frame and its place there (home, in the frame's unit square): the raw track carries it to
+    every other frame. Where the person put it on a frame (keys: frame -> place), its correction is that place less
+    where the track carried it; the master frame's correction is nothing; between keyed frames the corrections run
+    linearly and they hold beyond. On each frame the points' carried places and corrected places give a correcting
+    transform (four or more points: a homography, least squares past four; three: affine; two: a similarity; one:
+    a shift), composed in front of the raw track. Points whose master frame has no track are left out."""
+    width, height = size
+    raw = {int(i): _matrix(v) for i, v in frames.items()}
+    usable = []
+    for point in points:
+        master = int(point["master"])
+        if master not in raw:
+            continue
+        home = np.array(point["home"], float) * [width, height]
+        back = np.linalg.inv(raw[master])
+        keys = {master: np.zeros(2)}
+        for key, place in (point.get("keys") or {}).items():
+            frame = int(key)
+            if frame in raw and frame != master:
+                carried = corners_of(raw[frame] @ back, home[None])[0]
+                keys[frame] = np.array(place, float) * [width, height] - carried
+        usable.append((home, back, keys))
+    out = {}
+    for frame, h in raw.items():
+        src, dst = [], []
+        for home, back, keys in usable:
+            carried = corners_of(h @ back, home[None])[0]
+            src.append(carried)
+            dst.append(carried + _interpolate(keys, frame))
+        correction = np.eye(3)
+        if src and np.abs(np.array(dst) - np.array(src)).max() > 1e-6:
+            a, b = np.float32(src), np.float32(dst)
+            if len(a) >= 4:
+                found, _ = cv2.findHomography(a, b, 0)
+                correction = found if found is not None else correction
+            elif len(a) == 3:
+                correction = np.vstack([cv2.getAffineTransform(a, b), [0, 0, 1]])
+            elif len(a) == 2:
+                found, _ = cv2.estimateAffinePartial2D(a, b, method=cv2.LMEDS)
+                correction = np.vstack([found, [0, 0, 1]]) if found is not None else correction
+            else:
+                correction = np.array([[1, 0, b[0][0] - a[0][0]], [0, 1, b[0][1] - a[0][1]], [0, 0, 1]], float)
+        adjusted = correction @ h
+        out[str(frame)] = (adjusted / adjusted[2, 2]).ravel().round(9).tolist()
+    return out
+
+
+class AdjustPoint(BaseModel):
+    master: int = Field(ge=0)
+    home: list[float] = Field(min_length=2, max_length=2)  # its place on the master frame, unit square
+    keys: dict[str, list[float]] = Field(default_factory=dict)  # frame -> its place there, unit square
+
+
+class AdjustBody(BaseModel):
+    points: list[AdjustPoint] = Field(default_factory=list, max_length=64)
+
+
+def _readjust(data: dict) -> None:
+    """The adjusted track kept with the raw one, from the layer's reference points (none: no adjusted track)."""
+    spec = data.get("adjust") or []
+    if spec:
+        data["adjusted"] = adjusted_track(data["frames"], spec, tuple(data["size"]))
+    else:
+        data.pop("adjusted", None)
+
+
+@router.post("/adjust/{layer_id}")
+def adjust_track(layer_id: str, body: AdjustBody) -> dict:
+    """A layer's reference points set (all of them, as the workspace holds them) and its adjusted track made from
+    them; the corner pin, the Transform keys, the tracked matte and the workspace then follow the adjusted track."""
+    path = _path(layer_id)
+    data = _load(layer_id)
+    if not data:
+        raise HTTPException(404, "no track for that layer")
+    data["adjust"] = [p.model_dump() for p in body.points]
+    _readjust(data)
+    write_json(path, data)
+    keyed = sum(len(p.keys) for p in body.points)
+    return {"layer": layer_id, "points": len(body.points), "keys": keyed, "frames": len(data.get("adjusted") or {})}
+
+
+class NudgeBody(BaseModel):
+    media_id: str
+    layer_id: str
+    master: int = Field(ge=0)
+    home: list[float] = Field(min_length=2, max_length=2)
+    frame: int = Field(ge=0)
+    patch: int = Field(default=21, ge=7, le=101)  # the search region's size, pixels (Mocha's Search Region Size)
+    motion: int = Field(default=16, ge=1, le=200)  # how far it may have gone, pixels (Mocha's Maximum Motion)
+
+
+@router.post("/nudge")
+def auto_nudge(body: NudgeBody) -> dict:
+    """Mocha's Auto nudge: where a reference point's feature is on a frame. The master frame is warped into the
+    frame's geometry by the track, so a plane that has turned or tilted still matches; the patch around the point's
+    place there is searched for within the maximum motion, to a fraction of a pixel. Returns its place (unit square)
+    and the match's score (1 is perfect)."""
+    data = _load(body.layer_id)
+    if not data or str(body.master) not in data["frames"] or str(body.frame) not in data["frames"]:
+        raise HTTPException(409, "the point's master frame and this frame both need a track")
+    source, fps, width, height, _ = _video(body.media_id)
+    frames = data.get("adjusted") or data["frames"]
+    relate = _matrix(frames[str(body.frame)]) @ np.linalg.inv(_matrix(frames[str(body.master)]))
+    master = next(_read(source, fps, width, height, body.master, 1), None)
+    current = next(_read(source, fps, width, height, body.frame, 1), None)
+    if master is None or current is None:
+        raise HTTPException(404, "a frame could not be read")
+    home = np.array(body.home, float) * [width, height]
+    guess = corners_of(relate, home[None])[0]
+    half, reach = body.patch // 2, body.motion
+    gx, gy = round(guess[0]), round(guess[1])
+    x0, y0 = gx - half - reach, gy - half - reach
+    x1, y1 = gx + half + reach + 1, gy + half + reach + 1
+    if x0 < 0 or y0 < 0 or x1 > width or y1 > height:
+        raise HTTPException(409, "the point is too near the edge of the frame to search around it")
+    grey = lambda img: cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # noqa: E731
+    warped = cv2.warpPerspective(grey(master), relate, (width, height), flags=cv2.INTER_LINEAR)
+    template = warped[gy - half : gy + half + 1, gx - half : gx + half + 1]
+    region = grey(current)[y0:y1, x0:x1]
+    scores = cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED)
+    _, best, _, (bx, by) = cv2.minMaxLoc(scores)
+
+    def subpixel(values: np.ndarray, at: int) -> float:
+        if 0 < at < len(values) - 1:
+            a, b, c = values[at - 1], values[at], values[at + 1]
+            denom = a - 2 * b + c
+            return 0.5 * (a - c) / denom if abs(denom) > 1e-9 else 0.0
+        return 0.0
+
+    dx = bx + subpixel(scores[by, :], bx) - reach
+    dy = by + subpixel(scores[:, bx], by) - reach
+    place = [(gx + dx) / width, (gy + dy) / height]
+    return {"at": [round(float(v), 6) for v in place], "score": round(float(best), 3)}

@@ -194,3 +194,19 @@ transport tracks backwards, a frame back, stops, a frame forward and forwards, f
 a confidence strip under the scrubber. Shapes and the surface are kept in the reference frame's coordinates; changing
 a tracked layer's shapes or settings starts its track afresh, asked first. Done keeps the layers on the clip
 (`clip.planar`, a project command with undo); the per-frame tracks stay the engine's.
+
+AdjustTrack (P4): a layer's reference points remove its track's drift, as Mocha's do. Each point has a master frame
+and its place there; the raw track carries it to every other frame. Where the person puts it back on its feature on a
+frame, that frame keys its correction (the place less where the track carried it); the master frame's correction is
+nothing, corrections run linearly between keyed frames and hold beyond. On each frame the points' carried and
+corrected places give a correcting transform (a homography from four or more points, least squares past four; affine
+from three; a similarity from two; a shift from one), composed in front of the raw track: the adjusted track
+(`planar_api.adjusted_track`). POST /api/planar/adjust/<layer> sets a layer's points and keeps the adjusted track in
+the layer's store beside the raw one, made again after every re-track; the read, the surface's corners, the corner
+pin, the Transform keys and the tracked matte follow it where there is one. POST /api/planar/nudge is Mocha's Auto
+nudge: the master frame warped into the frame's geometry by the track, the patch around the point searched for within
+the maximum motion to a fraction of a pixel. In the workspace, AdjustTrack (a view) puts four points on the surface's
+corners the first time, draws each where the engine will put it (a red X on its master frame), joins them with lines
+coloured by their spread, and keys a correction where one is dragged (on its master frame, it moves its home); New
+point, Next, Set master, Delete, a 0.1 px nudge pad and Auto nudge with its search region and maximum motion.
+

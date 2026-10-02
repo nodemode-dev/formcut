@@ -407,6 +407,17 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack
+Where the track drifts, move a point back onto its feature|Là où le suivi dérive, ramenez un point sur son repère|Dove il tracciamento deriva, riporta un punto sul suo dettaglio|トラッキングがずれたら、ポイントを元の特徴点に戻します|트래킹이 어긋나면 포인트를 원래 지점으로 되돌리세요|Onde o rastreamento desvia, devolva um ponto ao seu detalhe|Где трекинг уплывает, верните точку на её деталь|İzleme kaydığında noktayı kendi ayrıntısına geri taşıyın|跟踪漂移时，把点移回它的特征处|追蹤漂移時，把點移回它的特徵處
+New point|Nouveau point|Nuovo punto|新規ポイント|새 포인트|Novo ponto|Новая точка|Yeni nokta|新建点|新增點
+Next point|Point suivant|Punto successivo|次のポイント|다음 포인트|Próximo ponto|Следующая точка|Sonraki nokta|下一个点|下一個點
+Set master|Définir le maître|Imposta master|マスターに設定|마스터로 설정|Definir mestre|Сделать главной|Ana olarak ayarla|设为主帧|設為主影格
+Delete point|Supprimer le point|Elimina punto|ポイントを削除|포인트 삭제|Excluir ponto|Удалить точку|Noktayı sil|删除点|刪除點
+Nudge|Décaler|Sposta|微調整|미세 이동|Deslocar|Сдвинуть|Kaydır|微调|微調
+Search region|Zone de recherche|Regione di ricerca|検索領域|검색 영역|Região de busca|Область поиска|Arama bölgesi|搜索区域|搜尋區域
+Maximum motion|Mouvement maximal|Movimento massimo|最大移動量|최대 움직임|Movimento máximo|Макс. движение|En fazla hareket|最大运动|最大運動
+Auto nudge|Décalage auto|Spostamento automatico|自動微調整|자동 미세 이동|Deslocamento automático|Автосдвиг|Otomatik kaydır|自动微调|自動微調
+Click where the new point goes|Cliquez où placer le nouveau point|Fai clic dove va il nuovo punto|新しいポイントの位置をクリック|새 포인트를 둘 곳을 클릭하세요|Clique onde fica o novo ponto|Щёлкните, куда поставить точку|Yeni noktanın yerine tıklayın|点击新点要放的位置|點按新點要放的位置
 Matte for this clip|Cache pour ce clip|Maschera per questa clip|このクリップのマット|이 클립의 매트|Matte para este clipe|Маска для этого клипа|Bu klip için matte|此片段的遮罩|此片段的遮罩
 Matte applied to this clip|Cache appliqué à ce clip|Maschera applicata a questa clip|このクリップにマットを適用しました|이 클립에 매트를 적용했습니다|Matte aplicado a este clipe|Маска применена к этому клипу|Matte bu klibe uygulandı|已将遮罩应用到此片段|已將遮罩套用到此片段
 Remove tracked matte|Retirer le cache suivi|Rimuovi maschera tracciata|トラッキングマットを外す|트래킹 매트 제거|Remover matte rastreado|Убрать отслеженную маску|İzlenen matte'ı kaldır|移除跟踪遮罩|移除追蹤遮罩

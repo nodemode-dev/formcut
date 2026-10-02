@@ -1664,3 +1664,14 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 @media (max-width: 860px) { .pw-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); } .pw-side { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--edge); } }
 .pw-up svg { transform: rotate(180deg); }
 .pw-check { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+/* AdjustTrack (P4): reference points, a red X on their master frame; the lines between them coloured by their spread */
+.pw-refpoint { fill: #ff475a; stroke: #fff; stroke-width: 1.5; cursor: move; }
+.pw-refpoint.is-chosen { fill: #ffae2b; }
+.pw-refx { stroke: #ff475a; stroke-width: 2.5; fill: none; pointer-events: none; }
+.pw-refx.is-chosen { stroke: #ffae2b; }
+.pw-refline { fill: none; stroke-width: 1.5; stroke-dasharray: 6 4; pointer-events: none; }
+.pw-q-green { stroke: #3fb950; } .pw-q-yellow { stroke: #ffae2b; } .pw-q-red { stroke: #ff475a; }
+.pw-hint { margin: 0; font-size: 12px; color: var(--ink-soft); }
+.pw-buttons-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.pw-nudge { display: inline-flex; gap: 2px; }

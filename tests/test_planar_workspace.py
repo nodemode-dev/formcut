@@ -63,7 +63,7 @@ def test_every_string_the_workspace_uses_is_in_every_language():
     keys = set(
         re.findall(r't\("(planar\.[a-zA-Z.]+)"\)', UI + (ROOT / "frontend" / "src" / "ui" / "tracking.ts").read_text(encoding="utf-8"))
     )
-    keys |= {f"planar.view.{v}" for v in ("surface", "grid", "trace", "matte", "stabilise")}
+    keys |= {f"planar.view.{v}" for v in ("surface", "grid", "trace", "matte", "stabilise", "adjust")}
     keys |= {f"planar.motion.{m}" for m in ("translation", "scale", "rotation", "shear", "perspective")} | {
         f"planar.mode.{m}" for m in ("large", "small", "manual")
     }
@@ -170,6 +170,18 @@ def test_the_workspace_in_the_real_app(tmp_path):
             page.click('.pw [data-ref="stop"]')
             page.wait_for_function("() => document.querySelector('.pw [data-ref=stop]').disabled", timeout=60000)
             assert frame() >= start + 3
+            # P4: AdjustTrack's four points on the surface's corners, one dragged a frame back (a correction keyed)
+            page.click('.pw [data-view="adjust"]')
+            page.wait_for_function("() => document.querySelectorAll('.pw svg .pw-refpoint').length === 4", timeout=10000)
+            page.keyboard.press("ArrowLeft")
+            time.sleep(1)
+            point = page.locator(".pw svg .pw-refpoint").first.bounding_box()
+            page.mouse.move(point["x"] + point["width"] / 2, point["y"] + point["height"] / 2)
+            page.mouse.down()
+            page.mouse.move(point["x"] + 20, point["y"] + 12, steps=5)
+            page.mouse.up()
+            time.sleep(2)
+            page.click('.pw [data-view="adjust"]')
             for view in ("grid", "trace", "stabilise"):
                 page.click(f'.pw [data-view="{view}"]')
             assert page.locator(".pw svg .pw-grid").count() > 0 and page.locator(".pw svg .pw-trace").count() == 4
@@ -218,6 +230,10 @@ def test_the_workspace_in_the_real_app(tmp_path):
                 if c.get("planar")
             ]
         assert saved and saved[0]["version"] == 1 and len(saved[0]["layers"]) == 1 and saved[0]["layers"][0]["surface"]
+        adjust = saved[0]["layers"][0].get("adjust") or []
+        assert len(adjust) == 4 and any(point["keys"] for point in adjust), adjust
+        stored = json.loads(urllib.request.urlopen(f"{base}/api/planar/track/{saved[0]['layers'][0]['id']}").read())  # noqa: S310 - the test's own local engine
+        assert stored.get("adjusted") and len(stored["adjust"]) == 4
         pins = [
             c["cornerPin"]
             for tl in doc.get("timelines", [])
