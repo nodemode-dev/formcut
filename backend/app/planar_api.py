@@ -65,6 +65,7 @@ class TrackBody(BaseModel):
 
 
 def _settings(raw: dict) -> Settings:
+    raw = {k: v for k, v in raw.items() if k != "screen"}  # how to track, read by the job itself (track_layer)
     allowed = set(Settings.__dataclass_fields__)
     unknown = set(raw) - allowed
     if unknown:
@@ -247,12 +248,45 @@ def track_layer(body: TrackBody) -> dict:
             matte = _raster(body.layer, (width, height), start_h, first)
             if (matte > 0).sum() < 64:
                 raise ValueError("the layer's shapes cover almost nothing on the frame tracked from")
-            tracker = PlanarTracker(frame, matte, settings)
+            # Track by a green or blue screen's edges (settings screen: "green" or "blue"): each frame's keyed screen
+            # (planar_green.green_quad, its sides' lines crossed) against the frame tracked from's, a homography from
+            # four points; a frame where it is not found holds the last, with no confidence (P8: on the owner's three
+            # phone shots this is what a planar track of a shiny, near-textureless screen cannot match)
+            screen = body.layer.settings.get("screen")
+            if screen not in (None, "", "green", "blue"):
+                raise ValueError("screen is green or blue")
+            if screen:
+                from .planar_green import green_quad
+
+                start_quad = green_quad(frame, screen)
+                if start_quad is None:
+                    raise ValueError(f"no {screen} screen found on the frame tracked from")
+                last_h = np.eye(3)
+
+                class _Screen:
+                    def __init__(self):
+                        self.at = first
+                        self.read = {first: start_quad}  # frame -> the screen's corners where it could be read
+
+                    def step(self, picture, exclude=None):
+                        nonlocal last_h
+                        found = green_quad(picture, screen)
+                        if found is None:
+                            return last_h, 0.0
+                        self.read[self.at] = found
+                        last_h = cv2.getPerspectiveTransform(start_quad.astype(np.float32), found.astype(np.float32)).astype(float)
+                        return last_h, 1.0
+
+                tracker = _Screen()
+            else:
+                tracker = PlanarTracker(frame, matte, settings)
             done, faint, lost = 0, 0, None
             report(0.0, f"Tracking from frame {first}")
             for index, frame in frames:
                 if cancelled():
                     break
+                if screen:
+                    tracker.at = index
                 h, confidence = tracker.step(frame, exclude_at(index) if exclude_at else None)
                 # a plane lost: twelve frames running with almost no confidence end the track there, what came
                 # before it kept (Mocha drifts on; stopping says where it went wrong)
@@ -278,6 +312,25 @@ def track_layer(body: TrackBody) -> dict:
                     frame=index,
                     confidence=round(confidence, 3),
                 )
+            if screen:
+                # frames where the screen could not be read (a finger over it, a flare) are filled from the frames
+                # either side that could, the corners run linearly between them (gaps up to a second), confidence
+                # 0.5 to say they were filled: on the owner's clip 3 a touch hid the screen on nine frames
+                read = tracker.read
+                order = sorted(read)
+                for gap in [
+                    int(i) for i, c in data["confidence"].items() if c == 0.0 and int(i) in range(min(first, last), max(first, last) + 1)
+                ]:
+                    before = [f for f in order if f < gap]
+                    after = [f for f in order if f > gap]
+                    if not before or not after or after[0] - before[-1] > round(fps):
+                        continue
+                    a, b = before[-1], after[0]
+                    corners = read[a] + (read[b] - read[a]) * ((gap - a) / (b - a))
+                    rel = cv2.getPerspectiveTransform(start_quad.astype(np.float32), corners.astype(np.float32)).astype(float)
+                    full = rel @ start_h
+                    data["frames"][str(gap)] = (full / full[2, 2]).ravel().round(9).tolist()
+                    data["confidence"][str(gap)] = 0.5
             _readjust(data)  # the reference points' corrections carried onto the frames just tracked
             write_json(path_of, data)
             out = {"layer": body.layer.id, "tracked": done, "from": first, "to": first + (done if last >= first else -done)}

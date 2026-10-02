@@ -1262,7 +1262,13 @@ class FrameRenderer:
                 top = 65535.0 if out.dtype == np.uint16 else 255.0
                 rgb = out[:, :, :3].astype(np.float32) / top
                 lean = (rgb - rgb.mean(2, keepdims=True)) @ (target / max(1e-6, float(np.linalg.norm(target))))
-                cleaned = rgb - spill * np.maximum(lean, 0)[..., None] * (target / max(1e-6, float(np.linalg.norm(target))))
+                # spill is light from the screen: it fades with distance from what the key took away (a blurred map
+                # of it, reaching about 3% of the frame), so a colour merely near the key's elsewhere keeps its hue
+                # (on the owner's clip 10 a teal wall far from the phone turned blue under spill applied everywhere)
+                taken = (keep < 0.5).astype(np.float32)
+                reach = max(8.0, 0.03 * max(w, h))
+                near = np.clip(cv2.GaussianBlur(taken, (0, 0), reach) * 4.0, 0, 1) if taken.any() else taken
+                cleaned = rgb - (spill * near * np.maximum(lean, 0))[..., None] * (target / max(1e-6, float(np.linalg.norm(target))))
                 out[:, :, :3] = np.round(np.clip(cleaned, 0, 1) * top).astype(out.dtype)
         mask = clip.get("mask")
         if mask:

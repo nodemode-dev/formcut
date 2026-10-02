@@ -407,6 +407,10 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Track by|Suivre par|Traccia tramite|トラッキング方法|트래킹 기준|Rastrear por|Отслеживать по|İzleme ölçütü|跟踪依据|追蹤依據
+Its picture (planar)|Son image (planaire)|La sua immagine (planare)|画像（プレーナー）|이미지(평면)|Sua imagem (planar)|По изображению (планарно)|Görüntüsü (düzlemsel)|画面内容（平面）|畫面內容（平面）
+A green screen's edges|Bords d'un écran vert|Bordi di uno schermo verde|グリーンスクリーンの縁|그린 스크린 가장자리|Bordas de uma tela verde|Края зелёного экрана|Yeşil perdenin kenarları|绿幕边缘|綠幕邊緣
+A blue screen's edges|Bords d'un écran bleu|Bordi di uno schermo blu|ブルースクリーンの縁|블루 스크린 가장자리|Bordas de uma tela azul|Края синего экрана|Mavi perdenin kenarları|蓝幕边缘|藍幕邊緣
 Spill|Débordement|Fuoriuscita|スピル|스필|Vazamento|Засветка|Taşma|溢色|溢色
 Key hold-out for this clip|Protection de l'incrustation pour ce clip|Protezione del keying per questa clip|このクリップのキー保護|이 클립의 키 보호|Proteção do chroma para este clipe|Защита ключа для этого клипа|Bu klip için anahtar koruması|此片段的抠像保护|此片段的去背保護
 Turn on this clip's chroma key first|Activez d'abord l'incrustation de ce clip|Attiva prima il chroma key di questa clip|まずこのクリップのクロマキーをオンにしてください|먼저 이 클립의 크로마 키를 켜세요|Ative primeiro o chroma key deste clipe|Сначала включите хромакей этого клипа|Önce bu klibin renk anahtarını açın|请先开启此片段的色度抠像|請先開啟此片段的色度去背

@@ -67,6 +67,7 @@ def test_every_string_the_workspace_uses_is_in_every_language():
     keys |= {f"planar.motion.{m}" for m in ("translation", "scale", "rotation", "shear", "perspective")} | {
         f"planar.mode.{m}" for m in ("large", "small", "manual")
     }
+    keys |= {f"planar.method.{m}" for m in ("planar", "green", "blue")}
     english = json.loads((ROOT / "frontend" / "src" / "i18n" / "en.json").read_text(encoding="utf-8"))
     pack = (ROOT / "frontend" / "src" / "i18n" / "language-pack.ts").read_text(encoding="utf-8")
     for lang in ("de.json", "es.json"):

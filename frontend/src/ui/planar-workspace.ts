@@ -18,7 +18,7 @@ type AdjustPoint = { master: number; home: number[]; keys: Record<string, number
 type Media = { fps: number; width: number; height: number; frames: number };
 const COLORS = ["#4b82f0", "#e25085", "#50e2a5", "#ffae2b", "#9e50e2", "#50cae2", "#e2a050", "#c9e250"];
 const MOTIONS = ["translation", "scale", "rotation", "shear", "perspective"] as const;
-const DEFAULTS: Record<string, unknown> = { translation: true, scale: true, rotation: true, shear: false, perspective: false, channel: "luminance", min_pixels: null, smoothing: 0, motion: "large", search_x: null, search_y: null, angle: 0, zoom: 0 };
+const DEFAULTS: Record<string, unknown> = { screen: null, translation: true, scale: true, rotation: true, shear: false, perspective: false, channel: "luminance", min_pixels: null, smoothing: 0, motion: "large", search_x: null, search_y: null, angle: 0, zoom: 0 };
 const VIEW_WIDTH = 1600;  // frames are fetched no wider than this for the viewer
 
 // 3 x 3 homographies, row-major, as the engine writes them (pixels of the media to pixels of the media)
@@ -367,6 +367,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const num = (key: string, step: number, min: number, max: number, autoable = false) => `<input type="number" data-key="${key}" step="${step}" min="${min}" max="${max}" value="${s[key] ?? ""}" placeholder="${autoable ? t("planar.auto") : ""}">`;
     box.innerHTML = `<div class="pw-head"><span>${t("planar.trackSettings")}</span></div>
       <div class="pw-row"><span>${t("planar.link")}</span><select data-ref="link">${[`<option value="">${t("planar.ownTrack")}</option>`, ...layers.filter((o) => o.id !== l.id).map((o) => `<option value="${o.id}" ${l.link === o.id ? "selected" : ""}>${esc(o.name)}</option>`)].join("")}</select></div>
+      <div class="pw-row"><span>${t("planar.method")}</span><select data-key="screen">${([["", "planar.method.planar"], ["green", "planar.method.green"], ["blue", "planar.method.blue"]] as const).map(([v, k]) => `<option value="${v}" ${(s.screen ?? "") === v ? "selected" : ""}>${t(k)}</option>`).join("")}</select></div>
       <div class="pw-motions">${MOTIONS.map((m) => `<label><input type="checkbox" data-key="${m}" ${s[m] ? "checked" : ""}>${t(`planar.motion.${m}`)}</label>`).join("")}</div>
       <div class="pw-row"><span>${t("planar.channel")}</span><select data-key="channel"><option value="luminance" ${s.channel === "luminance" ? "selected" : ""}>${t("planar.luminance")}</option><option value="auto" ${s.channel === "auto" ? "selected" : ""}>${t("planar.autoChannel")}</option></select></div>
       <div class="pw-row"><span>${t("planar.minPixels")}</span>${num("min_pixels", 1, 1, 100, true)}</div>
@@ -388,7 +389,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     }
     if (!l || !key) return;
     if (!(await invalidate(l))) { paintSettings(); return; }
-    const value = input.type === "checkbox" ? input.checked : input.type === "number" ? (input.value === "" ? null : Number(input.value)) : input.value;
+    const value = input.type === "checkbox" ? input.checked : input.type === "number" ? (input.value === "" ? null : Number(input.value)) : key === "screen" ? input.value || null : input.value;
     l.settings = { ...DEFAULTS, ...l.settings, [key]: value };
     // rotation brings scale, shear brings rotation, perspective brings all, as in Mocha
     const order = MOTIONS as readonly string[];

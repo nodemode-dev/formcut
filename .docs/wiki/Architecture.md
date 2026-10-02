@@ -240,3 +240,15 @@ whose key has either is keyed on the CPU side (the device's key pass has neither
 Spill; the workspace's Apply to a clip has Key hold-out for this clip (the key must be on); Remove key hold-out is in
 the Track section.
 
+Green screens (P8, on the owner's three phone shots): `backend/app/planar_green.py` measures a green (or blue) screen's
+corners on every frame without a tracker: the screen keyed (green less the larger of red and blue, the map upsampled
+twice), its outline taken, the outline points on the convex hull kept (a notch is bridged), each side's straight edge
+found by RANSAC within a pixel among the points near that side (a rounded corner's arc has few collinear points),
+refitted, and the four lines crossed (the sharp corners the rounded ones stand for). `python -m app.planar_green
+shot.mp4` scores the planar tracker against it, tracking the phone's border (the screen grown 8% less the screen shrunk
+4%, as a Mocha artist leaves a shiny screen out). The track job also tracks by the screen itself (settings screen:
+green or blue; the workspace's Track by): each frame's measured corners against the first's, a four-point homography;
+frames where the screen cannot be read (a finger over it) are filled from the read frames either side, linearly, gaps up
+to a second, confidence 0.5. The key's spill suppression fades with distance from what the key took away (a blurred map
+of it reaching about 3% of the frame): spill is the screen's light, near it.
+

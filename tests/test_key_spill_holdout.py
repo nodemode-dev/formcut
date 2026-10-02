@@ -46,7 +46,7 @@ def test_spill_suppression_takes_the_green_cast_off_and_keeps_brightness(tmp_pat
     plain = _render(tmp_path, KEY)
     cleaned = _render(tmp_path, {**KEY, "spill": 1.0})
     assert plain[50, 50].sum() == 0 and cleaned[50, 50].sum() == 0  # the screen keyed out either way
-    before, after = plain[20, 120], cleaned[20, 120]
+    before, after = plain[20, 104], cleaned[20, 104]  # beside the screen, where its spill is
     assert before[1] - after[1] > 15  # the green cast taken off the subject
     assert abs(before.mean() - after.mean()) < 3  # its brightness kept
     assert after[0] > before[0] and after[2] > before[2]
@@ -80,3 +80,34 @@ def test_the_key_command_and_the_inspector_keep_spill_and_the_hold_out():
     assert "spill: Math.min(1, Math.max(0, p.key.spill))" in project and "holdout: p.key.holdout.filter" in project
     inspector = (root / "ui" / "inspector-pane.ts").read_text(encoding="utf-8")
     assert '"keySpill"' in inspector and "spill, holdout }" in inspector
+
+
+def test_spill_fades_with_distance_from_what_the_key_took(tmp_path):
+    """Spill is the screen's light, near it: a green-leaning colour far from the keyed screen keeps its hue (on the
+    owner's clip 10 a teal wall far from the phone turned blue when spill was taken off everywhere)."""
+    from app.media import ingest_path
+
+    picture = np.zeros((300, 1200, 3), np.uint8)
+    picture[:, :100] = (0, 200, 0)  # a narrow screen at the left
+    picture[:, 100:] = (60, 140, 140)  # teal: leans towards green a little
+    path = tmp_path / "teal.png"
+    Image.fromarray(picture).save(path)
+    clip = {
+        "id": "c",
+        "kind": "image",
+        "label": "teal",
+        "start": 0,
+        "duration": 1,
+        "mediaId": ingest_path(path, "teal.png")["id"],
+        "key": {**KEY, "spill": 1.0},
+    }
+    project = validate_document(
+        {"width": 1200, "height": 300, "fps": 30, "activeTimeline": 0, "timelines": [{"tracks": [{"clips": [clip]}]}]}
+    )
+    renderer = FrameRenderer(project, 1200)
+    try:
+        out = renderer.frame(0.5)[:, :, :3].astype(int)
+    finally:
+        renderer.close()
+    assert np.abs(out[150, 1100] - [60, 140, 140]).max() <= 2  # a thousand pixels away: its own colour
+    assert out[150, 105][1] < 135  # beside the screen: the green lean taken off
