@@ -407,6 +407,7 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Brightest channel (screens)|Canal le plus lumineux (écrans)|Canale più luminoso (schermi)|最も明るいチャンネル（画面）|가장 밝은 채널(화면)|Canal mais brilhante (telas)|Самый яркий канал (экраны)|En parlak kanal (ekranlar)|最亮通道（屏幕）|最亮通道（螢幕）
 Track by|Suivre par|Traccia tramite|トラッキング方法|트래킹 기준|Rastrear por|Отслеживать по|İzleme ölçütü|跟踪依据|追蹤依據
 Its picture (planar)|Son image (planaire)|La sua immagine (planare)|画像（プレーナー）|이미지(평면)|Sua imagem (planar)|По изображению (планарно)|Görüntüsü (düzlemsel)|画面内容（平面）|畫面內容（平面）
 A green screen's edges|Bords d'un écran vert|Bordi di uno schermo verde|グリーンスクリーンの縁|그린 스크린 가장자리|Bordas de uma tela verde|Края зелёного экрана|Yeşil perdenin kenarları|绿幕边缘|綠幕邊緣

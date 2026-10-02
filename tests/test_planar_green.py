@@ -146,3 +146,24 @@ def test_tracking_by_the_screen_follows_it_through_the_engine(tmp_path):
         assert np.linalg.norm(corners[k] - truth, axis=1).max() < (1.5 if k in (5, 6) else 0.6), k  # 5, 6 filled
     confidence = client.get("/api/planar/track/phone").json()["confidence"]
     assert confidence[5] == confidence[6] == 0.5 and confidence[4] == confidence[7] == 1.0
+
+
+def test_the_brightest_channel_keeps_a_saturated_screen_under_a_reflection():
+    """A reflection adds white: a saturated green screen's luminance rises under it, its brightest channel does not;
+    the planar tracker can read that channel (Settings channel max), and the engine accepts it."""
+    from app.planar import PlanarTracker, Settings
+    from app.planar_api import _settings
+
+    frame = _frame(_homography(0))
+    glare = frame.astype(np.int32)
+    glare[200:500, 500:700] += 90  # white light over part of the screen
+    glare = np.clip(glare, 0, 255).astype(np.uint8)
+    matte = np.zeros((H, W), np.uint8)
+    matte[150:600, 450:820] = 255
+    on_max = PlanarTracker(frame, matte, Settings(channel="max"))
+    on_luma = PlanarTracker(frame, matte, Settings())
+    inside = (slice(300, 400), slice(560, 640))  # on the screen, under the glare
+    assert np.abs(on_max._gray(glare)[inside].astype(int) - on_max._gray(frame)[inside].astype(int)).max() == 0
+    # on saturated green only red and blue can rise: luminance by about 0.299 * 90 + 0.114 * 90, 37 levels
+    assert (on_luma._gray(glare)[inside].astype(int) - on_luma._gray(frame)[inside].astype(int)).min() > 30
+    assert _settings({"channel": "max"}).channel == "max"

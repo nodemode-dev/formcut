@@ -803,6 +803,7 @@
   "planar.method.planar": "صورته (مستوٍ)",
   "planar.method.green": "حواف شاشة خضراء",
   "planar.method.blue": "حواف شاشة زرقاء",
+  "planar.maxChannel": "ألمع قناة (الشاشات)",
   "gen.go": "توليد",
   "gen.img2img": "البدء من",
   "gen.img2img.none": "لا شيء (الوصف وحده)",

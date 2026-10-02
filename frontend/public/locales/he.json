@@ -803,6 +803,7 @@
   "planar.method.planar": "התמונה שלו (מישורי)",
   "planar.method.green": "קצוות של מסך ירוק",
   "planar.method.blue": "קצוות של מסך כחול",
+  "planar.maxChannel": "הערוץ הבהיר ביותר (מסכים)",
   "gen.go": "יצירה",
   "gen.img2img": "התחלה מ",
   "gen.img2img.none": "כלום (רק מההנחיה)",

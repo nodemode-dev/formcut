@@ -242,7 +242,8 @@ def track_and_score(
     cv2.fillPoly(matte, [np.round(grown(first, margin)).astype(np.int32)], 255)
     if ring is not None:
         cv2.fillPoly(matte, [np.round(grown(first, -ring)).astype(np.int32)], 0)
-    tracker = PlanarTracker(pictures[0], matte, Settings(**({"perspective": True} | (settings or {}))))
+    # the brightest channel by default: a saturated screen keeps it under a reflection (see planar.Settings.channel)
+    tracker = PlanarTracker(pictures[0], matte, Settings(**({"perspective": True, "channel": "max"} | (settings or {}))))
     errors, carried, confidences, sides = [], [first], [], []
     started = time.perf_counter()
     for i in range(1, len(pictures)):
@@ -281,12 +282,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("shots", nargs="+")
     parser.add_argument("--margin", type=float, default=0.08, help="the search area: the screen grown by this share")
     parser.add_argument("--ring", type=float, default=0.04, help="the screen shrunk by this share is left out (negative: none)")
+    parser.add_argument("--channel", default="max", choices=("max", "luminance", "auto"), help="what the tracker reads")
     parser.add_argument("--frames", type=int, default=None)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     results = []
     for shot in args.shots:
-        r = track_and_score(shot, args.margin, args.frames, ring=None if args.ring < 0 else args.ring)
+        r = track_and_score(shot, args.margin, args.frames, settings={"channel": args.channel}, ring=None if args.ring < 0 else args.ring)
         results.append(r)
         if not args.json:
             print(

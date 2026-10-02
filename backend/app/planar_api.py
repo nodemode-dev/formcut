@@ -71,8 +71,8 @@ def _settings(raw: dict) -> Settings:
     if unknown:
         raise HTTPException(400, f"unknown track settings: {', '.join(sorted(unknown))}")
     settings = Settings(**raw)
-    if settings.motion not in ("large", "small", "manual") or settings.channel not in ("luminance", "auto"):
-        raise HTTPException(400, "motion is large, small or manual; channel is luminance or auto")
+    if settings.motion not in ("large", "small", "manual") or settings.channel not in ("luminance", "auto", "max"):
+        raise HTTPException(400, "motion is large, small or manual; channel is luminance, auto or max")
     return settings
 
 

@@ -803,6 +803,7 @@
   "planar.method.planar": "تصویرش (صفحه‌ای)",
   "planar.method.green": "لبه‌های پردهٔ سبز",
   "planar.method.blue": "لبه‌های پردهٔ آبی",
+  "planar.maxChannel": "روشن‌ترین کانال (صفحه‌ها)",
   "gen.go": "ساختن",
   "gen.img2img": "شروع از",
   "gen.img2img.none": "هیچ (فقط متن)",

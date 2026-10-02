@@ -46,7 +46,8 @@ class Settings:
     rotation: bool = True
     shear: bool = False
     perspective: bool = False
-    channel: str = "luminance"  # or "auto": the colour channel with the most contrast in the matte
+    channel: str = "luminance"  # or "auto": the colour channel with the most contrast in the matte; or "max": the
+    # brightest of the three (a saturated screen colour under a reflection)
     min_pixels: float | None = None  # percent of the matte's pixels used; None: dynamic, by the matte's size
     smoothing: float = 0.0  # a blur before tracking, against noise
     motion: str = "large"  # "large" (search, then refine), "small" (refine only), "manual" (no tracking)
@@ -274,7 +275,13 @@ class PlanarTracker:
         return int(np.argmax(spreads))
 
     def _gray(self, frame: np.ndarray) -> np.ndarray:
-        if frame.ndim == 3:
+        if frame.ndim == 3 and self.settings.channel == "max":
+            # the brightest of the three channels (HSV value): a saturated screen colour stays at the top however much
+            # white a reflection adds, where its luminance rises with it. On the owner's upright phone, whose reflection
+            # crosses its screen, this took its sides from 0.72 to 0.39 px RMS (worst 6.1 to 2.8 px); the other two
+            # shots held or improved (gradient magnitude was tried as well, and did not)
+            gray = frame.max(axis=2)
+        elif frame.ndim == 3:
             gray = frame[:, :, self.channel] if self.channel is not None else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         else:
             gray = frame

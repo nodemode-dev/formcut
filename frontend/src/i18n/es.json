@@ -802,6 +802,7 @@
   "planar.method.planar": "Su imagen (planar)",
   "planar.method.green": "Bordes de una pantalla verde",
   "planar.method.blue": "Bordes de una pantalla azul",
+  "planar.maxChannel": "Canal más brillante (pantallas)",
   "gen.go": "Generar",
   "gen.img2img": "Partir de",
   "gen.img2img.none": "Nada (solo el prompt)",

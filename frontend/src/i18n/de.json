@@ -802,6 +802,7 @@
   "planar.method.planar": "Bildinhalt (planar)",
   "planar.method.green": "Kanten eines Greenscreens",
   "planar.method.blue": "Kanten eines Bluescreens",
+  "planar.maxChannel": "Hellster Kanal (Bildschirme)",
   "gen.go": "Erzeugen",
   "gen.img2img": "Ausgehen von",
   "gen.img2img.none": "Nichts (nur der Prompt)",
