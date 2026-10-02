@@ -59,7 +59,6 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   const pinned = !!selected?.cornerPin;
   const matted = !!selected?.planarMatte;
   const heldOut = !!selected?.key?.holdout?.length;
-  const replaced = !!selected?.screenReplace;
   const el = document.createElement("section");
   el.className = "pane pane-inspector";
   el.dataset.empty = String(!engine.snapshot.selectedClipId);
@@ -217,7 +216,6 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         <div class="prop-row"><label>${t("track.followRotation")}</label><button class="toggle" data-ref="track-rotation" aria-label="${t("track.followRotation")}"></button></div>
         <button class="tool-chip" data-ref="track-btn">${icon("search")}${t("track.btn")}</button>
         <button class="tool-chip" data-ref="planar-btn">${icon("layers")}${t("planar.open")}</button>
-        ${replaced ? `<button class="tool-chip" data-ref="screen-remove">${icon("close")}${t("screen.remove")}</button>` : ""}
         ${heldOut ? `<button class="tool-chip" data-ref="holdout-remove">${icon("close")}${t("holdout.remove")}</button>` : ""}
         ${matted ? `<button class="tool-chip" data-ref="matte-remove">${icon("close")}${t("matte.remove")}</button>` : ""}
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}

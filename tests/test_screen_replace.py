@@ -72,36 +72,3 @@ def test_the_bezel_and_the_wall_are_left_as_they_were(tmp_path):
     assert np.abs(out[35, 200] - [12, 12, 12]).max() <= 2
     assert np.abs(out[10, 10] - [116, 186, 198]).max() <= 2
     assert "screenReplace" in CPU_STEPS
-
-
-def test_the_engine_traces_the_screens_outline_and_the_new_pictures_light(tmp_path):
-    """Screen replacement's shape from the engine: the outline of a green screen with rounded corners on a frame, and
-    the replacement's average colour as the new screen's light; the workspace's Apply offers it."""
-    import subprocess
-    from pathlib import Path
-
-    import cv2
-    from app.main import app
-    from app.media import ingest_path
-    from fastapi.testclient import TestClient
-
-    frame = np.full((360, 640, 3), (198, 186, 116), np.uint8)  # BGR teal
-    cv2.rectangle(frame, (200, 60), (440, 300), (12, 12, 12), -1)
-    cv2.rectangle(frame, (210, 70), (430, 290), (0, 245, 0), -1)
-    still = tmp_path / "phone.png"
-    cv2.imwrite(str(still), frame)
-    video = tmp_path / "phone.mkv"
-    subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", str(still), "-t", "0.3", "-r", "24", "-c:v", "ffv1", str(video)], check=True
-    )
-    plate = ingest_path(video, "phone.mkv")["id"]
-    picture = tmp_path / "wall.png"
-    Image.new("RGB", (40, 80), (40, 60, 200)).save(picture)
-    insert = ingest_path(picture, "wall.png")["id"]
-    client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
-    out = client.post("/api/planar/screen-outline", json={"media_id": plate, "frame": 0, "insert_media_id": insert}).json()
-    pts = np.array(out["points"]) * [640, 360]
-    assert 205 < pts[:, 0].min() < 215 and 425 < pts[:, 0].max() < 435 and 65 < pts[:, 1].min() < 75
-    assert out["light"] == "#283cc8"
-    workspace = (Path(__file__).resolve().parents[1] / "frontend" / "src" / "ui" / "planar-workspace.ts").read_text(encoding="utf-8")
-    assert '<option value="screen">' in workspace and '"clip.screenReplace"' in workspace

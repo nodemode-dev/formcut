@@ -154,7 +154,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         <section class="pw-panel">
           <div class="pw-head"><span>${t("planar.apply")}</span></div>
           <div class="pw-row"><span>${t("planar.applyTo")}</span><select data-ref="target"></select></div>
-          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option><option value="screen">${t("planar.kind.screen")}</option></select></div>
+          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
         </section>
@@ -893,28 +893,6 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("kind").addEventListener("change", () => { $("matte-row").hidden = $<HTMLSelectElement>("kind").value !== "matte"; });
   $("apply").addEventListener("click", () => void (async () => {
     const l = layer(), target = $<HTMLSelectElement>("target").value, kind = $<HTMLSelectElement>("kind").value;
-    if (kind === "screen") {
-      // screen replacement: the screen's own outline traced on the tracked layer's reference frame, as a roto layer
-      // riding its track; the phone clip's screen replaced with its glare kept and its light the new picture's; the
-      // chosen clip corner-pinned onto the screen (the surface's corners) below it
-      const insert = engine.findClip(target)?.clip;
-      if (!l || !l.surface || !insert?.mediaId) { say(t("planar.needSurface")); return; }
-      const screen = (l.settings.screen === "blue" ? "blue" : "green") as "green" | "blue";
-      try {
-        const shape = await api<{ points: number[][]; light: string }>("/api/planar/screen-outline", { media_id: mediaId, frame: refFrame(l), screen, insert_media_id: insert.mediaId });
-        const id = `${l.id}-screen`;
-        const outline: PlanarLayer = { id, name: t("planar.screenLayer"), color: "#3fb950", shapes: [{ points: shape.points, mode: "add" }], reference: l.reference, settings: {}, visible: true, tracking: false, locked: true, link: l.id };
-        layers = [...layers.filter((one) => one.id !== id), outline];
-        engine.dispatch("clip.planar", { clipId, planar: { version: 1, layers } });
-        engine.dispatch("clip.screenReplace", { clipId, screenReplace: { layer: id, screen, reflection: 0.6, spill: 1, light: shape.light, feather: 1 } });
-        const out = await api<{ cornerPin?: { points: number[][]; times: number[] } }>("/api/planar/apply", { project: engine.snapshot, tracked_clip: clipId, layer_id: l.id, target_clip: target, kind: "corner-pin" });
-        if (out.cornerPin) engine.dispatch("clip.cornerPin", { clipId: target, cornerPin: out.cornerPin });
-        changed = false;
-        paintLayers();
-        say(t("planar.screenApplied").replace("{clip}", insert.label));
-      } catch (error) { say(error instanceof Error ? error.message : String(error)); }
-      return;
-    }
     if (kind === "holdout") {
       // this clip's layers as its key's hold-out (P7): inside them the chroma key takes nothing away
       const key = engine.findClip(clipId)?.clip.key;

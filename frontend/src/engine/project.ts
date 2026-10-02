@@ -254,17 +254,6 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
-      case "clip.screenReplace": {
-        const p = payload as { clipId: string; screenReplace: import("./types").Clip["screenReplace"] | null };
-        const found = this.findClip(p.clipId);
-        if (!found) break;
-        this.pushHistory();
-        if (p.screenReplace) found.clip.screenReplace = structuredClone(p.screenReplace);
-        else delete found.clip.screenReplace;
-        s.saved = false;
-        this.emit("clips");
-        break;
-      }
       case "clip.planarMatte": {
         const p = payload as { clipId: string; planarMatte: { layers: string[]; feather: number; invert: boolean } | null };
         const found = this.findClip(p.clipId);

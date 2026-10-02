@@ -142,9 +142,6 @@ export interface Clip {
   cornerPin?: { points: number[][]; times?: number[] };
   // the clip's own planar layers as its matte (Mocha's Apply Matte, P3): their shapes carried by their tracks
   planarMatte?: { layers: string[]; feather: number; invert: boolean };
-  // screen replacement (the renderer's screen_replace): the screen's tracked outline layer, its glare kept as light,
-  // the screen's light on what is near it replaced by the new screen's colour
-  screenReplace?: { layer: string; screen: "green" | "blue"; reflection: number; spill: number; light: string; feather: number };
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;
