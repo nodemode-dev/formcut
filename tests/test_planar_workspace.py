@@ -182,6 +182,27 @@ def test_the_workspace_in_the_real_app(tmp_path):
             page.mouse.up()
             time.sleep(2)
             page.click('.pw [data-view="adjust"]')
+            # P5: a roto layer, not tracked, linked to the tracked one, drawn as an X-Spline, a point moved a frame on
+            page.click('.pw [data-ref="add-layer"]')
+            page.click('.pw .pw-layer[data-index="0"] [data-act="tracking"]')
+            linked = page.eval_on_selector_all('.pw [data-ref="link"] option', "els => els.map(e => e.value).filter(Boolean)")
+            page.select_option('.pw [data-ref="link"]', linked[0])
+            page.click('.pw [data-ref="smooth"]')
+            page.click('.pw [data-tool="rect"]')
+            box = page.locator(".pw [data-ref=svg]").bounding_box()
+            page.mouse.move(box["x"] + box["width"] * 0.42, box["y"] + box["height"] * 0.4)
+            page.mouse.down()
+            page.mouse.move(box["x"] + box["width"] * 0.58, box["y"] + box["height"] * 0.6, steps=4)
+            page.mouse.up()
+            page.keyboard.press("ArrowLeft")
+            time.sleep(1)
+            page.click('.pw [data-tool="select"]')
+            handle = page.locator(".pw svg .pw-handle").first.bounding_box()
+            page.mouse.move(handle["x"] + handle["width"] / 2, handle["y"] + handle["height"] / 2)
+            page.mouse.down()
+            page.mouse.move(handle["x"] - 15, handle["y"] - 10, steps=4)
+            page.mouse.up()
+            assert not page.locator('.pw [data-ref="roto-hint"]').is_hidden()
             for view in ("grid", "trace", "stabilise"):
                 page.click(f'.pw [data-view="{view}"]')
             assert page.locator(".pw svg .pw-grid").count() > 0 and page.locator(".pw svg .pw-trace").count() == 4
@@ -229,7 +250,12 @@ def test_the_workspace_in_the_real_app(tmp_path):
                 for c in tr.get("clips", [])
                 if c.get("planar")
             ]
-        assert saved and saved[0]["version"] == 1 and len(saved[0]["layers"]) == 1 and saved[0]["layers"][0]["surface"]
+        assert saved and saved[0]["version"] == 1 and len(saved[0]["layers"]) == 2
+        roto = next(one for one in saved[0]["layers"] if one.get("link"))
+        tracked_layer = next(one for one in saved[0]["layers"] if not one.get("link"))
+        assert roto["link"] == tracked_layer["id"] and roto["tracking"] is False and tracked_layer["surface"]
+        assert roto["shapes"][0]["kind"] == "xspline" and roto["shapes"][0].get("keys"), json.dumps(roto)[:900]
+        saved[0]["layers"] = [tracked_layer]
         adjust = saved[0]["layers"][0].get("adjust") or []
         assert len(adjust) == 4 and any(point["keys"] for point in adjust), adjust
         stored = json.loads(urllib.request.urlopen(f"{base}/api/planar/track/{saved[0]['layers'][0]['id']}").read())  # noqa: S310 - the test's own local engine

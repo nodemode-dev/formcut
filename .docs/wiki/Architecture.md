@@ -210,3 +210,15 @@ corners the first time, draws each where the engine will put it (a red X on its 
 coloured by their spread, and keys a correction where one is dragged (on its master frame, it moves its home); New
 point, Next, Set master, Delete, a 0.1 px nudge pad and Auto nudge with its search region and maximum motion.
 
+Roto (P5, `backend/app/planar_shapes.py`, its twin in planar-workspace.ts): a shape may be an X-Spline, each point's
+tension from a corner (0) to a smooth curve (1) (a Hermite curve whose tangent at each point is the Catmull-Rom
+tangent times its tension, after the behaviour of Mocha's X-Spline handles), may carry each point's own feather
+(media pixels; the matte's edge fades outward over its nearest part's feather), and may be keyed on frames (keys:
+frame -> points, linear between, held beyond). A layer may be linked to another's track (link): its shapes ride that
+track, adjusted where it has one, in the workspace, the renderer's matte, the exclusion of layers behind it and the
+apply step. In the workspace a layer that is not tracked is a roto layer: dragging its point keys its shape on that
+frame (the first key holds across the clip), and with Uberkey the point moves the same on every key; Smooth draws
+X-Splines; a selected point's tension and edge feather are set in the shapes panel; the strip ticks the selected
+shape's keyframes. A tracked layer's shapes stay its search area (editing them starts its track afresh, asked; a
+point's feather is the matte's and leaves the track alone).
+

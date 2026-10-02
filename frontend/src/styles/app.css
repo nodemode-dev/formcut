@@ -1675,3 +1675,4 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pw-hint { margin: 0; font-size: 12px; color: var(--ink-soft); }
 .pw-buttons-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .pw-nudge { display: inline-flex; gap: 2px; }
+.pw-surface, .pw-grid, .pw-trace { pointer-events: none; }  /* drawn for the eye: the points and corners take the pointer */

@@ -42,6 +42,10 @@ _locks: dict[str, threading.Lock] = {}
 class Shape(BaseModel):
     points: list[list[float]] = Field(min_length=3, max_length=4000)  # x, y in the frame's unit square
     mode: str = "add"  # "add" or "subtract"
+    kind: str = "polygon"  # or "xspline": each point's tension from a corner (0) to a smooth curve (1)
+    tension: list[float] | None = None
+    feather: list[float] | None = None  # each point's own feather, media pixels (the matte's)
+    keys: dict[str, list[list[float]]] | None = None  # frame -> points (a roto layer's keyframes)
 
 
 class Layer(BaseModel):
@@ -49,6 +53,7 @@ class Layer(BaseModel):
     shapes: list[Shape] = Field(min_length=1, max_length=64)
     reference: float = Field(ge=0)  # source seconds: the frame the shapes are drawn on
     settings: dict = Field(default_factory=dict)
+    link: str | None = None  # Link to Track: the layer whose track carries these shapes (its own, without)
 
 
 class TrackBody(BaseModel):
@@ -72,7 +77,9 @@ def _settings(raw: dict) -> Settings:
 
 def _signature(layer: Layer, media_id: str) -> str:
     """What a track depends on: the media, the shapes, the reference frame and the settings."""
-    raw = json.dumps([media_id, [s.model_dump() for s in layer.shapes], round(layer.reference, 6), layer.settings], sort_keys=True)
+    # (a point's feather is the matte's, not the tracker's: softening an edge does not start a track afresh)
+    shapes = [{k: v for k, v in s.model_dump().items() if k != "feather"} for s in layer.shapes]
+    raw = json.dumps([media_id, shapes, round(layer.reference, 6), layer.settings], sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -158,19 +165,15 @@ def _frames(path: Path, fps: float, width: int, height: int, start: int, stop: i
         upper = lower - 1
 
 
-def _raster(layer: Layer, size: tuple[int, int], h: np.ndarray | None = None) -> np.ndarray:
-    """The layer's matte on a frame: its shapes (drawn on its reference) carried by h, add then subtract."""
+def _raster(layer: Layer, size: tuple[int, int], h: np.ndarray | None = None, frame: int = 0) -> np.ndarray:
+    """The layer's matte on a frame: its shapes as they are on that frame (keyframes, X-Splines; planar_shapes)
+    carried by h, add then subtract, solid (the tracker's area takes no feather)."""
+    from .planar_shapes import layer_matte
+
     width, height = size
-    matte = np.zeros((height, width), np.uint8)
-    for wanted in ("add", "subtract"):
-        for shape in layer.shapes:
-            if (shape.mode == "subtract") != (wanted == "subtract"):
-                continue
-            pts = np.array(shape.points, float) * [width, height]
-            if h is not None:
-                pts = corners_of(h, pts)
-            cv2.fillPoly(matte, [np.round(pts).astype(np.int32)], 0 if wanted == "subtract" else 255)
-    return matte
+    shapes = [{**s.model_dump(), "feather": None} for s in layer.shapes]
+    carry = (lambda pts: corners_of(h, pts * [width, height])) if h is not None else (lambda pts: pts * [width, height])
+    return (layer_matte(shapes, frame, carry, (width, height), lambda pts: pts) > 0.5).astype(np.uint8) * 255
 
 
 def _matrix(values) -> np.ndarray:
@@ -182,8 +185,9 @@ def _exclusion(above: list[Layer], media_id: str, size: tuple[int, int]):
     (and where it is drawn where it has none), grown a few pixels."""
     tracks = []
     for layer in above:
-        data = _load(layer.id)
-        tracks.append((layer, data if data.get("signature") == _signature(layer, media_id) else {}))
+        # a linked layer rides its carrier's track; its own must still match its shapes to be believed
+        data = _load(layer.link or layer.id)
+        tracks.append((layer, data if layer.link or data.get("signature") == _signature(layer, media_id) else {}))
     if not tracks:
         return None
     grow = np.ones((7, 7), np.uint8)
@@ -191,8 +195,9 @@ def _exclusion(above: list[Layer], media_id: str, size: tuple[int, int]):
     def at(index: int) -> np.ndarray | None:
         out = None
         for layer, data in tracks:
-            values = (data.get("frames") or {}).get(str(index))
-            matte = _raster(layer, size, _matrix(values) if values else None)
+            follow = data.get("adjusted") or data.get("frames") or {}
+            values = follow.get(str(index))
+            matte = _raster(layer, size, _matrix(values) if values else None, index)
             out = matte if out is None else cv2.bitwise_or(out, matte)
         return None if out is None else cv2.dilate(out, grow)
 
@@ -239,7 +244,7 @@ def track_layer(body: TrackBody) -> dict:
             total = abs(last - first)
             frames = _frames(source, fps, width, height, first, last)
             _, frame = next(frames)
-            matte = _raster(body.layer, (width, height), start_h)
+            matte = _raster(body.layer, (width, height), start_h, first)
             if (matte > 0).sum() < 64:
                 raise ValueError("the layer's shapes cover almost nothing on the frame tracked from")
             tracker = PlanarTracker(frame, matte, settings)
@@ -424,7 +429,7 @@ def apply_track(body: ApplyBody) -> dict:
     layer = next((one for one in (tracked.get("planar") or {}).get("layers", []) if one.get("id") == body.layer_id), None)
     if layer is None or not layer.get("surface"):
         raise HTTPException(400, "that layer has no surface on the tracked clip: place its surface in the Track workspace")
-    data = _load(body.layer_id)
+    data = _load(str(layer.get("link") or body.layer_id))  # a linked layer applies by its carrier's track
     if not data or data.get("media") != tracked.get("mediaId"):
         raise HTTPException(409, "that layer has no track on this clip's media yet")
     if data.get("adjusted"):

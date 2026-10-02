@@ -8,7 +8,7 @@
 // the track; it is the four corners the outputs use (P3). Layers higher in the list are in front: what they cover
 // is left out of the layers below them while tracking.
 import type { ProjectEngine } from "../engine/project";
-import type { ClipPlanar, PlanarLayer } from "../engine/types";
+import type { ClipPlanar, PlanarLayer, PlanarShape } from "../engine/types";
 import { api } from "../engine/api";
 import { t } from "../i18n";
 import { icon } from "./icons";
@@ -32,6 +32,36 @@ const invert = (m: number[]): number[] => {
   const det = a * A + b * B + c * C;
   return [A, -(b * i - c * h), b * f - c * e, B, a * i - c * g, -(a * f - c * d), C, -(a * h - b * g), a * e - b * d].map((v) => v / det);
 };
+// a shape's points on a frame and its outline: the twin of backend/app/planar_shapes.py (keyframes run linearly and
+// hold beyond; an X-Spline is a Hermite curve whose tangent at each point is the Catmull-Rom tangent times its tension)
+const SAMPLES = 12;
+const pointsAt = (shape: PlanarShape, index: number): number[][] => {
+  const keys = shape.keys ?? {};
+  const order = Object.keys(keys).map(Number).sort((a, b) => a - b);
+  if (!order.length) return shape.points;
+  if (index <= order[0]) return keys[String(order[0])];
+  if (index >= order[order.length - 1]) return keys[String(order[order.length - 1])];
+  const after = order.findIndex((k) => k > index), a = order[after - 1], b = order[after];
+  const f = (index - a) / (b - a), pa = keys[String(a)], pb = keys[String(b)];
+  return pa.length === pb.length ? pa.map((p, i) => [p[0] + (pb[i][0] - p[0]) * f, p[1] + (pb[i][1] - p[1]) * f]) : pa;
+};
+const outlineOf = (points: number[][], shape: PlanarShape): number[][] => {
+  const n = points.length;
+  if (shape.kind !== "xspline" || n < 3) return points;
+  const tension = shape.tension ?? [];
+  const out: number[][] = [];
+  for (let i = 0; i < n; i += 1) {
+    const p0 = points[i], p1 = points[(i + 1) % n], prev = points[(i - 1 + n) % n], next = points[(i + 2) % n];
+    const t0 = tension[i] ?? 1, t1 = tension[(i + 1) % n] ?? 1;
+    const m0 = [((p1[0] - prev[0]) / 2) * t0, ((p1[1] - prev[1]) / 2) * t0];
+    const m1 = [((next[0] - p0[0]) / 2) * t1, ((next[1] - p0[1]) / 2) * t1];
+    for (let k = 0; k < SAMPLES; k += 1) {
+      const t = k / SAMPLES, h00 = 2 * t ** 3 - 3 * t ** 2 + 1, h10 = t ** 3 - 2 * t ** 2 + t, h01 = -2 * t ** 3 + 3 * t ** 2, h11 = t ** 3 - t ** 2;
+      out.push([h00 * p0[0] + h10 * m0[0] + h01 * p1[0] + h11 * m1[0], h00 * p0[1] + h10 * m0[1] + h01 * p1[1] + h11 * m1[1]]);
+    }
+  }
+  return out;
+};
 const esc = (text: string) => text.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
 export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void {
@@ -48,6 +78,9 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   let mode: "add" | "subtract" = "add";
   const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false, adjust: false };
   let pointIndex = 0;  // the reference point selected in AdjustTrack
+  let picked: { shape: number; point: number } | null = null;  // the shape point selected (its tension and feather)
+  let uberkey = false;  // a dragged point moves the same on every keyframe of its shape
+  let smooth = false;  // new shapes drawn as X-Splines
   let placing = false;  // the next click on the frame places a new reference point
   let adjustTimer = 0;
   const tracks = new Map<string, Track>();
@@ -81,7 +114,16 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <div class="pw-seg" data-ref="mode" role="group">
             <button data-mode="add">${t("planar.add")}</button><button data-mode="subtract">${t("planar.subtract")}</button>
           </div>
-          <button class="tool-chip" data-ref="delete-shape">${icon("trash")}${t("planar.deleteShape")}</button>
+          <div class="pw-buttons-row">
+            <button class="tool-chip" data-ref="smooth">${t("planar.smooth")}</button>
+            <button class="tool-chip" data-ref="uberkey">${t("planar.uberkey")}</button>
+            <button class="tool-chip" data-ref="delete-shape">${icon("trash")}${t("planar.deleteShape")}</button>
+          </div>
+          <div data-ref="point-panel" hidden>
+            <div class="pw-row"><span>${t("planar.tension")}</span><input type="range" data-ref="tension" min="0" max="1" step="0.05"></div>
+            <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="0" max="500" step="1"></div>
+          </div>
+          <p class="pw-hint" data-ref="roto-hint" hidden>${t("planar.rotoHint")}</p>
         </section>
         <section class="pw-panel" data-ref="adjust-panel" hidden>
           <div class="pw-head"><span>${t("planar.adjust.title")}</span></div>
@@ -149,6 +191,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     return index === refFrame(l) ? [1, 0, 0, 0, 1, 0, 0, 0, 1] : null;
   };
   const px = (p: number[]) => [p[0] * media!.width, p[1] * media!.height];
+  // Link to Track: the layer whose track carries a layer's shapes (itself, unless linked to another)
+  const carrierOf = (l: PlanarLayer): PlanarLayer => (l.link ? layers.find((one) => one.id === l.link) ?? l : l);
   const unit = (p: number[]) => [p[0] / media!.width, p[1] / media!.height];
 
   // ---- drawing the frame and its overlays ----
@@ -157,18 +201,21 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const { width: W, height: H } = media;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     let out = "";
+    let on_top = "";
     layers.forEach((l, li) => {
       if (!l.visible) return;
-      const h = homography(l, frame);
+      const h = homography(carrierOf(l), frame);
       const carried = (p: number[]) => (h ? apply(h, ...(px(p) as [number, number])) : px(p));
       const active = li === current;
+      let handles = "";  // the shape's points, drawn last so they sit above the surface's corners where they meet
       const faint = !h;  // not tracked at this frame: shown where drawn, dashed
       l.shapes.forEach((shape, si) => {
-        const pts = shape.points.map((p) => carried(p).join(",")).join(" ");
+        const now = pointsAt(shape, frame);
+        const pts = outlineOf(now, shape).map((p) => carried(p).join(",")).join(" ");
         const fill = views.matte ? `${l.color}${shape.mode === "subtract" ? "00" : "55"}` : "none";
         out += `<polygon points="${pts}" fill="${fill}" stroke="${l.color}" stroke-width="${active && si === shapeIndex ? 3 : 2}" vector-effect="non-scaling-stroke"${faint ? ' stroke-dasharray="6 5"' : ""}${shape.mode === "subtract" ? ' class="is-subtract"' : ""} data-layer="${li}" data-shape="${si}"/>`;
         if (active && tool === "select" && !l.locked) {
-          shape.points.forEach((p, pi) => { const [x, y] = carried(p); out += `<circle class="pw-handle" cx="${x}" cy="${y}" r="5" data-point="${si}:${pi}" vector-effect="non-scaling-stroke"/>`; });
+          now.forEach((p, pi) => { const [x, y] = carried(p); handles += `<circle class="pw-handle" cx="${x}" cy="${y}" r="5" data-point="${si}:${pi}" vector-effect="non-scaling-stroke"/>`; });
         }
       });
       if (views.surface && l.surface && h) {
@@ -197,12 +244,14 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           }
         }
       }
+      on_top += handles;
     });
+    out += on_top;  // the active layer's points above every layer, so another layer's surface never covers them
     if (views.adjust) out += paintPoints();
     if (drawing.length) out += `<polyline class="pw-drawing" points="${drawing.map((p) => p.join(",")).join(" ")}" vector-effect="non-scaling-stroke"/>`;
     svg.innerHTML = out;
     // the stabilised view: the picture moved so the current layer's tracked plane holds still
-    const l = layer(), h = l ? homography(l, frame) : null;
+    const l = layer(), h = l ? homography(carrierOf(l), frame) : null;  // a linked layer stabilises by its carrier
     const inner = $("inner");
     if (views.stabilise && h) {
       const s = inner.clientWidth / W;
@@ -228,7 +277,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     canvas.width = Math.max(1, Math.min(2000, span));
     const g = canvas.getContext("2d")!;
     g.clearRect(0, 0, canvas.width, canvas.height);
-    const tr = l ? tracks.get(l.id) : undefined;
+    const keyed = l && shapeIndex >= 0 ? Object.keys(l.shapes[shapeIndex]?.keys ?? {}).map(Number) : [];
+    g.fillStyle = "#ffffff";
+    for (const k of keyed) g.fillRect(((k - first) / span) * canvas.width, 0, Math.max(2, canvas.width / span), canvas.height);
+    const tr = l ? tracks.get(carrierOf(l).id) : undefined;
     if (!tr) return;
     for (const [i, c] of tr.confidence) {
       g.fillStyle = c >= 0.6 ? "#3fb950" : c >= 0.3 ? "#ffae2b" : "#ff475a";
@@ -305,6 +357,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const s = { ...DEFAULTS, ...l.settings } as Record<string, unknown>;
     const num = (key: string, step: number, min: number, max: number, autoable = false) => `<input type="number" data-key="${key}" step="${step}" min="${min}" max="${max}" value="${s[key] ?? ""}" placeholder="${autoable ? t("planar.auto") : ""}">`;
     box.innerHTML = `<div class="pw-head"><span>${t("planar.trackSettings")}</span></div>
+      <div class="pw-row"><span>${t("planar.link")}</span><select data-ref="link">${[`<option value="">${t("planar.ownTrack")}</option>`, ...layers.filter((o) => o.id !== l.id).map((o) => `<option value="${o.id}" ${l.link === o.id ? "selected" : ""}>${esc(o.name)}</option>`)].join("")}</select></div>
       <div class="pw-motions">${MOTIONS.map((m) => `<label><input type="checkbox" data-key="${m}" ${s[m] ? "checked" : ""}>${t(`planar.motion.${m}`)}</label>`).join("")}</div>
       <div class="pw-row"><span>${t("planar.channel")}</span><select data-key="channel"><option value="luminance" ${s.channel === "luminance" ? "selected" : ""}>${t("planar.luminance")}</option><option value="auto" ${s.channel === "auto" ? "selected" : ""}>${t("planar.autoChannel")}</option></select></div>
       <div class="pw-row"><span>${t("planar.minPixels")}</span>${num("min_pixels", 1, 1, 100, true)}</div>
@@ -317,6 +370,13 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("settings").addEventListener("change", (event) => void (async () => {
     const input = event.target as HTMLInputElement;
     const l = layer(), key = input.dataset.key;
+    if (l && input.dataset.ref === "link") {
+      // Link to Track: the shapes ride the chosen layer's track (adjusted where it has one), its own without
+      l.link = input.value || undefined;
+      changed = true;
+      render();
+      return;
+    }
     if (!l || !key) return;
     if (!(await invalidate(l))) { paintSettings(); return; }
     const value = input.type === "checkbox" ? input.checked : input.type === "number" ? (input.value === "" ? null : Number(input.value)) : input.value;
@@ -343,7 +403,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   });
   $("align").addEventListener("click", () => {
     // the surface fitted to the whole frame on the current frame, kept in the reference's coordinates
-    const l = layer(), h = l ? homography(l, frame) : null;
+    const l = layer(), h = l ? homography(carrierOf(l), frame) : null;
     if (!l || !h) { say(t("planar.needTracked")); return; }
     const back = invert(h);
     l.surface = [[0, 0], [1, 0], [1, 1], [0, 1]].map((p) => unit(apply(back, ...(px(p) as [number, number]))));
@@ -367,7 +427,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   };
   // a point on the current frame, in the layer's reference: the shapes and surface are kept there
   const toReference = (l: PlanarLayer, x: number, y: number): number[] | null => {
-    const h = homography(l, frame);
+    const h = homography(carrierOf(l), frame);
     return h ? unit(apply(invert(h), x, y)) : null;
   };
 
@@ -378,7 +438,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const mapped = points.map((p) => toReference(l!, p[0], p[1]));
     if (mapped.some((p) => !p)) { say(t("planar.needTracked")); return; }
     if (!(await invalidate(l))) return;
-    l.shapes.push({ points: (mapped as number[][]).map((p) => [Number(p[0].toFixed(6)), Number(p[1].toFixed(6))]), mode });
+    const placed = (mapped as number[][]).map((p) => [Number(p[0].toFixed(6)), Number(p[1].toFixed(6))]);
+    l.shapes.push(smooth ? { points: placed, mode, kind: "xspline", tension: placed.map(() => 1) } : { points: placed, mode });
     if (!l.surface) {
       // the surface starts at the first shape's bounds, as a place to put the corners from
       const xs = l.shapes[0].points.map((p) => p[0]), ys = l.shapes[0].points.map((p) => p[1]);
@@ -406,7 +467,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     }
     if (target.dataset.corner !== undefined && l) { drag = { kind: "corner", a: Number(target.dataset.corner), b: 0, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
     if (tool === "select") {
-      if (target.dataset.point && l) { const [si, pi] = target.dataset.point.split(":").map(Number); drag = { kind: "point", a: si, b: pi, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
+      if (target.dataset.point && l) { const [si, pi] = target.dataset.point.split(":").map(Number); picked = { shape: si, point: pi }; shapeIndex = si; paintPoint(); drag = { kind: "point", a: si, b: pi, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
       if (target.dataset.shape !== undefined) { current = Number(target.dataset.layer); shapeIndex = Number(target.dataset.shape); paintSettings(); render(); }
       return;
     }
@@ -434,7 +495,12 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       movePoint(l, drag.a, x, y);
     } else if (l && drag.kind === "point") {
       const p = toReference(l, x, y);
-      if (p) { l.shapes[drag.a].points[drag.b] = p; changed = true; }
+      if (p) {
+        const shape = l.shapes[drag.a];
+        if (l.tracking) shape.points[drag.b] = p;  // a tracked layer's shape is its search area (asked at the end)
+        else keyPoint(shape, drag.b, p);
+        changed = true;
+      }
     }
     render();
   });
@@ -454,7 +520,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   })());
 
   // ---- tracking: the engine's jobs ----
-  const apiLayer = (l: PlanarLayer) => ({ id: l.id, shapes: l.shapes.map((s) => ({ points: s.points, mode: s.mode })), reference: l.reference, settings: l.settings });
+  const apiLayer = (l: PlanarLayer) => ({ id: l.id, shapes: l.shapes.map((s) => ({ points: s.points, mode: s.mode, kind: s.kind ?? "polygon", tension: s.tension ?? null, feather: s.feather ?? null, keys: s.keys ?? null })), reference: l.reference, settings: l.settings, link: l.link ?? null });
 
   async function loadTrack(l: PlanarLayer): Promise<void> {
     const reply = await fetch(`/api/planar/track/${l.id}`);
@@ -516,6 +582,49 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("back-one").addEventListener("click", () => void track(-1, true));
   $("stop").addEventListener("click", () => { if (job) void fetch(`/api/jobs/${job}`, { method: "DELETE" }); });
   scrub.addEventListener("input", () => { if (!job) showFrame(Number(scrub.value)); });
+
+  // ---- roto (P5): Autokey on layers that are not tracked, Überkey, a point's tension and feather ----
+  function keyPoint(shape: PlanarShape, i: number, place: number[]): void {
+    // a roto layer: the shape keyed on this frame as it now is (the first key holds over the whole clip); with Überkey
+    // the point moves by the same amount on every key, and on the base shape
+    const now = pointsAt(shape, frame).map((p) => [...p]);
+    const dx = place[0] - now[i][0], dy = place[1] - now[i][1];
+    if (uberkey) {
+      for (const pts of [shape.points, ...Object.values(shape.keys ?? {})]) pts[i] = [pts[i][0] + dx, pts[i][1] + dy];
+      return;
+    }
+    now[i] = place;
+    (shape.keys ??= {})[String(frame)] = now;
+  }
+  function paintPoint(): void {
+    const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
+    $("point-panel").hidden = !shape;
+    $("roto-hint").hidden = !l || l.tracking;
+    $("smooth").classList.toggle("is-on", smooth);
+    $("uberkey").classList.toggle("is-on", uberkey);
+    if (!shape || !picked) return;
+    const tension = $<HTMLInputElement>("tension");
+    tension.disabled = shape.kind !== "xspline";
+    tension.value = String(shape.tension?.[picked.point] ?? (shape.kind === "xspline" ? 1 : 0));
+    $<HTMLInputElement>("edge").value = String(shape.feather?.[picked.point] ?? 0);
+  }
+  $("smooth").addEventListener("click", () => { smooth = !smooth; paintPoint(); });
+  $("uberkey").addEventListener("click", () => { uberkey = !uberkey; paintPoint(); });
+  $("tension").addEventListener("change", () => void (async () => {
+    const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
+    if (!l || !shape || !picked || shape.kind !== "xspline") return;
+    if (l.tracking && !(await invalidate(l))) { paintPoint(); return; }  // a tracked layer's search area changes
+    (shape.tension ??= shape.points.map(() => 1))[picked.point] = Number($<HTMLInputElement>("tension").value);
+    changed = true;
+    render();
+  })());
+  $("edge").addEventListener("change", () => {
+    // the matte's feather only: the tracker ignores it, so no track starts afresh
+    const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
+    if (!l || !shape || !picked) return;
+    (shape.feather ??= shape.points.map(() => 0))[picked.point] = Math.max(0, Number($<HTMLInputElement>("edge").value) || 0);
+    changed = true;
+  });
 
   // ---- AdjustTrack (P4): reference points that remove drift, as Mocha's ----
   // A point's place on a frame is the raw track carrying it from its master frame plus its correction there, linear

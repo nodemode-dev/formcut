@@ -407,6 +407,13 @@ Plain|Simple|Semplice|標準|기본|Simples|Обычный|Sade|普通|一般
 Highlight the word|Mettre le mot en couleur|Evidenzia la parola|単語を色で強調|단어 강조|Destacar a palavra|Выделять слово цветом|Kelimeyi vurgula|高亮单词|標示單字
 Pop the word|Agrandir le mot|Ingrandisci la parola|単語を大きく|단어 키우기|Ampliar a palavra|Увеличивать слово|Kelimeyi büyüt|放大单词|放大單字
 Box the word|Encadrer le mot|Riquadra la parola|単語を枠で囲む|단어 상자 표시|Emoldurar a palavra|Слово в рамке|Kelimeyi kutula|单词加框|單字加框
+Smooth (X-Spline)|Lisse (X-Spline)|Morbido (X-Spline)|スムーズ (X-Spline)|부드럽게 (X-Spline)|Suave (X-Spline)|Гладкая (X-Spline)|Yumuşak (X-Spline)|平滑（X-Spline）|平滑（X-Spline）
+Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey|Überkey
+Tension|Tension|Tensione|テンション|장력|Tensão|Натяжение|Gerginlik|张力|張力
+Edge feather|Contour progressif|Sfumatura bordo|エッジのぼかし|가장자리 흐림|Suavizar borda|Растушёвка края|Kenar yumuşatma|边缘羽化|邊緣羽化
+Link to track|Lier au suivi|Collega al tracciamento|トラッキングにリンク|트래킹에 연결|Vincular ao rastreamento|Связать с трекингом|İzlemeye bağla|链接到跟踪|連結到追蹤
+Its own track|Son propre suivi|Il proprio tracciamento|自身のトラッキング|자체 트래킹|Seu próprio rastreamento|Свой трекинг|Kendi izi|自身的跟踪|自身的追蹤
+This layer is not tracked: moving its points keys its shape on this frame|Ce calque n'est pas suivi : déplacer ses points crée une clé sur cette image|Questo livello non è tracciato: spostare i punti crea una chiave in questo fotogramma|このレイヤーはトラッキングされません。ポイントを動かすとこのフレームにキーが付きます|이 레이어는 트래킹되지 않습니다. 포인트를 움직이면 이 프레임에 키가 생깁니다|Esta camada não é rastreada: mover os pontos cria uma chave neste quadro|Этот слой не отслеживается: сдвиг точек ставит ключ на этом кадре|Bu katman izlenmiyor: noktaları taşımak bu karede anahtar ekler|此图层未跟踪：移动点会在此帧添加关键帧|此圖層未追蹤：移動點會在此影格加入關鍵影格
 AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack|AdjustTrack
 Where the track drifts, move a point back onto its feature|Là où le suivi dérive, ramenez un point sur son repère|Dove il tracciamento deriva, riporta un punto sul suo dettaglio|トラッキングがずれたら、ポイントを元の特徴点に戻します|트래킹이 어긋나면 포인트를 원래 지점으로 되돌리세요|Onde o rastreamento desvia, devolva um ponto ao seu detalhe|Где трекинг уплывает, верните точку на её деталь|İzleme kaydığında noktayı kendi ayrıntısına geri taşıyın|跟踪漂移时，把点移回它的特征处|追蹤漂移時，把點移回它的特徵處
 New point|Nouveau point|Nuovo punto|新規ポイント|새 포인트|Novo ponto|Новая точка|Yeni nokta|新建点|新增點

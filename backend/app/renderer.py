@@ -1297,14 +1297,18 @@ class FrameRenderer:
         layers = [one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") in wanted and one.get("shapes")]
         if not layers:
             return None
+        from .planar_shapes import layer_matte
+
         left, top, right, bottom = crop_box(clip) or (0.0, 0.0, 0.0, 0.0)
         full_w, full_h = w / max(1e-6, 1 - left - right), h / max(1e-6, 1 - top - bottom)
-        matte = np.zeros((h, w), np.uint8)
+        alpha = np.zeros((h, w), np.float32)
         scale = 1.0
         for layer in layers:
-            track = self._planar_track(str(layer["id"]))
+            # Link to Track: the shapes ride the linked layer's track (adjusted where it has one), else their own
+            track = self._planar_track(str(layer.get("link") or layer["id"]))
             homography = np.eye(3)
             media_w, media_h = full_w, full_h
+            index = 0
             if track is not None:
                 order, frames, fps, (media_w, media_h) = track
                 index = round(self.matte_time * fps)
@@ -1312,17 +1316,15 @@ class FrameRenderer:
                 nearest = min((order[k] for k in (at - 1, at) if 0 <= k < len(order)), key=lambda f: abs(f - index))
                 homography = frames[nearest]
             scale = full_w / max(1.0, float(media_w))
-            layer_matte = np.zeros((h, w), np.uint8)
-            for wanted_mode in ("add", "subtract"):
-                for shape in layer["shapes"]:
-                    if (shape.get("mode") == "subtract") != (wanted_mode == "subtract"):
-                        continue
-                    pts = np.array(shape["points"], float) * [media_w, media_h]
-                    carried = cv2.perspectiveTransform(pts.reshape(-1, 1, 2), homography).reshape(-1, 2)
-                    local = carried * scale - [left * full_w, top * full_h]
-                    cv2.fillPoly(layer_matte, [np.round(local).astype(np.int32)], 0 if wanted_mode == "subtract" else 255)
-            matte = np.maximum(matte, layer_matte)
-        alpha = matte.astype(np.float32) / 255.0
+            size = (float(media_w), float(media_h))
+
+            def carry(pts, homography=homography, size=size):
+                return cv2.perspectiveTransform((pts * list(size)).reshape(-1, 1, 2), homography).reshape(-1, 2)
+
+            def to_pixels(media, scale=scale):
+                return media * scale - [left * full_w, top * full_h]
+
+            alpha = np.maximum(alpha, layer_matte(layer["shapes"], index, carry, (w, h), to_pixels))
         feather = float(spec.get("feather", 0) or 0) * scale
         if feather > 0:
             alpha = cv2.GaussianBlur(alpha, (0, 0), feather)
