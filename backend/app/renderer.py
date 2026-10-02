@@ -1336,18 +1336,33 @@ class FrameRenderer:
         floor = np.percentile(np.stack([a_, b_], -1)[inside], 20, axis=0) if inside.any() else np.zeros(2, np.float32)
         ra, rb = np.clip(a_ - floor[0], 0, 1), np.clip(b_ - floor[1], 0, 1)
         reflection = np.stack([ra, (ra + rb) / 2, rb], -1) if spec.get("screen") != "blue" else np.stack([ra, rb, (ra + rb) / 2], -1)
-        # smoothed within the screen (a blur of it over a blur of the screen, so the bezel does not bleed in): the
-        # light a soft source puts on glass is smooth, and what the screen's red and blue carry finer than that is the
-        # video's compression, in 8 and 16 pixel blocks (on the owner's upright phone, blotches in the glare)
+        # smoothed within the screen, from the screen and its glare only (a blur weighted by how even each pixel's two
+        # other channels are, over a blur of the weights): the light a soft source puts on glass is smooth, and what the
+        # screen's red and blue carry finer than that is the video's compression, in 8 and 16 pixel blocks (blotches in
+        # the glare, once). Glare is white light, its two channels rising together; the soft edge of something in front
+        # (a fingertip's skin mixed with the screen) has far more of one, and read as glare it made a halo round the
+        # owner's finger. (Weighting by the screen's lead instead left out the glare itself, which lowers it.)
+        clear = inside * np.clip(1 - np.abs(a_ - b_) / 0.08, 0, 1)
         soft = max(2.0, 0.012 * max(w, h))
-        weight = cv2.GaussianBlur(inside.astype(np.float32), (0, 0), soft)
-        reflection = cv2.GaussianBlur(reflection * inside[..., None], (0, 0), soft) / np.maximum(weight, 1e-4)[..., None]
+        weight = cv2.GaussianBlur(clear.astype(np.float32), (0, 0), soft)
+        reflection = cv2.GaussianBlur(reflection * clear[..., None], (0, 0), soft) / np.maximum(weight, 1e-4)[..., None]
+        reflection = np.where((weight > 1e-3)[..., None], reflection, 0)
         reflection *= float(spec.get("reflection", 0.6))
         glare = np.clip(reflection.max(axis=2), 0, 1)
         glare_colour = reflection / np.maximum(glare, 1e-4)[..., None]
         # what is in front of the screen: its colour difference falls away (skin, a pen: the screen's channel no lead)
         lead_over = lead - np.maximum(a_, b_)
-        screenness = np.clip((lead_over - 0.03) / 0.09, 0, 1)
+        # (a screen leads by 0.3 and more even washed by glare; spill on skin by 0.1 at most: a green-lit finger was a
+        # third see-through when the screen's range began at 0.03, and glare a little green when it ended at 0.35)
+        # and the screen and its glare have their other two channels even, where skin, however green the screen lights
+        # it, has far more red than blue: by the lead alone the owner's brightly lit fingertips read as part screen
+        even = np.clip(1 - np.abs(a_ - b_) / 0.12, 0, 1)
+        screenness = np.clip((lead_over - 0.12) / 0.13, 0, 1) * even
+        # inside the screen a bright pixel with its other two channels even is the glare's hottest part, where the
+        # screen's lead is all but washed out: the reflection's (at its strength), not something in front kept whole
+        # (white blotches, once); a dark one, a pen, stays in front
+        hot = even * np.clip((np.minimum(a_, b_) - 0.3) / 0.15, 0, 1) * (screen > 0.5)
+        screenness = np.maximum(screenness, hot)
         front = 1 - screenness
         # a couple of pixels past the traced outline, what is still clearly the screen's colour is the screen (the
         # outline's edge against the bezel), not light on the bezel: it goes, not lit (a bright rim, once)
@@ -1359,9 +1374,8 @@ class FrameRenderer:
         light_unit = light_rgb / max(luma, 1e-3)
         reach = max(6.0, 0.04 * max(w, h))
         near = np.clip(cv2.GaussianBlur(screen.astype(np.float32), (0, 0), reach) * 3.0, 0, 1)
-        # spill is a tint: a slight lead of the screen's channel, not the screen's own colour
-        tint = np.clip((0.2 - lead_over) / 0.08, 0, 1)
-        thrown = np.clip(lead_over, 0, 1) * tint * near * float(spec.get("spill", 1.0))
+        # spill is the screen's lead on what is not the screen, however strong (the brightest-lit fingertips the most)
+        thrown = np.clip(lead_over, 0, 1) * (1 - screenness) * near * float(spec.get("spill", 1.0))
         thrown = np.where(inside, thrown * front, thrown)  # on the screen itself only what is in front of it is lit by it
         lit = rgb.copy()
         channel = 2 if spec.get("screen") == "blue" else 1
