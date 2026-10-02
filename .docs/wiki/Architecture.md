@@ -259,3 +259,11 @@ channel stays put. On the owner's upright phone it took the planar track from 0.
 tracker by its sides; the corners are reported too, but in strong perspective the far ones are ill-conditioned for any
 measurement.
 
+The key's colour-difference mode (key.mode "difference"): how far the key colour's own channel leads the larger of the
+other two, as a share of its lead in the key colour; black, grey, white and colours leaning away cannot be keyed at any
+setting. Spill suppression's reach: from what the key took, filled out to the convex outline of each large keyed area,
+so glare the key leaves anywhere on a screen loses its green, while what lies outside (a wall) keeps the falloff.
+For green-screen phone shots the method that holds up (the owner's preference, tested on their three shots): the
+screen tracked by its own edges (Track by: a green screen's edges), the plate keyed on top keeping its own glare
+(similarity 0.3, blend 0.12 to 0.2, spill 0.7 to 1), the picture corner-pinned below.
+
