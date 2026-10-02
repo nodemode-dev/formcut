@@ -1416,8 +1416,20 @@ class FrameRenderer:
         # in front: uneven in red and blue (skin), or not led by the screen's colour at all (a nail, a highlight on skin:
         # on a green screen even white glare keeps green at or above red and blue; a fingernail's pale pink does not,
         # and was cut through on the owner's perspective shot)
-        in_front = np.maximum(np.clip((np.abs(one - two) - 0.06) / 0.06, 0, 1), np.clip((0.005 - lead) / 0.03, 0, 1))
+        # (unevenness counts only where the screen's colour barely leads: skin lit by the screen leads by 0.1 at most,
+        # while the screen's own green, its red and blue 21 levels apart at the owner's upright phone's corner, leads
+        # by 0.7 and was a third kept, in green specks)
+        uneven = np.clip((np.abs(one - two) - 0.06) / 0.06, 0, 1) * np.clip((0.2 - lead) / 0.1, 0, 1)
+        in_front = np.maximum(uneven, np.clip((0.005 - lead) / 0.03, 0, 1))
         cut = inside * lit * (1 - in_front)
+        # near the screen, a pixel strongly led by the screen's colour can only be the screen: where the carried outline
+        # drifts past its grow at a rounded corner, the screen's green is still taken (green specks, once)
+        # (as far as 24 px from it, the default: at the owner's upright phone's top right corner the carried outline was
+        # more than 8 px off, and the screen's green edge pixels, leading by 150 levels, were left as specks)
+        reach_green = max(1, int(spec.get("green_reach", 24)))
+        around = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * reach_green + 1, 2 * reach_green + 1)))
+        clearly = np.clip((((g if green_screen else b) - np.maximum(one, two)) - 0.12) / 0.1, 0, 1)
+        cut = np.maximum(cut, around * clearly * (1 - in_front))
         # the screen's light on what stays, taken off and given back in the new screen's colour (light: a hex, the
         # replacement's average): only a lead of the screen's own colour is touched, so a teal wall, a wooden desk or a
         # white one are left as they are however far it reaches, and fingers over the screen lose their green (a reach
