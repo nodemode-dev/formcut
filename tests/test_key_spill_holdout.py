@@ -150,3 +150,40 @@ def test_a_colour_difference_key_takes_the_screen_and_leaves_black_and_teal_whol
     assert np.abs(out[50, 200] - [12, 12, 12]).max() <= 2 and np.abs(out[50, 280] - [116, 186, 198]).max() <= 2
     assert np.abs(out[50, 360] - [225, 225, 225]).max() <= 2  # black, teal and white whole
     assert FrameRenderer._device_resident({"key": key}, []) is False
+
+
+def test_spill_reaches_a_large_glare_the_key_left_inside_the_screen(tmp_path):
+    """A reflection's palest part is not keyed; enclosed by keyed screen, it is still on the screen, and its green is
+    spill however far it is from a keyed pixel (the middle of a large glare on the owner's upright phone kept a green
+    tint); the wall beside the screen keeps its colour."""
+    from app.media import ingest_path
+
+    picture = np.zeros((400, 1200, 3), np.uint8)
+    picture[:] = (60, 140, 140)  # teal: leans towards green a little
+    picture[50:350, 100:700] = (10, 245, 10)  # the screen
+    picture[100:300, 200:600] = (190, 235, 190)  # a large pale glare on it, not keyed
+    picture[120:220, 640:700] = (200, 240, 200)  # a hotspot touching the screen's edge
+    path = tmp_path / "glare.png"
+    Image.fromarray(picture).save(path)
+    clip = {
+        "id": "c",
+        "kind": "image",
+        "label": "glare",
+        "start": 0,
+        "duration": 1,
+        "mediaId": ingest_path(path, "glare.png")["id"],
+        "key": {**KEY, "spill": 1.0},
+    }
+    project = validate_document(
+        {"width": 1200, "height": 400, "fps": 30, "activeTimeline": 0, "timelines": [{"tracks": [{"clips": [clip]}]}]}
+    )
+    renderer = FrameRenderer(project, 1200)
+    try:
+        out = renderer.frame(0.5)[:, :, :3].astype(int)
+    finally:
+        renderer.close()
+    middle = out[200, 400]
+    assert middle[1] <= max(middle[0], middle[2]) + 3, middle  # the glare's middle: neutral, its green gone
+    edge = out[170, 690]
+    assert edge[1] <= max(edge[0], edge[2]) + 3, edge  # the hotspot at the screen's edge: neutral too
+    assert np.abs(out[200, 1100] - [60, 140, 140]).max() <= 2  # the wall far from the screen: its own colour

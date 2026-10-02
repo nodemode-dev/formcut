@@ -1283,7 +1283,17 @@ class FrameRenderer:
                 # spill is light from the screen: it fades with distance from what the key took away (a blurred map
                 # of it, reaching about 3% of the frame), so a colour merely near the key's elsewhere keeps its hue
                 # (on the owner's clip 10 a teal wall far from the phone turned blue under spill applied everywhere)
-                taken = (keep < 0.5).astype(np.float32)
+                taken = (keep < 0.5).astype(np.uint8)
+                # what the key took, out to the convex outline of each large keyed area: a patch the key left on the
+                # screen (a reflection's palest part on the owner's upright phone) is on the screen, and its green is
+                # spill however far from a keyed pixel; without this the middle of a large glare kept a green tint, and
+                # filling only enclosed holes missed a hotspot touching the screen's edge (it meets the bezel, which the
+                # key leaves too). The wall beside the screen, outside the outline, keeps the falloff
+                found, _ = cv2.findContours(taken, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                for region in found:
+                    if cv2.contourArea(region) > 0.005 * w * h:
+                        cv2.fillConvexPoly(taken, cv2.convexHull(region), 1)
+                taken = taken.astype(np.float32)
                 reach = max(8.0, 0.03 * max(w, h))
                 near = np.clip(cv2.GaussianBlur(taken, (0, 0), reach) * 4.0, 0, 1) if taken.any() else taken
                 cleaned = rgb - (spill * near * np.maximum(lean, 0))[..., None] * (target / max(1e-6, float(np.linalg.norm(target))))
