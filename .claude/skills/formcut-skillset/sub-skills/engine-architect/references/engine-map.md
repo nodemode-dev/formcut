@@ -120,7 +120,7 @@ the automation transports.
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
 - `render_document.py` (130L)
-- `renderer.py` (1829L)
+- `renderer.py` (1857L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
