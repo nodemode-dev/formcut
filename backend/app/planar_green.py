@@ -47,7 +47,11 @@ def green_quad(frame: np.ndarray, screen: str = "green") -> np.ndarray | None:
     found."""
     green = _greenness(frame, screen)
     big = cv2.resize(green, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-    mask = (big > GREEN_LEVEL).astype(np.uint8)
+    # the edge at half of the screen's own local level, not at a fixed one: where a reflection washes the green out,
+    # a fixed level cuts the softened edge further in, and the measured screen shrinks with the glare (on the owner's
+    # upright phone, 2 to 4 px on its side under the reflection, mistaken at first for the tracker's error)
+    plateau = cv2.dilate(big, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31)))
+    mask = ((big > 0.5 * np.maximum(plateau, 2 * GREEN_LEVEL)) & (big > GREEN_LEVEL / 3)).astype(np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
     found, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not found:
@@ -104,7 +108,16 @@ def green_quad(frame: np.ndarray, screen: str = "green") -> np.ndarray | None:
         if best is None or best_count < 10:
             return None
         vx, vy, x0, y0 = cv2.fitLine(candidates[best].astype(np.float32), cv2.DIST_L2, 0, 0.01, 0.01).ravel()
-        line = (np.array([x0, y0], float), np.array([vx, vy], float))
+        line = _refined(
+            (np.array([x0, y0], float) / 2.0 - 0.25, np.array([vx, vy], float)),
+            green,
+            a / 2.0 - 0.25,
+            b / 2.0 - 0.25,
+            rough.mean(axis=0) / 2.0 - 0.25,
+        )
+        if line is None:
+            return None
+        line = (line[0] * 2.0, line[1])  # kept in the twice-size map's units until the corners are crossed
         lines.append(line)
     corners = []
     for k in range(4):
@@ -114,7 +127,55 @@ def green_quad(frame: np.ndarray, screen: str = "green") -> np.ndarray | None:
             return None
         t = np.linalg.solve(matrix, q - p)
         corners.append(p + u * t[0])
-    return np.array(corners) / 2.0  # back from the twice-upsampled map
+    return np.array(corners) / 2.0  # the refined lines are the frame's own, carried at twice its size above
+
+
+def _refined(
+    line: tuple[np.ndarray, np.ndarray], green: np.ndarray, a: np.ndarray, b: np.ndarray, centre: np.ndarray
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """A side's line to a fraction of a pixel, in the frame's own coordinates: the greenness profile sampled across
+    the side (bilinear) at a point every pixel along its middle, each profile's crossing of the level half way
+    between its inside and its outside found by interpolation, and a line fitted to the crossings. Finding the edge
+    through a pixel mask was a quarter to a half pixel off (a traced outline runs through the boundary pixels'
+    centres, and the twice-size map's pixel centres are not twice the frame's); profiles that cross away from the
+    rough line (a notch, a rounded corner) are left out."""
+    point, direction = line
+    direction = direction / np.linalg.norm(direction)
+    if (b - a) @ direction < 0:
+        direction = -direction  # a fitted line's direction has either sign: along the side, from a towards b
+    normal = np.array([-direction[1], direction[0]])
+    if (centre - point) @ normal > 0:
+        normal = -normal  # pointing out of the screen: the screen's centre lies behind the side
+    length = float(np.linalg.norm(b - a))
+    start = point + direction * ((a - point) @ direction)
+    steps = np.arange(0.15 * length, 0.85 * length, 1.0)
+    offsets = np.arange(-6.0, 6.01, 0.25)
+    if len(steps) < 6:
+        return None
+    base = start[None, :] + steps[:, None] * direction[None, :]
+    xs = (base[:, None, 0] + offsets[None, :] * normal[0]).astype(np.float32)
+    ys = (base[:, None, 1] + offsets[None, :] * normal[1]).astype(np.float32)
+    profiles = cv2.remap(green, xs, ys, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    found = []
+    for k in range(len(steps)):
+        profile = profiles[k]  # inside (negative offsets) to outside (positive)
+        high, low = float(np.median(profile[:6])), float(np.median(profile[-6:]))  # its inside and outside levels
+        if high - low < 40:
+            continue
+        level = (high + low) / 2
+        below = np.nonzero(profile < level)[0]
+        if not len(below) or below[0] == 0:
+            continue
+        j = below[0]
+        f = (profile[j - 1] - level) / max(1e-6, profile[j - 1] - profile[j])
+        offset = offsets[j - 1] + f * (offsets[j] - offsets[j - 1])
+        if abs(offset) > 1.5:
+            continue  # a notch or a corner's arc, not the side's edge
+        found.append(base[k] + normal * offset)
+    if len(found) < 6:
+        return None
+    vx, vy, x0, y0 = cv2.fitLine(np.array(found, np.float32), cv2.DIST_HUBER, 0, 0.01, 0.01).ravel()
+    return np.array([x0, y0], float), np.array([vx, vy], float)
 
 
 def measure(path: str, frames: int | None = None) -> tuple[list[np.ndarray], list[np.ndarray | None]]:
@@ -149,6 +210,22 @@ def grown(quad: np.ndarray, share: float) -> np.ndarray:
     return centre + (quad - centre) * (1 + share)
 
 
+def _side_distances(tracked: np.ndarray, measured: np.ndarray) -> np.ndarray:
+    """How far the tracked screen's sides lie from the measured ones: points a quarter, half and three quarters along
+    each tracked side, their distance across to the measured side's line (the line through its two measured corners
+    is the line fitted to that side). This compares what was measured, the sides; the corners are where the sides'
+    lines cross, and in strong perspective the far ones cross at a shallow angle, where a sliver of angle moves them
+    a long way, for the measurement as for the track."""
+    out = []
+    for k in range(4):
+        a, b = measured[k], measured[(k + 1) % 4]
+        normal = np.array([-(b - a)[1], (b - a)[0]]) / max(1e-9, float(np.linalg.norm(b - a)))
+        for f in (0.25, 0.5, 0.75):
+            point = tracked[k] + (tracked[(k + 1) % 4] - tracked[k]) * f
+            out.append(abs(float((point - a) @ normal)))
+    return np.array(out)
+
+
 def track_and_score(
     path: str, margin: float = 0.08, frames: int | None = None, settings: dict | None = None, ring: float | None = 0.04
 ) -> dict:
@@ -166,7 +243,7 @@ def track_and_score(
     if ring is not None:
         cv2.fillPoly(matte, [np.round(grown(first, -ring)).astype(np.int32)], 0)
     tracker = PlanarTracker(pictures[0], matte, Settings(**({"perspective": True} | (settings or {}))))
-    errors, carried, confidences = [], [first], []
+    errors, carried, confidences, sides = [], [first], [], []
     started = time.perf_counter()
     for i in range(1, len(pictures)):
         h, confidence = tracker.step(pictures[i])
@@ -175,6 +252,7 @@ def track_and_score(
         confidences.append(confidence)
         if quads[i] is not None:
             errors.append(np.linalg.norm(corners - quads[i], axis=1))
+            sides.append(_side_distances(corners, quads[i]))
     took = (time.perf_counter() - started) / max(1, len(pictures) - 1)
     per_frame = np.array([e.mean() for e in errors]) if errors else np.array([float("nan")])
     every = np.concatenate(errors) if errors else np.array([float("nan")])
@@ -186,6 +264,8 @@ def track_and_score(
         "meanError": round(float(per_frame.mean()), 3),
         "rmsError": round(float(np.sqrt(np.mean(np.square(every)))), 3),
         "worstCorner": round(float(every.max()), 3),
+        "sideRms": round(float(np.sqrt(np.mean(np.square(np.concatenate(sides))))) if sides else float("nan"), 3),
+        "sideWorst": round(float(np.concatenate(sides).max()) if sides else float("nan"), 3),
         "first30": round(float(per_frame[:30].mean()), 3),
         "last30": round(float(per_frame[-30:].mean()), 3),
         "measurementJitter": round(jitter(quads), 3),
@@ -210,8 +290,9 @@ def main(argv: list[str] | None = None) -> int:
         results.append(r)
         if not args.json:
             print(
-                f"{shot}: {r['frames']} frames, {r['measured']} measured | track vs measured: mean {r['meanError']} px, "
-                f"RMS {r['rmsError']}, worst corner {r['worstCorner']} | first 30 {r['first30']}, last 30 {r['last30']} | "
+                f"{shot}: {r['frames']} frames, {r['measured']} measured | sides: RMS {r['sideRms']} px, worst "
+                f"{r['sideWorst']} | corners: mean {r['meanError']} px, RMS {r['rmsError']}, worst {r['worstCorner']} | "
+                f"first 30 {r['first30']}, last 30 {r['last30']} | "
                 f"measurement jitter {r['measurementJitter']} px | {r['msPerFrame']} ms a frame",
                 flush=True,
             )

@@ -10,18 +10,29 @@ import pytest
 from app.planar_green import green_quad, grown, jitter
 
 W, H = 1280, 720
-SCREEN = np.array([[0, 0], [400, 0], [400, 800], [0, 800]], float)  # a phone screen's own corners
+SCREEN = np.array([[0, 0], [400, 0], [400, 800], [0, 800]], float)  # a phone screen's own corners (where it is placed)
+# where its picture's edges are: the screen fills pixels 0 to 399 (pixel centres are whole numbers), so its area runs
+# from -0.5 to 399.5: the placing corners less half a pixel on every side (first written as -0.5 to 400.5, which made
+# the right and bottom sides look a pixel in)
+EDGES = SCREEN - 0.5
+
+
+PAD = 2  # the screen drawn inside a margin of its source picture, away from the picture's own border
 
 
 def _screen_picture(colour: tuple[int, int, int]) -> np.ndarray:
-    """The screen on its own, 400 x 800: rounded corners (radius 60) and a notch at the top, the colour given."""
-    flat = np.zeros((800, 400, 3), np.uint8)
-    cv2.rectangle(flat, (60, 0), (340, 800), colour, -1)
-    cv2.rectangle(flat, (0, 60), (400, 740), colour, -1)
-    for cx, cy in ((60, 60), (340, 60), (60, 740), (340, 740)):
-        cv2.circle(flat, (cx, cy), 60, colour, -1, cv2.LINE_AA)
-    cv2.rectangle(flat, (130, 0), (270, 30), (10, 10, 10), -1)  # the notch
+    """The screen on its own, 400 x 800 inside a 2 px margin: rounded corners (radius 60) and a notch at the top."""
+    flat = np.zeros((800 + 2 * PAD, 400 + 2 * PAD, 3), np.uint8)
+    o = PAD
+    cv2.rectangle(flat, (o + 60, o), (o + 339, o + 799), colour, -1)
+    cv2.rectangle(flat, (o, o + 60), (o + 399, o + 739), colour, -1)
+    for cx, cy in ((60, 60), (339, 60), (60, 739), (339, 739)):
+        cv2.circle(flat, (o + cx, o + cy), 60, colour, -1, cv2.LINE_AA)
+    cv2.rectangle(flat, (o + 130, o), (o + 270, o + 30), (10, 10, 10), -1)  # the notch
     return flat
+
+
+SUPER = 4  # the screen warped at four times the frame's size and averaged down by area: each pixel's coverage
 
 
 def _frame(h: np.ndarray, colour=(0, 255, 0)) -> np.ndarray:
@@ -29,13 +40,20 @@ def _frame(h: np.ndarray, colour=(0, 255, 0)) -> np.ndarray:
     back = cv2.GaussianBlur((rng.random((H, W, 3)) * 255).astype(np.uint8), (0, 0), 3)  # busy, not the screen's colour
     back[:, :, 1] = (back[:, :, 1] * 0.5).astype(np.uint8)
     back[:, :, 0] = (back[:, :, 0] * 0.5).astype(np.uint8)
+    # frame pixel x covers x - 0.5 to x + 0.5; at SUPER times its size its sub-pixel centres are SUPER * x + (SUPER - 1) / 2
+    up = np.array([[SUPER, 0, (SUPER - 1) / 2], [0, SUPER, (SUPER - 1) / 2], [0, 0, 1]], float)
+    shifted = up @ h @ np.array([[1, 0, -PAD], [0, 1, -PAD], [0, 0, 1]], float)
+    size = (W * SUPER, H * SUPER)
     flat = _screen_picture(colour)
-    border = cv2.warpPerspective(np.full((800, 400), 255, np.uint8), h, (W, H))
-    warped = cv2.warpPerspective(flat, h, (W, H), flags=cv2.INTER_LINEAR)
+    full = np.zeros((800 + 2 * PAD, 400 + 2 * PAD), np.uint8)
+    full[PAD : PAD + 800, PAD : PAD + 400] = 255
+    down = lambda img: cv2.resize(img, (W, H), interpolation=cv2.INTER_AREA)  # noqa: E731
+    warped = down(cv2.warpPerspective(flat, shifted, size, flags=cv2.INTER_LINEAR)).astype(np.float32)
+    inside = down(cv2.warpPerspective(full, shifted, size, flags=cv2.INTER_LINEAR)).astype(np.float32)[..., None] / 255
     out = back.copy()
-    out[cv2.dilate(border, np.ones((9, 9), np.uint8)) > 0] = (12, 12, 12)  # the phone's black bezel
-    inside = cv2.warpPerspective(np.full((800, 400), 255, np.uint8), h, (W, H), flags=cv2.INTER_LINEAR).astype(np.float32)[..., None] / 255
-    return np.round(out * (1 - inside) + warped * inside).astype(np.uint8)
+    out[cv2.dilate((inside[..., 0] > 0).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0] = (12, 12, 12)  # the bezel
+    # the warped screen is already faded at its edge (blended with the black around it): over the background as it is
+    return np.clip(np.round(out * (1 - inside) + warped), 0, 255).astype(np.uint8)
 
 
 def _homography(k: int) -> np.ndarray:
@@ -52,10 +70,10 @@ def test_a_screens_corners_are_measured_to_a_fraction_of_a_pixel(screen):
     for k in range(0, 12, 3):
         h = _homography(k)
         found = green_quad(_frame(h, colour), screen)
-        truth = cv2.perspectiveTransform(SCREEN.reshape(-1, 1, 2), h).reshape(-1, 2)
+        truth = cv2.perspectiveTransform((EDGES - [0, 0]).reshape(-1, 1, 2), h).reshape(-1, 2)
         assert found is not None
         errors.append(np.linalg.norm(found - truth, axis=1).max())
-    assert max(errors) < 0.5, errors  # the rounded corners' sharp corners and the notch's side, under perspective
+    assert max(errors) < 0.3, errors  # the rounded corners' sharp corners and the notch's side, under perspective
 
 
 def test_no_screen_is_found_where_there_is_none_and_the_jitter_of_a_still_one_is_nothing():
@@ -110,7 +128,7 @@ def test_tracking_by_the_screen_follows_it_through_the_engine(tmp_path):
     encode.stdin.close()
     assert encode.wait() == 0
     media_id = ingest_path(path, "screen.mkv")["id"]
-    truth0 = cv2.perspectiveTransform(SCREEN.reshape(-1, 1, 2), _homography(0)).reshape(-1, 2)
+    truth0 = cv2.perspectiveTransform(EDGES.reshape(-1, 1, 2), _homography(0)).reshape(-1, 2)
     shape = (grown(truth0, 0.08) / [W, H]).round(6).tolist()
     layer = {"id": "phone", "shapes": [{"points": shape}], "reference": 0, "settings": {"perspective": True, "screen": "green"}}
     client = TestClient(app, base_url="http://127.0.0.1:8123", headers={"x-formcut-local": "1"})
@@ -124,7 +142,7 @@ def test_tracking_by_the_screen_follows_it_through_the_engine(tmp_path):
     surface = ",".join(f"{v:.6f}" for v in (truth0 / [W, H]).ravel())
     corners = np.array(client.get("/api/planar/track/phone", params={"surface": surface}).json()["corners"]) * [W, H]
     for k in range(12):
-        truth = cv2.perspectiveTransform(SCREEN.reshape(-1, 1, 2), _homography(k)).reshape(-1, 2)
+        truth = cv2.perspectiveTransform(EDGES.reshape(-1, 1, 2), _homography(k)).reshape(-1, 2)
         assert np.linalg.norm(corners[k] - truth, axis=1).max() < (1.5 if k in (5, 6) else 0.6), k  # 5, 6 filled
     confidence = client.get("/api/planar/track/phone").json()["confidence"]
     assert confidence[5] == confidence[6] == 0.5 and confidence[4] == confidence[7] == 1.0
