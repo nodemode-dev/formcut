@@ -730,6 +730,8 @@
   "planar.matteClip": "Isječak maske",
   "planar.dopeSheet": "Tablica ključnih okvira",
   "planar.curves": "Krivulje",
+  "planar.findFaces": "Pronađi lica",
+  "planar.noFaces": "Na ovom okviru nisu pronađena lica",
   "planar.maskMade": "Sloj je sada vlastita praćena maska isječka",
   "planar.aeCopied": "Ključni okviri kopirani: zalijepite ih na efekt Corner Pin u After Effectsu",
   "planar.forward": "Pomakni naprijed",

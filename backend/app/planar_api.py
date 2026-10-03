@@ -739,3 +739,40 @@ def segment(body: SegmentBody) -> dict:
     if len(traced) < 3:
         raise HTTPException(422, "nothing was found at that point: click inside the object")
     return {"points": [[p["x"], p["y"]] for p in traced], "area": round(float((alpha > 0.5).mean()), 4)}
+
+
+class FacesBody(BaseModel):
+    media_id: str
+    frame: int = Field(ge=0)
+
+
+@router.post("/faces")
+def faces_on(body: FacesBody) -> dict:
+    """Faces on a frame, frontal and in profile either way (OpenCV's own detectors, offline), overlapping finds
+    merged, each a box (x, y, w, h) in the frame's unit square: Mocha Pro's face detection."""
+    source, fps, width, height, count = _video(body.media_id)
+    frame = next(_read(source, fps, width, height, min(body.frame, count - 1), 1), None)
+    if frame is None:
+        raise HTTPException(422, "that frame could not be read")
+    gray = cv2.equalizeHist(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+    smallest = (max(24, width // 40),) * 2
+    found: list[tuple[int, int, int, int]] = []
+    for name, mirrored in (
+        ("haarcascade_frontalface_default.xml", False),
+        ("haarcascade_profileface.xml", False),
+        ("haarcascade_profileface.xml", True),
+    ):
+        cascade = cv2.CascadeClassifier(cv2.data.haarcascades + name)
+        image = cv2.flip(gray, 1) if mirrored else gray
+        for x, y, w, h in cascade.detectMultiScale(image, 1.1, 5, minSize=smallest):
+            found.append((width - int(x) - int(w) if mirrored else int(x), int(y), int(w), int(h)))
+    kept: list[tuple[int, int, int, int]] = []
+    for box in sorted(found, key=lambda b: b[2] * b[3], reverse=True):
+        x, y, w, h = box
+        overlaps = any(
+            max(0, min(x + w, kx + kw) - max(x, kx)) * max(0, min(y + h, ky + kh) - max(y, ky)) > 0.3 * min(w * h, kw * kh)
+            for kx, ky, kw, kh in kept
+        )
+        if not overlaps:
+            kept.append(box)
+    return {"faces": [[round(x / width, 5), round(y / height, 5), round(w / width, 5), round(h / height, 5)] for x, y, w, h in kept]}

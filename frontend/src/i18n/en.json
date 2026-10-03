@@ -729,6 +729,8 @@
   "planar.matteClip": "Matte clip",
   "planar.dopeSheet": "Dope sheet",
   "planar.curves": "Curves",
+  "planar.findFaces": "Find faces",
+  "planar.noFaces": "No faces found on this frame",
   "planar.maskMade": "The layer is now the clip's own tracked mask",
   "planar.aeCopied": "Corner pin keyframes copied: paste them onto a Corner Pin effect in After Effects",
   "planar.forward": "Move in front",

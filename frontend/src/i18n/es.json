@@ -729,6 +729,8 @@
   "planar.matteClip": "Clip de mate",
   "planar.dopeSheet": "Hoja de claves",
   "planar.curves": "Curvas",
+  "planar.findFaces": "Buscar caras",
+  "planar.noFaces": "No se encontraron caras en este fotograma",
   "planar.maskMade": "La capa es ahora la máscara seguida del propio clip",
   "planar.aeCopied": "Fotogramas clave copiados: pégalos en un efecto Pin de esquinas de After Effects",
   "planar.forward": "Traer adelante",

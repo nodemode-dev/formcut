@@ -123,7 +123,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     <div class="pw-body">
       <aside class="pw-side">
         <section class="pw-panel">
-          <div class="pw-head"><span>${t("planar.layers")}</span><button class="icon-btn" data-ref="add-layer" title="${t("planar.newLayer")}" aria-label="${t("planar.newLayer")}">${icon("plus")}</button></div>
+          <div class="pw-head"><span>${t("planar.layers")}</span><button class="tool-chip" data-ref="find-faces">${t("planar.findFaces")}</button><button class="icon-btn" data-ref="add-layer" title="${t("planar.newLayer")}" aria-label="${t("planar.newLayer")}">${icon("plus")}</button></div>
           <ul class="pw-layers" data-ref="layers"></ul>
         </section>
         <section class="pw-panel">
@@ -455,6 +455,19 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     if (row && input.dataset.act === "group") { layers[Number(row.dataset.index)].group = input.value.trim() || undefined; changed = true; }
   });
   $("add-layer").addEventListener("click", () => { newLayer(); render(); });
+  $("find-faces").addEventListener("click", () => void (async () => {
+    if (!media) return;
+    const reply = await fetch("/api/planar/faces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_id: mediaId, frame }) });
+    const faces = reply.ok ? ((await reply.json()) as { faces: number[][] }).faces : [];
+    if (!faces.length) { say(t("planar.noFaces")); return; }
+    for (const [x, y, w, h] of faces) {
+      const cx = (x + w / 2) * media.width, cy = (y + h / 2) * media.height, rx = (w / 2) * 1.15 * media.width, ry = (h / 2) * 1.15 * media.height;
+      newLayer();
+      await addShape(ellipseIn([cx - rx, cy - ry], [cx + rx, cy + ry], 12), 1);
+    }
+    paintLayers();
+    render();
+  })());
 
   // ---- track settings, as Mocha names them ----
   const matteChoices = (): [string, string][] => {

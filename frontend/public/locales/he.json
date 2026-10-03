@@ -730,6 +730,8 @@
   "planar.matteClip": "קליפ מסכה",
   "planar.dopeSheet": "גיליון פריימי מפתח",
   "planar.curves": "עקומות",
+  "planar.findFaces": "איתור פנים",
+  "planar.noFaces": "לא נמצאו פנים בפריים הזה",
   "planar.maskMade": "השכבה היא עכשיו המסכה העקובה של הקליפ עצמו",
   "planar.aeCopied": "פריימי המפתח הועתקו: הדביקו אותם על אפקט Corner Pin ב-After Effects",
   "planar.forward": "העברה לחזית",

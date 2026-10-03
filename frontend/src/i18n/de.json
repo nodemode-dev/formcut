@@ -729,6 +729,8 @@
   "planar.matteClip": "Masken-Clip",
   "planar.dopeSheet": "Dopesheet",
   "planar.curves": "Kurven",
+  "planar.findFaces": "Gesichter finden",
+  "planar.noFaces": "Auf diesem Frame wurden keine Gesichter gefunden",
   "planar.maskMade": "Die Ebene ist jetzt die eigene getrackte Maske des Clips",
   "planar.aeCopied": "Eckpunkt-Keyframes kopiert: in After Effects auf einen Effekt „Eckpunkte verschieben“ einfügen",
   "planar.forward": "Nach vorn",
