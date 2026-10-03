@@ -331,6 +331,9 @@ export interface PlanarLayer {
   link?: string;  // Link to Track: the layer whose track carries these shapes (its own, without)
   blend?: "add" | "subtract";
   invert?: boolean;
+  inTime?: number;
+  outTime?: number;
+  group?: string;
 }
 
 export interface ClipPlanar {

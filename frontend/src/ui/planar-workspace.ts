@@ -340,11 +340,16 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     $("layers").innerHTML = layers.map((l, i) => `<li class="pw-layer${i === current ? " is-current" : ""}" data-index="${i}" style="--layer:${l.color}">
       <span class="pw-swatch"></span>
       <input class="pw-name" value="${esc(l.name)}" aria-label="${t("planar.layerName")}" data-act="name">
+      <input type="color" class="pw-colour" value="${l.color}" aria-label="${t("canvas.colour")}" title="${t("canvas.colour")}" data-act="colour">
+      <input class="pw-group" value="${esc(l.group ?? "")}" placeholder="${t("planar.group")}" aria-label="${t("planar.group")}" data-act="group">
       <button class="icon-btn${l.visible ? " is-on" : ""}" data-act="visible" title="${t("planar.visible")}" aria-label="${t("planar.visible")}">${icon(l.visible ? "eye" : "eyeOff")}</button>
       <button class="icon-btn${l.tracking ? " is-on" : ""}" data-act="tracking" title="${t("planar.tracking")}" aria-label="${t("planar.tracking")}">${icon("settings")}</button>
       <button class="icon-btn${l.locked ? " is-on" : ""}" data-act="locked" title="${t("planar.locked")}" aria-label="${t("planar.locked")}">${icon("lock")}</button>
       <button class="tool-chip${l.blend === "subtract" ? " is-on" : ""}" data-act="blend" aria-pressed="${l.blend === "subtract"}" title="${t("planar.blendSubtract")}">${t("planar.blendSubtract")}</button>
       <button class="tool-chip${l.invert ? " is-on" : ""}" data-act="invert" aria-pressed="${!!l.invert}" title="${t("planar.invertLayer")}">${t("planar.invertLayer")}</button>
+      <button class="tool-chip" data-act="duplicate" title="${t("tray.duplicate")}">${t("tray.duplicate")}</button>
+      <button class="tool-chip${l.inTime !== undefined ? " is-on" : ""}" data-act="in" title="${t("planar.layerIn")}">${t("planar.layerIn")}${l.inTime !== undefined ? ` ${Math.round(l.inTime * media!.fps)}` : ""}</button>
+      <button class="tool-chip${l.outTime !== undefined ? " is-on" : ""}" data-act="out" title="${t("planar.layerOut")}">${t("planar.layerOut")}${l.outTime !== undefined ? ` ${Math.round(l.outTime * media!.fps)}` : ""}</button>
       <button class="icon-btn pw-up" data-act="up" title="${t("planar.forward")}" aria-label="${t("planar.forward")}">${icon("chevD")}</button>
       <button class="icon-btn" data-act="delete" title="${t("planar.deleteLayer")}" aria-label="${t("planar.deleteLayer")}">${icon("trash")}</button>
     </li>`).join("") || `<li class="pw-empty">${t("planar.hint")}</li>`;
@@ -379,8 +384,23 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const i = Number(row.dataset.index);
     const act = target.closest<HTMLElement>("[data-act]")?.dataset.act;
     const l = layers[i];
-    if (act === "visible" || act === "tracking" || act === "locked") { l[act as "visible" | "tracking" | "locked"] = !l[act as "visible" | "tracking" | "locked"]; changed = true; }
+    if (act === "visible" || act === "tracking" || act === "locked") {
+      const key = act as "visible" | "tracking" | "locked", value = !l[key];
+      for (const one of (event as MouseEvent).shiftKey && l.group ? layers.filter((x) => x.group === l.group) : [l]) one[key] = value;
+      changed = true;
+    }
     else if (act === "blend") { l.blend = l.blend === "subtract" ? "add" : "subtract"; changed = true; }
+    else if (act === "duplicate") {
+      const copy: PlanarLayer = { ...structuredClone(l), id: `pl${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name: `${l.name} 2`, link: l.link ?? l.id, tracking: false };
+      layers.splice(i, 0, copy);
+      current = i;
+      changed = true;
+    }
+    else if (act === "in" || act === "out") {
+      const at = frame / media!.fps, key = act === "in" ? "inTime" : "outTime";
+      l[key] = l[key] !== undefined && Math.abs(l[key]! - at) < 1e-6 ? undefined : at;
+      changed = true;
+    }
     else if (act === "invert") { l.invert = !l.invert; changed = true; }
     else if (act === "up" && i > 0) { [layers[i - 1], layers[i]] = [layers[i], layers[i - 1]]; current = i - 1; changed = true; }
     else if (act === "delete") {
@@ -398,6 +418,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const input = event.target as HTMLInputElement;
     const row = input.closest<HTMLElement>("[data-index]");
     if (row && input.dataset.act === "name") { layers[Number(row.dataset.index)].name = input.value.trim() || layers[Number(row.dataset.index)].name; changed = true; }
+    if (row && input.dataset.act === "colour") { layers[Number(row.dataset.index)].color = input.value; changed = true; paintLayers(); render(); }
+    if (row && input.dataset.act === "group") { layers[Number(row.dataset.index)].group = input.value.trim() || undefined; changed = true; }
   });
   $("add-layer").addEventListener("click", () => { newLayer(); render(); });
 

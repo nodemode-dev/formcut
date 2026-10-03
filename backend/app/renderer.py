@@ -1605,6 +1605,11 @@ class FrameRenderer:
         alpha = np.zeros((h, w), np.float32)
         scale = 1.0
         for layer in reversed(layers):
+            live_from, live_to = layer.get("inTime"), layer.get("outTime")
+            before_in = live_from is not None and self.matte_time < float(live_from) - 1e-6
+            after_out = live_to is not None and self.matte_time > float(live_to) + 1e-6
+            if before_in or after_out:
+                continue
             # Link to Track: the shapes ride the linked layer's track (adjusted where it has one), else their own
             track = self._planar_track(str(layer.get("link") or layer["id"]))
             homography = np.eye(3)
