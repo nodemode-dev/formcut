@@ -33,6 +33,7 @@ if ("serviceWorker" in navigator) {
 
 const engine = new ProjectEngine();
 const bin = new MediaBin();
+document.addEventListener("formcut:media-changed", () => void bin.load());
 
 const app = document.getElementById("app")!;
 const workspace = document.createElement("main");

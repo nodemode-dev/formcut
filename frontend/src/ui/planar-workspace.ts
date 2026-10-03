@@ -195,7 +195,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         <section class="pw-panel">
           <div class="pw-head"><span>${t("planar.apply")}</span></div>
           <div class="pw-row"><span>${t("planar.applyTo")}</span><select data-ref="target"></select></div>
-          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option><option value="stabilize">${t("planar.kind.stabilize")}</option><option value="reorient">${t("planar.kind.reorient")}</option></select></div>
+          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option><option value="stabilize">${t("planar.kind.stabilize")}</option><option value="reorient">${t("planar.kind.reorient")}</option><option value="remove">${t("planar.kind.remove")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
           <select data-ref="export-format" aria-label="${t("planar.copyAe")}"><option value="ae">After Effects Corner Pin</option><option value="nuke">Nuke CornerPin2D</option><option value="csv">CSV</option><option value="json">JSON</option></select>
@@ -1249,6 +1249,23 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   })());
   $("apply").addEventListener("click", () => void (async () => {
     const l = layer(), target = $<HTMLSelectElement>("target").value, kind = $<HTMLSelectElement>("kind").value;
+    if (kind === "remove") {
+      const background = layers.find((o) => o !== l && (tracks.get(o.id)?.frames.size ?? 0) > 1);
+      if (!l || !l.shapes.length || !background || !media) { say(t("planar.needBackground")); return; }
+      say(t("planar.removing"));
+      const reply = await fetch("/api/planar/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_id: mediaId, background: background.id, remove: apiLayer(l), start: first / media.fps, stop: last / media.fps }) });
+      if (!reply.ok) { say(t("planar.needBackground")); return; }
+      const removing = ((await reply.json()) as { job_id: string }).job_id;
+      let state = "running";
+      while (state === "queued" || state === "running") {
+        await new Promise((done) => setTimeout(done, 700));
+        state = ((await fetch(`/api/jobs/${removing}`).then((r) => r.json()).catch(() => ({ status: "error" }))) as { status: string }).status;
+      }
+      if (state !== "done") { say(t("planar.needBackground")); return; }
+      document.dispatchEvent(new CustomEvent("formcut:media-changed"));
+      say(t("planar.removed"));
+      return;
+    }
     if (kind === "stabilize" || kind === "reorient") {
       if (!l || (kind === "reorient" && !l.surface)) { say(t("planar.needSurface")); return; }
       engine.dispatch("clip.planar", { clipId, planar: { version: 1, layers } });

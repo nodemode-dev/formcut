@@ -368,6 +368,89 @@ def track_layer(body: TrackBody) -> dict:
     return jobs.submit("planar-track", operation)
 
 
+class RemoveBody(BaseModel):
+    media_id: str
+    background: str  # the layer whose track says how the background moves
+    remove: Layer  # what to take out: its shapes on each frame (keyed, or carried by its own track)
+    start: float = Field(ge=0)
+    stop: float = Field(ge=0)
+    reach: int = Field(default=20, ge=1, le=120)  # frames either side a fill is looked for in
+
+
+@router.post("/remove", status_code=202)
+def remove_object(body: RemoveBody) -> dict:
+    """Mocha Pro's Remove module: a clean clip rendered with what the remove layer covers taken out, each frame's hole
+    filled from the frames around it, nearest first, warped into it through the background layer's track and taken
+    only where the object was not in them; what no frame shows is inpainted. The clip goes to the media bin."""
+    source, fps, width, height, count = _video(body.media_id)
+    track = _load(body.background)
+    if not track:
+        raise HTTPException(409, "track the background layer first")
+    follow = track.get("adjusted") or track["frames"]
+    scale = np.diag([width / float(track["size"][0]), height / float(track["size"][1]), 1.0])
+    homographies = {int(k): scale @ _matrix(v) @ np.linalg.inv(scale) for k, v in follow.items()}
+    own = _load(body.remove.link or body.remove.id).get("frames") or {}
+    first, last = max(0, round(body.start * fps)), min(count - 1, round(body.stop * fps))
+    if last < first:
+        raise HTTPException(400, "stop comes before start")
+
+    def hole_at(index: int) -> np.ndarray:
+        values = own.get(str(index))
+        return cv2.dilate(_raster(body.remove, (width, height), _matrix(values) if values else None, index), np.ones((5, 5), np.uint8))
+
+    def operation(job_id, report, cancelled):
+        out_path = DATA_DIR / "renders" / f"removed-{job_id}.mkv"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_in = ["-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{width}x{height}", "-r", f"{fps}", "-i", "-"]
+        full_colour = ["-c:v", "libx264", "-crf", "12", "-preset", "medium", "-pix_fmt", "yuv444p", "-profile:v", "high444"]
+        writer = subprocess.Popen(["ffmpeg", "-v", "error", "-y", *raw_in, *full_colour, str(out_path)], stdin=subprocess.PIPE)
+        window: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+        frames = _frames(source, fps, width, height, max(0, first - body.reach), min(count - 1, last + body.reach))
+        pending = list(range(first, last + 1))
+        try:
+            for index, frame in frames:
+                if cancelled():
+                    break
+                window[index] = (frame, hole_at(index))
+                while pending and (pending[0] + body.reach <= index or index >= min(count - 1, last + body.reach)):
+                    t = pending.pop(0)
+                    writer.stdin.write(_filled(t, window, homographies).tobytes())
+                    for old in [k for k in window if k < t - body.reach]:
+                        window.pop(old)
+                    report((t - first + 1) / (last - first + 1), f"frame {t}")
+        finally:
+            writer.stdin.close()
+            writer.wait()
+        from .media import ingest_path
+
+        entry = ingest_path(out_path, f"removed {body.remove.id}.mkv")
+        return {"media_id": entry["id"], "frames": last - first + 1}
+
+    return jobs.submit("planar-remove", operation)
+
+
+def _filled(t: int, window: dict, homographies: dict) -> np.ndarray:
+    """Frame t with its hole filled from the window's frames through the background track, nearest first."""
+    frame, hole = window[t]
+    out, remaining = frame.copy(), hole > 0
+    h_t = homographies.get(t)
+    if h_t is not None:
+        height, width = hole.shape
+        for s in sorted((k for k in window if k != t and k in homographies), key=lambda k: abs(k - t)):
+            if not remaining.any():
+                break
+            move = h_t @ np.linalg.inv(homographies[s])
+            other, other_hole = window[s]
+            warped = cv2.warpPerspective(other, move, (width, height), flags=cv2.INTER_LINEAR)
+            usable = cv2.warpPerspective((other_hole == 0).astype(np.uint8), move, (width, height), flags=cv2.INTER_NEAREST) > 0
+            take = remaining & usable
+            out[take] = warped[take]
+            remaining &= ~take
+    if remaining.any():
+        out = cv2.inpaint(out, remaining.astype(np.uint8) * 255, 3, cv2.INPAINT_TELEA)
+    return out
+
+
 @router.get("/export/{layer_id}", response_class=PlainTextResponse)
 def export_track(layer_id: str, surface: str, format: str = "nuke") -> str:
     """A layer's corner pin for other hosts, in pixels of the tracked media: a Nuke CornerPin2D node to paste (y up from
