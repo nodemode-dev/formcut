@@ -1387,7 +1387,9 @@ class FrameRenderer:
         screenness = np.maximum(np.clip((lead_over - 0.15) / 0.1, 0, 1), even * np.clip((np.minimum(ea, eb) - 0.08) / 0.08, 0, 1) * inside)
         return screenness, light, lead_over
 
-    def fitted_path(self, clip: dict, layer_id: str, luma: np.ndarray, w: int, h: int, reach: float = 5.0, bias: float = 1.0) -> np.ndarray | None:
+    def fitted_path(
+        self, clip: dict, layer_id: str, luma: np.ndarray, w: int, h: int, reach: float = 5.0, bias: float = 1.0
+    ) -> np.ndarray | None:
         """The screen's outline as a vector path fitted to this frame: carried by its track, each point moved along its
         outward normal to where the brightness crosses from screen to bezel, the moves smoothed along the path."""
         layer = next((one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") == layer_id and one.get("shapes")), None)
@@ -1435,9 +1437,9 @@ class FrameRenderer:
             offsets[k] = steps[j - 1] + f * (steps[j] - steps[j - 1])
         wrapped = np.concatenate([offsets[-4:], offsets, offsets[:4]])
         offsets = np.median(np.lib.stride_tricks.sliding_window_view(wrapped, 9), axis=1)
-        taps = np.exp(-0.5 * (np.arange(-24, 25) / 8.0) ** 2)
+        taps = np.exp(-0.5 * (np.arange(-12, 13) / 4.0) ** 2)
         taps /= taps.sum()
-        offsets = np.convolve(np.concatenate([offsets[-24:], offsets, offsets[:24]]), taps, mode="valid") + bias
+        offsets = np.convolve(np.concatenate([offsets[-12:], offsets, offsets[:12]]), taps, mode="valid") + bias
         return pts + offsets[:, None] * normal
 
     def screen_cut(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
