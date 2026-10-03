@@ -32,7 +32,7 @@ from .webhooks import router as webhooks_router
 
 prefer_bundled()
 
-APP_VERSION = "2.4.6"
+APP_VERSION = "2.4.7"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
