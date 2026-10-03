@@ -35,6 +35,10 @@ const invert = (m: number[]): number[] => {
 // a shape's points on a frame and its outline: the twin of backend/app/planar_shapes.py (keyframes run linearly and
 // hold beyond; an X-Spline is a Hermite curve whose tangent at each point is the Catmull-Rom tangent times its tension)
 const SAMPLES = 12;
+const ellipseIn = (a: number[], b: number[], n: number): number[][] => {
+  const [cx, cy, rx, ry] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.abs(b[0] - a[0]) / 2, Math.abs(b[1] - a[1]) / 2];
+  return Array.from({ length: n }, (_, k) => [cx + rx * Math.cos((2 * Math.PI * k) / n), cy + ry * Math.sin((2 * Math.PI * k) / n)]);
+};
 const offAt = (shape: PlanarShape, index: number): Set<number> => {
   const off = shape.off ?? {};
   const order = Object.keys(off).map(Number).filter((k) => k <= index).sort((a, b) => a - b);
@@ -79,7 +83,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   let shapeIndex = -1;
   let media: Media | null = null;
   let frame = 0, first = 0, last = 0;
-  let tool: "select" | "draw" | "rect" | "segment" = "draw";
+  let tool: "select" | "draw" | "rect" | "ellipse" | "segment" = "draw";
   let mode: "add" | "subtract" = "add";
   const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false, adjust: false };
   let pointIndex = 0;  // the reference point selected in AdjustTrack
@@ -115,6 +119,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button data-tool="select" title="${t("planar.select")}" aria-label="${t("planar.select")}">${icon("pointer")}</button>
             <button data-tool="draw" title="${t("planar.draw")}" aria-label="${t("planar.draw")}">${icon("curve")}</button>
             <button data-tool="rect" title="${t("planar.rect")}" aria-label="${t("planar.rect")}">${icon("fit")}</button>
+            <button data-tool="ellipse" title="${t("mask.ellipse")}" aria-label="${t("mask.ellipse")}">${icon("ellipse")}</button>
             <button data-tool="segment" title="${t("planar.tool.segment")}" aria-label="${t("planar.tool.segment")}">${icon("sparkles")}</button>
           </div>
           <div class="pw-seg" data-ref="mode" role="group">
@@ -478,6 +483,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   }
 
   let drag: { kind: "point" | "corner" | "rect" | "ref"; a: number; b: number; start: [number, number] } | null = null;
+  let dragEnd: [number, number] = [0, 0];
   svg.addEventListener("pointerdown", (event) => {
     if (job) return;
     const [x, y] = pointer(event);
@@ -515,7 +521,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       })();
       return;
     }
-    if (tool === "rect") { drag = { kind: "rect", a: 0, b: 0, start: [x, y] }; drawing = [[x, y], [x, y], [x, y], [x, y], [x, y]]; svg.setPointerCapture(event.pointerId); return; }
+    if (tool === "rect" || tool === "ellipse") { drag = { kind: "rect", a: 0, b: 0, start: [x, y] }; drawing = [[x, y], [x, y], [x, y], [x, y], [x, y]]; svg.setPointerCapture(event.pointerId); return; }
     drawing.push([x, y]);
     render();
   });
@@ -559,7 +565,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const l = layer();
     if (drag.kind === "rect") {
       const [x0, y0] = drag.start;
-      drawing = [[x0, y0], [x, y0], [x, y], [x0, y], [x0, y0]];
+      dragEnd = [x, y];
+      drawing = tool === "ellipse" ? [...ellipseIn([x0, y0], [x, y], 48), ellipseIn([x0, y0], [x, y], 48)[0]] : [[x0, y0], [x, y0], [x, y], [x0, y], [x0, y0]];
     } else if (l && drag.kind === "corner" && l.surface) {
       const p = toReference(l, x, y);
       if (p) { l.surface[drag.a] = p; changed = true; }
@@ -581,9 +588,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const was = drag;
     drag = null;
     if (was.kind === "rect") {
+      const [a, b] = [was.start, dragEnd];
       const box = drawing.slice(0, 4);
       drawing = [];
-      if (Math.abs(box[2][0] - box[0][0]) > 4 && Math.abs(box[2][1] - box[0][1]) > 4) await addShape(box);
+      if (Math.abs(b[0] - a[0]) > 4 && Math.abs(b[1] - a[1]) > 4) await addShape(tool === "ellipse" ? ellipseIn(a, b, 12) : box, tool === "ellipse" ? 1 : undefined);
     } else if (was.kind === "point") {
       const l = layer();
       if (l && !(await invalidate(l))) await loadTracks();  // kept the track: the shape goes back

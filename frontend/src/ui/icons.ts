@@ -19,6 +19,7 @@ export const icons: Record<string, string> = {
   chevL: wrap('<path d="M9.8 4 6 8l3.8 4"/>'),
   chevR: wrap('<path d="M6.2 4 10 8l-3.8 4"/>'),
   diamond: wrap('<rect x="4.9" y="4.9" width="6.2" height="6.2" rx="1" transform="rotate(45 8 8)"/>'),
+  ellipse: wrap('<ellipse cx="8" cy="8" rx="5.6" ry="4.2"/>'),
   phone: wrap('<rect x="4.6" y="1.8" width="6.8" height="12.4" rx="1.6"/><path d="M7 12.2h2"/>'),
   pointer: `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M3.5 2.2 12.8 8l-4 .9-1.6 4.4z"/></svg>`,
   blade: wrap('<path d="M3 12.5 12.6 2.9"/><circle cx="4.6" cy="10.9" r="1.7"/><circle cx="8.2" cy="12.6" r="1.7"/><path d="m8.6 7 4 5.6"/>'),
