@@ -1387,6 +1387,57 @@ class FrameRenderer:
         screenness = np.maximum(np.clip((lead_over - 0.15) / 0.1, 0, 1), even * np.clip((np.minimum(ea, eb) - 0.08) / 0.08, 0, 1) * inside)
         return screenness, light, lead_over
 
+    def fitted_path(self, clip: dict, layer_id: str, luma: np.ndarray, w: int, h: int, reach: float = 5.0, bias: float = 1.0) -> np.ndarray | None:
+        """The screen's outline as a vector path fitted to this frame: carried by its track, each point moved along its
+        outward normal to where the brightness crosses from screen to bezel, the moves smoothed along the path."""
+        layer = next((one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") == layer_id and one.get("shapes")), None)
+        if layer is None:
+            return None
+        from .planar_shapes import points_at
+
+        left, top, right, bottom = crop_box(clip) or (0.0, 0.0, 0.0, 0.0)
+        full_w, full_h = w / max(1e-6, 1 - left - right), h / max(1e-6, 1 - top - bottom)
+        track = self._planar_track(str(layer.get("link") or layer["id"]))
+        homography, media_w, media_h, index = np.eye(3), full_w, full_h, 0
+        if track is not None:
+            order, frames, fps, (media_w, media_h) = track
+            index = round(self.matte_time * fps)
+            at = bisect.bisect_left(order, index)
+            nearest = min((order[k] for k in (at - 1, at) if 0 <= k < len(order)), key=lambda f: abs(f - index))
+            homography = frames[nearest]
+        scale = full_w / max(1.0, float(media_w))
+        pts = points_at(layer["shapes"][0], index) * [float(media_w), float(media_h)]
+        pts = cv2.perspectiveTransform(pts.reshape(-1, 1, 2).astype(np.float64), homography).reshape(-1, 2)
+        pts = pts * scale - [left * full_w, top * full_h]
+        if len(pts) < 8:
+            return pts
+        tangent = np.roll(pts, -1, 0) - np.roll(pts, 1, 0)
+        tangent /= np.maximum(np.linalg.norm(tangent, axis=1, keepdims=True), 1e-9)
+        normal = np.stack([tangent[:, 1], -tangent[:, 0]], -1)
+        if float(((pts - pts.mean(0)) * normal).sum()) < 0:
+            normal = -normal
+        steps = np.arange(-reach, reach + 1e-6, 0.25)
+        xs = (pts[:, None, 0] + steps[None, :] * normal[:, None, 0]).astype(np.float32)
+        ys = (pts[:, None, 1] + steps[None, :] * normal[:, None, 1]).astype(np.float32)
+        profiles = cv2.remap(luma.astype(np.float32), xs, ys, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        offsets = np.zeros(len(pts))
+        inner = steps <= -reach + 1.5
+        for k, profile in enumerate(profiles):
+            high, low = float(np.median(profile[inner])), float(profile[steps >= -1.0].min())
+            if high - low < 0.08:
+                continue
+            level = (high + low) / 2
+            below = np.nonzero((profile < level) & (steps >= -reach + 1.0))[0]
+            if not len(below) or below[0] == 0:
+                continue
+            j = below[0]
+            f = (profile[j - 1] - level) / max(1e-6, profile[j - 1] - profile[j])
+            offsets[k] = steps[j - 1] + f * (steps[j] - steps[j - 1])
+        taps = np.exp(-0.5 * (np.arange(-9, 10) / 3.0) ** 2)
+        taps /= taps.sum()
+        offsets = np.convolve(np.concatenate([offsets[-9:], offsets, offsets[:9]]), taps, mode="valid") + bias
+        return pts + offsets[:, None] * normal
+
     def screen_cut(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
         """A phone's screen cut out of the clip (screenCut: layer, grow, dark, bright, spill): a screen is bright inside
         a black bezel, and the picture's brightness is kept at full size (its colour at half). Inside the screen's
@@ -1399,17 +1450,20 @@ class FrameRenderer:
         a vector outline alone drifted off the real edge as the phone turned.)"""
         spec = clip.get("screenCut") or {}
         top = 65535.0 if out.dtype == np.uint16 else 255.0
-        matte = self.planar_alpha({**clip, "planarMatte": {"layers": [spec.get("layer")], "feather": 0, "invert": False}}, w, h)
-        if matte is None:
+        luma_in = (out[:, :, :3].astype(np.float32) / top) @ np.array([0.299, 0.587, 0.114], np.float32)
+        path = self.fitted_path(clip, str(spec.get("layer")), luma_in, w, h, float(spec.get("snap", 5.0)), float(spec.get("bias", 1.0)))
+        if path is None:
             return out
+        drawn = np.zeros((h, w), np.uint8)
+        cv2.fillPoly(drawn, [np.round(path * 16).astype(np.int32)], 255, lineType=cv2.LINE_AA, shift=4)
+        matte = drawn.astype(np.float32) / 255
+        if float(spec.get("edge_soft", 0.7)) > 0:
+            matte = cv2.GaussianBlur(matte, (0, 0), float(spec.get("edge_soft", 0.7)))
         grow = max(0, round(float(spec.get("grow", 2.0))))
         inside = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * grow + 1, 2 * grow + 1))) if grow else matte
         rgb = out[:, :, :3].astype(np.float32) / top
         r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
         luma = rgb @ np.array([0.299, 0.587, 0.114], np.float32)
-        dark, bright = float(spec.get("dark", 0.12)), float(spec.get("bright", 0.28))
-        lit = np.clip((luma - dark) / max(1e-3, bright - dark), 0, 1)
-        lit = lit * lit * (3 - 2 * lit)  # smoothstep: a soft, even edge
         green_screen = spec.get("screen") != "blue"
         one, two = (r, b) if green_screen else (r, g)
         lead = (g if green_screen else b) - np.maximum(one, two)
@@ -1420,16 +1474,18 @@ class FrameRenderer:
         rim_px = max(1, int(spec.get("rim", 6)))
         core = cv2.erode(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * rim_px + 1, 2 * rim_px + 1)))
         in_front = np.maximum(uneven, np.clip((0.005 - lead) / 0.03, 0, 1) * core)
-        cut = inside * lit * (1 - in_front)
-        # near the screen, a pixel strongly led by the screen's colour can only be the screen: where the carried outline
-        # drifts past its grow at a rounded corner, the screen's green is still taken (green specks, once)
-        # (as far as 24 px from it, the default: at the owner's upright phone's top right corner the carried outline was
-        # more than 8 px off, and the screen's green edge pixels, leading by 150 levels, were left as specks)
-        reach_green = max(1, int(spec.get("green_reach", 24)))
-        around = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * reach_green + 1, 2 * reach_green + 1)))
-        clearly = np.clip((((g if green_screen else b) - np.maximum(one, two)) - 0.12) / 0.1, 0, 1)
-        cut = np.maximum(cut, around * clearly * (1 - in_front))
-        cut = _guided(luma, cut.astype(np.float32), max(1, int(spec.get("soften", 2))), 1e-4)
+        front_soft = float(spec.get("front_soft", 1.2))
+        if front_soft > 0:
+            in_front = np.clip((cv2.GaussianBlur(in_front.astype(np.float32), (0, 0), front_soft) - 0.25) / 0.5, 0, 1)
+            in_front = in_front * in_front * (3 - 2 * in_front)
+        cut = matte * (1 - in_front)
+        reach_green = int(spec.get("green_reach", 0) or 0)
+        if reach_green > 0:
+            around = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * reach_green + 1, 2 * reach_green + 1)))
+            clearly = np.clip((((g if green_screen else b) - np.maximum(one, two)) - 0.12) / 0.1, 0, 1)
+            cut = np.maximum(cut, around * clearly * (1 - in_front))
+        if spec.get("soften"):
+            cut = _guided(luma, cut.astype(np.float32), int(spec["soften"]), 1e-4)
         # the screen's light on what stays, taken off and given back in the new screen's colour (light: a hex, the
         # replacement's average): only a lead of the screen's own colour is touched, so a teal wall, a wooden desk or a
         # white one are left as they are however far it reaches, and fingers over the screen lose their green (a reach
@@ -1446,7 +1502,8 @@ class FrameRenderer:
             colour = np.array([int(light[k : k + 2], 16) for k in (0, 2, 4)], np.float32) / 255
             luma_of = float(colour @ np.array([0.299, 0.587, 0.114], np.float32))
             weight = 0.587 if green_screen else 0.114  # the luminance of the light taken off
-            rgb += (thrown * weight)[..., None] * (colour / max(luma_of, 1e-3))[None, None, :]
+            given = np.minimum(thrown, float(spec.get("light_cap", 0.12)))
+            rgb += (given * weight)[..., None] * (colour / max(luma_of, 1e-3))[None, None, :]
         out[:, :, :3] = np.round(np.clip(rgb, 0, 1) * top).astype(out.dtype)
         out[:, :, 3] = np.round(out[:, :, 3].astype(np.float32) * (1 - cut)).astype(out.dtype)
         return out
