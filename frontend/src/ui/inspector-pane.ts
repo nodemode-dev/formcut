@@ -220,6 +220,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${matted ? `<button class="tool-chip" data-ref="matte-remove">${icon("close")}${t("matte.remove")}</button>` : ""}
         ${matted ? `<button class="tool-chip${selected?.planarMatte?.motionBlur ? " is-on" : ""}" data-ref="matte-blur" aria-pressed="${!!selected?.planarMatte?.motionBlur}">${t("track.motionBlurMatte")}</button>` : ""}
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}
+        ${selected?.planarStabilize || selected?.planarReorient ? `<button class="tool-chip" data-ref="module-remove">${icon("close")}${t("track.moduleRemove")}</button>` : ""}
         ${pinned ? `<button class="tool-chip${selected?.cornerPin?.motionBlur ? " is-on" : ""}" data-ref="pin-blur" aria-pressed="${!!selected?.cornerPin?.motionBlur}">${t("track.motionBlurPin")}</button>` : ""}
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
       </div>

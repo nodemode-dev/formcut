@@ -46,7 +46,7 @@ LEGACY = {
 # layer's own passes. Nothing is left: every layer can stay on the device.
 # a clip carrying any of these is placed on this side, not left on the device: a corner pin is a perspective warp,
 # which neither the device's affine pass nor the native warp-and-blend kernel makes (P3 of the planar tracking plan)
-CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare")
+CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare", "planarStabilize", "planarReorient")
 
 
 def _guided(guide: np.ndarray, source: np.ndarray, radius: int, eps: float) -> np.ndarray:
@@ -1460,6 +1460,32 @@ class FrameRenderer:
         offsets = np.convolve(np.concatenate([offsets[-12:], offsets, offsets[:12]]), taps, mode="valid") + bias
         return pts + offsets[:, None] * normal
 
+    def planar_warp(self, image: np.ndarray, clip: dict) -> np.ndarray:
+        """Mocha Pro's Stabilize and ReOrient modules on the frame, by a layer's planar track at the matte time:
+        planarStabilize {layer} warps the frame back to the reference by the inverse of the track's motion, so the
+        tracked plane holds still; planarReorient {layer, surface} warps the surface (four corners, the reference's
+        unit square) to its reference box square-on and still. Outside the picture is transparent."""
+        spec = clip.get("planarStabilize") or clip.get("planarReorient") or {}
+        track = self._planar_track(str(spec.get("layer") or ""))
+        if track is None:
+            return image
+        order, frames, fps, (media_w, media_h) = track
+        index = round(self.matte_time * fps)
+        at = bisect.bisect_left(order, index)
+        nearest = min((order[k] for k in (at - 1, at) if 0 <= k < len(order)), key=lambda f: abs(f - index))
+        h, w = image.shape[:2]
+        scale = np.diag([w / max(1.0, float(media_w)), h / max(1.0, float(media_h)), 1.0])
+        moved = scale @ np.asarray(frames[nearest], np.float64) @ np.linalg.inv(scale)
+        if clip.get("planarStabilize"):
+            warp = np.linalg.inv(moved)
+        else:
+            surface = np.array(spec.get("surface") or [[0, 0], [1, 0], [1, 1], [0, 1]], np.float64) * [w, h]
+            now = cv2.perspectiveTransform(surface.reshape(-1, 1, 2), moved).reshape(-1, 2)
+            (x0, y0), (x1, y1) = surface.min(0), surface.max(0)
+            square = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], np.float64)
+            warp = cv2.getPerspectiveTransform(now.astype(np.float32), square.astype(np.float32)).astype(np.float64)
+        return cv2.warpPerspective(image, warp, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+
     def screen_cut(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
         """A phone's screen cut out of the clip (screenCut: layer, grow, dark, bright, spill): a screen is bright inside
         a black bezel, and the picture's brightness is kept at full size (its colour at half). Inside the screen's
@@ -2062,6 +2088,8 @@ class FrameRenderer:
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             self.matte_time = source_time(clip, local)
+            if clip.get("planarStabilize") or clip.get("planarReorient"):
+                image = self.planar_warp(image, clip)
             mask_track = (clip.get("mask") or {}).get("track")
             masked = {**clip, "mask": {**clip["mask"], "points": mask_points_at(mask_track, local)}} if mask_track else clip
             image = self.mask_frame(image, masked)

@@ -195,7 +195,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         <section class="pw-panel">
           <div class="pw-head"><span>${t("planar.apply")}</span></div>
           <div class="pw-row"><span>${t("planar.applyTo")}</span><select data-ref="target"></select></div>
-          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option></select></div>
+          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option><option value="stabilize">${t("planar.kind.stabilize")}</option><option value="reorient">${t("planar.kind.reorient")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
           <select data-ref="export-format" aria-label="${t("planar.copyAe")}"><option value="ae">After Effects Corner Pin</option><option value="nuke">Nuke CornerPin2D</option><option value="csv">CSV</option><option value="json">JSON</option></select>
@@ -1249,6 +1249,15 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   })());
   $("apply").addEventListener("click", () => void (async () => {
     const l = layer(), target = $<HTMLSelectElement>("target").value, kind = $<HTMLSelectElement>("kind").value;
+    if (kind === "stabilize" || kind === "reorient") {
+      if (!l || (kind === "reorient" && !l.surface)) { say(t("planar.needSurface")); return; }
+      engine.dispatch("clip.planar", { clipId, planar: { version: 1, layers } });
+      const module = kind === "stabilize" ? { planarStabilize: { layer: l.id }, planarReorient: null } : { planarStabilize: null, planarReorient: { layer: l.id, surface: l.surface } };
+      engine.dispatch("clip.planarModule", { clipId, ...module });
+      changed = false;
+      say(t("planar.moduleApplied"));
+      return;
+    }
     if (kind === "holdout") {
       // this clip's layers as its key's hold-out (P7): inside them the chroma key takes nothing away
       const key = engine.findClip(clipId)?.clip.key;

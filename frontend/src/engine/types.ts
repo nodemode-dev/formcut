@@ -147,6 +147,8 @@ export interface Clip {
   cornerPin?: { points: number[][]; times?: number[]; motionBlur?: MotionBlur };
   // the clip's own planar layers as its matte (Mocha's Apply Matte, P3): their shapes carried by their tracks
   planarMatte?: { layers: string[]; feather: number; invert: boolean; motionBlur?: MotionBlur };
+  planarStabilize?: { layer: string };
+  planarReorient?: { layer: string; surface: number[][] };
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;

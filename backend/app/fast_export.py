@@ -43,6 +43,8 @@ ABSENT = (
     "cornerPin",  # a perspective warp: only the frame renderer places it (both graph paths refuse it here)
     "planarMatte",  # a tracked matte: the frame renderer's mask
     "screenCut",  # a screen cut by its tracked outline: the frame renderer's
+    "planarStabilize",  # a clip held still by a planar track: the frame renderer's
+    "planarReorient",  # a tracked surface turned square-on: the frame renderer's
     "glare",  # a screen's reflection as its own light: the frame renderer's
     "stabilise",
     "colour",
