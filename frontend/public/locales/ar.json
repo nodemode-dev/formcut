@@ -830,6 +830,8 @@
   "planar.needBackground": "الإزالة تحذف الطبقة المحددة: تتبّع طبقة أخرى على الخلفية أولاً",
   "planar.removing": "إزالة الجسم إطاراً بإطار…",
   "planar.removed": "صُيّر المقطع النظيف: إنه في حاوية الوسائط",
+  "planar.kind.mesh": "تثبيت الزوايا بشبكة (PowerMesh)",
+  "planar.meshing": "تتبّع الشبكة على السطح…",
   "planar.moduleApplied": "طُبّق على هذا المقطع",
   "track.moduleRemove": "إزالة التثبيت / إعادة التوجيه / العدسة",
   "track.lensRedistort": "العدسة: إعادة التشويه",

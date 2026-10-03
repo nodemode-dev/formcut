@@ -830,6 +830,8 @@
   "planar.needBackground": "Uklanjanje briše odabrani sloj: najprije pratite drugi sloj na pozadini",
   "planar.removing": "Uklanjanje objekta okvir po okvir…",
   "planar.removed": "Čisti isječak je iscrtan: nalazi se u spremniku medija",
+  "planar.kind.mesh": "Pribadanje kutova s mrežom (PowerMesh)",
+  "planar.meshing": "Praćenje mreže preko površine…",
   "planar.moduleApplied": "Primijenjeno na ovaj isječak",
   "track.moduleRemove": "Ukloni stabilizaciju / okretanje / objektiv",
   "track.lensRedistort": "Objektiv: ponovno izobliči",

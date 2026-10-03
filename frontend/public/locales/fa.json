@@ -830,6 +830,8 @@
   "planar.needBackground": "حذف، لایهٔ انتخاب‌شده را برمی‌دارد: اول لایهٔ دیگری را روی پس‌زمینه ردیابی کنید",
   "planar.removing": "حذف شیء فریم به فریم…",
   "planar.removed": "کلیپ تمیز رندر شد: در سبد رسانه است",
+  "planar.kind.mesh": "پین گوشه‌ها با شبکه (PowerMesh)",
+  "planar.meshing": "ردیابی شبکه روی سطح…",
   "planar.moduleApplied": "روی این کلیپ اعمال شد",
   "track.moduleRemove": "حذف تثبیت / چرخش / لنز",
   "track.lensRedistort": "لنز: اعوجاج دوباره",

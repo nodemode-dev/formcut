@@ -198,10 +198,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         <section class="pw-panel">
           <div class="pw-head"><span>${t("planar.apply")}</span></div>
           <div class="pw-row"><span>${t("planar.applyTo")}</span><select data-ref="target"></select></div>
-          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option><option value="stabilize">${t("planar.kind.stabilize")}</option><option value="reorient">${t("planar.kind.reorient")}</option><option value="remove">${t("planar.kind.remove")}</option></select></div>
+          <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option><option value="stabilize">${t("planar.kind.stabilize")}</option><option value="reorient">${t("planar.kind.reorient")}</option><option value="remove">${t("planar.kind.remove")}</option><option value="mesh">${t("planar.kind.mesh")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
-          <select data-ref="export-format" aria-label="${t("planar.copyAe")}"><option value="ae">After Effects Corner Pin</option><option value="nuke">Nuke CornerPin2D</option><option value="csv">CSV</option><option value="json">JSON</option></select>
+          <select data-ref="export-format" aria-label="${t("planar.copyAe")}"><option value="ae">After Effects Corner Pin</option><option value="nuke">Nuke CornerPin2D</option><option value="csv">CSV</option><option value="json">JSON</option><option value="camera-nuke">Nuke camera (3D solve)</option><option value="camera-json">Camera JSON (3D solve)</option></select>
           <button class="tool-chip" data-ref="copy-ae">${t("planar.copyAe")}</button>
           <button class="tool-chip" data-ref="make-mask">${t("planar.makeMask")}</button>
           <button class="tool-chip" data-ref="solve-lens">${t("planar.solveLens")}</button>
@@ -594,6 +594,24 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const h = homography(carrierOf(l), frame);
     return h ? unit(apply(invert(h), x, y)) : null;
   };
+
+  async function meshFor(l: PlanarLayer, times: number[]): Promise<{ cols: number; rows: number; times: number[]; points: number[][][] } | undefined> {
+    if (!media || !l.surface) return undefined;
+    say(t("planar.meshing"));
+    const post = await fetch("/api/planar/mesh", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_id: mediaId, layer: l.id, surface: l.surface, cols: 6, rows: 6, stop: last / media.fps }) });
+    if (!post.ok) return undefined;
+    const meshJob = ((await post.json()) as { job_id: string }).job_id;
+    let state = "running";
+    while (state === "queued" || state === "running") {
+      await new Promise((done) => setTimeout(done, 600));
+      state = ((await fetch(`/api/jobs/${meshJob}`).then((r) => r.json()).catch(() => ({ status: "error" }))) as { status: string }).status;
+    }
+    if (state !== "done") return undefined;
+    const mesh = (await fetch(`/api/planar/mesh/${l.id}`).then((r) => r.json())) as { cols: number; rows: number; keys: Record<string, number[][]> };
+    const order = (await fetch(`/api/planar/track/${l.id}`).then((r) => r.json()) as { frames: number[] }).frames;
+    const keyed = order.map((f, i) => [times[i], mesh.keys[String(f)]] as const).filter(([at, pts]) => at !== undefined && pts);
+    return { cols: mesh.cols, rows: mesh.rows, times: keyed.map(([at]) => at), points: keyed.map(([, pts]) => pts) };
+  }
 
   async function finishStroke(stroke: number[][]): Promise<void> {
     if (!media || stroke.length < 2) return;
@@ -1258,7 +1276,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const surfaceArg = l.surface.flat().map((v) => v.toFixed(6)).join(",");
     const format = $<HTMLSelectElement>("export-format").value;
     if (format !== "ae") {
-      const exported = await fetch(`/api/planar/export/${l.id}?surface=${surfaceArg}&format=${format}`);
+      const camera = format.startsWith("camera-");
+      const exported = await fetch(camera ? `/api/planar/camera/${l.id}?surface=${surfaceArg}&format=${format.slice(7)}` : `/api/planar/export/${l.id}?surface=${surfaceArg}&format=${format}`);
       if (!exported.ok) { say(t("planar.needSurface")); return; }
       await navigator.clipboard.writeText(await exported.text());
       say(t("planar.aeCopied"));
@@ -1329,7 +1348,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     engine.dispatch("clip.planar", { clipId, planar: { version: 1, layers } });
     changed = false;
     try {
-      const out = await api<{ cornerPin?: { points: number[][]; times: number[] }; keyframes?: Array<{ t: number; interp: string; props: Record<string, number> }>; frames: number }>("/api/planar/apply", { project: engine.snapshot, tracked_clip: clipId, layer_id: l.id, target_clip: target, kind });
+      const out = await api<{ cornerPin?: { points: number[][]; times: number[] }; keyframes?: Array<{ t: number; interp: string; props: Record<string, number> }>; frames: number }>("/api/planar/apply", { project: engine.snapshot, tracked_clip: clipId, layer_id: l.id, target_clip: target, kind: kind === "mesh" ? "corner-pin" : kind });
+      if (kind === "mesh" && out.cornerPin) out.cornerPin = { ...out.cornerPin, mesh: await meshFor(l, out.cornerPin.times) } as typeof out.cornerPin;
       if (out.cornerPin) engine.dispatch("clip.cornerPin", { clipId: target, cornerPin: out.cornerPin });
       else if (out.keyframes) {
         // the target's other keyframes kept; its position, scale and rotation keys replaced by the track's

@@ -829,6 +829,8 @@
   "planar.needBackground": "Remove takes the selected layer away: track another layer on the background first",
   "planar.removing": "Removing the object, frame by frame…",
   "planar.removed": "The clean clip is rendered: it is in the media bin",
+  "planar.kind.mesh": "Corner pin with a mesh (PowerMesh)",
+  "planar.meshing": "Tracking the mesh across the surface…",
   "planar.moduleApplied": "Applied to this clip",
   "track.moduleRemove": "Remove Stabilize / ReOrient / Lens",
   "track.lensRedistort": "Lens: redistort",

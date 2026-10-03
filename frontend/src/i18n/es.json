@@ -829,6 +829,8 @@
   "planar.needBackground": "Quitar elimina la capa seleccionada: primero sigue otra capa sobre el fondo",
   "planar.removing": "Quitando el objeto fotograma a fotograma…",
   "planar.removed": "El clip limpio está renderizado: está en la bandeja de medios",
+  "planar.kind.mesh": "Pin de esquinas con malla (PowerMesh)",
+  "planar.meshing": "Siguiendo la malla sobre la superficie…",
   "planar.moduleApplied": "Aplicado a este clip",
   "track.moduleRemove": "Quitar estabilizar / reorientar / lente",
   "track.lensRedistort": "Lente: volver a distorsionar",

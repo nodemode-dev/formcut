@@ -829,6 +829,8 @@
   "planar.needBackground": "Entfernen nimmt die gewählte Ebene weg: zuerst eine andere Ebene auf dem Hintergrund tracken",
   "planar.removing": "Objekt wird Frame für Frame entfernt…",
   "planar.removed": "Der saubere Clip ist gerendert: er liegt in der Medienablage",
+  "planar.kind.mesh": "Eckpunkte mit einem Gitter (PowerMesh)",
+  "planar.meshing": "Das Gitter wird über die Fläche getrackt…",
   "planar.moduleApplied": "Auf diesen Clip angewendet",
   "track.moduleRemove": "Stabilisieren / Ausrichten / Objektiv entfernen",
   "track.lensRedistort": "Objektiv: wieder verzerren",

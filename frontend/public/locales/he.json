@@ -830,6 +830,8 @@
   "planar.needBackground": "הסרה מוחקת את השכבה הנבחרת: קודם עקבו אחר שכבה אחרת על הרקע",
   "planar.removing": "מסיר את האובייקט פריים אחר פריים…",
   "planar.removed": "הקליפ הנקי רונדר: הוא בסל המדיה",
+  "planar.kind.mesh": "נעיצת פינות עם רשת (PowerMesh)",
+  "planar.meshing": "עוקב אחר הרשת על המשטח…",
   "planar.moduleApplied": "הוחל על הקליפ הזה",
   "track.moduleRemove": "הסרת ייצוב / כיוון / עדשה",
   "track.lensRedistort": "עדשה: עיוות חוזר",

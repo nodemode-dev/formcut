@@ -451,6 +451,75 @@ def _filled(t: int, window: dict, homographies: dict) -> np.ndarray:
     return out
 
 
+@router.get("/camera/{layer_id}", response_class=PlainTextResponse)
+def solve_camera(layer_id: str, surface: str, format: str = "json", focal: float = 0.0) -> str:
+    """Mocha Pro's 3D camera solve from a rectangle tracked on a plane: the focal length from its sides meeting at
+    right angles on each frame (median), unless given in pixels; its aspect likewise; the camera's pose on every
+    frame by solvePnP against the rectangle, one unit tall, y up, at the world's origin. As JSON (camera-to-world
+    matrices, positions, XYZ rotations) or a Nuke Camera2 node (rot_order XYZ, a 36 mm film back)."""
+    track = read_track(layer_id, surface)
+    width, height = track["size"]
+    centre = np.array([width / 2, height / 2])
+    quads = [np.array(q, np.float64) * [width, height] for q in track["corners"]]
+    square = np.float32([[0, 0], [1, 0], [1, 1], [0, 1]])
+    focals, sides = [], []
+    for q in quads:
+        g = cv2.getPerspectiveTransform(square, (q - centre).astype(np.float32))
+        g1, g2 = g[:, 0], g[:, 1]
+        if abs(g1[2] * g2[2]) > 1e-12:
+            f2 = -(g1[0] * g2[0] + g1[1] * g2[1]) / (g1[2] * g2[2])
+            if 0.09 * max(width, height) ** 2 < f2 < 25 * max(width, height) ** 2:
+                focals.append(math.sqrt(f2))
+    f = focal if focal > 0 else (float(np.median(focals)) if focals else 1.2 * max(width, height))
+    k = np.array([[f, 0, centre[0]], [0, f, centre[1]], [0, 0, 1]])
+    for q in quads:
+        g = np.linalg.inv(k) @ cv2.getPerspectiveTransform(square, q.astype(np.float32))
+        sides.append(np.linalg.norm(g[:, 0]) / max(np.linalg.norm(g[:, 1]), 1e-12))
+    aspect = float(np.median(sides))
+    plane = np.array([[0, 1, 0], [aspect, 1, 0], [aspect, 0, 0], [0, 0, 0]], np.float64)
+    flip = np.diag([1.0, -1.0, -1.0])
+    rows, errors = [], []
+    for frame, q in zip(track["frames"], quads, strict=True):
+        candidates = []
+        for rv, tv in zip(*cv2.solvePnPGeneric(plane, q, k, None, flags=cv2.SOLVEPNP_IPPE)[1:3], strict=True):
+            depth = (cv2.Rodrigues(rv)[0] @ plane.T + tv.reshape(3, 1))[2]
+            if (depth > 0).all():
+                seen = cv2.projectPoints(plane, rv, tv, k, None)[0].reshape(-1, 2)
+                candidates.append((float(np.abs(seen - q).max()), rv, tv))
+        if not candidates:
+            continue
+        _, rvec, tvec = min(candidates, key=lambda c: c[0])
+        _, rvec, tvec = cv2.solvePnP(plane, q, k, None, rvec.copy(), tvec.copy(), useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE)
+        rot = cv2.Rodrigues(rvec)[0]
+        seen = cv2.projectPoints(plane, rvec, tvec, k, None)[0].reshape(-1, 2)
+        errors.append(float(np.sqrt(((seen - q) ** 2).sum(-1).mean())))
+        to_world = rot.T @ flip
+        position = (-rot.T @ tvec).ravel()
+        rx = math.degrees(math.atan2(to_world[2, 1], to_world[2, 2]))
+        ry = math.degrees(math.asin(max(-1.0, min(1.0, -to_world[2, 0]))))
+        rz = math.degrees(math.atan2(to_world[1, 0], to_world[0, 0]))
+        matrix = np.eye(4)
+        matrix[:3, :3], matrix[:3, 3] = to_world, position
+        angles = [round(rx, 4), round(ry, 4), round(rz, 4)]
+        row = {"frame": frame, "position": [round(float(v), 6) for v in position], "rotation_xyz": angles}
+        rows.append({**row, "matrix": matrix.round(7).tolist()})
+    focal_mm = f / width * 36.0
+    if format == "json":
+        lens = {"focal_px": round(f, 3), "focal_mm": round(focal_mm, 4), "film_back_mm": [36.0, round(36.0 * height / width, 4)]}
+        fit = {"plane": {"aspect": round(aspect, 5), "height": 1.0}, "reprojection_px": round(float(np.mean(errors)) if errors else 0.0, 4)}
+        return json.dumps({"fps": track["fps"], "width": width, "height": height, **lens, **fit, "frames": rows}, indent=1)
+    if format != "nuke":
+        raise HTTPException(400, "format is json or nuke")
+
+    def curve(values: list[tuple[int, float]]) -> str:
+        return "{curve " + " ".join(f"x{frame} {value:.6f}" for frame, value in values) + "}"
+
+    translate = " ".join(curve([(r["frame"], r["position"][i]) for r in rows]) for i in range(3))
+    rotate = " ".join(curve([(r["frame"], r["rotation_xyz"][i]) for r in rows]) for i in range(3))
+    aperture = f"haperture 36\n vaperture {36.0 * height / width:.4f}"
+    return f"Camera2 {{\n translate {{{translate}}}\n rotate {{{rotate}}}\n rot_order XYZ\n focal {focal_mm:.4f}\n {aperture}\n name Camera_formcut\n}}\n"
+
+
 @router.get("/export/{layer_id}", response_class=PlainTextResponse)
 def export_track(layer_id: str, surface: str, format: str = "nuke") -> str:
     """A layer's corner pin for other hosts, in pixels of the tracked media: a Nuke CornerPin2D node to paste (y up from
@@ -979,15 +1048,6 @@ class MeshBody(BaseModel):
     stop: float = Field(ge=0)
 
 
-def _grid_smooth(values: np.ndarray, rows: int, cols: int, passes: int = 2) -> np.ndarray:
-    """Per-vertex values on a (rows+1) by (cols+1) grid, each averaged with its neighbours, passes times."""
-    grid = values.reshape(rows + 1, cols + 1, -1)
-    for _ in range(passes):
-        padded = np.pad(grid, ((1, 1), (1, 1), (0, 0)), mode="edge")
-        grid = (2 * grid + padded[:-2, 1:-1] + padded[2:, 1:-1] + padded[1:-1, :-2] + padded[1:-1, 2:]) / 6
-    return grid.reshape(values.shape)
-
-
 @router.post("/mesh", status_code=202)
 def track_mesh(body: MeshBody) -> dict:
     """Mocha Pro's PowerMesh: a grid over the layer's surface tracked as it bends. Each vertex rides the planar
@@ -1012,22 +1072,32 @@ def track_mesh(body: MeshBody) -> dict:
         return cv2.perspectiveTransform(home.reshape(-1, 1, 2), homographies[index]).reshape(-1, 2)
 
     def operation(job_id, report, cancelled):
-        small = min(1.0, 640 / max(width, height))
         frames = _frames(source, fps, width, height, first, max(first, last))
         _, before = next(frames)
-        previous = cv2.resize(cv2.cvtColor(before, cv2.COLOR_BGR2GRAY), None, fx=small, fy=small, interpolation=cv2.INTER_AREA)
+        previous = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
         deviation = np.zeros_like(home)
         keys = {str(first): (planar(first) / [width, height]).round(6).tolist()} if first in homographies else {}
         for index, frame in frames:
             if cancelled() or index not in homographies or index - 1 not in homographies:
                 break
-            current = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), None, fx=small, fy=small, interpolation=cv2.INTER_AREA)
-            flow = cv2.calcOpticalFlowFarneback(previous, current, None, 0.5, 4, 21, 5, 7, 1.5, 0)
+            current = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             was = planar(index - 1) + deviation
-            probe = (was * small).astype(np.float32)
-            moved = np.stack([cv2.remap(flow[:, :, k], probe[:, None, 0], probe[:, None, 1], cv2.INTER_LINEAR).ravel() for k in (0, 1)], -1)
-            change = was + moved / small - planar(index) - deviation
-            deviation = deviation + _grid_smooth(change, body.rows, body.cols)
+            criteria = (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 40, 0.005)
+            start_points = was.astype(np.float32).reshape(-1, 1, 2)
+            found, status, _ = cv2.calcOpticalFlowPyrLK(
+                previous, current, start_points, None, winSize=(31, 31), maxLevel=3, criteria=criteria
+            )
+            found = found.reshape(-1, 2).astype(np.float64)
+            lost = status.ravel() == 0
+            found[lost] = was[lost] + (planar(index) - planar(index - 1))[lost]
+            change = found - planar(index) - deviation
+            grid = np.pad(change.reshape(body.rows + 1, body.cols + 1, 2), ((1, 1), (1, 1), (0, 0)), mode="edge")
+            rows_n, cols_n = grid.shape[0] - 2, grid.shape[1] - 2
+            shifted = [grid[1 + dy : 1 + dy + rows_n, 1 + dx : 1 + dx + cols_n] for dy in (-1, 0, 1) for dx in (-1, 0, 1)]
+            around = np.median(np.stack(shifted), axis=0).reshape(-1, 2)
+            odd = np.linalg.norm(change - around, axis=1) > 1.5
+            change[odd] = around[odd]
+            deviation = deviation + change
             length = np.linalg.norm(deviation, axis=1, keepdims=True)
             deviation *= np.minimum(1.0, reach / np.maximum(length, 1e-9))
             keys[str(index)] = ((planar(index) + deviation) / [width, height]).round(6).tolist()
