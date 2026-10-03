@@ -719,6 +719,7 @@
   "planar.locked": "Bloqueada",
   "planar.blendSubtract": "Restar",
   "planar.invertLayer": "Invertir",
+  "planar.pointActive": "Punto activado/desactivado",
   "planar.forward": "Traer adelante",
   "planar.deleteLayer": "Eliminar capa",
   "planar.hint": "Dibuja una forma alrededor de una superficie plana: una pantalla, un cartel, una pared",

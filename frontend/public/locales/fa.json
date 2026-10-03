@@ -720,6 +720,7 @@
   "planar.locked": "قفل‌شده",
   "planar.blendSubtract": "کم کردن",
   "planar.invertLayer": "وارونه",
+  "planar.pointActive": "روشن/خاموش کردن نقطه",
   "planar.forward": "انتقال به جلو",
   "planar.deleteLayer": "حذف لایه",
   "planar.hint": "دور یک سطح صاف شکلی بکشید: صفحه‌نمایش، تابلو، دیوار",

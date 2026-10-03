@@ -38,6 +38,29 @@ def points_at(shape: dict, frame: int) -> np.ndarray:
     return pa + (pb - pa) * f if pa.shape == pb.shape else pa
 
 
+def active_at(shape: dict, frame: int) -> tuple[np.ndarray, dict]:
+    """The shape's active points on a frame and the shape with per-point values to match: shape["off"] maps a frame
+    to the points switched off from it on (Mocha's point activation), held until the next entry."""
+    points = points_at(shape, frame)
+    off_keys = shape.get("off") or {}
+    if not off_keys:
+        return points, shape
+    order = sorted(int(k) for k in off_keys)
+    at = bisect.bisect_right(order, frame)
+    if at == 0:
+        return points, shape
+    off = {int(i) for i in off_keys[str(order[at - 1])]}
+    keep = [i for i in range(len(points)) if i not in off]
+    if len(keep) < 3 or len(keep) == len(points):
+        return points, shape
+    trimmed = dict(shape)
+    for name in ("tension", "feather"):
+        values = shape.get(name)
+        if values and len(values) == len(points):
+            trimmed[name] = [values[i] for i in keep]
+    return points[keep], trimmed
+
+
 def outline(points: np.ndarray, shape: dict) -> tuple[np.ndarray, np.ndarray]:
     """The closed outline the shape draws (same units as points), and for each outline point the index of the shape
     point it comes from (with the fraction along the side, as index + fraction) so per-point values interpolate."""
@@ -99,7 +122,8 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
         for shape in shapes:
             if (shape.get("mode") == "subtract") != (wanted == "subtract"):
                 continue
-            pts, where = outline(points_at(shape, frame), shape)
+            live, live_shape = active_at(shape, frame)
+            pts, where = outline(live, live_shape)
             media = carry(pts)
             local = to_pixels(media)
             polygon = np.round(local).astype(np.int32)
@@ -109,7 +133,7 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
                 soft *= 1 - covered
                 continue
             solid = np.maximum(solid, covered)
-            feathers = feather_along(shape, where)
+            feathers = feather_along(live_shape, where)
             if feathers.max() <= 0:
                 continue
             # the outline drawn with each part's feather; outside the shape, the edge fades over the nearest part's

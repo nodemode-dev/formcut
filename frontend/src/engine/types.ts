@@ -311,6 +311,7 @@ export interface PlanarShape {
   tension?: number[];
   feather?: number[];  // each point's own feather in the tracked matte, media pixels
   keys?: Record<string, number[][]>;  // a roto layer's keyframes: frame -> points
+  off?: Record<string, number[]>;
 }
 
 export interface PlanarLayer {

@@ -35,6 +35,11 @@ const invert = (m: number[]): number[] => {
 // a shape's points on a frame and its outline: the twin of backend/app/planar_shapes.py (keyframes run linearly and
 // hold beyond; an X-Spline is a Hermite curve whose tangent at each point is the Catmull-Rom tangent times its tension)
 const SAMPLES = 12;
+const offAt = (shape: PlanarShape, index: number): Set<number> => {
+  const off = shape.off ?? {};
+  const order = Object.keys(off).map(Number).filter((k) => k <= index).sort((a, b) => a - b);
+  return new Set(order.length ? off[String(order[order.length - 1])] : []);
+};
 const pointsAt = (shape: PlanarShape, index: number): number[][] => {
   const keys = shape.keys ?? {};
   const order = Object.keys(keys).map(Number).sort((a, b) => a - b);
@@ -129,6 +134,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <div data-ref="point-panel" hidden>
             <p class="pw-hint">${t("planar.edgeHint")}</p>
             <button class="tool-chip" data-ref="delete-point">${icon("trash")}${t("planar.adjust.delete")}</button>
+            <button class="tool-chip" data-ref="toggle-point">${t("planar.pointActive")}</button>
             <div class="pw-row"><span>${t("planar.tension")}</span><input type="range" data-ref="tension" min="0" max="1" step="0.05"></div>
             <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="0" max="500" step="1"></div>
           </div>
@@ -220,11 +226,16 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       const faint = !h;  // not tracked at this frame: shown where drawn, dashed
       l.shapes.forEach((shape, si) => {
         const now = pointsAt(shape, frame);
-        const pts = outlineOf(now, shape).map((p) => carried(p).join(",")).join(" ");
+        const off = offAt(shape, frame);
+        const keep = (_: unknown, pi: number) => !off.has(pi);
+        const trimmed = off.size > 0 && now.length - off.size >= 3;
+        const liveShape = trimmed ? { ...shape, tension: shape.tension?.filter(keep), feather: shape.feather?.filter(keep) } : shape;
+        const pts = outlineOf(trimmed ? now.filter(keep) : now, liveShape).map((p) => carried(p).join(",")).join(" ");
         const fill = views.matte ? `${l.color}${shape.mode === "subtract" ? "00" : "55"}` : "none";
         out += `<polygon points="${pts}" fill="${fill}" stroke="${l.color}" stroke-width="${active && si === shapeIndex ? 3 : 2}" vector-effect="non-scaling-stroke"${faint ? ' stroke-dasharray="6 5"' : ""}${shape.mode === "subtract" ? ' class="is-subtract"' : ""} data-layer="${li}" data-shape="${si}"/>`;
         if (active && tool === "select" && !l.locked) {
-          now.forEach((p, pi) => { const [x, y] = carried(p); handles += `<circle class="pw-handle" cx="${x}" cy="${y}" r="5" data-point="${si}:${pi}" vector-effect="non-scaling-stroke"/>`; });
+          const offNow = offAt(shape, frame);
+          now.forEach((p, pi) => { const [x, y] = carried(p); handles += `<circle class="pw-handle${offNow.has(pi) ? " is-off" : ""}" cx="${x}" cy="${y}" r="5" data-point="${si}:${pi}" vector-effect="non-scaling-stroke"/>`; });
         }
       });
       if (views.surface && l.surface && h) {
@@ -694,11 +705,23 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     if (l.tracking && !(await invalidate(l))) return;
     for (const pts of [shape.points, ...Object.values(shape.keys ?? {})]) pts.splice(picked.point, 1);
     for (const values of [shape.tension, shape.feather]) values?.splice(picked.point, 1);
+    const gone = picked.point;
+    for (const [k, set] of Object.entries(shape.off ?? {})) shape.off![k] = set.filter((i) => i !== gone).map((i) => (i > gone ? i - 1 : i));
     picked = null;
     changed = true;
     paintPoint();
     render();
   })());
+  $("toggle-point").addEventListener("click", () => {
+    const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
+    if (!l || !shape || !picked) return;
+    const now = offAt(shape, frame);
+    if (now.has(picked.point)) now.delete(picked.point);
+    else if (shape.points.length - now.size > 3) now.add(picked.point);
+    (shape.off ??= {})[String(frame)] = [...now].sort((a, b) => a - b);
+    changed = true;
+    render();
+  });
   // the selected shape's keyframes: to the one before or after, one added here as the shape now is, this one taken off
   const keyFrames = (): number[] => {
     const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;

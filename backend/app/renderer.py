@@ -1395,7 +1395,7 @@ class FrameRenderer:
         layer = next((one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") == layer_id and one.get("shapes")), None)
         if layer is None:
             return None
-        from .planar_shapes import points_at
+        from .planar_shapes import active_at
 
         left, top, right, bottom = crop_box(clip) or (0.0, 0.0, 0.0, 0.0)
         full_w, full_h = w / max(1e-6, 1 - left - right), h / max(1e-6, 1 - top - bottom)
@@ -1408,7 +1408,7 @@ class FrameRenderer:
             nearest = min((order[k] for k in (at - 1, at) if 0 <= k < len(order)), key=lambda f: abs(f - index))
             homography = frames[nearest]
         scale = full_w / max(1.0, float(media_w))
-        pts = points_at(layer["shapes"][0], index) * [float(media_w), float(media_h)]
+        pts = active_at(layer["shapes"][0], index)[0] * [float(media_w), float(media_h)]
         pts = cv2.perspectiveTransform(pts.reshape(-1, 1, 2).astype(np.float64), homography).reshape(-1, 2)
         pts = pts * scale - [left * full_w, top * full_h]
         if len(pts) < 8:

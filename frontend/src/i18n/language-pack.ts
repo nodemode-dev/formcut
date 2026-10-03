@@ -479,6 +479,7 @@ Layer name|Nom du calque|Nome del livello|レイヤー名|레이어 이름|Nome 
 Visible|Visible|Visibile|表示|표시|Visível|Видимый|Görünür|可见|可見
 Track this layer|Suivre ce calque|Traccia questo livello|このレイヤーをトラッキング|이 레이어 트래킹|Rastrear esta camada|Трекинг этого слоя|Bu katmanı izle|跟踪此图层|追蹤此圖層
 Locked|Verrouillé|Bloccato|ロック|잠김|Bloqueada|Заблокирован|Kilitli|已锁定|已鎖定
+Point on/off|Point actif/inactif|Punto attivo/inattivo|ポイントのオン/オフ|포인트 켜기/끄기|Ponto ativo/inativo|Точка вкл./выкл.|Nokta açık/kapalı|点开/关|點開/關
 Move in front|Mettre devant|Porta davanti|前面へ移動|앞으로 이동|Trazer para frente|Переместить вперёд|Öne taşı|移到前面|移到前面
 Delete layer|Supprimer le calque|Elimina livello|レイヤーを削除|레이어 삭제|Excluir camada|Удалить слой|Katmanı sil|删除图层|刪除圖層
 Draw a shape around a flat surface to track: a screen, a sign, a wall|Dessinez une forme autour d'une surface plane : un écran, un panneau, un mur|Disegna una forma attorno a una superficie piana: uno schermo, un cartello, un muro|平らな面を囲むシェイプを描きます：画面、看板、壁|평평한 면을 둘러싸는 셰이프를 그리세요: 화면, 간판, 벽|Desenhe uma forma em volta de uma superfície plana: uma tela, uma placa, uma parede|Нарисуйте фигуру вокруг плоской поверхности: экрана, вывески, стены|Düz bir yüzeyin çevresine şekil çizin: ekran, tabela, duvar|围绕要跟踪的平面绘制形状：屏幕、招牌、墙面|圍繞要追蹤的平面繪製形狀：螢幕、招牌、牆面

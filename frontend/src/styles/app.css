@@ -1653,6 +1653,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pw-trace { fill: none; stroke: #ffae2b; stroke-width: 1; }
 .pw-drawing { fill: none; stroke: #fff; stroke-width: 1.5; stroke-dasharray: 4 3; }
 .pw-handle { fill: #fff; stroke: #000; stroke-width: 1; cursor: move; }
+.pw-handle.is-off { fill: transparent; stroke: #fff; stroke-width: 1.5; }
 .pw-corner { fill: #4b82f0; stroke: #fff; stroke-width: 1.5; cursor: move; }
 .pw-transport { border-top: 1px solid var(--edge); padding: var(--sp-2) var(--sp-3) calc(var(--sp-2) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; }
 .pw-scrub { display: flex; flex-direction: column; gap: 2px; }

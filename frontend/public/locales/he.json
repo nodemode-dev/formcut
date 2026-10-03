@@ -720,6 +720,7 @@
   "planar.locked": "נעולה",
   "planar.blendSubtract": "חיסור",
   "planar.invertLayer": "היפוך",
+  "planar.pointActive": "הפעלת/כיבוי נקודה",
   "planar.forward": "העברה לחזית",
   "planar.deleteLayer": "מחיקת שכבה",
   "planar.hint": "ציירו צורה סביב משטח שטוח למעקב: מסך, שלט, קיר",

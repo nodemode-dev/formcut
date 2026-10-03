@@ -720,6 +720,7 @@
   "planar.locked": "مقفلة",
   "planar.blendSubtract": "طرح",
   "planar.invertLayer": "عكس",
+  "planar.pointActive": "تشغيل/إيقاف النقطة",
   "planar.forward": "نقل إلى الأمام",
   "planar.deleteLayer": "حذف الطبقة",
   "planar.hint": "ارسم شكلًا حول سطح مستوٍ لتتبعه: شاشة أو لافتة أو جدار",
