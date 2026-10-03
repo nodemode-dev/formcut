@@ -725,6 +725,8 @@
   "planar.layerIn": "البداية هنا",
   "planar.layerOut": "النهاية هنا",
   "planar.group": "مجموعة",
+  "planar.copyAe": "نسخ تثبيت الزوايا لـ After Effects",
+  "planar.aeCopied": "نُسخت الإطارات المفتاحية: الصقها على تأثير Corner Pin في After Effects",
   "planar.forward": "نقل إلى الأمام",
   "planar.deleteLayer": "حذف الطبقة",
   "planar.hint": "ارسم شكلًا حول سطح مستوٍ لتتبعه: شاشة أو لافتة أو جدار",

@@ -725,6 +725,8 @@
   "planar.layerIn": "شروع از اینجا",
   "planar.layerOut": "پایان در اینجا",
   "planar.group": "گروه",
+  "planar.copyAe": "کپی پین گوشه‌ها برای After Effects",
+  "planar.aeCopied": "کی‌فریم‌ها کپی شد: آن‌ها را روی افکت Corner Pin در After Effects بچسبانید",
   "planar.forward": "انتقال به جلو",
   "planar.deleteLayer": "حذف لایه",
   "planar.hint": "دور یک سطح صاف شکلی بکشید: صفحه‌نمایش، تابلو، دیوار",

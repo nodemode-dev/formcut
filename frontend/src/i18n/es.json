@@ -724,6 +724,8 @@
   "planar.layerIn": "Entrada aquí",
   "planar.layerOut": "Salida aquí",
   "planar.group": "Grupo",
+  "planar.copyAe": "Copiar pin de esquinas para After Effects",
+  "planar.aeCopied": "Fotogramas clave copiados: pégalos en un efecto Pin de esquinas de After Effects",
   "planar.forward": "Traer adelante",
   "planar.deleteLayer": "Eliminar capa",
   "planar.hint": "Dibuja una forma alrededor de una superficie plana: una pantalla, un cartel, una pared",

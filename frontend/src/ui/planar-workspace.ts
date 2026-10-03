@@ -182,6 +182,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
+          <button class="tool-chip" data-ref="copy-ae">${t("planar.copyAe")}</button>
         </section>
       </aside>
       <main class="pw-main">
@@ -1005,6 +1006,18 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     $<HTMLSelectElement>("target").innerHTML = clips.map((c) => `<option value="${c.id}">${esc(c.label)}</option>`).join("") || `<option value="">${t("planar.noTarget")}</option>`;
   }
   $("kind").addEventListener("change", () => { $("matte-row").hidden = $<HTMLSelectElement>("kind").value !== "matte"; });
+  $("copy-ae").addEventListener("click", () => void (async () => {
+    const l = layer();
+    if (!l || !l.surface || !media) { say(t("planar.needSurface")); return; }
+    const reply = await fetch(`/api/planar/track/${l.id}?surface=${l.surface.flat().map((v) => v.toFixed(6)).join(",")}`);
+    if (!reply.ok) { say(t("planar.needSurface")); return; }
+    const data = await reply.json() as { frames: number[]; corners: number[][][] };
+    const names: [string, number][] = [["Upper Left #2", 0], ["Upper Right #3", 1], ["Lower Left #4", 3], ["Lower Right #5", 2]];
+    const head = ["Adobe After Effects 8.0 Keyframe Data", "", `\tUnits Per Second\t${media.fps}`, `\tSource Width\t${media.width}`, `\tSource Height\t${media.height}`, "\tSource Pixel Aspect Ratio\t1", "\tComp Pixel Aspect Ratio\t1", ""];
+    const blocks = names.map(([name, k]) => [`Effects\tCorner Pin #1\t${name}`, "\tFrame\tX pixels\tY pixels\t", ...data.frames.map((f, i) => `\t${f}\t${(data.corners[i][k][0] * media!.width).toFixed(3)}\t${(data.corners[i][k][1] * media!.height).toFixed(3)}\t`), ""].join("\n"));
+    await navigator.clipboard.writeText([...head, ...blocks, "", "End of Keyframe Data", ""].join("\n"));
+    say(t("planar.aeCopied"));
+  })());
   $("apply").addEventListener("click", () => void (async () => {
     const l = layer(), target = $<HTMLSelectElement>("target").value, kind = $<HTMLSelectElement>("kind").value;
     if (kind === "holdout") {

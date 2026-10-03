@@ -724,6 +724,8 @@
   "planar.layerIn": "Beginn hier",
   "planar.layerOut": "Ende hier",
   "planar.group": "Gruppe",
+  "planar.copyAe": "After-Effects-Eckpunkte kopieren",
+  "planar.aeCopied": "Eckpunkt-Keyframes kopiert: in After Effects auf einen Effekt „Eckpunkte verschieben“ einfügen",
   "planar.forward": "Nach vorn",
   "planar.deleteLayer": "Ebene löschen",
   "planar.hint": "Zeichnen Sie eine Form um eine ebene Fläche: einen Bildschirm, ein Schild, eine Wand",
