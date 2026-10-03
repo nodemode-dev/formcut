@@ -18,7 +18,7 @@ import bisect
 import cv2
 import numpy as np
 
-SAMPLES = 12  # points a curved side is drawn with
+SAMPLES = 48  # points a curved side is drawn with
 
 
 def points_at(shape: dict, frame: int) -> np.ndarray:
@@ -56,7 +56,7 @@ def active_at(shape: dict, frame: int) -> tuple[np.ndarray, dict]:
     trimmed = dict(shape)
     trimmed["points"] = points[keep].tolist()
     trimmed["keys"] = {}
-    for name in ("tension", "feather"):
+    for name in ("tension", "feather", "handles"):
         values = shape.get(name)
         if values and len(values) == len(points):
             trimmed[name] = [values[i] for i in keep]
@@ -67,6 +67,18 @@ def outline(points: np.ndarray, shape: dict) -> tuple[np.ndarray, np.ndarray]:
     """The closed outline the shape draws (same units as points), and for each outline point the index of the shape
     point it comes from (with the fraction along the side, as index + fraction) so per-point values interpolate."""
     n = len(points)
+    if shape.get("kind") == "bezier" and n >= 2:
+        handles = np.array(shape.get("handles") or [[0.0, 0.0, 0.0, 0.0]] * n, float)
+        if handles.shape != (n, 4):
+            handles = np.resize(handles, (n, 4))
+        ts = np.arange(SAMPLES) / SAMPLES
+        u = 1 - ts
+        segments = []
+        for i in range(n):
+            p0, p3 = points[i], points[(i + 1) % n]
+            p1, p2 = p0 + handles[i, 2:4], p3 + handles[(i + 1) % n, 0:2]
+            segments.append((u**3)[:, None] * p0 + (3 * u * u * ts)[:, None] * p1 + (3 * u * ts * ts)[:, None] * p2 + (ts**3)[:, None] * p3)
+        return np.concatenate(segments), np.concatenate([i + ts for i in range(n)])
     if shape.get("kind") != "xspline" or n < 3:
         return points, np.arange(n, dtype=float)
     tension = np.array(shape.get("tension") or [1.0] * n, float)

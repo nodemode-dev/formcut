@@ -720,6 +720,7 @@
   "planar.blendSubtract": "Subtract",
   "planar.invertLayer": "Invert",
   "planar.pointActive": "Point on/off",
+  "planar.makeBezier": "Make Bézier",
   "planar.forward": "Move in front",
   "planar.deleteLayer": "Delete layer",
   "planar.hint": "Draw a shape around a flat surface to track: a screen, a sign, a wall",

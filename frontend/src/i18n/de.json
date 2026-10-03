@@ -720,6 +720,7 @@
   "planar.blendSubtract": "Subtrahieren",
   "planar.invertLayer": "Umkehren",
   "planar.pointActive": "Punkt an/aus",
+  "planar.makeBezier": "In Bézier umwandeln",
   "planar.forward": "Nach vorn",
   "planar.deleteLayer": "Ebene löschen",
   "planar.hint": "Zeichnen Sie eine Form um eine ebene Fläche: einen Bildschirm, ein Schild, eine Wand",

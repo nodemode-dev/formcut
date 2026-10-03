@@ -34,7 +34,7 @@ const invert = (m: number[]): number[] => {
 };
 // a shape's points on a frame and its outline: the twin of backend/app/planar_shapes.py (keyframes run linearly and
 // hold beyond; an X-Spline is a Hermite curve whose tangent at each point is the Catmull-Rom tangent times its tension)
-const SAMPLES = 12;
+const SAMPLES = 48;
 const ellipseIn = (a: number[], b: number[], n: number): number[][] => {
   const [cx, cy, rx, ry] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.abs(b[0] - a[0]) / 2, Math.abs(b[1] - a[1]) / 2];
   return Array.from({ length: n }, (_, k) => [cx + rx * Math.cos((2 * Math.PI * k) / n), cy + ry * Math.sin((2 * Math.PI * k) / n)]);
@@ -56,6 +56,19 @@ const pointsAt = (shape: PlanarShape, index: number): number[][] => {
 };
 const outlineOf = (points: number[][], shape: PlanarShape): number[][] => {
   const n = points.length;
+  if (shape.kind === "bezier" && n >= 2) {
+    const hs = shape.handles ?? [];
+    const out: number[][] = [];
+    for (let i = 0; i < n; i += 1) {
+      const p0 = points[i], p3 = points[(i + 1) % n], h0 = hs[i] ?? [0, 0, 0, 0], h3 = hs[(i + 1) % n] ?? [0, 0, 0, 0];
+      const p1 = [p0[0] + h0[2], p0[1] + h0[3]], p2 = [p3[0] + h3[0], p3[1] + h3[1]];
+      for (let k = 0; k < SAMPLES; k += 1) {
+        const t = k / SAMPLES, u = 1 - t, a = u ** 3, b = 3 * u * u * t, c = 3 * u * t * t, d = t ** 3;
+        out.push([a * p0[0] + b * p1[0] + c * p2[0] + d * p3[0], a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1]]);
+      }
+    }
+    return out;
+  }
   if (shape.kind !== "xspline" || n < 3) return points;
   const tension = shape.tension ?? [];
   const out: number[][] = [];
@@ -140,6 +153,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <p class="pw-hint">${t("planar.edgeHint")}</p>
             <button class="tool-chip" data-ref="delete-point">${icon("trash")}${t("planar.adjust.delete")}</button>
             <button class="tool-chip" data-ref="toggle-point">${t("planar.pointActive")}</button>
+            <button class="tool-chip" data-ref="make-bezier">${t("planar.makeBezier")}</button>
             <div class="pw-row"><span>${t("planar.tension")}</span><input type="range" data-ref="tension" min="0" max="1" step="0.05"></div>
             <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="-500" max="500" step="1"></div>
           </div>
@@ -241,6 +255,14 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         if (active && tool === "select" && !l.locked) {
           const offNow = offAt(shape, frame);
           now.forEach((p, pi) => { const [x, y] = carried(p); handles += `<circle class="pw-handle${offNow.has(pi) ? " is-off" : ""}" cx="${x}" cy="${y}" r="5" data-point="${si}:${pi}" vector-effect="non-scaling-stroke"/>`; });
+          if (shape.kind === "bezier" && picked && picked.shape === si && now[picked.point]) {
+            const p = now[picked.point], hh = shape.handles?.[picked.point] ?? [0, 0, 0, 0];
+            const [px, py] = carried(p);
+            for (const [side, dx, dy] of [["in", hh[0], hh[1]], ["out", hh[2], hh[3]]] as [string, number, number][]) {
+              const [hx, hy] = carried([p[0] + dx, p[1] + dy]);
+              handles += `<line class="pw-bline" x1="${px}" y1="${py}" x2="${hx}" y2="${hy}" vector-effect="non-scaling-stroke"/><circle class="pw-bhandle" cx="${hx}" cy="${hy}" r="4" data-bh="${si}:${picked.point}:${side}" vector-effect="non-scaling-stroke"/>`;
+            }
+          }
         }
       });
       if (views.surface && l.surface && h) {
@@ -482,8 +504,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     say("");
   }
 
-  let drag: { kind: "point" | "corner" | "rect" | "ref"; a: number; b: number; start: [number, number] } | null = null;
+  let drag: { kind: "point" | "corner" | "rect" | "ref" | "handle"; a: number; b: number; start: [number, number] } | null = null;
   let dragEnd: [number, number] = [0, 0];
+  let handleSide: "in" | "out" = "out";
+  let handleBroken = false;
   svg.addEventListener("pointerdown", (event) => {
     if (job) return;
     const [x, y] = pointer(event);
@@ -506,6 +530,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         return;
       }
       lastPress = { at: now, x: event.clientX, y: event.clientY };
+      if (target.dataset.bh && l) { const [si, pi, side] = target.dataset.bh.split(":"); handleSide = side === "in" ? "in" : "out"; handleBroken = event.altKey; drag = { kind: "handle", a: Number(si), b: Number(pi), start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
       if (target.dataset.point && l) { const [si, pi] = target.dataset.point.split(":").map(Number); picked = { shape: si, point: pi }; shapeIndex = si; paintPoint(); drag = { kind: "point", a: si, b: pi, start: [x, y] }; svg.setPointerCapture(event.pointerId); return; }
       if (target.dataset.shape !== undefined) { current = Number(target.dataset.layer); shapeIndex = Number(target.dataset.shape); paintSettings(); render(); }
       return;
@@ -572,6 +597,20 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       if (p) { l.surface[drag.a] = p; changed = true; }
     } else if (l && drag.kind === "ref") {
       movePoint(l, drag.a, x, y);
+    } else if (l && drag.kind === "handle") {
+      const shape = l.shapes[drag.a], at = toReference(l, x, y), p = pointsAt(shape, frame)[drag.b];
+      if (at && p) {
+        const hs = (shape.handles ??= shape.points.map(() => [0, 0, 0, 0]));
+        const h = hs[drag.b] ?? (hs[drag.b] = [0, 0, 0, 0]);
+        const dx = at[0] - p[0], dy = at[1] - p[1];
+        const [mine, other] = handleSide === "in" ? [0, 2] : [2, 0];
+        h[mine] = dx; h[mine + 1] = dy;
+        if (!handleBroken) {
+          const len = Math.hypot(h[other], h[other + 1]) || Math.hypot(dx, dy), d = Math.hypot(dx, dy) || 1;
+          h[other] = (-dx / d) * len; h[other + 1] = (-dy / d) * len;
+        }
+        changed = true;
+      }
     } else if (l && drag.kind === "point") {
       const p = toReference(l, x, y);
       if (p) {
@@ -592,7 +631,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       const box = drawing.slice(0, 4);
       drawing = [];
       if (Math.abs(b[0] - a[0]) > 4 && Math.abs(b[1] - a[1]) > 4) await addShape(tool === "ellipse" ? ellipseIn(a, b, 12) : box, tool === "ellipse" ? 1 : undefined);
-    } else if (was.kind === "point") {
+    } else if (was.kind === "point" || was.kind === "handle") {
       const l = layer();
       if (l && !(await invalidate(l))) await loadTracks();  // kept the track: the shape goes back
     }
@@ -600,7 +639,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   })());
 
   // ---- tracking: the engine's jobs ----
-  const apiLayer = (l: PlanarLayer) => ({ id: l.id, shapes: l.shapes.map((s) => ({ points: s.points, mode: s.mode, kind: s.kind ?? "polygon", tension: s.tension ?? null, feather: s.feather ?? null, keys: s.keys ?? null })), reference: l.reference, settings: l.settings, link: l.link ?? null });
+  const apiLayer = (l: PlanarLayer) => ({ id: l.id, shapes: l.shapes.map((s) => ({ points: s.points, mode: s.mode, kind: s.kind ?? "polygon", tension: s.tension ?? null, feather: s.feather ?? null, keys: s.keys ?? null, handles: s.handles ?? null, off: s.off ?? null })), reference: l.reference, settings: l.settings, link: l.link ?? null });
 
   async function loadTrack(l: PlanarLayer): Promise<void> {
     const reply = await fetch(`/api/planar/track/${l.id}`);
@@ -720,6 +759,21 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     paintPoint();
     render();
   })());
+  $("make-bezier").addEventListener("click", () => {
+    const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
+    if (!shape || shape.kind === "bezier") return;
+    const pts = shape.points, n = pts.length, tension = shape.tension ?? [];
+    shape.handles = pts.map((_, i) => {
+      if (shape.kind !== "xspline") return [0, 0, 0, 0];
+      const prev = pts[(i - 1 + n) % n], next = pts[(i + 1) % n], k = (tension[i] ?? 1) / 6;
+      const mx = (next[0] - prev[0]) * k, my = (next[1] - prev[1]) * k;
+      return [-mx, -my, mx, my];
+    });
+    shape.kind = "bezier";
+    delete shape.tension;
+    changed = true;
+    render();
+  });
   $("toggle-point").addEventListener("click", () => {
     const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
     if (!l || !shape || !picked) return;

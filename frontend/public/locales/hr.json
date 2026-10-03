@@ -721,6 +721,7 @@
   "planar.blendSubtract": "Oduzmi",
   "planar.invertLayer": "Obrni",
   "planar.pointActive": "Točka uključena/isključena",
+  "planar.makeBezier": "Pretvori u Bézier",
   "planar.forward": "Pomakni naprijed",
   "planar.deleteLayer": "Izbriši sloj",
   "planar.hint": "Nacrtajte oblik oko ravne površine: zaslona, natpisa, zida",

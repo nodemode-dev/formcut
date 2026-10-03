@@ -46,6 +46,8 @@ class Shape(BaseModel):
     tension: list[float] | None = None
     feather: list[float] | None = None  # each point's own feather, media pixels (the matte's)
     keys: dict[str, list[list[float]]] | None = None  # frame -> points (a roto layer's keyframes)
+    handles: list[list[float]] | None = None  # a Bezier shape's in and out handles per point: ix, iy, ox, oy
+    off: dict[str, list[int]] | None = None
 
 
 class Layer(BaseModel):

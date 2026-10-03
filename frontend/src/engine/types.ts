@@ -307,7 +307,8 @@ export function defaultTransform(): ClipTransform {
 export interface PlanarShape {
   points: number[][];  // x, y in the frame's unit square, on the layer's reference frame
   mode: "add" | "subtract";
-  kind?: "polygon" | "xspline";  // an X-Spline: each point's tension from a corner (0) to a smooth curve (1)
+  kind?: "polygon" | "xspline" | "bezier";  // an X-Spline: each point's tension from a corner (0) to a smooth curve (1)
+  handles?: number[][];  // a Bezier's in and out handles per point, offsets from it: ix, iy, ox, oy
   tension?: number[];
   feather?: number[];  // each point's own feather in the tracked matte, media pixels
   keys?: Record<string, number[][]>;  // a roto layer's keyframes: frame -> points
