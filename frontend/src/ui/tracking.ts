@@ -28,6 +28,13 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
     const id = engine.snapshot.selectedClipId;
     if (id) engine.dispatch("clip.cornerPin", { clipId: id, cornerPin: null });
   });
+  for (const button of root.querySelectorAll<HTMLElement>('[data-ref="pin-match"]')) {
+    button.addEventListener("click", () => {
+      const id = engine.snapshot.selectedClipId, pin = id ? engine.findClip(id)?.clip.cornerPin : undefined;
+      const key = button.dataset.match as "light" | "grain" | "blur";
+      if (id && pin) engine.dispatch("clip.cornerPin", { clipId: id, cornerPin: { ...pin, match: { ...pin.match, [key]: !pin.match?.[key] } } });
+    });
+  }
   root.querySelector<HTMLElement>('[data-ref="module-remove"]')?.addEventListener("click", () => {
     const id = engine.snapshot.selectedClipId;
     if (id) engine.dispatch("clip.planarModule", { clipId: id, planarStabilize: null, planarReorient: null });

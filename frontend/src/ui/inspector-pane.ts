@@ -222,6 +222,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}
         ${selected?.planarStabilize || selected?.planarReorient ? `<button class="tool-chip" data-ref="module-remove">${icon("close")}${t("track.moduleRemove")}</button>` : ""}
         ${pinned ? `<button class="tool-chip${selected?.cornerPin?.motionBlur ? " is-on" : ""}" data-ref="pin-blur" aria-pressed="${!!selected?.cornerPin?.motionBlur}">${t("track.motionBlurPin")}</button>` : ""}
+        ${pinned ? (["light", "grain", "blur"] as const).map((k) => `<button class="tool-chip${selected?.cornerPin?.match?.[k] ? " is-on" : ""}" data-ref="pin-match" data-match="${k}" aria-pressed="${!!selected?.cornerPin?.match?.[k]}">${t(`track.match.${k}`)}</button>`).join("") : ""}
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
       </div>
       <div class="section" data-section="mask" data-feature="section.mask">

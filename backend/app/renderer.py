@@ -4,6 +4,7 @@ import json
 import math
 import os
 import sys
+import zlib
 from pathlib import Path
 
 import cv2
@@ -386,6 +387,58 @@ def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float
                     u**3 * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t**3 * y3,
                 )
             )
+    return out
+
+
+def _sharpness(luma: np.ndarray, where: np.ndarray) -> float:
+    """Mean edge strength over contrast inside where: how sharp, whatever the brightness."""
+    edge = cv2.magnitude(cv2.Sobel(luma, cv2.CV_32F, 1, 0), cv2.Sobel(luma, cv2.CV_32F, 0, 1))
+    return float(edge[where].mean() / max(float(luma[where].std()), 1e-6))
+
+
+def _grain(luma: np.ndarray, where: np.ndarray) -> float:
+    """The fine noise's level inside where: the high-passed brightness's median absolute deviation, as a deviation."""
+    fine = (luma - cv2.GaussianBlur(luma, (0, 0), 1.0))[where]
+    return float(1.4826 * np.median(np.abs(fine - np.median(fine))))
+
+
+def insert_match(layer: np.ndarray, below: np.ndarray, match: dict, key: str) -> np.ndarray:
+    """Mocha Pro's Insert module: an inserted layer matched to the plate under its footprint. light carries the
+    plate's shading across the surface onto it; blur softens it to the plate's sharpness; grain adds noise up to the
+    plate's level (seeded by key, so a render repeats). Its alpha is left as it is."""
+    top = 65535.0 if layer.dtype == np.uint16 else 255.0
+    weights = np.array([0.299, 0.587, 0.114], np.float32)
+    foot = layer[:, :, 3].astype(np.float32) / top > 0.5
+    if foot.sum() < 256:
+        return layer
+    ys, xs = np.nonzero(foot)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    box = (slice(y0, y1), slice(x0, x1))
+    inner = cv2.erode(foot[box].astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
+    if inner.sum() < 64:
+        return layer
+    rgb = layer[box][:, :, :3].astype(np.float32) / top
+    below_top = 65535.0 if below.dtype == np.uint16 else 255.0 if below.dtype == np.uint8 else 1.0
+    plate = (below[box][:, :, :3].astype(np.float32) / below_top) @ weights
+    if match.get("light"):
+        reach = max(4.0, 0.08 * max(y1 - y0, x1 - x0))
+        weight = cv2.GaussianBlur(inner.astype(np.float32), (0, 0), reach)
+        shade = cv2.GaussianBlur(plate * inner, (0, 0), reach) / np.maximum(weight, 1e-6)
+        rgb *= (shade / max(float(np.median(shade[inner])), 1e-6))[..., None]
+    if match.get("blur"):
+        target = _sharpness(plate, inner)
+        for sigma in np.arange(0.25, 4.01, 0.25):
+            if _sharpness(cv2.GaussianBlur(rgb, (0, 0), sigma) @ weights, inner) <= target:
+                rgb = cv2.GaussianBlur(rgb, (0, 0), sigma)
+                break
+    if match.get("grain"):
+        want, have = _grain(plate, inner), _grain(rgb @ weights, inner)
+        noise = np.random.default_rng(zlib.crc32(key.encode())).standard_normal(rgb.shape[:2]).astype(np.float32)
+        level = _grain(noise, inner)
+        if want > have and level > 0:
+            rgb += (noise * (np.sqrt(want * want - have * have) / level))[..., None]
+    out = layer.copy()
+    out[box][:, :, :3] = np.round(np.clip(rgb, 0, 1) * top).astype(layer.dtype)
     return out
 
 
@@ -2147,6 +2200,10 @@ class FrameRenderer:
                         borderMode=cv2.BORDER_CONSTANT,
                         borderValue=0,
                     )
+                match = (clip.get("cornerPin") or {}).get("match") or {}
+                if any(match.get(k) for k in ("light", "grain", "blur")):
+                    canvas = self._flush(canvas)
+                    layer = insert_match(layer, np.asarray(canvas), match, f"{clip.get('id')}:{round(local * 1000)}")
                 layer = self.transition(layer, clip, local)
                 layer = self.transition_out(layer, clip, local)
                 canvas = self._blend(canvas, layer, str(transform["blendMode"]))
