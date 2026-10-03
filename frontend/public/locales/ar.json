@@ -727,6 +727,7 @@
   "planar.group": "مجموعة",
   "planar.copyAe": "نسخ تثبيت الزوايا لـ After Effects",
   "planar.makeMask": "إنشاء قناع",
+  "planar.matteClip": "مقطع القناع",
   "planar.maskMade": "أصبحت الطبقة الآن قناع المقطع المتتبَّع",
   "planar.aeCopied": "نُسخت الإطارات المفتاحية: الصقها على تأثير Corner Pin في After Effects",
   "planar.forward": "نقل إلى الأمام",

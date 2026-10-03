@@ -726,6 +726,7 @@
   "planar.group": "Grupo",
   "planar.copyAe": "Copiar pin de esquinas para After Effects",
   "planar.makeMask": "Crear máscara",
+  "planar.matteClip": "Clip de mate",
   "planar.maskMade": "La capa es ahora la máscara seguida del propio clip",
   "planar.aeCopied": "Fotogramas clave copiados: pégalos en un efecto Pin de esquinas de After Effects",
   "planar.forward": "Traer adelante",

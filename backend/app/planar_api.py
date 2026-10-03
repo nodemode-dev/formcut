@@ -67,7 +67,7 @@ class TrackBody(BaseModel):
 
 
 def _settings(raw: dict) -> Settings:
-    raw = {k: v for k, v in raw.items() if k != "screen"}  # how to track, read by the job itself (track_layer)
+    raw = {k: v for k, v in raw.items() if k not in ("screen", "matte")}  # read by the job itself (track_layer)
     allowed = set(Settings.__dataclass_fields__)
     unknown = set(raw) - allowed
     if unknown:
@@ -183,6 +183,16 @@ def _matrix(values) -> np.ndarray:
     return np.array(values, float).reshape(3, 3)
 
 
+def _matte_outside(frame: np.ndarray, spec: dict, size: tuple[int, int]) -> np.ndarray:
+    """Where an imported matte keeps the tracker out: its dark half by brightness (its light half, inverted), 255."""
+    if (frame.shape[1], frame.shape[0]) != size:
+        frame = cv2.resize(frame, size, interpolation=cv2.INTER_LINEAR)
+    inside = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) > 127
+    if spec.get("invert"):
+        inside = ~inside
+    return np.where(inside, 0, 255).astype(np.uint8)
+
+
 def _exclusion(above: list[Layer], media_id: str, size: tuple[int, int]):
     """A function of the frame: what the layers in front cover there, each carried by its own track where it has one
     (and where it is drawn where it has none), grown a few pixels."""
@@ -238,6 +248,9 @@ def track_layer(body: TrackBody) -> dict:
         raise HTTPException(409, "track from the layer's reference frame, or from a frame it already has a track for")
     start_h = _matrix(data["frames"][str(first)])
     exclude_at = _exclusion(body.above, body.media_id, (width, height))
+    imported = body.layer.settings.get("matte") if isinstance(body.layer.settings.get("matte"), dict) else None
+    matte_info = _video(str(imported["media"])) if imported and imported.get("media") else None
+    matte_source, matte_size = (matte_info[0], (matte_info[2], matte_info[3])) if matte_info else (None, (width, height))
     lock = _locks.setdefault(body.layer.id, threading.Lock())
 
     def operation(job_id, report, cancelled):
@@ -248,6 +261,10 @@ def track_layer(body: TrackBody) -> dict:
             frames = _frames(source, fps, width, height, first, last)
             _, frame = next(frames)
             matte = _raster(body.layer, (width, height), start_h, first)
+            mattes = _frames(matte_source, fps, matte_size[0], matte_size[1], first, last) if matte_source else None
+            if mattes is not None:
+                _, first_matte = next(mattes)
+                matte = cv2.bitwise_and(matte, cv2.bitwise_not(_matte_outside(first_matte, imported, (width, height))))
             if (matte > 0).sum() < 64:
                 raise ValueError("the layer's shapes cover almost nothing on the frame tracked from")
             # Track by a green or blue screen's edges (settings screen: "green" or "blue"): each frame's keyed screen
@@ -289,7 +306,13 @@ def track_layer(body: TrackBody) -> dict:
                     break
                 if screen:
                     tracker.at = index
-                h, confidence = tracker.step(frame, exclude_at(index) if exclude_at else None)
+                kept_out = exclude_at(index) if exclude_at else None
+                if mattes is not None:
+                    _, matte_frame = next(mattes, (None, None))
+                    if matte_frame is not None:
+                        outside = _matte_outside(matte_frame, imported, (width, height))
+                        kept_out = outside if kept_out is None else cv2.bitwise_or(kept_out, outside)
+                h, confidence = tracker.step(frame, kept_out)
                 # a plane lost: twelve frames running with almost no confidence end the track there, what came
                 # before it kept (Mocha drifts on; stopping says where it went wrong)
                 faint = faint + 1 if confidence < 0.05 and settings.motion != "manual" else 0

@@ -426,6 +426,17 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("add-layer").addEventListener("click", () => { newLayer(); render(); });
 
   // ---- track settings, as Mocha names them ----
+  const matteChoices = (): [string, string][] => {
+    const seen = new Map<string, string>();
+    for (const timeline of engine.snapshot.timelines ?? []) {
+      for (const track of timeline.tracks ?? []) {
+        for (const c of track.clips ?? []) {
+          if (c.kind === "video" && c.mediaId && c.mediaId !== clip.mediaId && !seen.has(c.mediaId)) seen.set(c.mediaId, c.label ?? c.mediaId);
+        }
+      }
+    }
+    return [...seen];
+  };
   function paintSettings(): void {
     const l = layer(), box = $("settings");
     if (!l) { box.innerHTML = ""; return; }
@@ -433,6 +444,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const num = (key: string, step: number, min: number, max: number, autoable = false) => `<input type="number" data-key="${key}" step="${step}" min="${min}" max="${max}" value="${s[key] ?? ""}" placeholder="${autoable ? t("planar.auto") : ""}">`;
     box.innerHTML = `<div class="pw-head"><span>${t("planar.trackSettings")}</span></div>
       <div class="pw-row"><span>${t("planar.link")}</span><select data-ref="link">${[`<option value="">${t("planar.ownTrack")}</option>`, ...layers.filter((o) => o.id !== l.id).map((o) => `<option value="${o.id}" ${l.link === o.id ? "selected" : ""}>${esc(o.name)}</option>`)].join("")}</select></div>
+      <div class="pw-row"><span>${t("planar.matteClip")}</span><select data-ref="matte-clip">${[`<option value="">${t("mask.none")}</option>`, ...matteChoices().map(([id, label]) => `<option value="${id}" ${(s.matte as { media?: string } | undefined)?.media === id ? "selected" : ""}>${esc(label)}</option>`)].join("")}</select><label><input type="checkbox" data-ref="matte-invert" ${(s.matte as { invert?: boolean } | undefined)?.invert ? "checked" : ""}>${t("planar.invertLayer")}</label></div>
       <div class="pw-row"><span>${t("planar.method")}</span><select data-key="screen">${([["", "planar.method.planar"], ["green", "planar.method.green"], ["blue", "planar.method.blue"]] as const).map(([v, k]) => `<option value="${v}" ${(s.screen ?? "") === v ? "selected" : ""}>${t(k)}</option>`).join("")}</select></div>
       <div class="pw-motions">${MOTIONS.map((m) => `<label><input type="checkbox" data-key="${m}" ${s[m] ? "checked" : ""}>${t(`planar.motion.${m}`)}</label>`).join("")}</div>
       <div class="pw-row"><span>${t("planar.channel")}</span><select data-key="channel"><option value="luminance" ${s.channel === "luminance" ? "selected" : ""}>${t("planar.luminance")}</option><option value="auto" ${s.channel === "auto" ? "selected" : ""}>${t("planar.autoChannel")}</option><option value="max" ${s.channel === "max" ? "selected" : ""}>${t("planar.maxChannel")}</option></select></div>
@@ -451,6 +463,14 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       l.link = input.value || undefined;
       changed = true;
       render();
+      return;
+    }
+    if (l && (input.dataset.ref === "matte-clip" || input.dataset.ref === "matte-invert")) {
+      const box = $("settings"), media = box.querySelector<HTMLSelectElement>('[data-ref="matte-clip"]')?.value ?? "";
+      const invert = !!box.querySelector<HTMLInputElement>('[data-ref="matte-invert"]')?.checked;
+      if (media) l.settings.matte = { media, invert };
+      else delete l.settings.matte;
+      changed = true;
       return;
     }
     if (!l || !key) return;
