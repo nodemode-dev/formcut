@@ -763,6 +763,8 @@
   "planar.needSurface": "ضع سطح الطبقة أولًا",
   "planar.noTarget": "لا يوجد مقطع آخر للتطبيق عليه",
   "pin.remove": "إزالة تثبيت الزوايا",
+  "track.motionBlurPin": "ضبابية الحركة (تثبيت الزوايا)",
+  "track.motionBlurMatte": "ضبابية الحركة (القناع المتتبَّع)",
   "planar.kind.matte": "قناع لهذا المقطع",
   "planar.feather": "تنعيم الحافة",
   "planar.invert": "عكس",

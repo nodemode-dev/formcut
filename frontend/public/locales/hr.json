@@ -763,6 +763,8 @@
   "planar.needSurface": "Najprije postavite površinu sloja",
   "planar.noTarget": "Nema drugog isječka za primjenu",
   "pin.remove": "Ukloni pribadanje kutova",
+  "track.motionBlurPin": "Zamućenje pokreta (pribadanje kutova)",
+  "track.motionBlurMatte": "Zamućenje pokreta (praćena maska)",
   "planar.kind.matte": "Maska za ovaj isječak",
   "planar.feather": "Omekšavanje ruba",
   "planar.invert": "Obrni",

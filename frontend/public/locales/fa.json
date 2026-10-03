@@ -763,6 +763,8 @@
   "planar.needSurface": "ابتدا سطح لایه را جای دهید",
   "planar.noTarget": "کلیپ دیگری برای اعمال نیست",
   "pin.remove": "حذف پین گوشه‌ها",
+  "track.motionBlurPin": "تاری حرکت (پین گوشه‌ها)",
+  "track.motionBlurMatte": "تاری حرکت (مات ردیابی‌شده)",
   "planar.kind.matte": "مات برای این کلیپ",
   "planar.feather": "نرمی لبه",
   "planar.invert": "وارونه",

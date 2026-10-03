@@ -28,6 +28,16 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
     const id = engine.snapshot.selectedClipId;
     if (id) engine.dispatch("clip.cornerPin", { clipId: id, cornerPin: null });
   });
+  root.querySelector<HTMLElement>('[data-ref="pin-blur"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    const pin = id ? engine.findClip(id)?.clip.cornerPin : undefined;
+    if (id && pin) engine.dispatch("clip.cornerPin", { clipId: id, cornerPin: { ...pin, motionBlur: pin.motionBlur ? undefined : { samples: 8, shutter: 180 } } });
+  });
+  root.querySelector<HTMLElement>('[data-ref="matte-blur"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId;
+    const matte = id ? engine.findClip(id)?.clip.planarMatte : undefined;
+    if (id && matte) engine.dispatch("clip.planarMatte", { clipId: id, planarMatte: { ...matte, motionBlur: matte.motionBlur ? undefined : { samples: 8, shutter: 180 } } });
+  });
   // the Track workspace: planar tracking of the selected video clip (planar-workspace.ts)
   root.querySelector<HTMLElement>('[data-ref="planar-btn"]')?.addEventListener("click", () => {
     const project = engine.snapshot;

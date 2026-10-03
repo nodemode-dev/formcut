@@ -762,6 +762,8 @@
   "planar.needSurface": "Coloca primero la superficie de la capa",
   "planar.noTarget": "No hay otro clip al que aplicar",
   "pin.remove": "Quitar pin de esquinas",
+  "track.motionBlurPin": "Desenfoque de movimiento (pin de esquinas)",
+  "track.motionBlurMatte": "Desenfoque de movimiento (mate seguido)",
   "planar.kind.matte": "Mate para este clip",
   "planar.feather": "Desvanecer borde",
   "planar.invert": "Invertir",

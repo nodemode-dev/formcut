@@ -218,7 +218,9 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         <button class="tool-chip" data-ref="planar-btn">${icon("layers")}${t("planar.open")}</button>
         ${heldOut ? `<button class="tool-chip" data-ref="holdout-remove">${icon("close")}${t("holdout.remove")}</button>` : ""}
         ${matted ? `<button class="tool-chip" data-ref="matte-remove">${icon("close")}${t("matte.remove")}</button>` : ""}
+        ${matted ? `<button class="tool-chip${selected?.planarMatte?.motionBlur ? " is-on" : ""}" data-ref="matte-blur" aria-pressed="${!!selected?.planarMatte?.motionBlur}">${t("track.motionBlurMatte")}</button>` : ""}
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}
+        ${pinned ? `<button class="tool-chip${selected?.cornerPin?.motionBlur ? " is-on" : ""}" data-ref="pin-blur" aria-pressed="${!!selected?.cornerPin?.motionBlur}">${t("track.motionBlurPin")}</button>` : ""}
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>
       </div>
       <div class="section" data-section="mask" data-feature="section.mask">

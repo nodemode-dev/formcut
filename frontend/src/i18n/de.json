@@ -762,6 +762,8 @@
   "planar.needSurface": "Platzieren Sie zuerst die Fläche der Ebene",
   "planar.noTarget": "Kein anderer Clip zum Anwenden",
   "pin.remove": "Eckpunkte entfernen",
+  "track.motionBlurPin": "Bewegungsunschärfe (Eckpunkte)",
+  "track.motionBlurMatte": "Bewegungsunschärfe (getrackte Maske)",
   "planar.kind.matte": "Maske für diesen Clip",
   "planar.feather": "Weiche Kante",
   "planar.invert": "Umkehren",

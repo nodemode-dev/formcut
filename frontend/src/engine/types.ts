@@ -89,6 +89,11 @@ export interface ClipMask {
   invert?: boolean;
 }
 
+export interface MotionBlur {
+  samples: number;
+  shutter: number;
+}
+
 export interface ClipKey {
   color: string;
   similarity: number;
@@ -139,9 +144,9 @@ export interface Clip {
   planar?: ClipPlanar;
   // a corner pin: the clip's image corners onto four canvas points (fractions), fixed or as a track of samples timed in
   // the clip's local seconds (from a planar layer's surface, P3); its place, size and turn give way to it
-  cornerPin?: { points: number[][]; times?: number[] };
+  cornerPin?: { points: number[][]; times?: number[]; motionBlur?: MotionBlur };
   // the clip's own planar layers as its matte (Mocha's Apply Matte, P3): their shapes carried by their tracks
-  planarMatte?: { layers: string[]; feather: number; invert: boolean };
+  planarMatte?: { layers: string[]; feather: number; invert: boolean; motionBlur?: MotionBlur };
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;

@@ -1580,6 +1580,20 @@ class FrameRenderer:
         spec = clip.get("planarMatte")
         if not isinstance(spec, dict):
             return None
+        blur = spec.get("motionBlur") or {}
+        samples = max(1, int(blur.get("samples", 1) or 1)) if blur else 1
+        if samples > 1:
+            span = float(blur.get("shutter", 180)) / 360 / float(self.project["fps"])
+            centre, total = self.matte_time, None
+            try:
+                for k in range(samples):
+                    self.matte_time = centre + (k / (samples - 1) - 0.5) * span
+                    one = self.planar_alpha({**clip, "planarMatte": {**spec, "motionBlur": None}}, w, h)
+                    if one is not None:
+                        total = one if total is None else total + one
+            finally:
+                self.matte_time = centre
+            return total / samples if total is not None else None
         wanted = set(spec.get("layers") or [])
         layers = [one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") in wanted and one.get("shapes")]
         if not layers:
@@ -2041,17 +2055,42 @@ class FrameRenderer:
                 # a corner pin: the image's corners onto the four canvas points by a homography (the clip's own place,
                 # size and turn give way to it, as a corner pin does; its opacity, fades and blend stay)
                 src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
-                dst = np.float32([[x * self.width, y * self.height] for x, y in pinned])
                 image = image if image.flags.writeable else image.copy()
                 image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(image.dtype)
-                layer = cv2.warpPerspective(
-                    image,
-                    cv2.getPerspectiveTransform(src, dst),
-                    (self.width, self.height),
-                    flags=cv2.INTER_LINEAR,
-                    borderMode=cv2.BORDER_CONSTANT,
-                    borderValue=0,
-                )
+                blur = (clip.get("cornerPin") or {}).get("motionBlur") or {}
+                samples = max(1, int(blur.get("samples", 1) or 1)) if blur else 1
+                span = float(blur.get("shutter", 180)) / 360 / float(self.project["fps"]) if samples > 1 else 0.0
+                top = 65535.0 if image.dtype == np.uint16 else 255.0
+                total = np.zeros((self.height, self.width, 4), np.float32)
+                for k in range(samples if samples > 1 else 0):
+                    at = local + (k / (samples - 1) - 0.5) * span if samples > 1 else local
+                    corners = pin_at(clip, at) or pinned
+                    dst = np.float32([[x * self.width, y * self.height] for x, y in corners])
+                    warped = cv2.warpPerspective(
+                        image,
+                        cv2.getPerspectiveTransform(src, dst),
+                        (self.width, self.height),
+                        flags=cv2.INTER_LINEAR,
+                        borderMode=cv2.BORDER_CONSTANT,
+                        borderValue=0,
+                    )
+                    warped = warped.astype(np.float32) / top
+                    total[:, :, :3] += warped[:, :, :3] * warped[:, :, 3:4]
+                    total[:, :, 3] += warped[:, :, 3]
+                if samples > 1:
+                    total /= samples
+                    colour = total[:, :, :3] / np.maximum(total[:, :, 3:4], 1e-6)
+                    layer = np.round(np.clip(np.dstack([colour, total[:, :, 3:4]]), 0, 1) * top).astype(image.dtype)
+                else:
+                    dst = np.float32([[x * self.width, y * self.height] for x, y in pinned])
+                    layer = cv2.warpPerspective(
+                        image,
+                        cv2.getPerspectiveTransform(src, dst),
+                        (self.width, self.height),
+                        flags=cv2.INTER_LINEAR,
+                        borderMode=cv2.BORDER_CONSTANT,
+                        borderValue=0,
+                    )
                 layer = self.transition(layer, clip, local)
                 layer = self.transition_out(layer, clip, local)
                 canvas = self._blend(canvas, layer, str(transform["blendMode"]))

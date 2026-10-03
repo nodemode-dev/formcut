@@ -762,6 +762,8 @@
   "planar.needSurface": "Place the layer's surface first",
   "planar.noTarget": "No other clip to apply to",
   "pin.remove": "Remove corner pin",
+  "track.motionBlurPin": "Motion blur (corner pin)",
+  "track.motionBlurMatte": "Motion blur (tracked matte)",
   "planar.kind.matte": "Matte for this clip",
   "planar.feather": "Feather",
   "planar.invert": "Invert",

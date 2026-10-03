@@ -456,6 +456,8 @@ Applied to {clip}: {n} frames|Appliqué à {clip} : {n} images|Applicato a {clip
 Place the layer's surface first|Placez d'abord la surface du calque|Posiziona prima la superficie del livello|まずレイヤーのサーフェスを配置してください|먼저 레이어의 서피스를 배치하세요|Posicione primeiro a superfície da camada|Сначала разместите поверхность слоя|Önce katmanın yüzeyini yerleştirin|请先放置图层的平面|請先放置圖層的平面
 No other clip to apply to|Aucun autre clip auquel appliquer|Nessun'altra clip a cui applicare|適用できる他のクリップがありません|적용할 다른 클립이 없습니다|Nenhum outro clipe para aplicar|Нет другого клипа для применения|Uygulanacak başka klip yok|没有其他可应用的片段|沒有其他可套用的片段
 Remove corner pin|Retirer l'épinglage des coins|Rimuovi pin degli angoli|コーナーピンを外す|코너 핀 제거|Remover pin de cantos|Убрать угловую привязку|Köşe sabitlemeyi kaldır|移除四角定位|移除四角定位
+Motion blur (corner pin)|Flou de mouvement (épinglage des coins)|Sfocatura di movimento (pin degli angoli)|モーションブラー（コーナーピン）|모션 블러(코너 핀)|Desfoque de movimento (pin de cantos)|Размытие движения (угловая привязка)|Hareket bulanıklığı (köşe sabitleme)|运动模糊（四角定位）|動態模糊（四角定位）
+Motion blur (tracked matte)|Flou de mouvement (cache suivi)|Sfocatura di movimento (maschera tracciata)|モーションブラー（トラッキングマット）|모션 블러(트래킹 매트)|Desfoque de movimento (máscara rastreada)|Размытие движения (отслеживаемая маска)|Hareket bulanıklığı (izlenen maske)|运动模糊（跟踪遮罩）|動態模糊（追蹤遮罩）
 Stopped at frame|Arrêté à l'image|Fermato al fotogramma|停止したフレーム:|멈춘 프레임:|Parado no quadro|Остановлено на кадре|Şu karede durdu:|停止于帧|停止於影格
 Lost the plane at frame|Plan perdu à l'image|Piano perso al fotogramma|平面を見失ったフレーム:|평면을 놓친 프레임:|Plano perdido no quadro|Плоскость потеряна на кадре|Düzlem şu karede kayboldu:|平面丢失于帧|平面遺失於影格
 Layers|Calques|Livelli|レイヤー|레이어|Camadas|Слои|Katmanlar|图层|圖層
