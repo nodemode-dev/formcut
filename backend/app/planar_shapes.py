@@ -72,11 +72,28 @@ def feather_along(shape: dict, where: np.ndarray) -> np.ndarray:
     return values[base] * (1 - f) + values[(base + 1) % n] * f
 
 
+def coverage(polygon: np.ndarray, w: int, h: int, ss: int = 8) -> np.ndarray:
+    """Each pixel's area inside a closed path (pixel coordinates, centres on whole numbers), 0 to 1."""
+    p = np.asarray(polygon, np.float64)
+    if len(p) >= 3:
+        before, after = p - np.roll(p, 1, 0), np.roll(p, -1, 0) - p
+        n1 = np.stack([before[:, 1], -before[:, 0]], -1) / np.maximum(np.linalg.norm(before, axis=1, keepdims=True), 1e-12)
+        n2 = np.stack([after[:, 1], -after[:, 0]], -1) / np.maximum(np.linalg.norm(after, axis=1, keepdims=True), 1e-12)
+        normal = (n1 + n2) / np.maximum(np.linalg.norm(n1 + n2, axis=1, keepdims=True), 1e-12)
+        if float(((p - p.mean(0)) * normal).sum()) < 0:
+            normal = -normal
+        p = p - normal * (0.5 / ss)
+    big = np.zeros((h * ss, w * ss), np.uint8)
+    fine = np.round(((p + 0.5) * ss - 0.5) * 16).astype(np.int32)
+    cv2.fillPoly(big, [fine], 255, lineType=cv2.LINE_8, shift=4)
+    return cv2.resize(big, (w, h), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+
+
 def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to_pixels) -> np.ndarray:
     """A layer's matte (0 to 1) on a frame: its shapes at the frame, carried by carry (unit points -> media pixels),
     mapped to the picture's pixels by to_pixels, added then subtracted, each point's feather fading its edge outward."""
     w, h = size
-    solid = np.zeros((h, w), np.uint8)
+    solid = np.zeros((h, w), np.float32)
     soft = np.zeros((h, w), np.float32)
     for wanted in ("add", "subtract"):
         for shape in shapes:
@@ -86,14 +103,12 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
             media = carry(pts)
             local = to_pixels(media)
             polygon = np.round(local).astype(np.int32)
-            # drawn as a vector path: at a sixteenth of a pixel, its edge anti-aliased (a whole-pixel fill stepped
-            # along every edge and corner, plain on the owner's screen replacements)
-            fine = np.round(local * 16).astype(np.int32)
+            covered = coverage(local, w, h)
             if wanted == "subtract":
-                cv2.fillPoly(solid, [fine], 0, lineType=cv2.LINE_AA, shift=4)
-                soft[cv2.fillPoly(np.zeros((h, w), np.uint8), [polygon], 1) > 0] = 0
+                solid *= 1 - covered
+                soft *= 1 - covered
                 continue
-            cv2.fillPoly(solid, [fine], 255, lineType=cv2.LINE_AA, shift=4)
+            solid = np.maximum(solid, covered)
             feathers = feather_along(shape, where)
             if feathers.max() <= 0:
                 continue
@@ -114,4 +129,4 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
             inside = cv2.fillPoly(np.zeros((h, w), np.uint8), [polygon], 1) > 0
             fade[inside] = 0
             soft = np.maximum(soft, fade)
-    return np.maximum(solid.astype(np.float32) / 255.0, soft)
+    return np.maximum(solid, soft)

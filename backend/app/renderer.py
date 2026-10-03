@@ -1458,11 +1458,11 @@ class FrameRenderer:
         path = self.fitted_path(clip, str(spec.get("layer")), luma_in, w, h, float(spec.get("snap", 5.0)), float(spec.get("bias", 1.0)))
         if path is None:
             return out
-        drawn = np.zeros((h, w), np.uint8)
-        cv2.fillPoly(drawn, [np.round(path * 16).astype(np.int32)], 255, lineType=cv2.LINE_AA, shift=4)
-        matte = drawn.astype(np.float32) / 255
-        if float(spec.get("edge_soft", 0.7)) > 0:
-            matte = cv2.GaussianBlur(matte, (0, 0), float(spec.get("edge_soft", 0.7)))
+        from .planar_shapes import coverage
+
+        matte = coverage(path, w, h)
+        if float(spec.get("edge_soft", 0) or 0) > 0:
+            matte = cv2.GaussianBlur(matte, (0, 0), float(spec["edge_soft"]))
         grow = max(0, round(float(spec.get("grow", 2.0))))
         inside = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * grow + 1, 2 * grow + 1))) if grow else matte
         rgb = out[:, :, :3].astype(np.float32) / top
@@ -1478,7 +1478,7 @@ class FrameRenderer:
         rim_px = max(1, int(spec.get("rim", 6)))
         core = cv2.erode(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * rim_px + 1, 2 * rim_px + 1)))
         in_front = np.maximum(uneven, np.clip((0.005 - lead) / 0.03, 0, 1) * core)
-        front_soft = float(spec.get("front_soft", 1.2))
+        front_soft = float(spec.get("front_soft", 0) or 0)
         close_px = int(spec.get("front_close", 5))
         if close_px > 0:
             in_front = cv2.morphologyEx(
