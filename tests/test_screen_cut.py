@@ -37,7 +37,7 @@ def _plate(tmp_path):
     plate[205:225, 220:250] = (232, 222, 218)  # a fingernail: pale and nearly even, but not led by green
     path = tmp_path / "plate.png"
     Image.fromarray(plate).save(path)
-    layer = {"id": "screen", "shapes": [{"points": screen.round(6).tolist()}], "reference": 0, "settings": {}}
+    layer = {"id": "cut-screen", "shapes": [{"points": screen.round(6).tolist()}], "reference": 0, "settings": {}}
     return ingest_path(path, "plate.png")["id"], layer
 
 
@@ -64,7 +64,7 @@ def _render(tmp_path, field, spec):
 
 
 def test_the_screen_is_cut_by_its_outline_and_what_is_in_front_stays(tmp_path):
-    out = _render(tmp_path, "screenCut", {"layer": "screen", "screen": "green"})
+    out = _render(tmp_path, "screenCut", {"layer": "cut-screen", "screen": "green"})
     assert out[200, 150].max() <= 3 and out[110, 145].max() <= 3  # the screen and its glare gone (black below)
     assert out[175, 140].max() <= 3  # its hottest part too
     finger = out[175, 235]
@@ -75,7 +75,7 @@ def test_the_screen_is_cut_by_its_outline_and_what_is_in_front_stays(tmp_path):
 
 
 def test_the_glare_is_light_of_its_own_on_the_screen_only(tmp_path):
-    out = _render(tmp_path, "glare", {"layer": "screen", "screen": "green", "strength": 1.0, "smooth": 3})
+    out = _render(tmp_path, "glare", {"layer": "cut-screen", "screen": "green", "strength": 1.0, "smooth": 3})
     glare = out[110, 145]
     assert glare.min() > 80 and glare.max() - glare.min() <= 2  # neutral light where the reflection is
     assert out[200, 150].max() <= 12  # the clean screen: next to none
@@ -108,7 +108,7 @@ def test_the_edge_band_never_cuts_what_is_in_front(tmp_path):
     plate[40:80, 180:220] = (205, 160, 130)  # a fingertip across the screen's top edge (y = 60)
     path = tmp_path / "edge.png"
     Image.fromarray(plate).save(path)
-    layer = {"id": "screen", "shapes": [{"points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]}], "reference": 0, "settings": {}}
+    layer = {"id": "cut-edge", "shapes": [{"points": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]}], "reference": 0, "settings": {}}
     clip = {
         "id": "p",
         "kind": "image",
@@ -117,7 +117,7 @@ def test_the_edge_band_never_cuts_what_is_in_front(tmp_path):
         "duration": 1,
         "mediaId": ingest_path(path, "edge.png")["id"],
         "planar": {"version": 1, "layers": [layer]},
-        "screenCut": {"layer": "screen", "screen": "green"},
+        "screenCut": {"layer": "cut-edge", "screen": "green"},
     }
     project = validate_document(
         {"width": 400, "height": 300, "fps": 30, "activeTimeline": 0, "timelines": [{"tracks": [{"clips": [clip]}]}]}
