@@ -389,6 +389,24 @@ def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float
     return out
 
 
+def mask_points_at(track: list[dict], local: float) -> list[dict]:
+    """A tracked mask's anchors at a clip-local time: linear between the track's entries, held before and after."""
+    entries = sorted(track, key=lambda e: float(e["t"]))
+    if local <= float(entries[0]["t"]):
+        return entries[0]["points"]
+    if local >= float(entries[-1]["t"]):
+        return entries[-1]["points"]
+    at = bisect.bisect_right([float(e["t"]) for e in entries], local)
+    a, b = entries[at - 1], entries[at]
+    f = (local - float(a["t"])) / max(1e-9, float(b["t"]) - float(a["t"]))
+    if len(a["points"]) != len(b["points"]):
+        return a["points"]
+    return [
+        {k: float(p.get(k, 0)) + (float(q.get(k, 0)) - float(p.get(k, 0))) * f for k in set(p) | set(q)}
+        for p, q in zip(a["points"], b["points"], strict=True)
+    ]
+
+
 def mask_polygon(mask: dict) -> list[tuple[float, float]]:
     """Unit-square points for a mask, whichever kind it is."""
     if mask.get("shape") == "path":
@@ -2044,7 +2062,9 @@ class FrameRenderer:
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             self.matte_time = source_time(clip, local)
-            image = self.mask_frame(image, clip)
+            mask_track = (clip.get("mask") or {}).get("track")
+            masked = {**clip, "mask": {**clip["mask"], "points": mask_points_at(mask_track, local)}} if mask_track else clip
+            image = self.mask_frame(image, masked)
             transform = transform_at(clip, local)
             h, w = image.shape[:2]
             fit = min(self.width / w, self.height / h)

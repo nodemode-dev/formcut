@@ -726,6 +726,8 @@
   "planar.layerOut": "پایان در اینجا",
   "planar.group": "گروه",
   "planar.copyAe": "کپی پین گوشه‌ها برای After Effects",
+  "planar.makeMask": "ساخت ماسک",
+  "planar.maskMade": "لایه اکنون ماسک ردیابی‌شدهٔ خود کلیپ است",
   "planar.aeCopied": "کی‌فریم‌ها کپی شد: آن‌ها را روی افکت Corner Pin در After Effects بچسبانید",
   "planar.forward": "انتقال به جلو",
   "planar.deleteLayer": "حذف لایه",

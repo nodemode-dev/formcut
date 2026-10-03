@@ -183,6 +183,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
           <button class="tool-chip" data-ref="copy-ae">${t("planar.copyAe")}</button>
+          <button class="tool-chip" data-ref="make-mask">${t("planar.makeMask")}</button>
         </section>
       </aside>
       <main class="pw-main">
@@ -1006,6 +1007,30 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     $<HTMLSelectElement>("target").innerHTML = clips.map((c) => `<option value="${c.id}">${esc(c.label)}</option>`).join("") || `<option value="">${t("planar.noTarget")}</option>`;
   }
   $("kind").addEventListener("change", () => { $("matte-row").hidden = $<HTMLSelectElement>("kind").value !== "matte"; });
+  $("make-mask").addEventListener("click", () => {
+    const l = layer(), shape = l?.shapes.find((s) => s.mode !== "subtract");
+    if (!l || !shape || !media) { say(t("planar.needShape")); return; }
+    const carrier = carrierOf(l), tr = tracks.get(carrier.id);
+    const frames = tr && tr.frames.size ? [...tr.frames.keys()].sort((a, b) => a - b) : [refFrame(l)];
+    const speed = clip.speed ?? 1, sourceIn = clip.sourceIn ?? 0;
+    const path = frames.map((f) => {
+      const pts = pointsAt(shape, f), n = pts.length, h = homography(carrier, f);
+      const map = (x: number, y: number): number[] => (h ? unit(apply(h, ...(px([x, y]) as [number, number]))) : [x, y]);
+      const hs = pts.map((_, i) => {
+        if (shape.kind === "bezier") return shape.handles?.[i] ?? [0, 0, 0, 0];
+        if (shape.kind !== "xspline") return [0, 0, 0, 0];
+        const prev = pts[(i - 1 + n) % n], next = pts[(i + 1) % n], k = (shape.tension?.[i] ?? 1) / 6;
+        return [-(next[0] - prev[0]) * k, -(next[1] - prev[1]) * k, (next[0] - prev[0]) * k, (next[1] - prev[1]) * k];
+      });
+      const anchors = pts.map((p, i) => {
+        const [x, y] = map(p[0], p[1]), [ix, iy] = map(p[0] + hs[i][0], p[1] + hs[i][1]), [ox, oy] = map(p[0] + hs[i][2], p[1] + hs[i][3]);
+        return { x, y, inX: ix - x, inY: iy - y, outX: ox - x, outY: oy - y };
+      });
+      return { t: Math.max(0, (f / media!.fps - sourceIn) / speed), mask: anchors };
+    });
+    engine.dispatch("clip.mask-track", { clipId, path });
+    say(t("planar.maskMade"));
+  });
   $("copy-ae").addEventListener("click", () => void (async () => {
     const l = layer();
     if (!l || !l.surface || !media) { say(t("planar.needSurface")); return; }
