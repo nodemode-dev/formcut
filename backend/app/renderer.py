@@ -1665,7 +1665,8 @@ class FrameRenderer:
         front_layers = spec.get("front") or []
         if front_layers:
             vector = self.planar_alpha({**clip, "planarMatte": {"layers": list(front_layers), "feather": 0, "invert": False}}, w, h)
-            in_front = vector if vector is not None else np.zeros_like(matte)
+            screen_coloured = np.clip((lead - 0.15) / 0.15, 0, 1)
+            in_front = vector * (1 - screen_coloured) if vector is not None else np.zeros_like(matte)
         cut = matte * (1 - in_front)
         reach_green = int(spec.get("green_reach", 0) or 0)
         if reach_green > 0:
