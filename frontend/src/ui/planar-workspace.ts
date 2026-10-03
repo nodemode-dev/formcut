@@ -136,7 +136,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button class="tool-chip" data-ref="delete-point">${icon("trash")}${t("planar.adjust.delete")}</button>
             <button class="tool-chip" data-ref="toggle-point">${t("planar.pointActive")}</button>
             <div class="pw-row"><span>${t("planar.tension")}</span><input type="range" data-ref="tension" min="0" max="1" step="0.05"></div>
-            <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="0" max="500" step="1"></div>
+            <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="-500" max="500" step="1"></div>
           </div>
           <p class="pw-hint" data-ref="roto-hint" hidden>${t("planar.rotoHint")}</p>
         </section>
@@ -760,7 +760,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     // the matte's feather only: the tracker ignores it, so no track starts afresh
     const l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
     if (!l || !shape || !picked) return;
-    (shape.feather ??= shape.points.map(() => 0))[picked.point] = Math.max(0, Number($<HTMLInputElement>("edge").value) || 0);
+    (shape.feather ??= shape.points.map(() => 0))[picked.point] = Math.min(500, Math.max(-500, Number($<HTMLInputElement>("edge").value) || 0));
     changed = true;
   });
 

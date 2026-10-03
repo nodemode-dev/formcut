@@ -54,6 +54,8 @@ def active_at(shape: dict, frame: int) -> tuple[np.ndarray, dict]:
     if len(keep) < 3 or len(keep) == len(points):
         return points, shape
     trimmed = dict(shape)
+    trimmed["points"] = points[keep].tolist()
+    trimmed["keys"] = {}
     for name in ("tension", "feather"):
         values = shape.get(name)
         if values and len(values) == len(points):
@@ -132,9 +134,10 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
                 solid *= 1 - covered
                 soft *= 1 - covered
                 continue
+            before = solid
             solid = np.maximum(solid, covered)
             feathers = feather_along(live_shape, where)
-            if feathers.max() <= 0:
+            if np.abs(feathers).max() <= 0:
                 continue
             # the outline drawn with each part's feather; outside the shape, the edge fades over the nearest part's
             scale = float(np.linalg.norm(local[1] - local[0]) / max(1e-9, np.linalg.norm(media[1] - media[0]))) if len(local) > 1 else 1.0
@@ -153,4 +156,8 @@ def layer_matte(shapes: list[dict], frame: int, carry, size: tuple[int, int], to
             inside = cv2.fillPoly(np.zeros((h, w), np.uint8), [polygon], 1) > 0
             fade[inside] = 0
             soft = np.maximum(soft, fade)
+            inner = inside & (width < 0)
+            if inner.any():
+                ramp = np.clip(distance / np.maximum(-width, 1e-6), 0, 1).astype(np.float32)
+                solid = np.where(inner, np.maximum(before, np.minimum(covered, ramp)), solid)
     return np.maximum(solid, soft)
