@@ -182,6 +182,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <div class="pw-row"><span>${t("planar.kind")}</span><select data-ref="kind"><option value="corner-pin">${t("planar.kind.pin")}</option><option value="transform">${t("planar.kind.transform")}</option><option value="matte">${t("planar.kind.matte")}</option><option value="holdout">${t("planar.kind.holdout")}</option></select></div>
           <div class="pw-row" data-ref="matte-row" hidden><span>${t("planar.feather")}</span><span class="pw-pair"><input type="number" data-ref="feather" min="0" max="100" step="0.5" value="2"><label class="pw-check"><input type="checkbox" data-ref="invert">${t("planar.invert")}</label></span></div>
           <button class="tool-chip" data-ref="apply">${icon("link")}${t("planar.applyBtn")}</button>
+          <select data-ref="export-format" aria-label="${t("planar.copyAe")}"><option value="ae">After Effects Corner Pin</option><option value="nuke">Nuke CornerPin2D</option><option value="csv">CSV</option><option value="json">JSON</option></select>
           <button class="tool-chip" data-ref="copy-ae">${t("planar.copyAe")}</button>
           <button class="tool-chip" data-ref="make-mask">${t("planar.makeMask")}</button>
         </section>
@@ -1147,7 +1148,16 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("copy-ae").addEventListener("click", () => void (async () => {
     const l = layer();
     if (!l || !l.surface || !media) { say(t("planar.needSurface")); return; }
-    const reply = await fetch(`/api/planar/track/${l.id}?surface=${l.surface.flat().map((v) => v.toFixed(6)).join(",")}`);
+    const surfaceArg = l.surface.flat().map((v) => v.toFixed(6)).join(",");
+    const format = $<HTMLSelectElement>("export-format").value;
+    if (format !== "ae") {
+      const exported = await fetch(`/api/planar/export/${l.id}?surface=${surfaceArg}&format=${format}`);
+      if (!exported.ok) { say(t("planar.needSurface")); return; }
+      await navigator.clipboard.writeText(await exported.text());
+      say(t("planar.aeCopied"));
+      return;
+    }
+    const reply = await fetch(`/api/planar/track/${l.id}?surface=${surfaceArg}`);
     if (!reply.ok) { say(t("planar.needSurface")); return; }
     const data = await reply.json() as { frames: number[]; corners: number[][][] };
     const names: [string, number][] = [["Upper Left #2", 0], ["Upper Right #3", 1], ["Lower Left #4", 3], ["Lower Right #5", 2]];

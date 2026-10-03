@@ -25,7 +25,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
 from . import jobs
@@ -366,6 +366,34 @@ def track_layer(body: TrackBody) -> dict:
     STORE.mkdir(parents=True, exist_ok=True)
     write_json(path_of, data)
     return jobs.submit("planar-track", operation)
+
+
+@router.get("/export/{layer_id}", response_class=PlainTextResponse)
+def export_track(layer_id: str, surface: str, format: str = "nuke") -> str:
+    """A layer's corner pin for other hosts, in pixels of the tracked media: a Nuke CornerPin2D node to paste (y up from
+    the bottom, to1 to to4 lower left, lower right, upper right, upper left), CSV, or JSON (Mocha Pro's exports)."""
+    track = read_track(layer_id, surface)
+    width, height = track["size"]
+    rows = list(zip(track["frames"], track["corners"], strict=True))
+    if format == "csv":
+        head = "frame,top_left_x,top_left_y,top_right_x,top_right_y,bottom_right_x,bottom_right_y,bottom_left_x,bottom_left_y"
+        body = [",".join([str(f)] + [f"{c[0] * width:.3f},{c[1] * height:.3f}" for c in quad]) for f, quad in rows]
+        return "\n".join([head, *body]) + "\n"
+    if format == "json":
+        frames = [{"frame": f, "corners": [[round(c[0] * width, 3), round(c[1] * height, 3)] for c in quad]} for f, quad in rows]
+        return json.dumps(
+            {"fps": track["fps"], "width": width, "height": height, "origin": "top left", "order": "tl tr br bl", "frames": frames},
+            indent=1,
+        )
+    if format != "nuke":
+        raise HTTPException(400, "format is nuke, csv or json")
+
+    def curve(k: int, axis: int) -> str:
+        keys = [f"x{f} {quad[k][0] * width if axis == 0 else height - quad[k][1] * height:.3f}" for f, quad in rows]
+        return "{curve " + " ".join(keys) + "}"
+
+    pins = "\n".join(f" to{n + 1} {{{curve(k, 0)} {curve(k, 1)}}}" for n, k in enumerate((3, 2, 1, 0)))
+    return f"CornerPin2D {{\n{pins}\n from1 {{0 0}}\n from2 {{{width} 0}}\n from3 {{{width} {height}}}\n from4 {{0 {height}}}\n name CornerPin2D_formcut\n}}\n"
 
 
 @router.get("/track/{layer_id}")
