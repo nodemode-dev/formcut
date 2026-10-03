@@ -196,6 +196,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         </div></div></div>
         <div class="pw-transport">
           <div class="pw-scrub"><input type="range" data-ref="scrub" min="0" max="0" value="0" aria-label="${t("planar.frame")}"><canvas data-ref="strip" height="6" aria-hidden="true"></canvas></div>
+          <div class="pw-timing">
+            <div class="pw-timing-head">${t("planar.dopeSheet")}</div><svg data-ref="dope" class="pw-dope" preserveAspectRatio="none"></svg>
+            <div class="pw-timing-head">${t("planar.curves")}</div><svg data-ref="curves" class="pw-curves" preserveAspectRatio="none"></svg>
+          </div>
           <div class="pw-buttons">
             <button class="icon-btn" data-ref="back-all" title="${t("planar.trackBack")}" aria-label="${t("planar.trackBack")}">${icon("toStart")}</button>
             <button class="icon-btn" data-ref="back-one" title="${t("planar.stepBack")}" aria-label="${t("planar.stepBack")}">${icon("stepBack")}</button>
@@ -320,7 +324,34 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     render();
   }
 
+  function paintTiming(): void {
+    const span = Math.max(1, last - first), X = (f: number) => ((f - first) / span) * 1000;
+    const dope = $("dope"), rows = Math.max(1, layers.length);
+    dope.setAttribute("viewBox", `0 0 1000 ${rows * 14}`);
+    let d = `<line class="pw-now" x1="${X(frame)}" y1="0" x2="${X(frame)}" y2="${rows * 14}" vector-effect="non-scaling-stroke"/>`;
+    layers.forEach((l, li) => {
+      const keyed = new Set<number>();
+      for (const s of l.shapes) for (const k of Object.keys(s.keys ?? {})) keyed.add(Number(k));
+      d += `<rect x="0" y="${li * 14 + 6}" width="1000" height="2" fill="${l.color}" opacity="0.35"/>`;
+      for (const k of keyed) d += `<rect class="pw-dkey" x="${X(k) - 3}" y="${li * 14 + 2}" width="6" height="10" fill="${l.color}" data-dope="${li}:${k}"/>`;
+    });
+    dope.innerHTML = d;
+    const curves = $("curves"), l = layer(), shape = picked && l ? l.shapes[picked.shape] : undefined;
+    curves.setAttribute("viewBox", "0 0 1000 100");
+    let c = `<line class="pw-now" x1="${X(frame)}" y1="0" x2="${X(frame)}" y2="100" vector-effect="non-scaling-stroke"/>`;
+    const keys = shape ? Object.keys(shape.keys ?? {}).map(Number).sort((a, b) => a - b) : [];
+    if (shape && picked && keys.length) {
+      for (const [axis, cls] of [[0, "pw-cx"], [1, "pw-cy"]] as [number, string][]) {
+        const pts = keys.map((k) => [X(k), 100 - (shape.keys![String(k)][picked!.point]?.[axis] ?? 0) * 100]);
+        c += `<polyline class="${cls}" points="${pts.map((p) => p.join(",")).join(" ")}" vector-effect="non-scaling-stroke"/>`;
+        keys.forEach((k, i) => { c += `<rect class="pw-ckey ${cls}" x="${pts[i][0] - 4}" y="${pts[i][1] - 3}" width="8" height="6" data-curve="${k}:${axis}"/>`; });
+      }
+    }
+    curves.innerHTML = c;
+  }
+
   function paintStrip(): void {
+    paintTiming();
     const canvas = $<HTMLCanvasElement>("strip"), l = layer();
     const span = last - first + 1;
     canvas.width = Math.max(1, Math.min(2000, span));
@@ -836,6 +867,55 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
     return Object.keys(shape?.keys ?? {}).map(Number).sort((a, b) => a - b);
   };
+  let timingDrag: { kind: "dope"; layer: number; from: number; to: number } | { kind: "curve"; key: number; axis: number } | null = null;
+  const frameAt = (el: Element, clientX: number) => {
+    const r = el.getBoundingClientRect();
+    return Math.max(first, Math.min(last, Math.round(first + ((clientX - r.left) / Math.max(1, r.width)) * Math.max(1, last - first))));
+  };
+  $("dope").addEventListener("pointerdown", (event) => {
+    const hit = (event.target as Element).closest<SVGElement>("[data-dope]");
+    if (!hit) return;
+    const [li, k] = hit.dataset.dope!.split(":").map(Number);
+    timingDrag = { kind: "dope", layer: li, from: k, to: k };
+    $("dope").setPointerCapture(event.pointerId);
+  });
+  $("dope").addEventListener("pointermove", (event) => {
+    if (timingDrag?.kind !== "dope") return;
+    timingDrag.to = frameAt($("dope"), event.clientX);
+    $("dope").querySelector(`[data-dope="${timingDrag.layer}:${timingDrag.from}"]`)?.setAttribute("x", String(((timingDrag.to - first) / Math.max(1, last - first)) * 1000 - 3));
+  });
+  $("dope").addEventListener("pointerup", () => {
+    const drag = timingDrag;
+    timingDrag = null;
+    if (drag?.kind !== "dope") return;
+    if (drag.to === drag.from) { showFrame(drag.from); return; }
+    for (const s of layers[drag.layer]?.shapes ?? []) {
+      for (const store of [s.keys, s.off] as (Record<string, unknown> | undefined)[]) {
+        if (store && store[String(drag.from)] !== undefined) { store[String(drag.to)] = store[String(drag.from)]; delete store[String(drag.from)]; }
+      }
+    }
+    changed = true;
+    render();
+    paintStrip();
+  });
+  $("curves").addEventListener("pointerdown", (event) => {
+    const hit = (event.target as Element).closest<SVGElement>("[data-curve]");
+    if (!hit) return;
+    const [key, axis] = hit.dataset.curve!.split(":").map(Number);
+    timingDrag = { kind: "curve", key, axis };
+    $("curves").setPointerCapture(event.pointerId);
+  });
+  $("curves").addEventListener("pointermove", (event) => {
+    if (timingDrag?.kind !== "curve" || !picked) return;
+    const shape = layer()?.shapes[picked.shape], at = shape?.keys?.[String(timingDrag.key)]?.[picked.point];
+    if (!at) return;
+    const r = $("curves").getBoundingClientRect();
+    at[timingDrag.axis] = Math.max(0, Math.min(1, 1 - (event.clientY - r.top) / Math.max(1, r.height)));
+    changed = true;
+    render();
+    paintStrip();
+  });
+  $("curves").addEventListener("pointerup", () => { timingDrag = null; });
   $("key-prev").addEventListener("click", () => { const before = keyFrames().filter((k) => k < frame); if (before.length) showFrame(before[before.length - 1]); });
   $("key-next").addEventListener("click", () => { const after = keyFrames().find((k) => k > frame); if (after !== undefined) showFrame(after); });
   $("key-add").addEventListener("click", () => {

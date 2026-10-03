@@ -728,6 +728,8 @@
   "planar.copyAe": "Kopiraj pribadanje kutova za After Effects",
   "planar.makeMask": "Stvori masku",
   "planar.matteClip": "Isječak maske",
+  "planar.dopeSheet": "Tablica ključnih okvira",
+  "planar.curves": "Krivulje",
   "planar.maskMade": "Sloj je sada vlastita praćena maska isječka",
   "planar.aeCopied": "Ključni okviri kopirani: zalijepite ih na efekt Corner Pin u After Effectsu",
   "planar.forward": "Pomakni naprijed",
