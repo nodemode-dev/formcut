@@ -1662,6 +1662,10 @@ class FrameRenderer:
         if front_soft > 0:
             in_front = np.clip((cv2.GaussianBlur(in_front.astype(np.float32), (0, 0), front_soft) - 0.25) / 0.5, 0, 1)
             in_front = in_front * in_front * (3 - 2 * in_front)
+        front_layers = spec.get("front") or []
+        if front_layers:
+            vector = self.planar_alpha({**clip, "planarMatte": {"layers": list(front_layers), "feather": 0, "invert": False}}, w, h)
+            in_front = vector if vector is not None else np.zeros_like(matte)
         cut = matte * (1 - in_front)
         reach_green = int(spec.get("green_reach", 0) or 0)
         if reach_green > 0:
