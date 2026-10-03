@@ -146,6 +146,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <div class="pw-buttons-row" data-ref="keys-row">
             <button class="icon-btn" data-ref="key-prev" title="${t("planar.keyPrev")}" aria-label="${t("planar.keyPrev")}">${icon("chevL")}</button>
             <button class="tool-chip" data-ref="key-add">${icon("diamond")}${t("planar.keyAdd")}</button>
+            <button class="tool-chip" data-ref="assist">${t("planar.assist")}</button>
             <button class="tool-chip" data-ref="key-delete">${t("planar.keyDelete")}</button>
             <button class="icon-btn" data-ref="key-next" title="${t("planar.keyNext")}" aria-label="${t("planar.keyNext")}">${icon("chevR")}</button>
           </div>
@@ -932,6 +933,25 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   $("curves").addEventListener("pointerup", () => { timingDrag = null; });
   $("key-prev").addEventListener("click", () => { const before = keyFrames().filter((k) => k < frame); if (before.length) showFrame(before[before.length - 1]); });
   $("key-next").addEventListener("click", () => { const after = keyFrames().find((k) => k > frame); if (after !== undefined) showFrame(after); });
+  $("assist").addEventListener("click", () => void (async () => {
+    const l = layer(), shape = shapeIndex >= 0 ? l?.shapes[shapeIndex] : undefined;
+    if (!l || !shape || !media) { say(t("planar.needShape")); return; }
+    const carrier = carrierOf(l), h = homography(carrier, frame);
+    const points = pointsAt(shape, frame).map((p) => (h ? unit(apply(h, ...(px(p) as [number, number]))) : p));
+    say(t("planar.assisting"));
+    const reply = await fetch("/api/planar/assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_id: mediaId, points, frame, stop: last }) });
+    if (!reply.ok) { say(t("planar.needShape")); return; }
+    const keys = ((await reply.json()) as { keys: Record<string, number[][]> }).keys;
+    shape.keys ??= {};
+    for (const [f, pts] of Object.entries(keys)) {
+      const hf = homography(carrier, Number(f));
+      shape.keys[f] = pts.map((p) => (hf ? unit(apply(invert(hf), ...(px(p) as [number, number]))) : p));
+    }
+    changed = true;
+    render();
+    paintStrip();
+    say(t("planar.assisted"));
+  })());
   $("key-add").addEventListener("click", () => {
     const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
     if (!shape) { say(t("planar.needShape")); return; }

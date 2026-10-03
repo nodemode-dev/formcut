@@ -769,6 +769,69 @@ def segment(body: SegmentBody) -> dict:
     return {"points": [[p["x"], p["y"]] for p in traced], "area": round(float((alpha > 0.5).mean()), 4)}
 
 
+class AssistBody(BaseModel):
+    media_id: str
+    points: list[list[float]] = Field(min_length=3, max_length=4000)  # the shape's outline on frame, unit square
+    frame: int = Field(ge=0)
+    stop: int = Field(ge=0)
+
+
+def _smooth_closed(values: np.ndarray, median: int = 7, sigma: float = 3.0) -> np.ndarray:
+    """Per-point values along a closed path: a running median, then a Gaussian, each wrapping round."""
+    half = median // 2
+    wrapped = np.concatenate([values[-half:], values, values[:half]])
+    cleaned = np.median(np.lib.stride_tricks.sliding_window_view(wrapped, median, axis=0), axis=-1)
+    reach = int(3 * sigma)
+    taps = np.exp(-0.5 * (np.arange(-reach, reach + 1) / sigma) ** 2)
+    taps /= taps.sum()
+    padded = np.concatenate([cleaned[-reach:], cleaned, cleaned[:reach]])
+    return np.stack([np.convolve(padded[:, k], taps, mode="valid") for k in range(values.shape[1])], -1)
+
+
+@router.post("/assist")
+def matte_assist(body: AssistBody) -> dict:
+    """A shape carried through the shot as vector keys (Mocha Pro's Matte Assist): each frame, dense optical flow
+    from the frame before, read a few pixels inside the outline (the object's own motion, not its edge's mix with
+    what is behind), cleaned and smoothed along the closed path, moves every point. Keys in the frame's unit square."""
+    source, fps, width, height, count = _video(body.media_id)
+    last = max(0, min(body.stop, count - 1))
+    pts = np.array(body.points, np.float64) * [width, height]
+    scale = min(1.0, 640 / max(width, height))
+    frames = _frames(source, fps, width, height, body.frame, last)
+    _, before = next(frames)
+
+    def small(image: np.ndarray) -> np.ndarray:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        return cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA) if scale < 1 else gray
+
+    previous = small(before)
+    keys = {str(body.frame): (pts / [width, height]).round(6).tolist()}
+    for index, frame in frames:
+        current = small(frame)
+        flow = cv2.calcOpticalFlowFarneback(previous, current, None, 0.5, 4, 21, 5, 7, 1.5, 0)
+        tangent = np.roll(pts, -1, 0) - np.roll(pts, 1, 0)
+        tangent /= np.maximum(np.linalg.norm(tangent, axis=1, keepdims=True), 1e-9)
+        inward = np.stack([-tangent[:, 1], tangent[:, 0]], -1)
+        if float(((pts.mean(0) - pts) * inward).sum()) < 0:
+            inward = -inward
+        probe = ((pts + inward * 4.0) * scale).astype(np.float32)
+        sampled = [cv2.remap(flow[:, :, k], probe[:, None, 0], probe[:, None, 1], cv2.INTER_LINEAR).ravel() for k in (0, 1)]
+        moves = np.stack(sampled, -1) / scale
+        pts = pts + _smooth_closed(moves)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
+        edge = cv2.magnitude(cv2.Sobel(gray, cv2.CV_32F, 1, 0), cv2.Sobel(gray, cv2.CV_32F, 0, 1))
+        steps = np.arange(-4.0, 4.01, 0.5)
+        along = (pts[:, None, :] - inward[:, None, :] * steps[None, :, None]).astype(np.float32)
+        profiles = cv2.remap(edge, along[:, :, 0], along[:, :, 1], cv2.INTER_LINEAR)
+        best = profiles.argmax(axis=1)
+        strong = profiles.max(axis=1) > 1.5 * profiles.mean(axis=1)
+        snap = np.where(strong, steps[best], 0.0)
+        pts = pts - inward * _smooth_closed(snap[:, None])
+        keys[str(index)] = (pts / [width, height]).round(6).tolist()
+        previous = current
+    return {"keys": keys}
+
+
 class FacesBody(BaseModel):
     media_id: str
     frame: int = Field(ge=0)
