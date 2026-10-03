@@ -1604,7 +1604,7 @@ class FrameRenderer:
         full_w, full_h = w / max(1e-6, 1 - left - right), h / max(1e-6, 1 - top - bottom)
         alpha = np.zeros((h, w), np.float32)
         scale = 1.0
-        for layer in layers:
+        for layer in reversed(layers):
             # Link to Track: the shapes ride the linked layer's track (adjusted where it has one), else their own
             track = self._planar_track(str(layer.get("link") or layer["id"]))
             homography = np.eye(3)
@@ -1625,7 +1625,10 @@ class FrameRenderer:
             def to_pixels(media, scale=scale):
                 return media * scale - [left * full_w, top * full_h]
 
-            alpha = np.maximum(alpha, layer_matte(layer["shapes"], index, carry, (w, h), to_pixels))
+            matte = layer_matte(layer["shapes"], index, carry, (w, h), to_pixels)
+            if layer.get("invert"):
+                matte = 1.0 - matte
+            alpha = alpha * (1.0 - matte) if layer.get("blend") == "subtract" else np.maximum(alpha, matte)
         feather = float(spec.get("feather", 0) or 0) * scale
         if feather > 0:
             alpha = cv2.GaussianBlur(alpha, (0, 0), feather)

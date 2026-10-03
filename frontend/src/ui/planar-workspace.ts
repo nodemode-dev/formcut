@@ -305,6 +305,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       <button class="icon-btn${l.visible ? " is-on" : ""}" data-act="visible" title="${t("planar.visible")}" aria-label="${t("planar.visible")}">${icon(l.visible ? "eye" : "eyeOff")}</button>
       <button class="icon-btn${l.tracking ? " is-on" : ""}" data-act="tracking" title="${t("planar.tracking")}" aria-label="${t("planar.tracking")}">${icon("settings")}</button>
       <button class="icon-btn${l.locked ? " is-on" : ""}" data-act="locked" title="${t("planar.locked")}" aria-label="${t("planar.locked")}">${icon("lock")}</button>
+      <button class="tool-chip${l.blend === "subtract" ? " is-on" : ""}" data-act="blend" aria-pressed="${l.blend === "subtract"}" title="${t("planar.blendSubtract")}">${t("planar.blendSubtract")}</button>
+      <button class="tool-chip${l.invert ? " is-on" : ""}" data-act="invert" aria-pressed="${!!l.invert}" title="${t("planar.invertLayer")}">${t("planar.invertLayer")}</button>
       <button class="icon-btn pw-up" data-act="up" title="${t("planar.forward")}" aria-label="${t("planar.forward")}">${icon("chevD")}</button>
       <button class="icon-btn" data-act="delete" title="${t("planar.deleteLayer")}" aria-label="${t("planar.deleteLayer")}">${icon("trash")}</button>
     </li>`).join("") || `<li class="pw-empty">${t("planar.hint")}</li>`;
@@ -340,6 +342,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     const act = target.closest<HTMLElement>("[data-act]")?.dataset.act;
     const l = layers[i];
     if (act === "visible" || act === "tracking" || act === "locked") { l[act as "visible" | "tracking" | "locked"] = !l[act as "visible" | "tracking" | "locked"]; changed = true; }
+    else if (act === "blend") { l.blend = l.blend === "subtract" ? "add" : "subtract"; changed = true; }
+    else if (act === "invert") { l.invert = !l.invert; changed = true; }
     else if (act === "up" && i > 0) { [layers[i - 1], layers[i]] = [layers[i], layers[i - 1]]; current = i - 1; changed = true; }
     else if (act === "delete") {
       if (!window.confirm(t("planar.deleteAsk"))) return;

@@ -327,6 +327,8 @@ export interface PlanarLayer {
   tracking: boolean;
   locked: boolean;
   link?: string;  // Link to Track: the layer whose track carries these shapes (its own, without)
+  blend?: "add" | "subtract";
+  invert?: boolean;
 }
 
 export interface ClipPlanar {

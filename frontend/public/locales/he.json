@@ -718,6 +718,8 @@
   "planar.visible": "גלויה",
   "planar.tracking": "מעקב אחר שכבה זו",
   "planar.locked": "נעולה",
+  "planar.blendSubtract": "חיסור",
+  "planar.invertLayer": "היפוך",
   "planar.forward": "העברה לחזית",
   "planar.deleteLayer": "מחיקת שכבה",
   "planar.hint": "ציירו צורה סביב משטח שטוח למעקב: מסך, שלט, קיר",

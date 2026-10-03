@@ -718,6 +718,8 @@
   "planar.visible": "Vidljivo",
   "planar.tracking": "Prati ovaj sloj",
   "planar.locked": "Zaključano",
+  "planar.blendSubtract": "Oduzmi",
+  "planar.invertLayer": "Obrni",
   "planar.forward": "Pomakni naprijed",
   "planar.deleteLayer": "Izbriši sloj",
   "planar.hint": "Nacrtajte oblik oko ravne površine: zaslona, natpisa, zida",
