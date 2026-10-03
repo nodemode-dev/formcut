@@ -1479,6 +1479,13 @@ class FrameRenderer:
         core = cv2.erode(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * rim_px + 1, 2 * rim_px + 1)))
         in_front = np.maximum(uneven, np.clip((0.005 - lead) / 0.03, 0, 1) * core)
         front_soft = float(spec.get("front_soft", 1.2))
+        close_px = int(spec.get("front_close", 3))
+        if close_px > 0:
+            in_front = cv2.morphologyEx(
+                in_front.astype(np.float32),
+                cv2.MORPH_CLOSE,
+                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * close_px + 1, 2 * close_px + 1)),
+            )
         if front_soft > 0:
             in_front = np.clip((cv2.GaussianBlur(in_front.astype(np.float32), (0, 0), front_soft) - 0.25) / 0.5, 0, 1)
             in_front = in_front * in_front * (3 - 2 * in_front)
