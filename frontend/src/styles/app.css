@@ -1646,6 +1646,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pw-inner { position: absolute; inset: 0; transform-origin: 0 0; }
 .pw-inner img, .pw-inner svg { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
 .pw-inner svg { cursor: crosshair; }
+.pw-stage.is-matte .pw-inner img { filter: grayscale(1) brightness(0.55); }
 .pw-inner svg polygon { stroke-linejoin: round; }
 .pw-inner svg polygon.is-subtract { stroke-dasharray: 2 4; }
 .pw-surface { fill: rgba(75, 130, 240, 0.12); stroke: #4b82f0; stroke-width: 2; }

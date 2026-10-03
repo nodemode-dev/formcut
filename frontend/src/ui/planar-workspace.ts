@@ -250,7 +250,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
         const trimmed = off.size > 0 && now.length - off.size >= 3;
         const liveShape = trimmed ? { ...shape, tension: shape.tension?.filter(keep), feather: shape.feather?.filter(keep) } : shape;
         const pts = outlineOf(trimmed ? now.filter(keep) : now, liveShape).map((p) => carried(p).join(",")).join(" ");
-        const fill = views.matte ? `${l.color}${shape.mode === "subtract" ? "00" : "55"}` : "none";
+        const fill = views.matte ? `${l.color}${shape.mode === "subtract" ? "00" : "99"}` : "none";
         out += `<polygon points="${pts}" fill="${fill}" stroke="${l.color}" stroke-width="${active && si === shapeIndex ? 3 : 2}" vector-effect="non-scaling-stroke"${faint ? ' stroke-dasharray="6 5"' : ""}${shape.mode === "subtract" ? ' class="is-subtract"' : ""} data-layer="${li}" data-shape="${si}"/>`;
         if (active && tool === "select" && !l.locked) {
           const offNow = offAt(shape, frame);
@@ -449,6 +449,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     if (b) {
       const v = b.dataset.view as keyof typeof views;
       views[v] = !views[v];
+      $("stage").classList.toggle("is-matte", views.matte);
       if (v === "adjust") startAdjust();
       render();
     }
@@ -615,7 +616,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       const p = toReference(l, x, y);
       if (p) {
         const shape = l.shapes[drag.a];
-        if (l.tracking) shape.points[drag.b] = p;  // a tracked layer's shape is its search area (asked at the end)
+        const keyedArea = l.tracking && (tracks.get(l.id)?.frames.size ?? 0) > 1;
+        if (l.tracking && !keyedArea) shape.points[drag.b] = p;
         else keyPoint(shape, drag.b, p);
         changed = true;
       }
@@ -633,7 +635,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       if (Math.abs(b[0] - a[0]) > 4 && Math.abs(b[1] - a[1]) > 4) await addShape(tool === "ellipse" ? ellipseIn(a, b, 12) : box, tool === "ellipse" ? 1 : undefined);
     } else if (was.kind === "point" || was.kind === "handle") {
       const l = layer();
-      if (l && !(await invalidate(l))) await loadTracks();  // kept the track: the shape goes back
+      const keyedArea = !!l && l.tracking && was.kind === "point" && (tracks.get(l.id)?.frames.size ?? 0) > 1;
+      if (l && !keyedArea && !(await invalidate(l))) await loadTracks();
     }
     render();
   })());
