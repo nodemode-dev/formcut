@@ -149,6 +149,7 @@ export interface Clip {
   planarMatte?: { layers: string[]; feather: number; invert: boolean; motionBlur?: MotionBlur };
   planarStabilize?: { layer: string };
   planarReorient?: { layer: string; surface: number[][] };
+  lens?: { k1: number; k2: number; mode: "undistort" | "redistort" };
   muted?: boolean;
   extendOut?: number;
   colour?: ColourPanel;

@@ -38,6 +38,11 @@ export function installTracking(root: HTMLElement, engine: ProjectEngine): void 
   root.querySelector<HTMLElement>('[data-ref="module-remove"]')?.addEventListener("click", () => {
     const id = engine.snapshot.selectedClipId;
     if (id) engine.dispatch("clip.planarModule", { clipId: id, planarStabilize: null, planarReorient: null });
+    if (id && engine.findClip(id)?.clip.lens) engine.dispatch("clip.lens", { clipId: id, lens: null });
+  });
+  root.querySelector<HTMLElement>('[data-ref="lens-mode"]')?.addEventListener("click", () => {
+    const id = engine.snapshot.selectedClipId, lens = id ? engine.findClip(id)?.clip.lens : undefined;
+    if (id && lens) engine.dispatch("clip.lens", { clipId: id, lens: { ...lens, mode: lens.mode === "redistort" ? "undistort" : "redistort" } });
   });
   root.querySelector<HTMLElement>('[data-ref="pin-blur"]')?.addEventListener("click", () => {
     const id = engine.snapshot.selectedClipId;

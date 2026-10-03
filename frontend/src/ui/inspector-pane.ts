@@ -220,7 +220,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         ${matted ? `<button class="tool-chip" data-ref="matte-remove">${icon("close")}${t("matte.remove")}</button>` : ""}
         ${matted ? `<button class="tool-chip${selected?.planarMatte?.motionBlur ? " is-on" : ""}" data-ref="matte-blur" aria-pressed="${!!selected?.planarMatte?.motionBlur}">${t("track.motionBlurMatte")}</button>` : ""}
         ${pinned ? `<button class="tool-chip" data-ref="pin-remove">${icon("close")}${t("pin.remove")}</button>` : ""}
-        ${selected?.planarStabilize || selected?.planarReorient ? `<button class="tool-chip" data-ref="module-remove">${icon("close")}${t("track.moduleRemove")}</button>` : ""}
+        ${selected?.planarStabilize || selected?.planarReorient || selected?.lens ? `<button class="tool-chip" data-ref="module-remove">${icon("close")}${t("track.moduleRemove")}</button>` : ""}
+        ${selected?.lens ? `<button class="tool-chip${selected.lens.mode === "redistort" ? " is-on" : ""}" data-ref="lens-mode" aria-pressed="${selected.lens.mode === "redistort"}">${t("track.lensRedistort")}</button>` : ""}
         ${pinned ? `<button class="tool-chip${selected?.cornerPin?.motionBlur ? " is-on" : ""}" data-ref="pin-blur" aria-pressed="${!!selected?.cornerPin?.motionBlur}">${t("track.motionBlurPin")}</button>` : ""}
         ${pinned ? (["light", "grain", "blur"] as const).map((k) => `<button class="tool-chip${selected?.cornerPin?.match?.[k] ? " is-on" : ""}" data-ref="pin-match" data-match="${k}" aria-pressed="${!!selected?.cornerPin?.match?.[k]}">${t(`track.match.${k}`)}</button>`).join("") : ""}
         <div class="text-add-hint" data-ref="track-hint">${t("track.hint")}</div>

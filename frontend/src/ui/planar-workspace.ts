@@ -108,6 +108,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   let frame = 0, first = 0, last = 0;
   let tool: "select" | "draw" | "rect" | "ellipse" | "segment" | "freehand" | "brush" = "draw";
   let magnetic = false;
+  let lensMode = false;
+  const lensLines: number[][][] = [];
   let mode: "add" | "subtract" = "add";
   const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false, adjust: false };
   let pointIndex = 0;  // the reference point selected in AdjustTrack
@@ -147,6 +149,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button data-tool="freehand" title="${t("planar.freehand")}" aria-label="${t("planar.freehand")}">${icon("freehand")}</button>
             <button data-tool="brush" title="${t("planar.brush")}" aria-label="${t("planar.brush")}">${icon("brush")}</button>
             <button data-ref="magnetic" title="${t("planar.magnetic")}" aria-label="${t("planar.magnetic")}" aria-pressed="false">${icon("magnet")}</button>
+            <button data-ref="lens-lines" title="${t("planar.lensLines")}" aria-label="${t("planar.lensLines")}" aria-pressed="false">${icon("grid")}</button>
             <button data-tool="segment" title="${t("planar.tool.segment")}" aria-label="${t("planar.tool.segment")}">${icon("sparkles")}</button>
           </div>
           <div class="pw-seg" data-ref="mode" role="group">
@@ -201,6 +204,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
           <select data-ref="export-format" aria-label="${t("planar.copyAe")}"><option value="ae">After Effects Corner Pin</option><option value="nuke">Nuke CornerPin2D</option><option value="csv">CSV</option><option value="json">JSON</option></select>
           <button class="tool-chip" data-ref="copy-ae">${t("planar.copyAe")}</button>
           <button class="tool-chip" data-ref="make-mask">${t("planar.makeMask")}</button>
+          <button class="tool-chip" data-ref="solve-lens">${t("planar.solveLens")}</button>
+          <button class="tool-chip" data-ref="clear-lens">${t("planar.clearLens")}</button>
         </section>
       </aside>
       <main class="pw-main">
@@ -319,6 +324,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     out += on_top;  // the active layer's points above every layer, so another layer's surface never covers them
     if (views.adjust) out += paintPoints();
     if (drawing.length) out += `<polyline class="pw-drawing" points="${drawing.map((p) => p.join(",")).join(" ")}" vector-effect="non-scaling-stroke"/>`;
+    for (const line of lensLines) out += `<polyline class="pw-lensline" points="${line.map(([u, v]) => `${u * W},${v * H}`).join(" ")}" vector-effect="non-scaling-stroke"/>`;
     svg.innerHTML = out;
     // the stabilised view: the picture moved so the current layer's tracked plane holds still
     const l = layer(), h = l ? homography(carrierOf(l), frame) : null;  // a linked layer stabilises by its carrier
@@ -591,6 +597,11 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
 
   async function finishStroke(stroke: number[][]): Promise<void> {
     if (!media || stroke.length < 2) return;
+    if (lensMode && tool === "freehand") {
+      if (stroke.length >= 3) lensLines.push(stroke.map(([x, y]) => [x / media!.width, y / media!.height]));
+      render();
+      return;
+    }
     const W = media.width, H = media.height, post = (url: string, body: unknown) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (tool === "brush") {
       const reply = await post("/api/planar/brush", { width: W, height: H, strokes: [stroke.map(([x, y]) => [x / W, y / H])], radius: Math.max(4, Math.round(Math.min(W, H) / 60)) });
@@ -893,6 +904,21 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     changed = true;
     paintPoint();
     render();
+  })());
+  $("lens-lines").addEventListener("click", () => {
+    lensMode = !lensMode;
+    $("lens-lines").classList.toggle("is-on", lensMode);
+    $("lens-lines").setAttribute("aria-pressed", String(lensMode));
+    if (lensMode) { tool = "freehand"; paintLayers(); }
+  });
+  $("clear-lens").addEventListener("click", () => { lensLines.length = 0; render(); });
+  $("solve-lens").addEventListener("click", () => void (async () => {
+    if (!media || lensLines.length < 2) { say(t("planar.lensNeedLines")); return; }
+    const reply = await fetch("/api/planar/lens", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ width: media.width, height: media.height, lines: lensLines }) });
+    if (!reply.ok) { say(t("planar.lensNeedLines")); return; }
+    const solved = (await reply.json()) as { k1: number; k2: number; error: number };
+    engine.dispatch("clip.lens", { clipId, lens: { k1: solved.k1, k2: solved.k2, mode: "undistort" } });
+    say(t("planar.lensSolved"));
   })());
   $("magnetic").addEventListener("click", () => {
     magnetic = !magnetic;

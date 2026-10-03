@@ -390,6 +390,58 @@ def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float
     return out
 
 
+def mesh_at(mesh: dict, local: float) -> np.ndarray | None:
+    """A mesh's vertices (pixels of the unit square, row by row) at a clip-local time, linear between its keys."""
+    times, frames = mesh.get("times") or [], mesh.get("points") or []
+    if not times or len(times) != len(frames):
+        return None
+    if local <= times[0]:
+        return np.array(frames[0], np.float64)
+    if local >= times[-1]:
+        return np.array(frames[-1], np.float64)
+    at = bisect.bisect_right(times, local)
+    f = (local - times[at - 1]) / max(1e-9, times[at] - times[at - 1])
+    return np.array(frames[at - 1], np.float64) * (1 - f) + np.array(frames[at], np.float64) * f
+
+
+def mesh_warp(image: np.ndarray, vertices: np.ndarray, cols: int, rows: int, size: tuple[int, int]) -> np.ndarray:
+    """An image warped onto a mesh of (rows+1) by (cols+1) vertices (canvas pixels): each cell by the homography from
+    its share of the image, every canvas pixel told its cell by one raster and sampled in one remap; the mesh's outer
+    edge drawn by exact coverage (Mocha Pro's PowerMesh insert)."""
+    from .planar_shapes import coverage
+
+    width, height = size
+    h, w = image.shape[:2]
+    grid = vertices.reshape(rows + 1, cols + 1, 2)
+    cell = np.full((height, width), -1, np.int32)
+    inverse = []
+    for r in range(rows):
+        for c in range(cols):
+            quad = np.array([grid[r, c], grid[r, c + 1], grid[r + 1, c + 1], grid[r + 1, c]], np.float32)
+            x0, x1, y0, y1 = c * w / cols, (c + 1) * w / cols, r * h / rows, (r + 1) * h / rows
+            src = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], np.float32)
+            inverse.append(cv2.getPerspectiveTransform(quad, src).astype(np.float64))
+            cv2.fillPoly(cell, [np.round(quad * 16).astype(np.int32)], len(inverse) - 1, lineType=cv2.LINE_8, shift=4)
+    if (cell < 0).any():
+        grown = cv2.dilate((cell + 1).astype(np.float32), np.ones((5, 5), np.uint8)).astype(np.int32) - 1
+        cell = np.where(cell >= 0, cell, grown)
+    ys, xs = np.mgrid[0:height, 0:width].astype(np.float64)
+    map_x, map_y = np.full((height, width), -1.0, np.float32), np.full((height, width), -1.0, np.float32)
+    for k, hinv in enumerate(inverse):
+        where = cell == k
+        px, py = xs[where], ys[where]
+        d = hinv[2, 0] * px + hinv[2, 1] * py + hinv[2, 2]
+        map_x[where] = (hinv[0, 0] * px + hinv[0, 1] * py + hinv[0, 2]) / d
+        map_y[where] = (hinv[1, 0] * px + hinv[1, 1] * py + hinv[1, 2]) / d
+    out = cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    rim = np.concatenate([grid[0, :], grid[1:, -1], grid[-1, -2::-1], grid[-2:0:-1, 0]])
+    top = 65535.0 if image.dtype == np.uint16 else 255.0
+    alpha = coverage(rim, width, height) * (out[:, :, 3].astype(np.float32) / top if out.shape[2] == 4 else 1.0)
+    out = out if out.shape[2] == 4 else np.dstack([out, np.zeros((height, width), out.dtype)])
+    out[:, :, 3] = np.round(np.clip(alpha, 0, 1) * top).astype(out.dtype)
+    return out
+
+
 def lens_warp(image: np.ndarray, lens: dict) -> np.ndarray:
     """Mocha Pro's Lens module on a frame: mode undistort straightens what the lens bent (each output pixel taken from
     where the radial model, inverted by fixed-point steps, says it was shot); redistort bends a straight picture back.
@@ -2216,6 +2268,9 @@ class FrameRenderer:
                     total /= samples
                     colour = total[:, :, :3] / np.maximum(total[:, :, 3:4], 1e-6)
                     layer = np.round(np.clip(np.dstack([colour, total[:, :, 3:4]]), 0, 1) * top).astype(image.dtype)
+                elif (mesh := (clip.get("cornerPin") or {}).get("mesh")) and (vertices := mesh_at(mesh, local)) is not None:
+                    size = (self.width, self.height)
+                    layer = mesh_warp(image, vertices * list(size), int(mesh["cols"]), int(mesh["rows"]), size)
                 else:
                     dst = np.float32([[x * self.width, y * self.height] for x, y in pinned])
                     layer = cv2.warpPerspective(

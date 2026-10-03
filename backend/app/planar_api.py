@@ -970,6 +970,85 @@ def matte_assist(body: AssistBody) -> dict:
     return {"keys": keys}
 
 
+class MeshBody(BaseModel):
+    media_id: str
+    layer: str  # a tracked layer: the mesh rides its track
+    surface: list[list[float]] = Field(min_length=4, max_length=4)  # four corners, the reference's unit square
+    cols: int = Field(default=6, ge=1, le=24)
+    rows: int = Field(default=6, ge=1, le=24)
+    stop: float = Field(ge=0)
+
+
+def _grid_smooth(values: np.ndarray, rows: int, cols: int, passes: int = 2) -> np.ndarray:
+    """Per-vertex values on a (rows+1) by (cols+1) grid, each averaged with its neighbours, passes times."""
+    grid = values.reshape(rows + 1, cols + 1, -1)
+    for _ in range(passes):
+        padded = np.pad(grid, ((1, 1), (1, 1), (0, 0)), mode="edge")
+        grid = (2 * grid + padded[:-2, 1:-1] + padded[2:, 1:-1] + padded[1:-1, :-2] + padded[1:-1, 2:]) / 6
+    return grid.reshape(values.shape)
+
+
+@router.post("/mesh", status_code=202)
+def track_mesh(body: MeshBody) -> dict:
+    """Mocha Pro's PowerMesh: a grid over the layer's surface tracked as it bends. Each vertex rides the planar
+    track, plus its own deviation from the plane, followed frame to frame by optical flow, smoothed across the grid
+    and kept within a third of a cell; the planar track keeps the whole from drifting. A key per frame from the
+    layer's reference on (vertices row by row, the unit square)."""
+    source, fps, width, height, count = _video(body.media_id)
+    track = _load(body.layer)
+    if not track:
+        raise HTTPException(409, "track the layer first")
+    follow = track.get("adjusted") or track["frames"]
+    scale = np.diag([width / float(track["size"][0]), height / float(track["size"][1]), 1.0])
+    homographies = {int(k): scale @ _matrix(v) @ np.linalg.inv(scale) for k, v in follow.items()}
+    first, last = int(track["reference"]), min(count - 1, round(body.stop * fps))
+    corners = np.array(body.surface, np.float64) * [width, height]
+    u, v = np.meshgrid(np.linspace(0, 1, body.cols + 1), np.linspace(0, 1, body.rows + 1))
+    u, v = u.ravel()[:, None], v.ravel()[:, None]
+    home = (1 - u) * (1 - v) * corners[0] + u * (1 - v) * corners[1] + u * v * corners[2] + (1 - u) * v * corners[3]
+    reach = 0.33 * min(np.linalg.norm(corners[1] - corners[0]) / body.cols, np.linalg.norm(corners[3] - corners[0]) / body.rows)
+
+    def planar(index: int) -> np.ndarray:
+        return cv2.perspectiveTransform(home.reshape(-1, 1, 2), homographies[index]).reshape(-1, 2)
+
+    def operation(job_id, report, cancelled):
+        small = min(1.0, 640 / max(width, height))
+        frames = _frames(source, fps, width, height, first, max(first, last))
+        _, before = next(frames)
+        previous = cv2.resize(cv2.cvtColor(before, cv2.COLOR_BGR2GRAY), None, fx=small, fy=small, interpolation=cv2.INTER_AREA)
+        deviation = np.zeros_like(home)
+        keys = {str(first): (planar(first) / [width, height]).round(6).tolist()} if first in homographies else {}
+        for index, frame in frames:
+            if cancelled() or index not in homographies or index - 1 not in homographies:
+                break
+            current = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), None, fx=small, fy=small, interpolation=cv2.INTER_AREA)
+            flow = cv2.calcOpticalFlowFarneback(previous, current, None, 0.5, 4, 21, 5, 7, 1.5, 0)
+            was = planar(index - 1) + deviation
+            probe = (was * small).astype(np.float32)
+            moved = np.stack([cv2.remap(flow[:, :, k], probe[:, None, 0], probe[:, None, 1], cv2.INTER_LINEAR).ravel() for k in (0, 1)], -1)
+            change = was + moved / small - planar(index) - deviation
+            deviation = deviation + _grid_smooth(change, body.rows, body.cols)
+            length = np.linalg.norm(deviation, axis=1, keepdims=True)
+            deviation *= np.minimum(1.0, reach / np.maximum(length, 1e-9))
+            keys[str(index)] = ((planar(index) + deviation) / [width, height]).round(6).tolist()
+            previous = current
+            report((index - first) / max(1, last - first), f"frame {index}")
+        result = {"layer": body.layer, "cols": body.cols, "rows": body.rows, "fps": fps, "keys": keys}
+        write_json(_path(body.layer).with_suffix(".mesh.json"), result)
+        return {"frames": len(keys)}
+
+    return jobs.submit("planar-mesh", operation)
+
+
+@router.get("/mesh/{layer_id}")
+def read_mesh(layer_id: str) -> dict:
+    """A layer's tracked mesh, as the mesh job left it."""
+    data = read_json(_path(layer_id).with_suffix(".mesh.json"), None)
+    if not data:
+        raise HTTPException(404, "no mesh for that layer")
+    return data
+
+
 class LensBody(BaseModel):
     width: int = Field(gt=0, le=16384)
     height: int = Field(gt=0, le=16384)

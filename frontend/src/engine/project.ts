@@ -265,6 +265,17 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "clip.lens": {
+        const p = payload as { clipId: string; lens: { k1: number; k2: number; mode: "undistort" | "redistort" } | null };
+        const found = this.findClip(p.clipId);
+        if (!found) break;
+        this.pushHistory();
+        if (p.lens) found.clip.lens = structuredClone(p.lens);
+        else delete found.clip.lens;
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "clip.planarModule": {
         const p = payload as { clipId: string; planarStabilize?: { layer: string } | null; planarReorient?: { layer: string; surface: number[][] } | null };
         const found = this.findClip(p.clipId);
