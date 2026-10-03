@@ -970,6 +970,58 @@ def matte_assist(body: AssistBody) -> dict:
     return {"keys": keys}
 
 
+class LensBody(BaseModel):
+    width: int = Field(gt=0, le=16384)
+    height: int = Field(gt=0, le=16384)
+    lines: list[list[list[float]]] = Field(min_length=1, max_length=64)  # points along edges that should be straight
+
+
+def lens_undistort_points(pts: np.ndarray, k1: float, k2: float, size: tuple[int, int]) -> np.ndarray:
+    """Distorted pixels to undistorted: p_u = c + (p_d - c)(1 + k1 r^2 + k2 r^4), r over the half-diagonal."""
+    width, height = size
+    centre = np.array([width / 2, height / 2])
+    half = 0.5 * math.hypot(width, height)
+    offset = pts - centre
+    r2 = (offset**2).sum(-1, keepdims=True) / half**2
+    return centre + offset * (1 + k1 * r2 + k2 * r2 * r2)
+
+
+@router.post("/lens")
+def solve_lens(body: LensBody) -> dict:
+    """Mocha Pro's Lens module: the radial distortion (k1, k2) that makes points along edges meant to be straight lie on
+    straight lines once undistorted, by a Levenberg-Marquardt fit in numpy; with how far from straight they stay."""
+    size = (body.width, body.height)
+    lines = [np.array(line, np.float64) * [body.width, body.height] for line in body.lines if len(line) >= 3]
+    if not lines:
+        raise HTTPException(400, "each line needs three points or more")
+
+    def residuals(k: np.ndarray) -> np.ndarray:
+        out = []
+        for pts in lines:
+            u = lens_undistort_points(pts, float(k[0]), float(k[1]), size)
+            centred = u - u.mean(0)
+            normal = np.linalg.svd(centred, full_matrices=False)[2][-1]
+            out.append(centred @ normal)
+        return np.concatenate(out)
+
+    k, damping = np.zeros(2), 1e-3
+    cost = float((residuals(k) ** 2).sum())
+    for _ in range(100):
+        r = residuals(k)
+        jac = np.stack([(residuals(k + step) - r) / 1e-6 for step in np.eye(2) * 1e-6], -1)
+        trial = k - np.linalg.solve(jac.T @ jac + damping * np.diag(np.diag(jac.T @ jac) + 1e-12), jac.T @ r)
+        trial_cost = float((residuals(trial) ** 2).sum())
+        if trial_cost < cost:
+            gain = cost - trial_cost
+            k, cost, damping = trial, trial_cost, damping / 3
+            if gain < 1e-12:
+                break
+        else:
+            damping *= 4
+    final = residuals(k)
+    return {"k1": round(float(k[0]), 7), "k2": round(float(k[1]), 7), "error": round(float(np.sqrt((final**2).mean())), 4)}
+
+
 class FacesBody(BaseModel):
     media_id: str
     frame: int = Field(ge=0)

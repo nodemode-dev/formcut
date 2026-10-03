@@ -47,7 +47,7 @@ LEGACY = {
 # layer's own passes. Nothing is left: every layer can stay on the device.
 # a clip carrying any of these is placed on this side, not left on the device: a corner pin is a perspective warp,
 # which neither the device's affine pass nor the native warp-and-blend kernel makes (P3 of the planar tracking plan)
-CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare", "planarStabilize", "planarReorient")
+CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare", "planarStabilize", "planarReorient", "lens")
 
 
 def _guided(guide: np.ndarray, source: np.ndarray, radius: int, eps: float) -> np.ndarray:
@@ -388,6 +388,30 @@ def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float
                 )
             )
     return out
+
+
+def lens_warp(image: np.ndarray, lens: dict) -> np.ndarray:
+    """Mocha Pro's Lens module on a frame: mode undistort straightens what the lens bent (each output pixel taken from
+    where the radial model, inverted by fixed-point steps, says it was shot); redistort bends a straight picture back.
+    The model: undistorted = c + (distorted - c)(1 + k1 r^2 + k2 r^4), r over the half-diagonal."""
+    k1, k2 = float(lens.get("k1", 0)), float(lens.get("k2", 0))
+    if abs(k1) < 1e-9 and abs(k2) < 1e-9:
+        return image
+    h, w = image.shape[:2]
+    half2 = 0.25 * (w * w + h * h)
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    dx, dy = xs - w / 2, ys - h / 2
+    r2 = (dx * dx + dy * dy) / half2
+    if lens.get("mode") == "redistort":
+        factor = 1 + k1 * r2 + k2 * r2 * r2
+    else:
+        factor = np.ones_like(r2)
+        for _ in range(12):
+            rd2 = r2 / (factor * factor)
+            factor = 1 + k1 * rd2 + k2 * rd2 * rd2
+        factor = 1 / factor
+    map_x, map_y = (w / 2 + dx * factor).astype(np.float32), (h / 2 + dy * factor).astype(np.float32)
+    return cv2.remap(image, map_x, map_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
 
 
 def _sharpness(luma: np.ndarray, where: np.ndarray) -> float:
@@ -2141,6 +2165,8 @@ class FrameRenderer:
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             self.matte_time = source_time(clip, local)
+            if clip.get("lens"):
+                image = lens_warp(image, clip["lens"])
             if clip.get("planarStabilize") or clip.get("planarReorient"):
                 image = self.planar_warp(image, clip)
             mask_track = (clip.get("mask") or {}).get("track")
