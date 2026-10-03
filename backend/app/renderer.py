@@ -1433,9 +1433,11 @@ class FrameRenderer:
             j = below[0]
             f = (profile[j - 1] - level) / max(1e-6, profile[j - 1] - profile[j])
             offsets[k] = steps[j - 1] + f * (steps[j] - steps[j - 1])
-        taps = np.exp(-0.5 * (np.arange(-9, 10) / 3.0) ** 2)
+        wrapped = np.concatenate([offsets[-4:], offsets, offsets[:4]])
+        offsets = np.median(np.lib.stride_tricks.sliding_window_view(wrapped, 9), axis=1)
+        taps = np.exp(-0.5 * (np.arange(-24, 25) / 8.0) ** 2)
         taps /= taps.sum()
-        offsets = np.convolve(np.concatenate([offsets[-9:], offsets, offsets[:9]]), taps, mode="valid") + bias
+        offsets = np.convolve(np.concatenate([offsets[-24:], offsets, offsets[:24]]), taps, mode="valid") + bias
         return pts + offsets[:, None] * normal
 
     def screen_cut(self, out: np.ndarray, clip: dict, w: int, h: int) -> np.ndarray:
