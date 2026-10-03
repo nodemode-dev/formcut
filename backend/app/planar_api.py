@@ -788,6 +788,74 @@ def _smooth_closed(values: np.ndarray, median: int = 7, sigma: float = 3.0) -> n
     return np.stack([np.convolve(padded[:, k], taps, mode="valid") for k in range(values.shape[1])], -1)
 
 
+def _normals_in(pts: np.ndarray) -> np.ndarray:
+    """Each point's unit normal towards the inside of the closed path."""
+    tangent = np.roll(pts, -1, 0) - np.roll(pts, 1, 0)
+    tangent /= np.maximum(np.linalg.norm(tangent, axis=1, keepdims=True), 1e-9)
+    inward = np.stack([-tangent[:, 1], tangent[:, 0]], -1)
+    return -inward if float(((pts.mean(0) - pts) * inward).sum()) < 0 else inward
+
+
+def _snap_to_edges(frame: np.ndarray, pts: np.ndarray, reach: float = 4.0) -> np.ndarray:
+    """Points (pixels) moved along their normals to the strongest edge within reach, where one stands out, the
+    moves cleaned and smoothed along the closed path."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    edge = cv2.magnitude(cv2.Sobel(gray, cv2.CV_32F, 1, 0), cv2.Sobel(gray, cv2.CV_32F, 0, 1))
+    inward = _normals_in(pts)
+    steps = np.arange(-reach, reach + 0.01, 0.5)
+    along = (pts[:, None, :] - inward[:, None, :] * steps[None, :, None]).astype(np.float32)
+    profiles = cv2.remap(edge, along[:, :, 0], along[:, :, 1], cv2.INTER_LINEAR)
+    strong = profiles.max(axis=1) > 1.5 * profiles.mean(axis=1)
+    snap = np.where(strong, steps[profiles.argmax(axis=1)], 0.0)
+    return pts - inward * _smooth_closed(snap[:, None])
+
+
+class SnapBody(BaseModel):
+    media_id: str
+    frame: int = Field(ge=0)
+    points: list[list[float]] = Field(min_length=3, max_length=4000)  # unit square
+    reach: float = Field(default=6.0, gt=0, le=40)
+
+
+@router.post("/snap")
+def snap_points(body: SnapBody) -> dict:
+    """A shape's points snapped to the edges on a frame (Mocha Pro's edge snapping and magnetic drawing)."""
+    source, fps, width, height, count = _video(body.media_id)
+    frame = next(_read(source, fps, width, height, min(body.frame, count - 1), 1), None)
+    if frame is None:
+        raise HTTPException(422, "that frame could not be read")
+    pts = _snap_to_edges(frame, np.array(body.points, np.float64) * [width, height], body.reach)
+    return {"points": (pts / [width, height]).round(6).tolist()}
+
+
+class BrushBody(BaseModel):
+    width: int = Field(gt=0, le=16384)
+    height: int = Field(gt=0, le=16384)
+    strokes: list[list[list[float]]] = Field(min_length=1, max_length=200)  # each a list of points, unit square
+    radius: float = Field(gt=0, le=2000)  # pixels
+
+
+@router.post("/brush")
+def brush_outline(body: BrushBody) -> dict:
+    """The outline of the area painted by brush strokes (Mocha Pro's Area Brush): the strokes drawn thick at the
+    picture's size, the largest painted area's edge traced and simplified to within a pixel, in the unit square."""
+    canvas = np.zeros((body.height, body.width), np.uint8)
+    thickness = max(1, round(body.radius * 2))
+    for stroke in body.strokes:
+        pts = np.round(np.array(stroke, np.float64) * [body.width, body.height]).astype(np.int32)
+        if len(pts) == 1:
+            cv2.circle(canvas, tuple(int(v) for v in pts[0]), max(1, round(body.radius)), 255, -1, cv2.LINE_AA)
+        else:
+            cv2.polylines(canvas, [pts], False, 255, thickness, cv2.LINE_AA)
+    found, _ = cv2.findContours((canvas > 127).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if not found:
+        raise HTTPException(422, "nothing was painted")
+    outline = cv2.approxPolyDP(max(found, key=cv2.contourArea), 1.0, True).reshape(-1, 2).astype(np.float64)
+    if len(outline) < 3:
+        raise HTTPException(422, "the painted area is too small")
+    return {"points": (outline / [body.width, body.height]).round(6).tolist()}
+
+
 @router.post("/assist")
 def matte_assist(body: AssistBody) -> dict:
     """A shape carried through the shot as vector keys (Mocha Pro's Matte Assist): each frame, dense optical flow
@@ -809,24 +877,11 @@ def matte_assist(body: AssistBody) -> dict:
     for index, frame in frames:
         current = small(frame)
         flow = cv2.calcOpticalFlowFarneback(previous, current, None, 0.5, 4, 21, 5, 7, 1.5, 0)
-        tangent = np.roll(pts, -1, 0) - np.roll(pts, 1, 0)
-        tangent /= np.maximum(np.linalg.norm(tangent, axis=1, keepdims=True), 1e-9)
-        inward = np.stack([-tangent[:, 1], tangent[:, 0]], -1)
-        if float(((pts.mean(0) - pts) * inward).sum()) < 0:
-            inward = -inward
+        inward = _normals_in(pts)
         probe = ((pts + inward * 4.0) * scale).astype(np.float32)
         sampled = [cv2.remap(flow[:, :, k], probe[:, None, 0], probe[:, None, 1], cv2.INTER_LINEAR).ravel() for k in (0, 1)]
         moves = np.stack(sampled, -1) / scale
-        pts = pts + _smooth_closed(moves)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.float32)
-        edge = cv2.magnitude(cv2.Sobel(gray, cv2.CV_32F, 1, 0), cv2.Sobel(gray, cv2.CV_32F, 0, 1))
-        steps = np.arange(-4.0, 4.01, 0.5)
-        along = (pts[:, None, :] - inward[:, None, :] * steps[None, :, None]).astype(np.float32)
-        profiles = cv2.remap(edge, along[:, :, 0], along[:, :, 1], cv2.INTER_LINEAR)
-        best = profiles.argmax(axis=1)
-        strong = profiles.max(axis=1) > 1.5 * profiles.mean(axis=1)
-        snap = np.where(strong, steps[best], 0.0)
-        pts = pts - inward * _smooth_closed(snap[:, None])
+        pts = _snap_to_edges(frame, pts + _smooth_closed(moves))
         keys[str(index)] = (pts / [width, height]).round(6).tolist()
         previous = current
     return {"keys": keys}

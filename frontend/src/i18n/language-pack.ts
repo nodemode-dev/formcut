@@ -489,6 +489,10 @@ Matte clip|Clip de cache|Clip maschera|マットクリップ|매트 클립|Clipe
 Dope sheet|Feuille d'exposition|Dope sheet|ドープシート|도프 시트|Folha de animação|Таблица ключей|Anahtar kare tablosu|摄影表|攝影表
 Find faces|Trouver les visages|Trova volti|顔を検出|얼굴 찾기|Encontrar rostos|Найти лица|Yüzleri bul|查找人脸|尋找人臉
 Matte Assist|Assistant de cache|Assistente maschera|マットアシスト|매트 어시스트|Assistente de máscara|Помощник маски|Maske yardımcısı|遮罩辅助|遮罩輔助
+Freehand|Main levée|A mano libera|フリーハンド|자유형|À mão livre|От руки|Serbest çizim|手绘|手繪
+Area brush|Pinceau de zone|Pennello area|エリアブラシ|영역 브러시|Pincel de área|Кисть области|Alan fırçası|区域画笔|區域筆刷
+Magnetic: freehand clings to edges|Magnétique : le tracé suit les bords|Magnetico: il tratto si aggancia ai bordi|マグネット：フリーハンドが輪郭に吸着|자석: 자유형 선이 가장자리에 붙음|Magnético: o traço adere às bordas|Магнит: линия от руки прилипает к краям|Mıknatıs: serbest çizim kenarlara yapışır|磁性：手绘线吸附到边缘|磁性：手繪線吸附到邊緣
+Snap to edges|Aligner sur les bords|Aggancia ai bordi|輪郭にスナップ|가장자리에 맞추기|Ajustar às bordas|Привязать к краям|Kenarlara yasla|吸附到边缘|吸附到邊緣
 Following the shape through the shot…|Suivi de la forme dans le plan…|Inseguimento della forma nell'inquadratura…|ショット全体で形状を追跡中…|샷 전체에서 모양을 따라가는 중…|Seguindo a forma ao longo do plano…|Отслеживание формы по всему плану…|Şekil çekim boyunca izleniyor…|正在整个镜头中跟随形状…|正在整個鏡頭中跟隨形狀…
 The shape is keyed on every frame to the end of the shot|La forme a une clé sur chaque image jusqu'à la fin du plan|La forma ha una chiave su ogni fotogramma fino alla fine dell'inquadratura|ショットの終わりまで全フレームで形状にキーを設定しました|샷 끝까지 모든 프레임에 모양 키가 설정되었습니다|A forma tem chave em todos os quadros até o fim do plano|Форма получила ключ на каждом кадре до конца плана|Şekil çekimin sonuna kadar her karede anahtarlandı|形状已在每一帧上设置关键帧，直至镜头结束|形狀已在每一影格設定關鍵影格，直到鏡頭結束
 No faces found on this frame|Aucun visage trouvé sur cette image|Nessun volto trovato in questo fotogramma|このフレームに顔は見つかりませんでした|이 프레임에서 얼굴을 찾지 못했습니다|Nenhum rosto encontrado neste quadro|На этом кадре лица не найдены|Bu karede yüz bulunamadı|此帧未找到人脸|此影格未找到人臉

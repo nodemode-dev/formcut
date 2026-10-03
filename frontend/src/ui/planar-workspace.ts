@@ -35,6 +35,16 @@ const invert = (m: number[]): number[] => {
 // a shape's points on a frame and its outline: the twin of backend/app/planar_shapes.py (keyframes run linearly and
 // hold beyond; an X-Spline is a Hermite curve whose tangent at each point is the Catmull-Rom tangent times its tension)
 const SAMPLES = 48;
+const simplify = (pts: number[][], tol: number): number[][] => {
+  if (pts.length < 3) return pts;
+  const a = pts[0], b = pts[pts.length - 1], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+  let worst = 0, at = 0;
+  for (let i = 1; i < pts.length - 1; i += 1) {
+    const d = len > 1e-9 ? Math.abs(dy * (pts[i][0] - a[0]) - dx * (pts[i][1] - a[1])) / len : Math.hypot(pts[i][0] - a[0], pts[i][1] - a[1]);
+    if (d > worst) { worst = d; at = i; }
+  }
+  return worst > tol ? [...simplify(pts.slice(0, at + 1), tol).slice(0, -1), ...simplify(pts.slice(at), tol)] : [a, b];
+};
 const ellipseIn = (a: number[], b: number[], n: number): number[][] => {
   const [cx, cy, rx, ry] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.abs(b[0] - a[0]) / 2, Math.abs(b[1] - a[1]) / 2];
   return Array.from({ length: n }, (_, k) => [cx + rx * Math.cos((2 * Math.PI * k) / n), cy + ry * Math.sin((2 * Math.PI * k) / n)]);
@@ -96,7 +106,8 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
   let shapeIndex = -1;
   let media: Media | null = null;
   let frame = 0, first = 0, last = 0;
-  let tool: "select" | "draw" | "rect" | "ellipse" | "segment" = "draw";
+  let tool: "select" | "draw" | "rect" | "ellipse" | "segment" | "freehand" | "brush" = "draw";
+  let magnetic = false;
   let mode: "add" | "subtract" = "add";
   const views = { surface: true, grid: false, trace: false, matte: false, stabilise: false, adjust: false };
   let pointIndex = 0;  // the reference point selected in AdjustTrack
@@ -133,6 +144,9 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button data-tool="draw" title="${t("planar.draw")}" aria-label="${t("planar.draw")}">${icon("curve")}</button>
             <button data-tool="rect" title="${t("planar.rect")}" aria-label="${t("planar.rect")}">${icon("fit")}</button>
             <button data-tool="ellipse" title="${t("mask.ellipse")}" aria-label="${t("mask.ellipse")}">${icon("ellipse")}</button>
+            <button data-tool="freehand" title="${t("planar.freehand")}" aria-label="${t("planar.freehand")}">${icon("freehand")}</button>
+            <button data-tool="brush" title="${t("planar.brush")}" aria-label="${t("planar.brush")}">${icon("brush")}</button>
+            <button data-ref="magnetic" title="${t("planar.magnetic")}" aria-label="${t("planar.magnetic")}" aria-pressed="false">${icon("magnet")}</button>
             <button data-tool="segment" title="${t("planar.tool.segment")}" aria-label="${t("planar.tool.segment")}">${icon("sparkles")}</button>
           </div>
           <div class="pw-seg" data-ref="mode" role="group">
@@ -155,6 +169,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
             <button class="tool-chip" data-ref="delete-point">${icon("trash")}${t("planar.adjust.delete")}</button>
             <button class="tool-chip" data-ref="toggle-point">${t("planar.pointActive")}</button>
             <button class="tool-chip" data-ref="make-bezier">${t("planar.makeBezier")}</button>
+            <button class="tool-chip" data-ref="snap-edges">${t("planar.snapEdges")}</button>
             <div class="pw-row"><span>${t("planar.tension")}</span><input type="range" data-ref="tension" min="0" max="1" step="0.05"></div>
             <div class="pw-row"><span>${t("planar.edge")}</span><input type="number" data-ref="edge" min="-500" max="500" step="1"></div>
           </div>
@@ -574,6 +589,25 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     return h ? unit(apply(invert(h), x, y)) : null;
   };
 
+  async function finishStroke(stroke: number[][]): Promise<void> {
+    if (!media || stroke.length < 2) return;
+    const W = media.width, H = media.height, post = (url: string, body: unknown) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (tool === "brush") {
+      const reply = await post("/api/planar/brush", { width: W, height: H, strokes: [stroke.map(([x, y]) => [x / W, y / H])], radius: Math.max(4, Math.round(Math.min(W, H) / 60)) });
+      if (reply.ok) await addShape(((await reply.json()) as { points: number[][] }).points.map(([u, v]) => [u * W, v * H]));
+      return;
+    }
+    const far = stroke.reduce((best, p, i) => (Math.hypot(p[0] - stroke[0][0], p[1] - stroke[0][1]) > Math.hypot(stroke[best][0] - stroke[0][0], stroke[best][1] - stroke[0][1]) ? i : best), 0);
+    let pts = [...simplify(stroke.slice(0, far + 1), 2).slice(0, -1), ...simplify(stroke.slice(far), 2)];
+    if (pts.length > 3 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 3) pts = pts.slice(0, -1);
+    if (pts.length < 3) return;
+    if (magnetic) {
+      const reply = await post("/api/planar/snap", { media_id: mediaId, frame, points: pts.map(([x, y]) => [x / W, y / H]) });
+      if (reply.ok) pts = ((await reply.json()) as { points: number[][] }).points.map(([u, v]) => [u * W, v * H]);
+    }
+    await addShape(pts, 1);
+  }
+
   async function addShape(points: number[][], spline?: number): Promise<void> {
     let l = layer();
     if (!l || l.locked) l = newLayer();
@@ -595,7 +629,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     say("");
   }
 
-  let drag: { kind: "point" | "corner" | "rect" | "ref" | "handle"; a: number; b: number; start: [number, number] } | null = null;
+  let drag: { kind: "point" | "corner" | "rect" | "ref" | "handle" | "stroke"; a: number; b: number; start: [number, number] } | null = null;
   let dragEnd: [number, number] = [0, 0];
   let handleSide: "in" | "out" = "out";
   let handleBroken = false;
@@ -638,6 +672,7 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
       return;
     }
     if (tool === "rect" || tool === "ellipse") { drag = { kind: "rect", a: 0, b: 0, start: [x, y] }; drawing = [[x, y], [x, y], [x, y], [x, y], [x, y]]; svg.setPointerCapture(event.pointerId); return; }
+    if (tool === "freehand" || tool === "brush") { drag = { kind: "stroke", a: 0, b: 0, start: [x, y] }; drawing = [[x, y]]; svg.setPointerCapture(event.pointerId); return; }
     drawing.push([x, y]);
     render();
   });
@@ -679,7 +714,10 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     if (!drag) return;
     const [x, y] = pointer(event);
     const l = layer();
-    if (drag.kind === "rect") {
+    if (drag.kind === "stroke") {
+      const tail = drawing[drawing.length - 1];
+      if (!tail || Math.hypot(x - tail[0], y - tail[1]) > 1.5) drawing.push([x, y]);
+    } else if (drag.kind === "rect") {
       const [x0, y0] = drag.start;
       dragEnd = [x, y];
       drawing = tool === "ellipse" ? [...ellipseIn([x0, y0], [x, y], 48), ellipseIn([x0, y0], [x, y], 48)[0]] : [[x0, y0], [x, y0], [x, y], [x0, y], [x0, y0]];
@@ -718,7 +756,11 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     if (!drag) return;
     const was = drag;
     drag = null;
-    if (was.kind === "rect") {
+    if (was.kind === "stroke") {
+      const stroke = drawing;
+      drawing = [];
+      await finishStroke(stroke);
+    } else if (was.kind === "rect") {
       const [a, b] = [was.start, dragEnd];
       const box = drawing.slice(0, 4);
       drawing = [];
@@ -851,6 +893,25 @@ export function openPlanarWorkspace(engine: ProjectEngine, clipId: string): void
     changed = true;
     paintPoint();
     render();
+  })());
+  $("magnetic").addEventListener("click", () => {
+    magnetic = !magnetic;
+    $("magnetic").classList.toggle("is-on", magnetic);
+    $("magnetic").setAttribute("aria-pressed", String(magnetic));
+  });
+  $("snap-edges").addEventListener("click", () => void (async () => {
+    const l = layer(), shape = shapeIndex >= 0 ? l?.shapes[shapeIndex] : undefined;
+    if (!l || !shape || !media) { say(t("planar.needShape")); return; }
+    const h = homography(carrierOf(l), frame);
+    const points = pointsAt(shape, frame).map((p) => (h ? unit(apply(h, ...(px(p) as [number, number]))) : p));
+    const reply = await fetch("/api/planar/snap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ media_id: mediaId, frame, points }) });
+    if (!reply.ok) return;
+    const snapped = ((await reply.json()) as { points: number[][] }).points.map((p) => (h ? unit(apply(invert(h), ...(px(p) as [number, number]))) : p));
+    if (shape.keys && Object.keys(shape.keys).length) shape.keys[String(frame)] = snapped;
+    else shape.points = snapped;
+    changed = true;
+    render();
+    paintStrip();
   })());
   $("make-bezier").addEventListener("click", () => {
     const shape = shapeIndex >= 0 ? layer()?.shapes[shapeIndex] : undefined;
