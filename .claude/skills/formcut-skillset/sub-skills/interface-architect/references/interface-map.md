@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1194L)
+- `engine/project.ts` (1207L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
-- `engine/types.ts` (343L)
+- `engine/types.ts` (345L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1404L)
+- `i18n/language-pack.ts` (1412L)
 - `i18n/text.ts` (29L)
 - `main.ts` (96L)
 - `types/assets.d.ts` (6L)
@@ -51,8 +51,8 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/file-menu.ts` (17L)
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
-- `ui/icons.ts` (56L)
-- `ui/inspector-pane.ts` (1737L)
+- `ui/icons.ts` (58L)
+- `ui/inspector-pane.ts` (1738L)
 - `ui/instagram.ts` (185L)
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
@@ -60,7 +60,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/media-pane.ts` (1433L)
 - `ui/missing-media.ts` (103L)
 - `ui/mode-popout.ts` (157L)
-- `ui/planar-workspace.ts` (1273L)
+- `ui/planar-workspace.ts` (1343L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
 - `ui/recorder.ts` (344L)
@@ -81,7 +81,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/track-controls.ts` (39L)
 - `ui/track-height.ts` (80L)
 - `ui/track-keyframes.ts` (715L)
-- `ui/tracking.ts` (83L)
+- `ui/tracking.ts` (87L)
 - `ui/upscale-dialog.ts` (254L)
 - `ui/viewer.ts` (96L)
 - `ui/webhooks-settings.ts` (124L)
@@ -115,6 +115,7 @@ and a UI module that mutates state directly is a defect.
 - `clip.mute`
 - `clip.planar`
 - `clip.planarMatte`
+- `clip.planarModule`
 - `clip.remove`
 - `clip.remove-range`
 - `clip.select`
