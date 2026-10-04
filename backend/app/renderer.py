@@ -1740,13 +1740,17 @@ class FrameRenderer:
         front_layers = spec.get("front") or []
         if front_layers:
             vector = self.planar_alpha({**clip, "planarMatte": {"layers": list(front_layers), "feather": 0, "invert": False}}, w, h)
+            grow_front = int(spec.get("front_grow", 0) or 0)
+            if vector is not None and grow_front > 0:
+                vector = cv2.dilate(vector, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * grow_front + 1, 2 * grow_front + 1)))
             screen_coloured = np.clip((cv2.GaussianBlur(lead.astype(np.float32), (0, 0), 1.0) - 0.15) / 0.15, 0, 1)
             in_front = vector * (1 - screen_coloured) if vector is not None else np.zeros_like(matte)
         cut = matte * (1 - in_front)
         reach_green = int(spec.get("green_reach", 0) or 0)
         if reach_green > 0:
             around = cv2.dilate(matte, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * reach_green + 1, 2 * reach_green + 1)))
-            clearly = np.clip((((g if green_screen else b) - np.maximum(one, two)) - 0.12) / 0.1, 0, 1)
+            smooth_lead = cv2.GaussianBlur(((g if green_screen else b) - np.maximum(one, two)).astype(np.float32), (0, 0), 1.0)
+            clearly = np.clip((smooth_lead - 0.12) / 0.1, 0, 1)
             cut = np.maximum(cut, around * clearly * (1 - in_front))
         if spec.get("soften"):
             cut = _guided(luma, cut.astype(np.float32), int(spec["soften"]), 1e-4)
