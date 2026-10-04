@@ -481,6 +481,14 @@ def export_media(
 ) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     stamps = {"began": time.perf_counter()}  # the export timed in parts: start-up, the frames, the finish
+    # A rate other than the project's, beyond the 0.2% of a retime such as 24 to 23.976 (the same frames, stamped
+    # slower), is sampled from the timeline at that rate. Rendered at the project's rate and handed to the encoder at
+    # another, frames were duplicated: the Posh :15 from a 24 fps project exported at 30 repeated every fifth frame.
+    wanted_num, wanted_den = RATE_PRESETS.get(rate or "", (0, 0))
+    if wanted_num:
+        target = wanted_num / wanted_den
+        if abs(target - float(project["fps"])) / float(project["fps"]) > 0.002:
+            project = {**project, "fps": round(target) if abs(target - round(target)) < 1e-6 else target}
     path = OUTPUTS / (job_id + "." + format)
     audio = OUTPUTS / (job_id + ".wav")
     log = OUTPUTS / (job_id + ".log")
@@ -827,7 +835,9 @@ def export_media(
         program = str(addon_binary_for(encoder) or "ffmpeg")
         # An HDR output needs the frame path: the two graphs feed the file to
         # the encoder untouched and would tag Rec.709 pixels as HLG or PQ.
-        native = None if os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter else fast_export.plan(project, count)
+        fractional = not float(project["fps"]).is_integer()  # the graph's timebase takes whole rates; the frame path any
+        frames_only = os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter or fractional
+        native = None if frames_only else fast_export.plan(project, count)
         if native is not None:
             fast_export.run(
                 native, program, audio, [*codec, "-pix_fmt", pix], out_w, out_h, out_rate, project["duration"], path, log, report, cancelled
