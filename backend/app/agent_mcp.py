@@ -442,7 +442,10 @@ def formcut_set_frame(
     description=(
         "Start rendering a project to a file and return a job id. Rendering takes minutes, so this returns "
         "immediately: poll formcut_render_status with the job id until it reports done, which carries the output "
-        "path. Format is mp4, webm or gif; quality is low, medium or high."
+        "path. Format is mp4, webm or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, "
+        "30, 50, 59.94 or 60; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), "
+        "audio_bitrate in kbps (192, 256 or 320), and a loudness target in LUFS with a true-peak ceiling in dBTP "
+        "(one measured gain on the mix, no compression)."
     ),
     annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
 )
@@ -450,17 +453,29 @@ def formcut_render(
     project_id: Annotated[str, Field(description="Project id to render")],
     file_format: Annotated[str, Field(description="Output container: mp4, webm or gif")] = "mp4",
     quality: Annotated[str, Field(description="Encoder ladder: low, medium or high")] = "high",
+    rate: Annotated[str | None, Field(description="Output frame rate, e.g. 23.976 or 24; the project's when unset")] = None,
+    size: Annotated[str | None, Field(description="Output size preset (see formcut_capabilities); the project's when unset")] = None,
+    codec: Annotated[str | None, Field(description="Video codec, e.g. h264, hevc, av1, vp9; the container's default when unset")] = None,
+    ten_bit: Annotated[bool, Field(description="Ten-bit video where the codec carries it")] = False,
+    exact: Annotated[bool, Field(description="An intra-only master for frame-exact editing elsewhere")] = False,
+    audio_bitrate: Annotated[int | None, Field(description="Audio bitrate in kbps, e.g. 192, 256 or 320")] = None,
+    loudness: Annotated[float | None, Field(description="Integrated loudness target in LUFS, e.g. -14, -16 or -23")] = None,
+    true_peak: Annotated[float, Field(description="True-peak ceiling in dBTP the loudness gain never passes")] = -1.0,
 ) -> str:
     if file_format not in ("mp4", "webm", "gif"):
         return "format must be mp4, webm or gif"
     if quality not in ("low", "medium", "high"):
         return "quality must be low, medium or high"
-    ok, job = _rpc("project.export", {"id": project_id, "format": file_format, "quality": quality})
+    options = {"rate": rate, "size": size, "codec": codec, "tenBit": ten_bit or None, "exact": exact or None}
+    options |= {"audioBitrate": audio_bitrate, "loudness": loudness, "truePeak": true_peak if loudness is not None else None}
+    params = {"id": project_id, "format": file_format, "quality": quality} | {k: v for k, v in options.items() if v is not None}
+    ok, job = _rpc("project.export", params)
     if not ok:
         return job
     job_id = job.get("job_id")
+    chosen = ", ".join(f"{k} {v}" for k, v in options.items() if v is not None)
     return (
-        f"render started as job {job_id} ({file_format}, {quality})\n"
+        f"render started as job {job_id} ({file_format}, {quality}{', ' + chosen if chosen else ''})\n"
         "poll formcut_render_status with this job id; a minute between polls is reasonable"
     )
 
@@ -481,14 +496,32 @@ def formcut_render_status(
         return state
     if state.get("ready"):
         return (
-            f"render done\nfile: {state.get('file')}\nname: {state.get('name')}\n"
+            f"state: done\nprogress: 1.000\nfile: {state.get('file')}\nname: {state.get('name')}\n"
             f"type: {state.get('media_type')}\nalso fetchable from {_engine()}{state.get('url')}"
         )
     status = state.get("status", "unknown")
+    progress = float(state.get("progress") or 0)
     if status in ("cancelled", "error"):
-        return f"render {status}. Start a new one with formcut_render when the cause is fixed."
-    percent = round(float(state.get("progress") or 0) * 100)
-    return f"render {status}, {percent}% done. Poll again shortly."
+        reason = state.get("error") or state.get("message") or "not given"
+        return f"state: {status}\nprogress: {progress:.3f}\nreason: {reason}\nStart a new one with formcut_render when the cause is fixed."
+    return f"state: {status}\nprogress: {progress:.3f}\nrender {status}, {round(progress * 100)}% done. Poll again shortly."
+
+
+@mcp.tool(
+    name="formcut_render_audio",
+    description=(
+        "Start rendering a project's audio mix alone (a WAV) and return a job id; poll formcut_render_status with it. "
+        "For measuring or mastering the mix outside the picture render."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+)
+def formcut_render_audio(
+    project_id: Annotated[str, Field(description="Project id whose mix to render")],
+) -> str:
+    ok, job = _rpc("project.export_audio", {"id": project_id})
+    if not ok:
+        return job
+    return f"audio render started as job {job.get('job_id')}\npoll formcut_render_status with this job id"
 
 
 @mcp.tool(

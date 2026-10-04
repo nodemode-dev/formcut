@@ -51,6 +51,9 @@ class RenderInput(BaseModel):
     exact: bool = False
     size: str | None = None
     rate: str | None = None
+    audioBitrate: int | None = Field(default=None, ge=64, le=512)  # kbps; the encoder's default when unset
+    loudness: float | None = Field(default=None, ge=-40, le=-5)  # integrated LUFS target; the mix as made when unset
+    truePeak: float = Field(default=-1.0, ge=-9, le=0)  # dBTP the loudness gain never pushes past
 
 
 def checked(body: RenderInput) -> dict:
@@ -429,6 +432,37 @@ def resize_for(project: dict, size: str | None) -> tuple[int, int]:
     return out_w - (out_w % 2), out_h - (out_h % 2)
 
 
+def measure_loudness(path: Path) -> dict | None:
+    """A file's EBU R128 loudness: integrated (LUFS), range (LU) and true peak (dBTP), by ffmpeg's ebur128 filter;
+    None where it has no audio or cannot be read."""
+    run = subprocess.run(
+        ["ffmpeg", "-nostats", "-i", str(path), "-vn", "-af", "ebur128=peak=true", "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    summary = run.stderr[run.stderr.rfind("Summary:") :]
+    found = {}
+    for key, label in (("integrated", "I:"), ("range", "LRA:"), ("true_peak", "Peak:")):
+        at = summary.find(label)
+        if at < 0:
+            return None
+        try:
+            found[key] = float(summary[at + len(label) :].split()[0])
+        except (ValueError, IndexError):
+            return None
+    return found if found["integrated"] > -70 else None
+
+
+def loudness_gain(path: Path, target: float, ceiling: float = -1.0) -> float | None:
+    """The one gain (dB) that brings a mix to the target integrated loudness without its true peak passing the
+    ceiling: plain gain, the mix's dynamics as edited (no compression or limiting). None where it cannot be measured."""
+    measured = measure_loudness(path)
+    if measured is None:
+        return None
+    return min(target - measured["integrated"], ceiling - measured["true_peak"])
+
+
 def export_media(
     project: dict,
     job_id: str,
@@ -441,6 +475,9 @@ def export_media(
     size: str | None = None,
     rate: str | None = None,
     exact: bool = False,
+    audio_kbps: int | None = None,
+    loudness: float | None = None,
+    true_peak: float = -1.0,
 ) -> dict:
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     stamps = {"began": time.perf_counter()}  # the export timed in parts: start-up, the frames, the finish
@@ -494,6 +531,12 @@ def export_media(
         # `audio` is already the temporary wav path in this scope, so the audio
         # codec flags need their own name.
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
+        if audio_kbps:
+            audio_flags += ["-b:a", f"{int(audio_kbps)}k"]
+        if loudness is not None:
+            gain = loudness_gain(audio, loudness, true_peak)
+            if gain is not None:
+                audio_flags += ["-af", f"volume={gain:.2f}dB"]
         # The colour-managed pipeline lands every source in BT.709 (tone-mapped
         # or converted at decode), so the file says so; an untagged file is
         # guessed at by players, and not always the same way.
@@ -1037,9 +1080,9 @@ def export(body: RenderInput):
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
 
     def operation(job_id, report, cancelled):
-        result = export_media(
-            project, job_id, report, cancelled, body.format, body.quality, body.codec, body.tenBit, body.size, body.rate, body.exact
-        )
+        sound = {"audio_kbps": body.audioBitrate, "loudness": body.loudness, "true_peak": body.truePeak}
+        picture = (body.format, body.quality, body.codec, body.tenBit, body.size, body.rate, body.exact)
+        result = export_media(project, job_id, report, cancelled, *picture, **sound)
         webhooks.announce_export(result, project)
         return result
 

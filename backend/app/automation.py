@@ -534,6 +534,7 @@ def dispatch(method: str, params: dict):
                 "project.undo",
                 "project.redo",
                 "project.export",
+                "project.export_audio",
                 "job.result",
                 "job.status",
                 "job.cancel",
@@ -626,7 +627,7 @@ def dispatch(method: str, params: dict):
         if not job_id:
             raise ValueError("Supply a job id as id or job_id")
         return jobs.status(job_id) if method == "job.status" else jobs.cancel(job_id)
-    if method not in ("project.get", "project.export", "project.edit", "project.undo", "project.redo"):
+    if method not in ("project.get", "project.export", "project.export_audio", "project.edit", "project.undo", "project.redo"):
         raise ValueError("Unknown API method")
     with _lock:
         project_id = params.get("id")
@@ -637,8 +638,15 @@ def dispatch(method: str, params: dict):
             raise ValueError("Project not found")
         if method == "project.get":
             return project
-        if method == "project.export":
-            return export(RenderInput(project=project, format=params.get("format", "mp4"), quality=params.get("quality", "high")))
+        if method in ("project.export", "project.export_audio"):
+            keys = ("codec", "tenBit", "exact", "size", "rate", "audioBitrate", "loudness", "truePeak")
+            options = {k: params[k] for k in keys if params.get(k) is not None}
+            body = RenderInput(project=project, format=params.get("format", "mp4"), quality=params.get("quality", "high"), **options)
+            if method == "project.export_audio":
+                from .render_api import audio as render_audio_only
+
+                return render_audio_only(body)
+            return export(body)
         version = int(project.get("revision", 0))
         if "revision" in params and params["revision"] != version:
             raise ValueError("Project changed; read the current revision before editing")
