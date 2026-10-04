@@ -390,6 +390,39 @@ def _bezier_path(points: list[dict], steps: int = 18) -> list[tuple[float, float
     return out
 
 
+def pin_warp(image: np.ndarray, dst: np.ndarray, size: tuple[int, int], supersample: int = 1) -> np.ndarray:
+    """An image pinned onto four canvas points (top left, top right, bottom right, bottom left). With supersample above
+    one: pre-shrunk by area to what it covers at that many times the canvas, warped there in sixteen-bit premultiplied
+    colour, then averaged down, so each pixel is the mean of the picture under it and a picture shrunk many times
+    keeps its thin lines whole instead of breaking into steps. At one, the single bilinear warp it always was."""
+    h, w = image.shape[:2]
+    dst = np.float32(dst)
+    if supersample <= 1:
+        src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+        flags = {"flags": cv2.INTER_LINEAR, "borderMode": cv2.BORDER_CONSTANT, "borderValue": 0}
+        return cv2.warpPerspective(image, cv2.getPerspectiveTransform(src, dst), size, **flags)
+    s = int(supersample)
+    big_dst = dst * s
+    across = max(np.linalg.norm(big_dst[1] - big_dst[0]), np.linalg.norm(big_dst[2] - big_dst[3]))
+    down = max(np.linalg.norm(big_dst[3] - big_dst[0]), np.linalg.norm(big_dst[2] - big_dst[1]))
+    top = 65535.0 if image.dtype == np.uint16 else 255.0
+    rgba = image.astype(np.float32) / top
+    if rgba.shape[2] == 3:
+        rgba = np.dstack([rgba, np.ones(rgba.shape[:2], np.float32)])
+    rgba[:, :, :3] *= rgba[:, :, 3:4]
+    fx, fy = min(1.0, float(across) / w), min(1.0, float(down) / h)
+    if fx < 1 or fy < 1:
+        rgba = cv2.resize(rgba, (max(2, round(w * fx)), max(2, round(h * fy))), interpolation=cv2.INTER_AREA)
+    deep = np.round(rgba * 65535).astype(np.uint16)
+    ph, pw = deep.shape[:2]
+    src = np.float32([[0, 0], [pw, 0], [pw, ph], [0, ph]])
+    flags = {"flags": cv2.INTER_LINEAR, "borderMode": cv2.BORDER_CONSTANT, "borderValue": 0}
+    big = cv2.warpPerspective(deep, cv2.getPerspectiveTransform(src, big_dst), (size[0] * s, size[1] * s), **flags)
+    small = cv2.resize(big, size, interpolation=cv2.INTER_AREA).astype(np.float32) / 65535
+    colour = small[:, :, :3] / np.maximum(small[:, :, 3:4], 1e-6)
+    return np.round(np.clip(np.dstack([colour, small[:, :, 3:4]]), 0, 1) * top).astype(image.dtype)
+
+
 def mesh_at(mesh: dict, local: float) -> np.ndarray | None:
     """A mesh's vertices (pixels of the unit square, row by row) at a clip-local time, linear between its keys."""
     times, frames = mesh.get("times") or [], mesh.get("points") or []
@@ -2246,10 +2279,10 @@ class FrameRenderer:
             if pinned is not None:
                 # a corner pin: the image's corners onto the four canvas points by a homography (the clip's own place,
                 # size and turn give way to it, as a corner pin does; its opacity, fades and blend stay)
-                src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
                 image = image if image.flags.writeable else image.copy()
                 image[:, :, 3] = np.round(image[:, :, 3] * alpha).astype(image.dtype)
                 blur = (clip.get("cornerPin") or {}).get("motionBlur") or {}
+                supersample = max(1, int((clip.get("cornerPin") or {}).get("supersample", 1) or 1))
                 samples = max(1, int(blur.get("samples", 1) or 1)) if blur else 1
                 span = float(blur.get("shutter", 180)) / 360 / float(self.project["fps"]) if samples > 1 else 0.0
                 top = 65535.0 if image.dtype == np.uint16 else 255.0
@@ -2258,15 +2291,7 @@ class FrameRenderer:
                     at = local + (k / (samples - 1) - 0.5) * span if samples > 1 else local
                     corners = pin_at(clip, at) or pinned
                     dst = np.float32([[x * self.width, y * self.height] for x, y in corners])
-                    warped = cv2.warpPerspective(
-                        image,
-                        cv2.getPerspectiveTransform(src, dst),
-                        (self.width, self.height),
-                        flags=cv2.INTER_LINEAR,
-                        borderMode=cv2.BORDER_CONSTANT,
-                        borderValue=0,
-                    )
-                    warped = warped.astype(np.float32) / top
+                    warped = pin_warp(image, dst, (self.width, self.height), supersample).astype(np.float32) / top
                     total[:, :, :3] += warped[:, :, :3] * warped[:, :, 3:4]
                     total[:, :, 3] += warped[:, :, 3]
                 if samples > 1:
@@ -2278,14 +2303,7 @@ class FrameRenderer:
                     layer = mesh_warp(image, vertices * list(size), int(mesh["cols"]), int(mesh["rows"]), size)
                 else:
                     dst = np.float32([[x * self.width, y * self.height] for x, y in pinned])
-                    layer = cv2.warpPerspective(
-                        image,
-                        cv2.getPerspectiveTransform(src, dst),
-                        (self.width, self.height),
-                        flags=cv2.INTER_LINEAR,
-                        borderMode=cv2.BORDER_CONSTANT,
-                        borderValue=0,
-                    )
+                    layer = pin_warp(image, dst, (self.width, self.height), supersample)
                 match = (clip.get("cornerPin") or {}).get("match") or {}
                 if any(match.get(k) for k in ("light", "grain", "blur")):
                     canvas = self._flush(canvas)
