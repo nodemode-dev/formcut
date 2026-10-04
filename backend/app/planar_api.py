@@ -183,6 +183,54 @@ def _matrix(values) -> np.ndarray:
     return np.array(values, float).reshape(3, 3)
 
 
+def _bridged(read: dict, distrust: set, least: int = 6, widest: int = 60) -> dict:
+    """A screen's measured corners (frame to four points) with the distrusted frames (something in front of its edge:
+    a hand over the screen moved a measured side by up to 5 px on the owner's clip 3) refitted from the clean frames
+    around them: a quadratic in time through at least least clean frames either side (the window widened up to widest
+    frames), each coordinate on its own. Clean frames stay as measured."""
+    clean = sorted(f for f in read if f not in distrust)
+    out = {f: np.asarray(v, float).reshape(4, 2) for f, v in read.items()}
+    if len(clean) < 4:
+        return out
+    times = np.array(clean, float)
+    values = np.stack([np.asarray(read[f], float).reshape(8) for f in clean])
+    for frame in sorted(distrust & set(read)):
+        before = times[times < frame][-least:]
+        after = times[times > frame][:least]
+        chosen = np.concatenate([before[before >= frame - widest], after[after <= frame + widest]])
+        if len(chosen) < 4:
+            continue
+        rows = np.searchsorted(times, chosen)
+        dt = chosen - frame
+        basis = np.stack([np.ones_like(dt), dt, dt * dt], 1)
+        coef = np.linalg.lstsq(basis, values[rows], rcond=None)[0]
+        out[frame] = coef[0].reshape(4, 2)
+    return out
+
+
+def _rim_cover(picture: np.ndarray, quad: np.ndarray, screen: str) -> np.ndarray:
+    """For each side of a screen's measured quad, the share of a band 3 to 10 px inside it (its middle 70%, clear of
+    rounded corners) that is not screen-coloured: what lies in front of the screen's edge on this frame."""
+    from .planar_green import GREEN_LEVEL, _greenness
+
+    keyed = _greenness(picture, screen) > GREEN_LEVEL / 2
+    centre = quad.mean(axis=0)
+    shares = []
+    for k in range(4):
+        a, b = quad[k], quad[(k + 1) % 4]
+        along = b - a
+        inward = np.array([-along[1], along[0]]) / max(1e-9, float(np.linalg.norm(along)))
+        if (centre - a) @ inward < 0:
+            inward = -inward
+        p, q = a + 0.03 * along, a + 0.97 * along
+        band = np.array([p + inward * 3, q + inward * 3, q + inward * 10, p + inward * 10])
+        region = np.zeros(keyed.shape, np.uint8)
+        cv2.fillConvexPoly(region, np.round(band).astype(np.int32), 1)
+        inside = region > 0
+        shares.append(float(1.0 - keyed[inside].mean()) if inside.any() else 0.0)
+    return np.array(shares)
+
+
 def _matte_outside(frame: np.ndarray, spec: dict, size: tuple[int, int]) -> np.ndarray:
     """Where an imported matte keeps the tracker out: its dark half by brightness (its light half, inverted), 255."""
     if (frame.shape[1], frame.shape[0]) != size:
@@ -286,6 +334,7 @@ def track_layer(body: TrackBody) -> dict:
                     def __init__(self):
                         self.at = first
                         self.read = {first: start_quad}  # frame -> the screen's corners where it could be read
+                        self.cover: dict[int, np.ndarray] = {}
 
                     def step(self, picture, exclude=None):
                         nonlocal last_h
@@ -293,6 +342,7 @@ def track_layer(body: TrackBody) -> dict:
                         if found is None:
                             return last_h, 0.0
                         self.read[self.at] = found
+                        self.cover[self.at] = _rim_cover(picture, found, screen)
                         last_h = cv2.getPerspectiveTransform(start_quad.astype(np.float32), found.astype(np.float32)).astype(float)
                         return last_h, 1.0
 
@@ -341,7 +391,22 @@ def track_layer(body: TrackBody) -> dict:
                 # frames where the screen could not be read (a finger over it, a flare) are filled from the frames
                 # either side that could, the corners run linearly between them (gaps up to a second), confidence
                 # 0.5 to say they were filled: on the owner's clip 3 a touch hid the screen on nine frames
-                read = tracker.read
+                seen = set()
+                if tracker.cover:
+                    usual = np.median(np.stack(list(tracker.cover.values())), axis=0)
+                    seen = {k for k, share in tracker.cover.items() if (share > usual + 0.02).any()}
+                measured = tracker.read
+                for k in measured:
+                    if k - 1 in measured and k + 1 in measured:
+                        jump = np.linalg.norm(measured[k] - (measured[k - 1] + measured[k + 1]) / 2, axis=1).max()
+                        if jump > 1.5:
+                            seen.add(k)
+                covered = {k + d for k in seen for d in range(-3, 4) if k + d in measured and k + d != first}
+                read = _bridged(tracker.read, covered)
+                for k in covered & set(read):
+                    rel = cv2.getPerspectiveTransform(start_quad.astype(np.float32), read[k].astype(np.float32)).astype(float)
+                    full = rel @ start_h
+                    data["frames"][str(k)] = (full / full[2, 2]).ravel().round(9).tolist()
                 order = sorted(read)
                 for gap in [
                     int(i) for i, c in data["confidence"].items() if c == 0.0 and int(i) in range(min(first, last), max(first, last) + 1)
