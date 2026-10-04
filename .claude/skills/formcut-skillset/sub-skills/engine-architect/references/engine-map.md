@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 711 | /api/rpc | 2 |
+| automation.py | 737 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -38,19 +38,19 @@ The rest is written by hand.
 | generate.py | 1113 | /api/generate | 6 |
 | generative.py | 152 | /api/generative | 5 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
-| jobs.py | 109 | /api/jobs | 3 |
+| jobs.py | 182 | /api/jobs | 3 |
 | klein.py | 267 | /api/models/klein | 3 |
 | krea2.py | 797 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 462 | /api/health | 13 |
+| main.py | 470 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 765 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
-| planar_api.py | 1208 | /api/planar | 19 |
+| planar_api.py | 1273 | /api/planar | 19 |
 | presets.py | 620 | /api/presets | 9 |
 | project_files.py | 308 | /api/project-files | 6 |
 | project_packages.py | 312 | /api/projects | 4 |
@@ -59,7 +59,7 @@ The rest is written by hand.
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1284 | /api/render | 13 |
+| render_api.py | 1339 | /api/render | 13 |
 | render_stream.py | 87 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -79,7 +79,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (739L)
+- `agent_mcp.py` (800L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
@@ -119,6 +119,7 @@ the automation transports.
 - `prompt_data.py` (119L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
+- `qc.py` (155L)
 - `render_document.py` (130L)
 - `renderer.py` (2399L)
 - `rhythm.py` (148L)
