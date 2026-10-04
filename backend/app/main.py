@@ -103,12 +103,12 @@ from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
 from .engine_report import router as engine_router
 from .generative import router as generative_router
-from .planar_api import router as planar_router
 from .klein import router as klein_router
 from .krea2 import router as krea2_router
 from .linking import router as linking_router
 from .loras import router as loras_router
 from .media_check import router as media_check_router
+from .planar_api import router as planar_router
 from .project_files import router as project_files_router
 from .project_packages import router as project_packages_router
 from .subtitles import router as subtitles_router
