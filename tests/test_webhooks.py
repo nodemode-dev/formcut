@@ -172,7 +172,7 @@ def test_the_export_route_announces_what_it_made(tmp_path, receiver, monkeypatch
     client.post("/api/webhooks", json={"url": receiver["url"]})
     result = _export(tmp_path)
     monkeypatch.setattr(render_api, "checked", lambda body: {"name": "Holiday"})
-    monkeypatch.setattr(render_api, "export_media", lambda *args: result)
+    monkeypatch.setattr(render_api, "export_media", lambda *args, **kwargs: result)
     job = client.post("/api/render/export", json={"project": {}}).json()
     assert _wait(lambda: jobs.status(job["job_id"])["status"] == "done")
     assert _wait(lambda: receiver["requests"])
