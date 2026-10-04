@@ -16,7 +16,16 @@ pushd backend
 python -m venv .venv-package
 call .venv-package\Scripts\activate.bat
 python -m pip install --upgrade pip >nul
-pip install -r requirements.txt pyinstaller
+pip install -r requirements.txt pyinstaller "maturin==1.15.0"
+rem The Rust kernels with the GPU executor (DX12) every speed reading used, as the macOS and Linux builds have them.
+if exist native-dist rmdir /s /q native-dist
+python -m maturin build --release --manifest-path native\Cargo.toml --features gpu --out native-dist
+if errorlevel 1 exit /b 1
+for %%w in (native-dist\*.whl) do pip install --force-reinstall --no-deps "%%w"
+python -c "import formcut_native; print('kernels load:', formcut_native.__file__)"
+if errorlevel 1 (echo formcut's Rust kernels were built but do not load; stopping. & exit /b 1)
+python -c "import formcut_native, sys; sys.exit(0 if hasattr(formcut_native, 'GpuFrame') else 1)"
+if errorlevel 1 (echo formcut's Rust kernels were built without the GPU executor; stopping. & exit /b 1)
 python prepare_cv.py
 if errorlevel 1 exit /b 1
 python freeze.py --onefile

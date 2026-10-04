@@ -39,10 +39,13 @@ PY="$VENV/bin/python"
 $PY -m pip install --upgrade pip >/dev/null
 $PY -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
 rm -rf native-dist
-$PY -m maturin build --release --manifest-path native/Cargo.toml --interpreter "$PY" --out native-dist
+$PY -m maturin build --release --manifest-path native/Cargo.toml --interpreter "$PY" --features gpu --out native-dist
 $PY -m pip install --force-reinstall --no-deps native-dist/*.whl
 $PY -c "import formcut_native; print('kernels load:', formcut_native.__file__)" \
   || { echo "formcut's Rust kernels were built but do not load (the error is above); stopping."; exit 1; }
+# With the GPU executor (Vulkan) every speed reading used; GpuFrame exists only with --features gpu.
+$PY -c "import formcut_native, sys; sys.exit(0 if hasattr(formcut_native, 'GpuFrame') else 1)" \
+  || { echo "formcut's Rust kernels were built without the GPU executor; stopping."; exit 1; }
 $PY prepare_cv.py
 $PY freeze.py --onefile
 CHECK=$(./dist/formcut-engine --selfcheck)

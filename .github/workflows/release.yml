@@ -130,9 +130,11 @@ jobs:
         working-directory: backend
         run: |
           python -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
-          python -m maturin build --release --manifest-path native/Cargo.toml --target "${{ matrix.target }}" --out native-dist
+          python -m maturin build --release --manifest-path native/Cargo.toml --target "${{ matrix.target }}" --features gpu --out native-dist
           python -m pip install --force-reinstall --no-deps native-dist/*.whl
           python -c "import formcut_native; print('kernels load:', formcut_native.__file__)"
+          # the executor every speed reading used (GpuFrame exists only with --features gpu): a release without it is refused
+          python -c "import formcut_native, sys; sys.exit(0 if hasattr(formcut_native, 'GpuFrame') else 'the Rust kernels were built without the GPU executor')"
           python prepare_cv.py
           python freeze.py --onefile
           suffix=""
