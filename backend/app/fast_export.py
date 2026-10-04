@@ -46,6 +46,7 @@ ABSENT = (
     "planarStabilize",  # a clip held still by a planar track: the frame renderer's
     "planarReorient",  # a tracked surface turned square-on: the frame renderer's
     "lens",  # a lens undistorted or redistorted: the frame renderer's
+    "cleanPlate",  # a reflection taken off by a clean frame through a track: the frame renderer's
     "glare",  # a screen's reflection as its own light: the frame renderer's
     "stabilise",
     "colour",

@@ -47,7 +47,7 @@ LEGACY = {
 # layer's own passes. Nothing is left: every layer can stay on the device.
 # a clip carrying any of these is placed on this side, not left on the device: a corner pin is a perspective warp,
 # which neither the device's affine pass nor the native warp-and-blend kernel makes (P3 of the planar tracking plan)
-CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare", "planarStabilize", "planarReorient", "lens")
+CPU_STEPS: tuple[str, ...] = ("cornerPin", "screenCut", "glare", "planarStabilize", "planarReorient", "lens", "cleanPlate")
 
 
 def _guided(guide: np.ndarray, source: np.ndarray, radius: int, eps: float) -> np.ndarray:
@@ -1622,6 +1622,48 @@ class FrameRenderer:
         offsets = np.convolve(np.concatenate([offsets[-12:], offsets, offsets[:12]]), taps, mode="valid") + bias
         return pts + offsets[:, None] * normal
 
+    def clean_plate(self, image: np.ndarray, clip: dict) -> np.ndarray:
+        """A reflection taken off a tracked surface: inside cleanPlate's layer (on its track), the frame replaced by the
+        same surface from a frame without the reflection (cleanPlate.frame, a source frame), warped through the track,
+        its level matched per channel on a thin band just outside the layer, joined by the layer's exact coverage."""
+        spec = clip.get("cleanPlate") or {}
+        layer_id = str(spec.get("layer") or "")
+        layer = next((one for one in (clip.get("planar") or {}).get("layers", []) if one.get("id") == layer_id), None)
+        track = self._planar_track(str(layer.get("link") or layer_id)) if layer else None
+        if track is None:
+            return image
+        order, frames, fps, (media_w, media_h) = track
+        ref = int(spec.get("frame", 0))
+        if ref not in frames:
+            return image
+        index = round(self.matte_time * fps)
+        at = bisect.bisect_left(order, index)
+        nearest = min((order[k] for k in (at - 1, at) if 0 <= k < len(order)), key=lambda f: abs(f - index))
+        h, w = image.shape[:2]
+        scale = np.diag([w / max(1.0, float(media_w)), h / max(1.0, float(media_h)), 1.0])
+        move = scale @ np.asarray(frames[nearest], np.float64) @ np.linalg.inv(np.asarray(frames[ref], np.float64)) @ np.linalg.inv(scale)
+        cache = self.__dict__.setdefault("_clean_plates", {})
+        key = (clip.get("mediaId"), ref, w, h)
+        if key not in cache:
+            still = np.asarray(self.media_frame(clip, ref / fps))
+            cache[key] = cv2.resize(still, (w, h), interpolation=cv2.INTER_AREA) if still.shape[:2] != (h, w) else still.copy()
+        plate = cv2.warpPerspective(cache[key], move, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        matte = self.planar_alpha({**clip, "planarMatte": {"layers": [layer_id], "feather": 0, "invert": False}}, w, h)
+        if matte is None:
+            return image
+        band = (cv2.dilate((matte > 0.5).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0) & (matte < 0.01)
+        mixed = plate[:, :, :3].astype(np.float32)
+        if band.sum() > 50:
+            for c in range(3):
+                ratio = float(image[:, :, c][band].mean()) / max(1.0, float(plate[:, :, c][band].mean()))
+                mixed[:, :, c] *= min(1.15, max(0.85, ratio))
+        a = matte[..., None]
+        out = image.copy()
+        top = 65535.0 if image.dtype == np.uint16 else 255.0
+        blended = image[:, :, :3].astype(np.float32) * (1 - a) + mixed * a
+        out[:, :, :3] = np.round(np.clip(blended, 0, top)).astype(image.dtype)
+        return out
+
     def planar_warp(self, image: np.ndarray, clip: dict) -> np.ndarray:
         """Mocha Pro's Stabilize and ReOrient modules on the frame, by a layer's planar track at the matte time:
         planarStabilize {layer} warps the frame back to the reference by the inverse of the track's motion, so the
@@ -2255,6 +2297,8 @@ class FrameRenderer:
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             self.matte_time = source_time(clip, local)
+            if clip.get("cleanPlate"):
+                image = self.clean_plate(image, clip)
             if clip.get("lens"):
                 image = lens_warp(image, clip["lens"])
             if clip.get("planarStabilize") or clip.get("planarReorient"):
