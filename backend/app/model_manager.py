@@ -284,6 +284,14 @@ MODELS = {
             "voices-v1.0.bin": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
         },
     },
+    "voice-activity": {
+        "name": "Silero VAD",
+        "license": "MIT",
+        # whether someone is speaking, under music too: the cut check refuses an edit with speech on both sides
+        "files": {
+            "silero_vad.onnx": "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx",
+        },
+    },
 }
 _lock = threading.RLock()
 _downloading: set[str] = set()

@@ -508,6 +508,26 @@ def formcut_render_status(
 
 
 @mcp.tool(
+    name="formcut_speech_check",
+    description=(
+        "Before rendering: check every sounding clip's in and out point on the active timeline for cutting through "
+        "speech, music bed or not (a voice-activity model: unsafe when someone is speaking on both sides of the cut "
+        "within 100 ms). Unsafe cuts come back with the nearest pause to move them into. The first call on a new "
+        "source starts a measuring job: poll formcut_render_status with its id, then call again. Needs the "
+        "voice-activity model (Settings, Models, or POST /api/models/voice-activity/download on the engine)."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_speech_check(
+    project_id: Annotated[str, Field(description="Project id; its active timeline is checked")],
+) -> str:
+    ok, result = _rpc("timeline.cuts", {"id": project_id})
+    if not ok:
+        return result
+    return json.dumps(result, indent=1)
+
+
+@mcp.tool(
     name="formcut_frame_check",
     description=(
         "Before rendering: predict which video clips on the active timeline would show a repeated frame at an output "

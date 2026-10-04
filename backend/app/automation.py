@@ -447,6 +447,45 @@ def dispatch(method: str, params: dict):
         if not cues:
             raise ValueError("No captions on that track")
         return {"format": fmt, "text": write(cues, fmt), "count": len(cues)}
+    if method == "timeline.cuts":
+        import numpy as np
+
+        from .media import MEDIA_DIR
+        from .speech import CACHE as SPEECH_CACHE
+        from .speech import check_cuts, voice_map
+
+        project_id = str(params.get("id") or "")
+        project = store.get_project(project_id)
+        if not project:
+            raise ValueError("Project not found")
+        timeline = project["timelines"][int(project.get("activeTimeline", 0))]
+        sounding = [
+            c
+            for track in timeline["tracks"]
+            for c in track["clips"]
+            if c.get("kind") in ("audio", "video") and c.get("mediaId") and not c.get("muted") and not track.get("muted")
+        ]
+        missing = sorted({c["mediaId"] for c in sounding if not (SPEECH_CACHE / f"{c['mediaId']}.npy").exists()})
+        if missing:
+            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*"))) for m in missing}
+
+            def listen(job_id, report, cancelled):
+                for media_id, path in sources.items():
+                    voice_map(media_id, path, report, cancelled)
+                return {"measured": list(sources)}
+
+            job = jobs.submit("voice", listen)
+            message = "measuring where the sources' speech is; call again once that job is done"
+            return {"measuring": missing, "job_id": job["job_id"], "message": message}
+        rows = []
+        for clip in sounding:
+            probabilities = np.load(SPEECH_CACHE / f"{clip['mediaId']}.npy")
+            begin = float(clip.get("sourceIn", 0))
+            end = begin + float(clip["duration"]) * float(clip.get("speed", 1))
+            for edge, at, timeline_at in (("in", begin, clip["start"]), ("out", end, clip["start"] + clip["duration"])):
+                (row,) = check_cuts(probabilities, [at])
+                rows.append({"clip": clip["id"], "label": clip.get("label"), "edge": edge, "timeline_time": round(timeline_at, 3), **row})
+        return {"cuts": rows, "unsafe": sum(not r["safe"] for r in rows)}
     if method == "timeline.frames":
         import numpy as np
 
@@ -556,7 +595,8 @@ def dispatch(method: str, params: dict):
             raise ValueError("Supply a job id as id or job_id")
         state = jobs.status(str(job_id))
         if state.get("status") != "done":
-            return {"ready": False, "status": state.get("status"), "progress": state.get("progress")}
+            pending = {"ready": False, "status": state.get("status"), "progress": state.get("progress")}
+            return pending | ({"error": state["error"]} if state.get("error") else {})
         result = state.get("result") or {}
         return {
             "ready": True,
@@ -579,6 +619,7 @@ def dispatch(method: str, params: dict):
                 "media.beats",
                 "media.qc",
                 "timeline.frames",
+                "timeline.cuts",
                 "media.ducking",
                 "captions.import",
                 "captions.export",
