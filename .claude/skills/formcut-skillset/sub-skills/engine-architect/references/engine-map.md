@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 828 | /api/rpc | 2 |
+| automation.py | 849 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -79,7 +79,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (881L)
+- `agent_mcp.py` (903L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
@@ -108,6 +108,7 @@ the automation transports.
 - `matte_cache.py` (126L)
 - `mflux_worker.py` (147L)
 - `multicam_sync.py` (158L)
+- `music.py` (136L)
 - `openh264.py` (410L)
 - `package_registry.py` (80L)
 - `paths.py` (32L)
