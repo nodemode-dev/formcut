@@ -501,7 +501,7 @@ def formcut_render_status(
         )
     status = state.get("status", "unknown")
     progress = float(state.get("progress") or 0)
-    if status in ("cancelled", "error"):
+    if status in ("cancelled", "error", "interrupted"):
         reason = state.get("error") or state.get("message") or "not given"
         return f"state: {status}\nprogress: {progress:.3f}\nreason: {reason}\nStart a new one with formcut_render when the cause is fixed."
     return f"state: {status}\nprogress: {progress:.3f}\nrender {status}, {round(progress * 100)}% done. Poll again shortly."

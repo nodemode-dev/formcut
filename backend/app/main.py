@@ -78,6 +78,14 @@ async def _recover_media() -> None:
 
 
 @app.on_event("startup")
+async def _resume_jobs() -> None:
+    # Jobs survive a restart: finished ones are found again, an export caught mid-render is re-queued under its id.
+    from . import jobs, render_api  # noqa: F401 (render_api registers the export resumer)
+
+    jobs.resume_pending()
+
+
+@app.on_event("startup")
 async def _warm_library() -> None:
     # The stickers are drawn in the background, so the Stickers tab opens full.
     # The test suite sets FORMCUT_NO_WARM: its library tests use their own folders.

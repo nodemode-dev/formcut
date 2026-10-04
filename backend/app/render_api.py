@@ -1079,6 +1079,10 @@ def export(body: RenderInput):
         if body.codec not in allowed:
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
 
+    return jobs.submit("export", _export_operation(body, project), recipe=body.model_dump())
+
+
+def _export_operation(body: RenderInput, project: dict):
     def operation(job_id, report, cancelled):
         sound = {"audio_kbps": body.audioBitrate, "loudness": body.loudness, "true_peak": body.truePeak}
         picture = (body.format, body.quality, body.codec, body.tenBit, body.size, body.rate, body.exact)
@@ -1086,7 +1090,15 @@ def export(body: RenderInput):
         webhooks.announce_export(result, project)
         return result
 
-    return jobs.submit("export", operation)
+    return operation
+
+
+def _resume_export(recipe: dict):
+    body = RenderInput(**recipe)
+    return _export_operation(body, checked(body))
+
+
+jobs.RESUMERS["export"] = _resume_export
 
 
 @router.post("/audio", status_code=202)
