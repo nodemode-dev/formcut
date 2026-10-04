@@ -522,6 +522,16 @@ def dispatch(method: str, params: dict):
             dispatch("project.edit", {"id": project_id, "commands": commands, "revision": project.get("revision")})
             result["fixed"] = len(commands)
         return result
+    if method == "media.transcribe":
+        from .media import _find
+        from .transcribe import TranscribeInput
+        from .transcribe import start as start_transcription
+
+        record = _find(str(params.get("id") or ""))
+        size = str(params.get("size") or "small")
+        language = str(params.get("language") or "en")
+        body = TranscribeInput(mediaId=record["id"], duration=float(record.get("duration") or 1), size=size, language=language)
+        return start_transcription(body)
     if method == "media.qc":
         from .media import MEDIA_DIR, _find
         from .qc import quality_report
@@ -598,6 +608,8 @@ def dispatch(method: str, params: dict):
             pending = {"ready": False, "status": state.get("status"), "progress": state.get("progress")}
             return pending | ({"error": state["error"]} if state.get("error") else {})
         result = state.get("result") or {}
+        if not result.get("file"):  # a result that is not a file (a transcription, a measurement) comes back whole
+            return {"ready": True, "status": "done", "result": result}
         return {
             "ready": True,
             "status": "done",
@@ -618,6 +630,7 @@ def dispatch(method: str, params: dict):
                 "media.scenes",
                 "media.beats",
                 "media.qc",
+                "media.transcribe",
                 "timeline.frames",
                 "timeline.cuts",
                 "media.ducking",

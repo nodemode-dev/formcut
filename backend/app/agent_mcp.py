@@ -508,6 +508,44 @@ def formcut_render_status(
 
 
 @mcp.tool(
+    name="formcut_transcribe",
+    description=(
+        "Transcribe a library item's speech with formcut's local Whisper (ONNX). Call with media_id to start (returns "
+        "a job id), then with that job_id to collect the sentences with their start and end times. size is tiny, "
+        "base, small (default), medium or large; small covers a music-bedded voice-over far better than base. "
+        "Sentence times are reliable; word times inside a sentence are not cut points: check cuts with "
+        "formcut_speech_check."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+)
+def formcut_transcribe(
+    media_id: Annotated[str | None, Field(description="Library item to transcribe (starts a job)")] = None,
+    size: Annotated[str, Field(description="Model size: tiny, base, small, medium or large")] = "small",
+    job_id: Annotated[str | None, Field(description="A transcription job's id, to collect its sentences")] = None,
+) -> str:
+    if job_id:
+        ok, state = _rpc("job.result", {"id": job_id})
+        if not ok:
+            return state
+        if not state.get("ready"):
+            reason = f", {state['error']}" if state.get("error") else ""
+            return f"state: {state.get('status')}\nprogress: {float(state.get('progress') or 0):.3f}{reason}"
+        result = state.get("result") or {}
+        sentences = []
+        for chunk in result.get("chunks", []):
+            sentences.append({"start": chunk.get("start"), "end": chunk.get("end"), "text": str(chunk.get("text", "")).strip()})
+        return json.dumps({"model": result.get("model"), "sentences": sentences}, indent=1)
+    if not media_id:
+        return "give a media_id to start, or the job_id of a transcription to collect"
+    if size not in ("tiny", "base", "small", "medium", "large"):
+        return "size must be tiny, base, small, medium or large"
+    ok, job = _rpc("media.transcribe", {"id": media_id, "size": size})
+    if not ok:
+        return job
+    return f"transcription started as job {job.get('job_id')}\ncall formcut_transcribe again with this job_id to collect it"
+
+
+@mcp.tool(
     name="formcut_speech_check",
     description=(
         "Before rendering: check every sounding clip's in and out point on the active timeline for cutting through "
