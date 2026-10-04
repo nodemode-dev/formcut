@@ -1740,7 +1740,7 @@ class FrameRenderer:
         front_layers = spec.get("front") or []
         if front_layers:
             vector = self.planar_alpha({**clip, "planarMatte": {"layers": list(front_layers), "feather": 0, "invert": False}}, w, h)
-            screen_coloured = np.clip((lead - 0.15) / 0.15, 0, 1)
+            screen_coloured = np.clip((cv2.GaussianBlur(lead.astype(np.float32), (0, 0), 1.0) - 0.15) / 0.15, 0, 1)
             in_front = vector * (1 - screen_coloured) if vector is not None else np.zeros_like(matte)
         cut = matte * (1 - in_front)
         reach_green = int(spec.get("green_reach", 0) or 0)
@@ -1867,7 +1867,7 @@ class FrameRenderer:
             track = self._planar_track(str(layer.get("link") or layer["id"]))
             homography = np.eye(3)
             media_w, media_h = full_w, full_h
-            index = 0
+            index = round(self.matte_time * float(self.project["fps"]))
             if track is not None:
                 order, frames, fps, (media_w, media_h) = track
                 index = round(self.matte_time * fps)
