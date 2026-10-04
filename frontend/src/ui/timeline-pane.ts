@@ -65,6 +65,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       <button class="tool-chip" data-ref="chip-captions" data-feature="chip.captions">${icon("captions")}${t("chip.captions")}</button>
       <button class="tool-chip" data-ref="chip-speak" data-feature="chip.speak" disabled>${icon("speak")}${t("chip.speak")}</button>
       <button class="tool-chip" data-ref="chip-detach" data-feature="chip.detach">${icon("detach")}${t("chip.detach")}</button>
+      <button class="tool-chip" data-ref="chip-focus" data-feature="chip.focus" title="${t("focus.tip")}">${icon("pip")}${t("focus.title")}</button>
       <button class="iconbtn" title="${t('tool.addtrack')}" data-ref="act-add-track" data-feature="act.addTrack" data-label="${t('tool.addtrack')}">${icon("addTrack")}</button>
       <span class="spacer"></span>
       <span class="tl-tc" data-ref="tc">${formatTimecode(s.playhead, s.fps)}</span>

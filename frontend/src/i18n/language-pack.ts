@@ -1,5 +1,26 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Move earlier|Déplacer plus tôt|Sposta prima|前へ移動|앞으로 이동|Mover para antes|Переместить раньше|Öne taşı|前移|前移
+const rows = `Focus moves|Mouvements de focus|Movimenti di focus|フォーカス移動|포커스 이동|Movimentos de foco|Движения к фокусу|Odak hareketleri|焦点运镜|焦點運鏡
+Draw areas on the picture and compose a camera move between them|Dessinez des zones sur l'image et composez un mouvement de caméra entre elles|Disegna aree sull'immagine e componi un movimento di camera tra di esse|画像に領域を描き、その間をつなぐカメラの動きを作成|그림에 영역을 그리고 그 사이를 잇는 카메라 움직임을 구성|Desenhe áreas na imagem e componha um movimento de câmera entre elas|Нарисуйте области на изображении и составьте движение камеры между ними|Görüntüye alanlar çizin ve aralarında bir kamera hareketi oluşturun|在画面上绘制区域，并在它们之间生成镜头运动|在畫面上繪製區域，並在它們之間生成鏡頭運動
+Drag on the picture to draw a focus area|Faites glisser sur l'image pour dessiner une zone de focus|Trascina sull'immagine per disegnare un'area di focus|画像上をドラッグしてフォーカス領域を描く|그림 위를 드래그해 포커스 영역을 그리세요|Arraste na imagem para desenhar uma área de foco|Проведите по изображению, чтобы нарисовать область фокуса|Odak alanı çizmek için görüntü üzerinde sürükleyin|在画面上拖动以绘制焦点区域|在畫面上拖曳以繪製焦點區域
+Select an image or video clip first|Sélectionnez d'abord un clip image ou vidéo|Seleziona prima una clip immagine o video|先に画像または動画のクリップを選択してください|먼저 이미지나 동영상 클립을 선택하세요|Selecione primeiro um clipe de imagem ou vídeo|Сначала выберите клип с изображением или видео|Önce bir görüntü ya da video klibi seçin|请先选择一个图片或视频片段|請先選擇一個圖片或影片片段
+{count} areas|{count} zones|{count} aree|{count} 個の領域|영역 {count}개|{count} áreas|Областей: {count}|{count} alan|{count} 个区域|{count} 個區域
+3D moves come with device clips|Les mouvements 3D arrivent avec les clips d'appareil|I movimenti 3D arrivano con le clip dispositivo|3D の動きはデバイスクリップで使えます|3D 움직임은 기기 클립에서 쓸 수 있습니다|Movimentos 3D vêm com clipes de dispositivo|3D-движения появятся с клипами устройств|3D hareketler cihaz klipleriyle gelir|3D 运镜随设备片段提供|3D 運鏡隨裝置片段提供
+Fast|Rapide|Veloce|速い|빠르게|Rápido|Быстро|Hızlı|快|快
+Medium|Moyen|Medio|普通|보통|Médio|Средне|Orta|中|中
+Slow|Lent|Lento|遅い|느리게|Lento|Медленно|Yavaş|慢|慢
+Loop|Boucle|Ciclo|ループ|반복|Repetir|Повтор|Döngü|循环|循環
+Presets|Préréglages|Preimpostazioni|プリセット|프리셋|Predefinições|Пресеты|Hazır ayarlar|预设|預設
+Choose a move|Choisir un mouvement|Scegli un movimento|動きを選択|움직임 선택|Escolha um movimento|Выберите движение|Bir hareket seçin|选择运镜|選擇運鏡
+Scan left to right|Balayage de gauche à droite|Panoramica da sinistra a destra|左から右へスキャン|왼쪽에서 오른쪽으로 훑기|Varredura da esquerda para a direita|Слева направо|Soldan sağa tarama|从左到右扫过|從左到右掃過
+Top to bottom|De haut en bas|Dall'alto in basso|上から下へ|위에서 아래로|De cima para baixo|Сверху вниз|Yukarıdan aşağıya|从上到下|從上到下
+Push in|Rapprochement|Avvicinamento|プッシュイン|푸시 인|Aproximação|Наезд|Yaklaşma|推近|推近
+Out and back|Aller-retour|Andata e ritorno|引いて戻る|멀어졌다 돌아오기|Ida e volta|Туда и обратно|Gidiş dönüş|拉远再回来|拉遠再回來
+Compose|Composer|Componi|作成|구성|Compor|Составить|Oluştur|生成|生成
+Shuffle|Mélanger|Rimescola|シャッフル|섞기|Embaralhar|Перемешать|Karıştır|换一个|換一個
+Edit areas|Modifier les zones|Modifica aree|領域を編集|영역 편집|Editar áreas|Изменить области|Alanları düzenle|编辑区域|編輯區域
+Delete area|Supprimer la zone|Elimina area|領域を削除|영역 삭제|Excluir área|Удалить область|Alanı sil|删除区域|刪除區域
+The move could not be composed|Le mouvement n'a pas pu être composé|Impossibile comporre il movimento|動きを作成できませんでした|움직임을 구성하지 못했습니다|Não foi possível compor o movimento|Не удалось составить движение|Hareket oluşturulamadı|无法生成运镜|無法生成運鏡
+Move earlier|Déplacer plus tôt|Sposta prima|前へ移動|앞으로 이동|Mover para antes|Переместить раньше|Öne taşı|前移|前移
 Turn off|Désactiver|Disattiva|オフにする|끄기|Desativar|Выключить|Kapat|关闭|關閉
 Turn on|Activer|Attiva|オンにする|켜기|Ativar|Включить|Aç|开启|開啟
 Encodes as {codec} with {encoder}|Encode en {codec} avec {encoder}|Codifica in {codec} con {encoder}|{encoder} で {codec} にエンコード|{encoder}(으)로 {codec} 인코딩|Codifica como {codec} com {encoder}|Кодирование в {codec} через {encoder}|{encoder} ile {codec} olarak kodlar|使用 {encoder} 编码为 {codec}|使用 {encoder} 編碼為 {codec}

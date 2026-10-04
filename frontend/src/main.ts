@@ -14,6 +14,7 @@ import { installBehaviours } from "./ui/appearance";
 import "./styles/app.css";
 import "./styles/themes.css";
 import "./styles/containers.css";
+import "./styles/focus.css";
 import "./styles/settings.css";
 import { ProjectEngine } from "./engine/project";
 import { MediaBin } from "./engine/media";

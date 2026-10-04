@@ -5,6 +5,7 @@ import { api } from "../engine/api";
 import { rejoinEligibility } from "../engine/creator-commands";
 import { sourceTime } from "../engine/timing";
 import { t } from "../i18n";
+import { installFocusMoves } from "./focus-moves";
 
 export const editorVerbs: Record<string, () => void> = {};
 
@@ -162,5 +163,7 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
   control("chip-captions")?.addEventListener("click", () => { document.querySelector<HTMLButtonElement>('[data-tab="Text"]')?.click(); document.querySelector<HTMLElement>('[data-ref="transcribe"]')?.focus(); });
   const speak = control("chip-speak");
   if (speak) { speak.disabled = false; speak.addEventListener("click", () => { document.querySelector<HTMLButtonElement>(".titlebar-right .tool-chip")?.click(); document.querySelector<HTMLButtonElement>('[data-page="speech"]')?.click(); }); }
+  const focusChip = control("chip-focus");
+  if (focusChip) installFocusMoves(focusChip, engine, bin);
   control("chip-detach")?.addEventListener("click", () => { void detach().catch(error => window.alert(error.message)); });
 }

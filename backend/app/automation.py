@@ -44,7 +44,11 @@ def apply_edit(project: dict, command: dict):
         clip = located[1]
         canvas = (float(project.get("width") or 1920), float(project.get("height") or 1080))
         record = _find(clip["mediaId"]) if clip.get("mediaId") else {}
-        picture = (float(record.get("width") or canvas[0]), float(record.get("height") or canvas[1]))
+        crop = clip.get("crop") or {}
+        kept_w = 1 - float(crop.get("left") or 0) - float(crop.get("right") or 0)
+        kept_h = 1 - float(crop.get("top") or 0) - float(crop.get("bottom") or 0)
+        # the picture after the clip's crop, as the renderer places it (and the interface maps the areas)
+        picture = (float(record.get("width") or canvas[0]) * kept_w, float(record.get("height") or canvas[1]) * kept_h)
         seed = command.get("seed")
         made = compose(
             float(clip["duration"]),
