@@ -267,3 +267,51 @@ For green-screen phone shots the method that holds up (the owner's preference, t
 screen tracked by its own edges (Track by: a green screen's edges), the plate keyed on top keeping its own glare
 (similarity 0.3, blend 0.12 to 0.2, spill 0.7 to 1), the picture corner-pinned below.
 
+## Planar modules (v2.5.2 to v2.5.5)
+
+The Track workspace's modules, each a renderer step or a job over a layer's track (`backend/app/planar_api.py`,
+`backend/app/renderer.py`): Stabilize and ReOrient (`planarStabilize`, `planarReorient`, the frame warped by the
+track's inverse or forward homography); Remove (`POST /api/planar/remove`, a job: the hole filled from up to 20 frames
+either side through the background's track, inpainted where none shows it, out to the media bin); Insert
+(`cornerPin.match`: the plate's shading, grain and softness measured per frame and laid on the insert); Lens
+(`POST /api/planar/lens`, k1 and k2 fitted by Levenberg-Marquardt to lines that should be straight; `clip.lens`
+undistorts and redistorts in the render); PowerMesh (`POST /api/planar/mesh`: each vertex followed by Lucas-Kanade,
+only outliers corrected; `cornerPin.mesh` warps the insert cell by cell in one remap); and the 3D camera solve
+(`GET /api/planar/camera/<layer>`: focal length from the plane's right angles, both poses solved and the front-facing
+one kept, as JSON or a Nuke Camera2). Matte Assist (`POST /api/planar/assist`) carries a shape by dense flow inside it
+snapped to edges.
+
+## Screen replacement (v2.5.6)
+
+What made the owner's phone composites right: the picture pinned with supersampling (`cornerPin.supersample`: shrunk
+by area to four times the canvas, warped there, averaged down, so a wallpaper shrunk 5 to 15 times keeps its lines);
+`cleanPlate` (a reflection lies on the whole glass, so the notch and border are replaced from a reflection-free frame
+through the track, levelled per channel); `screenCut.front` layers for what lies in front (a keyed occluder grown by
+`front_grow` so the key decides its edge; the screen-colour rules measured on a colour lead smoothed by a pixel, so 4:2:0
+blocks do not step); full despill within 4 px of the cut. The screen-edge track (`green_quad` per frame) records how
+much of a band inside each side is covered; frames whose rim is covered beyond its usual share, or whose corner jumps
+over 1.5 px, widened by three frames, are bridged from the clean frames around them (a quadratic in time), so a hand
+crossing the screen no longer moves it (the worst corner jump on clip 3 went from 5.38 to 0.76 px).
+
+## Cutdowns and delivery (v2.5.7 to v2.6.2)
+
+From the owner's Posh cutdowns, the work that ran outside formcut is now in it:
+
+- `jobs.py` keeps a ledger (`jobs.json`) at each status change with a recipe; on start finished jobs return and an
+  export caught mid-render is queued again under its own id. Until that resume has run, a ledger write keeps the
+  records still on disk (a startup job once overwrote it).
+- `render_api.py`: the audio bitrate; `measure_loudness` and `loudness_gain` (one gain to a target under a true-peak
+  ceiling); a rate more than 0.2% from the project's sampled from the timeline at that rate (rendered at the project's
+  rate and padded by the encoder, a 24 fps edit at 30 repeated every fifth frame).
+- `qc.py`: the delivery check, its perceptual repeats ffmpeg's mpdecimate.
+- `cadence.py`: a source's cadence map (each frame's share of pixels changed by over 4 levels; new above the larger of
+  0.15% and 5% of the local new-frame level), formcut's frame choice replayed per clip, the per-clip solver, and an
+  mpdecimate simulator matching ffmpeg's decisions frame for frame.
+- `speech.py`: the voice map (Silero VAD, MIT, 32 ms steps) and the cut rule (unsafe with speech on both sides within
+  100 ms). Transcription word times are not cut points; loudness pauses fail under a music bed.
+- `music.py`: spectral flux, tempo by weighted autocorrelation then tempo and phase searched together (0.01 BPM), the
+  final hit, bar-aligned joins between safe zones. The downbeat is not detected (a four-on-the-floor kick gives beat
+  one no accent): the first beat stands for it.
+- `cutdown.py`: the planner, ranked scripts with exact source segments; on the Posh master all seven delivered scripts
+  are among its candidates. The ranking is by natural joins, not meaning.
+

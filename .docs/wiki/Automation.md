@@ -66,3 +66,51 @@ Title styles ride `clip.text` patches like any other style field, so the full pr
 
 ### v1.62.0 and v1.63.0
 `POST /api/transcribe` runs Whisper in the engine as a job (`mediaId`, `sourceIn`, `duration`, `language`, `size` from tiny to large, `wordsPerCaption`, optional `audioStream`); the job's result carries `chunks` with word times, `byWord`, `model` and `provider`, the same shape the Captions panel consumes. `GET /api/transcribe/status` lists providers, sizes and which models are cached. `project.edit` adds `timeline.cut-range` (`start`, `end`): the span leaves every track of the timeline, clips inside it are removed, clips straddling it are cut into a head and a tail, and everything after moves back by the length; it is the command behind the transcript panel's cut, so an agent can edit by text too.
+
+## MCP server
+
+The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 28 tools over stdio,
+each a thin, documented wrapper over the RPC above; the full listing is generated into
+`.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`. By purpose:
+
+- Engine and projects: `formcut_status`, `formcut_capabilities`, `formcut_catalogue`, `formcut_list_projects`,
+  `formcut_create_project`, `formcut_get_project`, `formcut_edit`, `formcut_add_clip`, `formcut_set_frame`.
+- Media: `formcut_import_media`, `formcut_list_media`, `formcut_media_proxy`, `formcut_find_scenes`,
+  `formcut_transcribe` (sentences with their times; the small model by default).
+- Rendering: `formcut_render` (format, quality, rate, size, codec, ten bit, exact, audio bitrate, a loudness target
+  with a true-peak ceiling), `formcut_render_audio`, `formcut_render_status`, `formcut_cancel_render`.
+- Delivery checks: `formcut_qc`, `formcut_frame_check`, `formcut_speech_check`.
+- Music and cutdowns: `formcut_music`, `formcut_plan_cutdown`.
+- Effect packages: `formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`, `formcut_list_packages`,
+  `formcut_remove_package`.
+
+`formcut_render_status` opens every reply with `state:` and a numeric `progress:` (then `file:`, or `reason:` when a job
+failed or was interrupted). Tools that need a measurement of a source first (the frame, speech and cutdown checks)
+start a job on the first call and say so; poll `formcut_render_status` with its id, then call again. The `cutdown`
+sub-skill in `.claude/skills/formcut-mcp` walks a whole cutdown through these tools.
+
+### v2.5.7 to v2.6.2: delivery and cutdowns
+
+`project.export` passes every export option: `codec`, `tenBit`, `exact`, `size`, `rate` (23.976 to 60), `audioBitrate`
+(kbps), `loudness` (integrated LUFS) and `truePeak` (dBTP, default -1): the mix gets one measured gain that reaches the
+target without passing the ceiling. A rate more than 0.2% from the project's is sampled from the timeline at that rate.
+`project.export_audio` renders the mix alone. Jobs are kept in `jobs.json` in the data folder at each status change;
+after a restart finished jobs are found again and an export caught mid-render is queued again under its own id
+(`interrupted`, with the reason, when it cannot be). `job.result` carries a failed job's `error` and returns a finished
+job's result whole when it is not a file.
+
+- `media.qc` (`job` or `id`, optional `edits`, `loudness`, `truePeak`): duration, frames, rate, codecs; exact and
+  perceptual (mpdecimate) repeats; freezes; black and flash frames; the first and last frame against the sharpest of
+  their own shot's first and last second; loudness, range and true peak; clicks at the given edits; `passed` and
+  `reasons`.
+- `timeline.frames` (`id`, `rate`, `fix`): each video clip's predicted repeated frames from its source's measured
+  cadence; with `fix`, the smallest change that removes them (an in-point shift up to 3 source frames and a speed-up
+  up to 2%, else a push of 0.10% scale an output frame) as one edit.
+- `timeline.cuts` (`id`): every sounding clip's in and out point checked against its source's voice map (Silero VAD,
+  the `voice-activity` model): unsafe with speech on both sides within 100 ms, the nearest pause given.
+- `media.transcribe` (`id`, `size`, `language`): a whole library item transcribed as a job.
+- `media.music` (`id`, optional `outFrom`, `outTo`): tempo, beat, bar, first beat, final hit; with an out-point range,
+  joins a whole number of bars apart whose ends are outside speech. `media.beats` takes its tempo from the same grid.
+- `media.cutdowns` (`id`, `length`, `top`): ranked scripts of the length with their exact source segments, bars and
+  pauses (whole sentences, an opener that can stand first, bar-aligned joins with natural pauses, music bridges, the
+  call to action last on the button); one job first measures what is missing (sentences, voice map, music map).
