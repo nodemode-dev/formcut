@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 774 | /api/rpc | 2 |
+| automation.py | 828 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -48,7 +48,7 @@ The rest is written by hand.
 | main.py | 470 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
-| model_manager.py | 765 | /api/models | 8 |
+| model_manager.py | 773 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | planar_api.py | 1273 | /api/planar | 19 |
 | presets.py | 620 | /api/presets | 9 |
@@ -79,7 +79,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (823L)
+- `agent_mcp.py` (881L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
@@ -128,6 +128,7 @@ the automation transports.
 - `scenes.py` (110L)
 - `security.py` (68L)
 - `segmentation.py` (323L)
+- `speech.py` (105L)
 - `stabilise.py` (209L)
 - `store.py` (107L)
 - `subject.py` (220L)
