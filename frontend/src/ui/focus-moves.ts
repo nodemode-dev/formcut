@@ -66,7 +66,7 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", t("focus.title"));
   panel.innerHTML = `
-    <div class="focus-head"><span class="focus-title">${t("focus.title")}</span><span class="focus-count" data-ref="count"></span>
+    <div class="focus-head" data-ref="grip"><span class="focus-title">${t("focus.title")}</span><span class="focus-count" data-ref="count"></span>
       <button class="iconbtn" data-ref="reset" title="${t("focus.reset")}" aria-label="${t("focus.reset")}">${icon("reset")}</button>
       <button class="iconbtn" data-ref="done" title="${t("focus.done")}" aria-label="${t("focus.done")}">${icon("close")}</button></div>
     <p class="focus-hint" data-ref="hint">${t("focus.hint")}</p>
@@ -112,7 +112,15 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
     compose.disabled = areas.length === 0;
     compose.textContent = composed ? t("focus.shuffle") : t("focus.compose");
     ref("edit").hidden = !composed;
-    ref("hint").hidden = composed || areas.length > 0;
+    ref("hint").hidden = !warning && (composed || areas.length > 0);
+  };
+  let warning = false, warned: number | undefined;
+  const warn = () => {
+    warning = true;
+    ref("hint").classList.add("is-warn");
+    paint();
+    window.clearTimeout(warned);
+    warned = window.setTimeout(() => { warning = false; ref("hint").classList.remove("is-warn"); paint(); }, 2000);
   };
 
   /** A pointer position as unit coordinates on the clip's picture, clamped to it. */
@@ -149,7 +157,11 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
     const up = () => {
       overlay.removeEventListener("pointermove", move);
       const [x0, y0, x1, y1] = areas[index];
-      if (mode === "draw" && (x1 - x0 < 0.02 || y1 - y0 < 0.02)) areas.splice(index, 1); // a click, not an area
+      if (mode === "draw" && (x1 - x0 < 0.02 || y1 - y0 < 0.02)) {
+        // a click, or a drag outside the clip's picture (it clamps to nothing): say where to draw
+        areas.splice(index, 1);
+        warn();
+      }
       paint();
     };
     overlay.addEventListener("pointermove", move);
@@ -207,6 +219,22 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
     paint();
   });
 
+  // the panel moves by its header, so it can be put where it does not cover what is being drawn on
+  ref("grip").addEventListener("pointerdown", (event) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+    event.preventDefault();
+    const grip = ref("grip");
+    grip.setPointerCapture(event.pointerId);
+    const bounds = stage.getBoundingClientRect(), from = panel.getBoundingClientRect();
+    const dx = event.clientX - from.left, dy = event.clientY - from.top;
+    const move = (moved: PointerEvent) => {
+      panel.style.left = `${Math.min(bounds.width - from.width, Math.max(0, moved.clientX - bounds.left - dx))}px`;
+      panel.style.top = `${Math.min(bounds.height - from.height, Math.max(0, moved.clientY - bounds.top - dy))}px`;
+      panel.style.bottom = "auto";
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", () => grip.removeEventListener("pointermove", move), { once: true });
+  });
   const keys = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
   const relayout = new ResizeObserver(() => paint());
   const close = () => {

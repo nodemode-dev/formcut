@@ -4,7 +4,7 @@
   "focus.tip": "ارسم مناطق على الصورة وكوّن حركة كاميرا بينها",
   "focus.hint": "اسحب على الصورة لرسم منطقة تركيز",
   "focus.needClip": "اختر مقطع صورة أو فيديو أولًا",
-  "focus.count": "{count} مناطق",
+  "focus.count": "المناطق: {count}",
   "focus.reset": "إعادة الضبط",
   "focus.done": "تم",
   "focus.motion": "الحركة",

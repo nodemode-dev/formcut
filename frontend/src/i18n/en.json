@@ -3,7 +3,7 @@
   "focus.tip": "Draw areas on the picture and compose a camera move between them",
   "focus.hint": "Drag on the picture to draw a focus area",
   "focus.needClip": "Select an image or video clip first",
-  "focus.count": "{count} areas",
+  "focus.count": "Areas: {count}",
   "focus.reset": "Reset",
   "focus.done": "Done",
   "focus.motion": "Motion",

@@ -3,7 +3,7 @@
   "focus.tip": "Dibuja áreas en la imagen y compón un movimiento de cámara entre ellas",
   "focus.hint": "Arrastra sobre la imagen para dibujar un área de enfoque",
   "focus.needClip": "Selecciona primero un clip de imagen o vídeo",
-  "focus.count": "{count} áreas",
+  "focus.count": "Áreas: {count}",
   "focus.reset": "Restablecer",
   "focus.done": "Listo",
   "focus.motion": "Movimiento",

@@ -64,25 +64,33 @@
 
 .focus-panel {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  left: 8px;
+  top: 8px;
   z-index: var(--z-dropdown);
-  width: min(300px, calc(100% - 24px));
+  width: min(232px, calc(100% - 16px));
   box-sizing: border-box;
-  padding: 12px;
+  padding: 8px 10px 10px;
   border: 1px solid var(--edge);
-  border-radius: var(--radius-l);
+  border-radius: var(--radius-m);
   background: var(--float);
   color: var(--ink);
+  font-size: 12px;
   display: grid;
-  gap: 10px;
-  box-shadow: 0 8px 24px var(--veil);
+  gap: 6px;
+  box-shadow: 0 6px 18px var(--veil);
 }
 
+/* the header is the panel's handle: drag it off whatever is being drawn on */
 .focus-head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.focus-head:active {
+  cursor: grabbing;
 }
 
 .focus-title {
@@ -97,6 +105,19 @@
 .focus-hint {
   margin: 0;
   color: var(--ink-soft);
+}
+
+/* after a drag that drew nothing (a click, or outside the clip's picture) */
+.focus-hint.is-warn {
+  color: var(--cue);
+}
+
+.focus-panel .focus-seg button {
+  padding: 4px 6px;
+}
+
+.focus-panel .focus-primary {
+  padding: 7px 10px;
 }
 
 .focus-row {

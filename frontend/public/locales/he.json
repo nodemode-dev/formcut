@@ -4,7 +4,7 @@
   "focus.tip": "צייר אזורים על התמונה וחבר ביניהם תנועת מצלמה",
   "focus.hint": "גרור על התמונה כדי לצייר אזור מיקוד",
   "focus.needClip": "בחר קודם קליפ של תמונה או וידאו",
-  "focus.count": "{count} אזורים",
+  "focus.count": "אזורים: {count}",
   "focus.reset": "איפוס",
   "focus.done": "סיום",
   "focus.motion": "תנועה",

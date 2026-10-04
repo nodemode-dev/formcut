@@ -3,7 +3,7 @@
   "focus.tip": "Bereiche ins Bild zeichnen und eine Kamerafahrt zwischen ihnen erstellen",
   "focus.hint": "Auf dem Bild ziehen, um einen Fokusbereich zu zeichnen",
   "focus.needClip": "Zuerst einen Bild- oder Videoclip auswählen",
-  "focus.count": "{count} Bereiche",
+  "focus.count": "Bereiche: {count}",
   "focus.reset": "Zurücksetzen",
   "focus.done": "Fertig",
   "focus.motion": "Bewegung",
