@@ -51,9 +51,10 @@ def _spans(log: str, start_key: str, end_key: str) -> list[list[float]]:
     return [[round(a, 3), round(b, 3)] for a, b in zip(starts, ends, strict=False)]
 
 
-def _pictures(path: Path) -> tuple[list[float], list[float]]:
-    """Per frame, at a quarter of the size: mean brightness, and sharpness (variance of the Laplacian)."""
-    capture, means, sharp = cv2.VideoCapture(str(path)), [], []
+def _pictures(path: Path) -> tuple[list[float], list[float], list[float]]:
+    """Per frame, at a quarter of the size: mean brightness, sharpness (variance of the Laplacian), and the mean change
+    from the frame before (a cut shows as a large one)."""
+    capture, means, sharp, change, previous = cv2.VideoCapture(str(path)), [], [], [], None
     while True:
         ok, frame = capture.read()
         if not ok:
@@ -61,8 +62,20 @@ def _pictures(path: Path) -> tuple[list[float], list[float]]:
         small = cv2.cvtColor(cv2.resize(frame, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
         means.append(float(small.mean()))
         sharp.append(float(cv2.Laplacian(small, cv2.CV_32F).var()))
+        change.append(float(cv2.absdiff(small, previous).mean()) if previous is not None else 0.0)
+        previous = small
     capture.release()
-    return means, sharp
+    return means, sharp, change
+
+
+def _against_own_shot(sharp: list[float], change: list[float], fps: float) -> float:
+    """The first frame's sharpness against the sharpest frame of the first second of its own shot (to the first cut):
+    an opening on a fly-in or a blur still settling scores low (the owner's round two opened on the collage's
+    fly-in; a rebuild doing so scored 0.19, the delivered spots 0.99, or 0.65 when the comparison crossed a cut)."""
+    span = max(2, round(fps))
+    end = next((i for i in range(1, min(span, len(change))) if change[i] > 25), min(span, len(sharp)))
+    best = max(sharp[:end]) if end else 0.0
+    return sharp[0] / best if best else 1.0
 
 
 def _clicks(path: Path, edits: list[float]) -> list[dict]:
@@ -96,19 +109,17 @@ def quality_report(
     audio = next((s for s in probe.get("streams", []) if s.get("codec_type") == "audio"), {})
     num, _, den = str(video.get("r_frame_rate", "0/1")).partition("/")
     fps = float(num) / max(1.0, float(den or 1))
-    means, sharp = _pictures(path)
+    means, sharp, change = _pictures(path)
     frames = len(means)
     exact = _exact_repeats(path)
     perceptual = _perceptual_repeats(path, fps, frames)
     freeze_log = _ffmpeg(["-i", str(path), "-map", "0:v:0", "-vf", "freezedetect=n=-60dB:d=0.5", "-f", "null", "-"])
     black_log = _ffmpeg(["-i", str(path), "-map", "0:v:0", "-vf", "blackdetect=d=0.04:pix_th=0.10", "-f", "null", "-"])
     flashes = [i for i in range(1, frames - 1) if means[i] - max(means[i - 1], means[i + 1]) > 40]
-    # against the frames next to them in their own shot, not the spot's median: a plain opening shot is not a soft
-    # one (the Posh :15 More Than Answering opens on its shot's sharpest frame, below the spot's median detail)
-    opening = float(np.median(sharp[1:7])) if len(sharp) > 7 else 0.0
-    closing = float(np.median(sharp[-7:-1])) if len(sharp) > 7 else 0.0
-    first_sharp = sharp[0] / opening if opening else 1.0
-    last_sharp = sharp[-1] / closing if closing else 1.0
+    # against the sharpest of the first (last) second of their own shot, not the spot's median: a plain opening shot is
+    # not a soft one, and an opening still settling (a fly-in) is
+    first_sharp = _against_own_shot(sharp, change, fps) if sharp else 1.0
+    last_sharp = _against_own_shot(sharp[::-1], [0.0, *change[:0:-1]], fps) if sharp else 1.0
     loud = measure_loudness(path) if audio else None
     report = {
         "file": str(path),
