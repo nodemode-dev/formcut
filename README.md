@@ -161,7 +161,7 @@ Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut
 
 ## MCP server
 
-formcut carries an MCP server, so Claude Code, Codex, Cursor, Claude Desktop, VS Code or any MCP client can drive the editor: 26 workflow tools over stdio, built on the official Python SDK, which answers both the 2025-11-25 protocol and the stateless 2026-07-28 revision.
+formcut carries an MCP server, so Claude Code, Codex, Cursor, Claude Desktop, VS Code or any MCP client can drive the editor: 27 workflow tools over stdio, built on the official Python SDK, which answers both the 2025-11-25 protocol and the stateless 2026-07-28 revision.
 
 The installed app includes it. Open **Settings, Connections, AI agents**: it shows, for each client, the exact command or config to add, with this copy of formcut's path already filled in, and a Copy button. The client runs the app's own engine as `formcut-engine --mcp`; nothing else is installed. While formcut is running, the server finds it by itself: the engine publishes its address in `engine.json` in formcut's data folder, and every call reads it afresh, so quitting and reopening formcut breaks no connection. If formcut is not running, a call says so and asks for it to be opened.
 
@@ -169,7 +169,7 @@ From a checkout, the same server runs as `mcp/formcut_mcp.py` with the engine's 
 
 The tools are workflow shaped rather than one per endpoint: `formcut_status`,
 `formcut_import_media`, `formcut_create_project`, `formcut_add_clip`,
-`formcut_set_frame`, `formcut_render`, `formcut_render_audio`, `formcut_render_status`, `formcut_qc`, `formcut_frame_check`, `formcut_speech_check`, `formcut_transcribe`,
+`formcut_set_frame`, `formcut_render`, `formcut_render_audio`, `formcut_render_status`, `formcut_qc`, `formcut_frame_check`, `formcut_speech_check`, `formcut_transcribe`, `formcut_music`,
 `formcut_cancel_render`, `formcut_list_media`, `formcut_list_projects`,
 `formcut_get_project`, `formcut_media_proxy`, `formcut_find_scenes`,
 `formcut_catalogue`, `formcut_edit`, `formcut_capabilities`, and for effect packages

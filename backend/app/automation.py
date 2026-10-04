@@ -549,11 +549,31 @@ def dispatch(method: str, params: dict):
         edits = [float(t) for t in params.get("edits") or []]
         target_lufs = float(params["loudness"]) if params.get("loudness") is not None else None
         return quality_report(target, edits or None, target_lufs, float(params.get("truePeak", -1.0)))
-    if method == "media.beats":
-        from .media import _samples
-        from .rhythm import beats
+    if method in ("media.beats", "media.music"):
+        from .media import MEDIA_DIR, _find
+        from .music import music_map
 
-        return beats(_samples(str(params.get("id") or "")), 48000, float(params.get("sensitivity") or 0.5))
+        media_id = str(params.get("id") or "")
+        _find(media_id)
+        source = next(iter(MEDIA_DIR.glob(f"{media_id}.*")), None)
+        if source is None:
+            raise ValueError("Media file is missing")
+        grid = music_map(media_id, source)
+        if method == "media.beats":
+            from .media import _samples
+            from .rhythm import beats
+
+            # the onsets as before; the tempo from the grid (the commonest onset gap read 125 BPM eighth notes as 250)
+            found = beats(_samples(media_id), 48000, float(params.get("sensitivity") or 0.5))
+            return found | {k: grid[k] for k in ("bpm", "bar", "first_beat", "final_hit")}
+        if params.get("outFrom") is None:
+            return grid
+        from .music import joins, safe_zones
+        from .speech import STEP, voice_map
+
+        zones = safe_zones(voice_map(media_id, source), STEP)
+        out_from, out_to = float(params["outFrom"]), float(params.get("outTo", params["outFrom"]))
+        return grid | {"joins": joins(zones, grid["bar"], out_from, out_to)[:60]}
     if method == "media.ducking":
         from .media import _samples
         from .rhythm import ducking
@@ -630,6 +650,7 @@ def dispatch(method: str, params: dict):
                 "media.scenes",
                 "media.beats",
                 "media.qc",
+                "media.music",
                 "media.transcribe",
                 "timeline.frames",
                 "timeline.cuts",

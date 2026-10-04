@@ -508,6 +508,28 @@ def formcut_render_status(
 
 
 @mcp.tool(
+    name="formcut_music",
+    description=(
+        "A library item's music grid: tempo (BPM), beat and bar length, first beat, and the final hit (the chord a "
+        "spot can end on). With out_from (and out_to), also joins a whole number of bars apart: an out-point in that "
+        "range and an in-point later, both outside speech (formcut_speech_check's rule), so the music runs on and no "
+        "sentence is cut. The downbeat is reported as the music's first beat; it is not detected from the audio."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_music(
+    media_id: Annotated[str, Field(description="The library item carrying the music (a mix or a music track)")],
+    out_from: Annotated[float | None, Field(description="Earliest out-point for joins, in seconds of this media")] = None,
+    out_to: Annotated[float | None, Field(description="Latest out-point for joins; out_from when unset")] = None,
+) -> str:
+    params = {"id": media_id} | ({"outFrom": out_from} if out_from is not None else {}) | ({"outTo": out_to} if out_to is not None else {})
+    ok, result = _rpc("media.music", params)
+    if not ok:
+        return result
+    return json.dumps(result, indent=1)
+
+
+@mcp.tool(
     name="formcut_transcribe",
     description=(
         "Transcribe a library item's speech with formcut's local Whisper (ONNX). Call with media_id to start (returns "
