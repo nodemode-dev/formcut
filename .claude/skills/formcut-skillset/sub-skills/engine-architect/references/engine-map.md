@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 737 | /api/rpc | 2 |
+| automation.py | 774 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -59,7 +59,7 @@ The rest is written by hand.
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1339 | /api/render | 13 |
+| render_api.py | 1349 | /api/render | 13 |
 | render_stream.py | 87 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -79,10 +79,11 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (800L)
+- `agent_mcp.py` (823L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
+- `cadence.py` (151L)
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
