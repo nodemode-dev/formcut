@@ -522,6 +522,49 @@ def dispatch(method: str, params: dict):
             dispatch("project.edit", {"id": project_id, "commands": commands, "revision": project.get("revision")})
             result["fixed"] = len(commands)
         return result
+    if method == "media.cutdowns":
+        import json as json_module
+
+        import numpy as np
+
+        from .cutdown import plan
+        from .media import MEDIA_DIR, _find
+        from .music import CACHE as MUSIC_CACHE
+        from .music import music_map, safe_zones
+        from .paths import DATA_DIR
+        from .speech import CACHE as SPEECH_CACHE
+        from .speech import STEP, voice_map
+
+        media_id = str(params.get("id") or "")
+        record = _find(media_id)
+        source = next(iter(MEDIA_DIR.glob(f"{media_id}.*")), None)
+        if source is None:
+            raise ValueError("Media file is missing")
+        said = DATA_DIR / "transcripts" / f"{media_id}.json"
+        needed = [p for p in (said, SPEECH_CACHE / f"{media_id}.npy", MUSIC_CACHE / f"{media_id}.json") if not p.exists()]
+        if needed:
+
+            def measure(job_id, report, cancelled):
+                from .transcribe import decode_audio, load, model_for, transcribe
+
+                if not said.exists():
+                    model = load(model_for("en", "small"))
+                    audio = decode_audio(source, 0.0, float(record.get("duration") or 0), None)
+                    found = transcribe(model, audio, "en", lambda f: report(0.6 * f, "transcribing"), cancelled)
+                    said.parent.mkdir(parents=True, exist_ok=True)
+                    said.write_text(json_module.dumps([{"start": s["start"], "end": s["end"], "text": s["text"].strip()} for s in found]))
+                voice_map(media_id, source, lambda f, *_: report(0.6 + 0.3 * f, "listening for speech"), cancelled)
+                music_map(media_id, source)
+                return {"measured": [p.name for p in needed]}
+
+            job = jobs.submit("cutdown-measure", measure)
+            message = "measuring the master (sentences, speech, music); call again once that job is done"
+            return {"measuring": [p.parent.name for p in needed], "job_id": job["job_id"], "message": message}
+        sentences = json_module.loads(said.read_text())
+        zones = safe_zones(np.load(SPEECH_CACHE / f"{media_id}.npy"), STEP)
+        grid = music_map(media_id, source)
+        scripts = plan(sentences, zones, grid, float(params.get("length") or 15), top=int(params.get("top") or 10))
+        return {"length": float(params.get("length") or 15), "bar": grid["bar"], "final_hit": grid["final_hit"], "scripts": scripts}
     if method == "media.transcribe":
         from .media import _find
         from .transcribe import TranscribeInput
@@ -651,6 +694,7 @@ def dispatch(method: str, params: dict):
                 "media.beats",
                 "media.qc",
                 "media.music",
+                "media.cutdowns",
                 "media.transcribe",
                 "timeline.frames",
                 "timeline.cuts",

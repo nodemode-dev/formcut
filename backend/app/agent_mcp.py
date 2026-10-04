@@ -508,6 +508,29 @@ def formcut_render_status(
 
 
 @mcp.tool(
+    name="formcut_plan_cutdown",
+    description=(
+        "Plan cutdowns of a master: ranked scripts of the given length (seconds) from its mix, each with its exact "
+        "source segments, the bars jumped at each join and the pause each leaves. Every script: whole sentences, "
+        "joins a whole number of bars apart outside speech with natural pauses (a music bridge such as an end-card "
+        "wipe allowed), the closing call to action last, ending on the music's button, the length exact. Ranked by "
+        "natural pauses, opening the film, fewer joins; choosing among them is editorial (see the cutdown "
+        "sub-skill). The first call on a new master starts a measuring job: poll formcut_render_status, then call again."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_plan_cutdown(
+    media_id: Annotated[str, Field(description="The master (or its mix) in the library")],
+    length: Annotated[float, Field(description="Target length in seconds, e.g. 15 or 30")] = 15.0,
+    top: Annotated[int, Field(description="How many scripts to return, best first")] = 10,
+) -> str:
+    ok, result = _rpc("media.cutdowns", {"id": media_id, "length": length, "top": top})
+    if not ok:
+        return result
+    return json.dumps(result, indent=1)
+
+
+@mcp.tool(
     name="formcut_music",
     description=(
         "A library item's music grid: tempo (BPM), beat and bar length, first beat, and the final hit (the chord a "

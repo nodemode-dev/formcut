@@ -24,10 +24,11 @@ breaking it failed a round.
 
 1. Import the master and read it: `formcut_import_media`, then `formcut_transcribe` (small model) for sentences with
    times. Sentence times are reliable; word times are not cut points.
-2. The music grid: `formcut_music` gives tempo, bar, first beat and final hit. With `out_from` and `out_to` around the
-   end of a line it lists joins a whole number of bars apart whose ends are outside speech. Compose scripts from
-   these: a script is units (source ranges of complete sentences) joined by these candidates, its length the sum of
-   the units, the last unit ending after the final hit.
+2. Scripts: `formcut_plan_cutdown` with the length lists ranked scripts, each with its exact source segments, the bars
+   jumped at each join and the pause each leaves (whole sentences, bar-aligned joins outside speech, the call to action
+   last, ending on the button, the length exact). Choose among them by the editorial rules above; the ranking is by
+   natural pauses, not by meaning. To adjust a join by hand, `formcut_music` with `out_from` and `out_to` lists the
+   bar-aligned joins from that out-point.
 3. Build each spot's timeline: the mix on two alternating audio tracks (one per unit, 20 to 30 ms crossfades at the
    joins, a short fade at the end), picture cuts from the master muted on a video track, matched to the words.
 4. `formcut_speech_check`: every audio cut safe. Move any unsafe cut into the pause it names.
@@ -43,8 +44,9 @@ breaking it failed a round.
 
 ## Not yet automated
 
-- The script planner: formcut does not yet enumerate whole scripts for a target length. Compose them from
-  `formcut_music`'s join candidates and these rules; judge viability editorially.
+- Editorial choice: `formcut_plan_cutdown` lists feasible scripts ranked by how natural the joins sound, not by
+  whether they tell a story; on the Posh master all seven delivered scripts are among its 26 :15 and 140 :30, the
+  :15 at ranks 2, 4, 7 and 18. Read them and choose.
 - The downbeat: `formcut_music` reports the music's first beat as the downbeat; it is not detected from the audio.
   Joins need only the bar length, so they are unaffected.
 - Soft transitions in the picture (dissolves, wipes): `formcut_find_scenes` finds hard cuts only. Check in-points by
