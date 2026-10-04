@@ -447,6 +447,42 @@ def dispatch(method: str, params: dict):
         if not cues:
             raise ValueError("No captions on that track")
         return {"format": fmt, "text": write(cues, fmt), "count": len(cues)}
+    if method == "timeline.frames":
+        import numpy as np
+
+        from .cadence import CACHE, cadence_map, solve_clip
+        from .media import MEDIA_DIR, _find
+
+        project_id = str(params.get("id") or "")
+        project = store.get_project(project_id)
+        if not project:
+            raise ValueError("Project not found")
+        rate = float(params.get("rate") or project["fps"])
+        timeline = project["timelines"][int(project.get("activeTimeline", 0))]
+        clips = [c for track in timeline["tracks"] for c in track["clips"] if c.get("kind") == "video" and c.get("mediaId")]
+        missing = sorted({c["mediaId"] for c in clips if not (CACHE / f"{c['mediaId']}.npy").exists()})
+        if missing:
+            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*"))) for m in missing}
+
+            def measure(job_id, report, cancelled):
+                for media_id, path in sources.items():
+                    cadence_map(media_id, path, report, cancelled)
+                return {"measured": list(sources)}
+
+            job = jobs.submit("cadence", measure)
+            message = "measuring the sources' cadence; call again once that job is done"
+            return {"measuring": missing, "job_id": job["job_id"], "message": message}
+        rows, commands = [], []
+        for clip in clips:
+            solved = solve_clip(clip, rate, float(_find(clip["mediaId"]).get("fps") or rate), np.load(CACHE / f"{clip['mediaId']}.npy"))
+            rows.append({"clip": clip["id"], "label": clip.get("label"), "start": clip["start"], **solved})
+            if params.get("fix") and solved["change"]:
+                commands.append({"op": "clip.update", "clipId": clip["id"], "patch": solved["change"]})
+        result = {"rate": rate, "repeats": sum(r["repeats"] for r in rows), "clips": rows}
+        if commands:
+            dispatch("project.edit", {"id": project_id, "commands": commands, "revision": project.get("revision")})
+            result["fixed"] = len(commands)
+        return result
     if method == "media.qc":
         from .media import MEDIA_DIR, _find
         from .qc import quality_report
@@ -542,6 +578,7 @@ def dispatch(method: str, params: dict):
                 "media.scenes",
                 "media.beats",
                 "media.qc",
+                "timeline.frames",
                 "media.ducking",
                 "captions.import",
                 "captions.export",

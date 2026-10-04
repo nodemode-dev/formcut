@@ -107,7 +107,7 @@ def test_an_agent_drives_the_running_engine(tmp_path):
         assert json.loads((tmp_path / "engine.json").read_text())["url"] == address
         for command in ([sys.executable, str(ENTRY), "--mcp"], [sys.executable, str(ROOT / "mcp" / "formcut_mcp.py")]):
             count, status = _drive(command, env)
-            assert count == 23 and address in status, (command, status[:200])
+            assert count == 24 and address in status, (command, status[:200])
     finally:
         engine.terminate()
         engine.wait(timeout=30)

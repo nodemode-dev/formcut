@@ -508,6 +508,29 @@ def formcut_render_status(
 
 
 @mcp.tool(
+    name="formcut_frame_check",
+    description=(
+        "Before rendering: predict which video clips on the active timeline would show a repeated frame at an output "
+        "rate, from each source's measured cadence (a 60p master can carry 24, 25 and 30p footage padded with "
+        "duplicates). With fix, apply per clip the smallest change that removes them: an in-point shift of up to 3 "
+        "source frames and a speed-up of up to 2%, or a slow keep-alive push on a hold. The first call on a new source "
+        "starts a measuring job: poll formcut_render_status with its id, then call again."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+)
+def formcut_frame_check(
+    project_id: Annotated[str, Field(description="Project id; its active timeline is checked")],
+    rate: Annotated[float | None, Field(description="Output frame rate; the project's when unset")] = None,
+    fix: Annotated[bool, Field(description="Apply the changes that remove the predicted repeats")] = False,
+) -> str:
+    params = {"id": project_id, "fix": fix} | ({"rate": rate} if rate else {})
+    ok, result = _rpc("timeline.frames", params)
+    if not ok:
+        return result
+    return json.dumps(result, indent=1)
+
+
+@mcp.tool(
     name="formcut_qc",
     description=(
         "Check a rendered file before delivering it: duration, frame count and rate; exact repeated frames and "
