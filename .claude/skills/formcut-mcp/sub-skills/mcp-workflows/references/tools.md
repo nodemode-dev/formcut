@@ -2,7 +2,7 @@
 
 Generated from `backend/app/agent_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, with its exact name, its parameters (limits and defaults as the server enforces them) and whether it changes anything. Names are case sensitive. If a host's tool listing disagrees with this file, the listing is current and this file is stale.
 
-The server declares 22 tools.
+The server declares 23 tools.
 
 | Tool | Parameters | Effect | What it does |
 | --- | --- | --- | --- |
@@ -18,6 +18,7 @@ The server declares 22 tools.
 | `formcut_set_frame` | `project_id` str; `revision` int (ge 0); `width` int (ge 16, le 7680); `height` int (ge 16, le 4320); `fps` int (ge 1, le 240) = 30 | changes state | Change a project's frame size and rate, and return the new revision. Use it when the output format differs from the default 1920x1080 at 30 fps. |
 | `formcut_render` | `project_id` str; `file_format` str = 'mp4'; `quality` str = 'high'; `rate` str = None; `size` str = None; `codec` str = None; `ten_bit` bool = False; `exact` bool = False; `audio_bitrate` int = None; `loudness` float = None; `true_peak` float = -1.0 | changes state | Start rendering a project to a file and return a job id. Rendering takes minutes, so this returns immediately: poll formcut_render_status with the job id until it reports done, which carries the output path. Format is mp4, webm or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, 30, 50, 59.94 or 60; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), audio_bitrate in kbps (192, 256 or 320), and a loudness target in LUFS with a true-peak ceiling in dBTP (one measured gain on the mix, no compression). |
 | `formcut_render_status` | `job_id` str | read only | Report a render's progress, and when it is finished give the output file path. Also reports a cancelled or failed render with the reason. Poll this after formcut_render. |
+| `formcut_qc` | `job_id` str = None; `media_id` str = None; `edits` list = None; `loudness` float = None; `true_peak` float = -1.0 | read only | Check a rendered file before delivering it: duration, frame count and rate; exact repeated frames and near duplicates (ffmpeg's mpdecimate); freezes; black and flash frames; first and last frame sharpness; integrated loudness, range and true peak; clicks at given audio edit points. Returns JSON with passed and the reasons it failed. Give a finished render's job id, or a media id. |
 | `formcut_render_audio` | `project_id` str | changes state | Start rendering a project's audio mix alone (a WAV) and return a job id; poll formcut_render_status with it. For measuring or mastering the mix outside the picture render. |
 | `formcut_cancel_render` | `job_id` str | destructive | Stop a render that is still running. The partial output is discarded. |
 | `formcut_catalogue` | `kind` str = 'all'; `group` str = '' | read only | List what the formcut renderer can apply, with the ids an edit uses: video entries (colour grades and visual effects, each with a category and group), audio chains, transitions and blend modes. Use it before naming an effect, so the id is real. |

@@ -508,6 +508,34 @@ def formcut_render_status(
 
 
 @mcp.tool(
+    name="formcut_qc",
+    description=(
+        "Check a rendered file before delivering it: duration, frame count and rate; exact repeated frames and "
+        "near duplicates (ffmpeg's mpdecimate); freezes; black and flash frames; first and last frame sharpness; "
+        "integrated loudness, range and true peak; clicks at given audio edit points. Returns JSON with passed and "
+        "the reasons it failed. Give a finished render's job id, or a media id."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_qc(
+    job_id: Annotated[str | None, Field(description="A finished render's job id")] = None,
+    media_id: Annotated[str | None, Field(description="Or a media id from the library")] = None,
+    edits: Annotated[list[float] | None, Field(description="Audio edit points in seconds, to listen for clicks")] = None,
+    loudness: Annotated[float | None, Field(description="Integrated loudness target in LUFS; within 1 LU passes")] = None,
+    true_peak: Annotated[float, Field(description="True-peak ceiling in dBTP")] = -1.0,
+) -> str:
+    if not job_id and not media_id:
+        return "give a finished render's job id or a media id"
+    params = {"job": job_id} if job_id else {"id": media_id}
+    params |= {"edits": edits or [], "truePeak": true_peak} | ({"loudness": loudness} if loudness is not None else {})
+    ok, report = _rpc("media.qc", params)
+    if not ok:
+        return report
+    head = {"passed": report.get("passed"), "reasons": report.get("reasons")}
+    return json.dumps({**head, **{k: v for k, v in report.items() if k not in head}}, indent=1)
+
+
+@mcp.tool(
     name="formcut_render_audio",
     description=(
         "Start rendering a project's audio mix alone (a WAV) and return a job id; poll formcut_render_status with it. "

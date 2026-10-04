@@ -447,6 +447,23 @@ def dispatch(method: str, params: dict):
         if not cues:
             raise ValueError("No captions on that track")
         return {"format": fmt, "text": write(cues, fmt), "count": len(cues)}
+    if method == "media.qc":
+        from .media import MEDIA_DIR, _find
+        from .qc import quality_report
+
+        if params.get("job"):
+            result = jobs.status(str(params["job"])).get("result") or {}
+            target = Path(str(result.get("file") or ""))
+        else:
+            media_id = str(params.get("id") or "")
+            _find(media_id)
+            matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+            target = matches[0] if matches else Path("")
+        if not target.is_file():
+            raise ValueError("Give a finished render's job id or a media id to check")
+        edits = [float(t) for t in params.get("edits") or []]
+        target_lufs = float(params["loudness"]) if params.get("loudness") is not None else None
+        return quality_report(target, edits or None, target_lufs, float(params.get("truePeak", -1.0)))
     if method == "media.beats":
         from .media import _samples
         from .rhythm import beats
@@ -524,6 +541,7 @@ def dispatch(method: str, params: dict):
                 "media.proxy",
                 "media.scenes",
                 "media.beats",
+                "media.qc",
                 "media.ducking",
                 "captions.import",
                 "captions.export",
