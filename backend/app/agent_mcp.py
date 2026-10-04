@@ -611,6 +611,37 @@ def formcut_speech_check(
 
 
 @mcp.tool(
+    name="formcut_focus_motion",
+    description=(
+        "Compose a camera move from focus areas on a clip: each area is a rectangle on the clip's own picture as "
+        "[x0, y0, x1, y1] in 0 to 1; the move opens wide, frames each area in turn (centred, filling all but the margin, "
+        "never showing an empty edge the wide shot did not) and holds on it, and with loop returns to the wide shot so "
+        "it repeats. Written as the clip's scale, posX and posY keyframes in one undoable edit, editable afterwards. "
+        "speed is fast, medium or slow; a seed shuffles the order the areas are visited."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+)
+def formcut_focus_motion(
+    project_id: Annotated[str, Field(description="Project id")],
+    revision: Annotated[int, Field(ge=0, description="Revision last seen for this project")],
+    clip_id: Annotated[str, Field(description="The clip to move over")],
+    areas: Annotated[list[list[float]], Field(description="Focus areas in visiting order, each [x0, y0, x1, y1] in 0 to 1")],
+    speed: Annotated[str, Field(description="fast, medium or slow")] = "medium",
+    loop: Annotated[bool, Field(description="End on the wide shot so the move repeats cleanly")] = False,
+    seed: Annotated[int | None, Field(description="Shuffle the visiting order with this seed")] = None,
+) -> str:
+    if speed not in ("fast", "medium", "slow"):
+        return "speed must be fast, medium or slow"
+    command = {"op": "clip.focus-motion", "clipId": clip_id, "areas": areas, "speed": speed, "loop": loop}
+    if seed is not None:
+        command["seed"] = seed
+    ok, result = _rpc("project.edit", {"id": project_id, "revision": revision, "commands": [command]})
+    if not ok:
+        return result
+    return f"focus move written on clip {clip_id}; project revision {result.get('revision')}"
+
+
+@mcp.tool(
     name="formcut_frame_check",
     description=(
         "Before rendering: predict which video clips on the active timeline would show a repeated frame at an output "

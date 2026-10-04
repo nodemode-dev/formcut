@@ -102,6 +102,7 @@ from .agent_connect import router as agents_router
 from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
 from .engine_report import router as engine_router
+from .focus_motion import router as focus_motion_router
 from .generative import router as generative_router
 from .klein import router as klein_router
 from .krea2 import router as krea2_router
@@ -129,6 +130,7 @@ app.include_router(media_check_router)
 app.include_router(engine_router)
 app.include_router(generative_router)
 app.include_router(planar_router)
+app.include_router(focus_motion_router)
 app.include_router(project_files_router)
 
 

@@ -35,6 +35,29 @@ def apply_edit(project: dict, command: dict):
         if not located:
             raise ValueError("Clip not found")
         located[0]["clips"].remove(located[1])
+    elif operation == "clip.focus-motion":
+        if not located:
+            raise ValueError("Clip not found")
+        from .focus_motion import compose, merged_keyframes
+        from .media import _find
+
+        clip = located[1]
+        canvas = (float(project.get("width") or 1920), float(project.get("height") or 1080))
+        record = _find(clip["mediaId"]) if clip.get("mediaId") else {}
+        picture = (float(record.get("width") or canvas[0]), float(record.get("height") or canvas[1]))
+        seed = command.get("seed")
+        made = compose(
+            float(clip["duration"]),
+            canvas,
+            picture,
+            command["areas"],
+            clip.get("transform") or {},
+            str(command.get("speed") or "medium"),
+            bool(command.get("loop")),
+            int(seed) if seed is not None else None,
+            float(command.get("margin", 0.08)),
+        )
+        clip["keyframes"] = merged_keyframes(clip.get("keyframes") or [], made["keyframes"])
     elif operation == "clip.update":
         if not located:
             raise ValueError("Clip not found")
@@ -751,6 +774,7 @@ def dispatch(method: str, params: dict):
                 "clip.add",
                 "clip.remove",
                 "clip.update",
+                "clip.focus-motion",
                 "clip.move",
                 "clip.split",
                 "clips.move",

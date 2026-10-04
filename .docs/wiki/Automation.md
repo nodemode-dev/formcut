@@ -69,7 +69,7 @@ Title styles ride `clip.text` patches like any other style field, so the full pr
 
 ## MCP server
 
-The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 28 tools over stdio,
+The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 29 tools over stdio,
 each a thin, documented wrapper over the RPC above; the full listing is generated into
 `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`. By purpose:
 
@@ -81,6 +81,9 @@ each a thin, documented wrapper over the RPC above; the full listing is generate
   with a true-peak ceiling), `formcut_render_audio`, `formcut_render_status`, `formcut_cancel_render`.
 - Delivery checks: `formcut_qc`, `formcut_frame_check`, `formcut_speech_check`.
 - Music and cutdowns: `formcut_music`, `formcut_plan_cutdown`.
+- Camera moves: `formcut_focus_motion` (the `clip.focus-motion` edit: `areas` as `[x0, y0, x1, y1]` on the clip's
+  picture in visiting order, `speed` fast, medium or slow, `loop`, optional `seed` and `margin`; the clip's scale,
+  posX and posY keyframes replaced in one edit; `POST /api/focus-motion` returns the keyframes without applying them).
 - Effect packages: `formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`, `formcut_list_packages`,
   `formcut_remove_package`.
 
