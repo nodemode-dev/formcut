@@ -1760,6 +1760,7 @@ class FrameRenderer:
         # of a bezel's width left the fingers above the owner's perspective phone lit green)
         reach = float(spec.get("reach", 0) or 0) or max(6.0, 0.04 * max(w, h))
         near = np.clip(cv2.GaussianBlur(inside, (0, 0), reach) * 3.0, 0, 1)
+        near = np.maximum(near, cv2.dilate(inside.astype(np.float32), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))))
         # despill: "max" holds the screen's colour to the larger of the other two (a teal wall untouched), "average" to
         # their mean, which takes the yellow a green screen casts on skin (green risen, still below red) as well
         limit = (one + two) / 2 if spec.get("despill") == "average" else np.maximum(one, two)
