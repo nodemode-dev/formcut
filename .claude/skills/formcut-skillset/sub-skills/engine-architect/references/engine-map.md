@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 849 | /api/rpc | 2 |
+| automation.py | 893 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -79,7 +79,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (903L)
+- `agent_mcp.py` (926L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
@@ -87,6 +87,7 @@ the automation transports.
 - `cli.py` (61L)
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
+- `cutdown.py` (128L)
 - `discovery.py` (65L)
 - `durable.py` (84L)
 - `effect_packages.py` (435L)
@@ -121,7 +122,7 @@ the automation transports.
 - `prompt_data.py` (119L)
 - `prompt_space.py` (74L)
 - `proxies.py` (265L)
-- `qc.py` (155L)
+- `qc.py` (166L)
 - `render_document.py` (130L)
 - `renderer.py` (2399L)
 - `rhythm.py` (148L)
