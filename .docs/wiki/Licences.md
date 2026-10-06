@@ -11,6 +11,8 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 | python-multipart | Apache-2.0 | upload parsing | ship |
 | vite, typescript | MIT | build-time only, output ships | ship |
 | Inter font | OFL-1.1 | No remote stylesheet or font file is shipped; system UI fonts are used | not bundled |
+| 3d-mock-models device library v0.10.0 | CC0-1.0 | ten device models in backend/app/device_library (generated in code by the owner's 3d-mock-models; LICENSE beside them) | ship |
+| Inter glyphs in the device key legends | OFL-1.1 | drawn into the laptop and 2-in-1 models' legend textures by the generator; images only, no font file | ship |
 | httpx | BSD-3-Clause | Pexels API and media fetch | ship |
 | yt-dlp | Unlicense (public domain) | URL media import, invoked as a module subprocess | ship |
 | @huggingface/transformers | Apache-2.0 | in-browser Whisper transcription | ship |

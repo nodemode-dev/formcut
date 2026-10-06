@@ -611,6 +611,38 @@ def formcut_speech_check(
 
 
 @mcp.tool(
+    name="formcut_devices",
+    description=(
+        "The device library: ten photoreal device models (phones, tablets, a flip and two folds, two laptops and a "
+        "2-in-1) for device mockups. Each lists its screens a clip can be shown on (the inner display, and on folding "
+        "devices the cover display, with size, aspect, suggested pixels and cut-outs), the parts that pose (lid, fold, "
+        "stand, with ranges in degrees), whether the keyboard is backlit, and its finishes. Give an id for one device."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_devices(
+    device_id: Annotated[str | None, Field(description="One device's id, e.g. fold-open; omit for all")] = None,
+) -> str:
+    ok, result = _rpc("devices.list", {"id": device_id} if device_id else {})
+    if not ok:
+        return result
+    items = [result] if device_id else result["devices"]
+    lines = [] if device_id else [f"{len(items)} devices (library {result['version']}, contract {result['contract']})"]
+    for item in items:
+        screens = "; ".join(
+            f"{s['slot']} {s['pixels'][0]}x{s['pixels'][1]} (aspect {s['aspect']})"
+            + (f", cut-out {s['cutouts'][0]['shape']}" if s["cutouts"] else "")
+            for s in item["screens"]
+        )
+        poses = ", ".join(f"{a['name']} {a['closedDeg']} to {a['maxDeg']} deg" for a in item["articulations"]) or "none"
+        lines.append(
+            f"{item['id']} ({item['kind']}, {item['style']}): screens {screens}; poses {poses}; "
+            f"backlit keyboard {'yes' if item['backlight'] else 'no'}; finishes {', '.join(sorted(item['finishes']))}"
+        )
+    return "\n".join(lines)
+
+
+@mcp.tool(
     name="formcut_focus_motion",
     description=(
         "Compose a camera move from focus areas on a clip: each area is a rectangle on the clip's own picture as "

@@ -7,7 +7,7 @@ description: "Connect formcut's MCP server to Claude Code, Codex, Cursor, Claude
 
 ## Purpose
 
-Get the 29 formcut tools reachable from an MCP client and driving the formcut that is running, and diagnose it when they are not.
+Get the 30 formcut tools reachable from an MCP client and driving the formcut that is running, and diagnose it when they are not.
 
 ## Where the server comes from
 

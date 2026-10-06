@@ -619,6 +619,11 @@ def dispatch(method: str, params: dict):
         edits = [float(t) for t in params.get("edits") or []]
         target_lufs = float(params["loudness"]) if params.get("loudness") is not None else None
         return quality_report(target, edits or None, target_lufs, float(params.get("truePeak", -1.0)))
+    if method == "devices.list":
+        from .devices import catalogue as device_library
+        from .devices import device
+
+        return device(str(params["id"])) if params.get("id") else device_library()
     if method in ("media.beats", "media.music"):
         from .media import MEDIA_DIR, _find
         from .music import music_map
@@ -721,6 +726,7 @@ def dispatch(method: str, params: dict):
                 "media.beats",
                 "media.qc",
                 "media.music",
+                "devices.list",
                 "media.cutdowns",
                 "media.transcribe",
                 "timeline.frames",

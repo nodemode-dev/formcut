@@ -1,0 +1,1500 @@
+{
+  "version": "v0.10.0",
+  "blender": "5.2.2 LTS",
+  "ao": {
+    "samples": 256,
+    "size": 2048
+  },
+  "models": [
+    {
+      "id": "detachable-open",
+      "file": "detachable-open.glb",
+      "sha256": "44ca7fb879232a700cfc08722d23266eeb6e9f91ea437a6a4c32151d26e1b43e",
+      "bytes": 11963396,
+      "triangles": 174041,
+      "dimensionsMm": [
+        288.0,
+        210.0,
+        5.0
+      ],
+      "finish": "platinum",
+      "license": "CC0-1.0",
+      "finishes": {
+        "black": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.035,
+            0.036,
+            0.04
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.015,
+            0.015,
+            0.017
+          ],
+          "deckSurface": "fabric",
+          "frame": [
+            0.035,
+            0.036,
+            0.04
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.035,
+            0.036,
+            0.04
+          ],
+          "key": [
+            0.02,
+            0.02,
+            0.02
+          ]
+        },
+        "platinum": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.72,
+            0.73,
+            0.74
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.15,
+            0.153,
+            0.157
+          ],
+          "deckSurface": "fabric",
+          "frame": [
+            0.72,
+            0.73,
+            0.74
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.72,
+            0.73,
+            0.74
+          ],
+          "key": [
+            0.1,
+            0.1,
+            0.105
+          ]
+        },
+        "sand": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.55,
+            0.43,
+            0.35
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.2,
+            0.145,
+            0.11
+          ],
+          "deckSurface": "fabric",
+          "frame": [
+            0.55,
+            0.43,
+            0.35
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.55,
+            0.43,
+            0.35
+          ],
+          "key": [
+            0.14,
+            0.1,
+            0.075
+          ]
+        },
+        "sapphire": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.3,
+            0.42,
+            0.62
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.03,
+            0.06,
+            0.11
+          ],
+          "deckSurface": "fabric",
+          "frame": [
+            0.3,
+            0.42,
+            0.62
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.3,
+            0.42,
+            0.62
+          ],
+          "key": [
+            0.025,
+            0.045,
+            0.08
+          ]
+        }
+      }
+    },
+    {
+      "id": "flip-open",
+      "file": "flip-open.glb",
+      "sha256": "396188b4c253cd4dec74096b8b858705b1a636ec3f8a926074e98c329847653e",
+      "bytes": 5925776,
+      "triangles": 95444,
+      "dimensionsMm": [
+        75.5,
+        167.0,
+        6.2
+      ],
+      "finish": "pink",
+      "license": "CC0-1.0",
+      "finishes": {
+        "cream": {
+          "antenna": [
+            0.5,
+            0.46,
+            0.36
+          ],
+          "back": [
+            0.62,
+            0.57,
+            0.45
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.72,
+            0.67,
+            0.56
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.72,
+            0.67,
+            0.56
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.62,
+            0.57,
+            0.45
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "graphite": {
+          "antenna": [
+            0.024,
+            0.025,
+            0.027
+          ],
+          "back": [
+            0.03,
+            0.031,
+            0.034
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.07,
+            0.072,
+            0.078
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.07,
+            0.072,
+            0.078
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.03,
+            0.031,
+            0.034
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "mint": {
+          "antenna": [
+            0.21,
+            0.3,
+            0.25
+          ],
+          "back": [
+            0.26,
+            0.38,
+            0.31
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.46,
+            0.64,
+            0.54
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.46,
+            0.64,
+            0.54
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.26,
+            0.38,
+            0.31
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "pink": {
+          "antenna": [
+            0.44,
+            0.27,
+            0.34
+          ],
+          "back": [
+            0.56,
+            0.33,
+            0.43
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.8,
+            0.54,
+            0.66
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.8,
+            0.54,
+            0.66
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.56,
+            0.33,
+            0.43
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "fold-minimal",
+      "file": "fold-minimal.glb",
+      "sha256": "8b7f6a0528251dc6aa2f641cca17330d9cff9e517d18e7ee0939acce601e3bf6",
+      "bytes": 6232440,
+      "triangles": 96306,
+      "dimensionsMm": [
+        165.0,
+        118.0,
+        5.2
+      ],
+      "finish": "white",
+      "license": "CC0-1.0",
+      "finishes": {
+        "navy": {
+          "antenna": [
+            0.03,
+            0.04,
+            0.06
+          ],
+          "back": [
+            0.012,
+            0.02,
+            0.036
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.09,
+            0.11,
+            0.15
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.09,
+            0.11,
+            0.15
+          ],
+          "frameRoughness": 0.14,
+          "inset": [
+            0.012,
+            0.02,
+            0.036
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "white": {
+          "antenna": [
+            0.6,
+            0.59,
+            0.57
+          ],
+          "back": [
+            0.84,
+            0.83,
+            0.81
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.72,
+            0.71,
+            0.69
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.72,
+            0.71,
+            0.69
+          ],
+          "frameRoughness": 0.14,
+          "inset": [
+            0.84,
+            0.83,
+            0.81
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "fold-open",
+      "file": "fold-open.glb",
+      "sha256": "e2a0947084a8b74f03d3597e3ee2681a14871ce10297e41f99edc54baa5c9232",
+      "bytes": 6677828,
+      "triangles": 115216,
+      "dimensionsMm": [
+        162.0,
+        124.0,
+        4.6
+      ],
+      "finish": "lavender",
+      "license": "CC0-1.0",
+      "finishes": {
+        "cream": {
+          "antenna": [
+            0.5,
+            0.46,
+            0.36
+          ],
+          "back": [
+            0.62,
+            0.57,
+            0.45
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.72,
+            0.67,
+            0.56
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.72,
+            0.67,
+            0.56
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.62,
+            0.57,
+            0.45
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "graphite": {
+          "antenna": [
+            0.024,
+            0.025,
+            0.027
+          ],
+          "back": [
+            0.03,
+            0.031,
+            0.034
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.07,
+            0.072,
+            0.078
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.07,
+            0.072,
+            0.078
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.03,
+            0.031,
+            0.034
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "lavender": {
+          "antenna": [
+            0.22,
+            0.19,
+            0.25
+          ],
+          "back": [
+            0.29,
+            0.255,
+            0.325
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.5,
+            0.46,
+            0.58
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.5,
+            0.46,
+            0.58
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.29,
+            0.255,
+            0.325
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "pistachio": {
+          "antenna": [
+            0.24,
+            0.29,
+            0.18
+          ],
+          "back": [
+            0.3,
+            0.36,
+            0.22
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.5,
+            0.58,
+            0.4
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.5,
+            0.58,
+            0.4
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.3,
+            0.36,
+            0.22
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "laptop-minimal",
+      "file": "laptop-minimal.glb",
+      "sha256": "a290cb93dde86f94a5be81a09278b98e1cc392eb68a6b08b57c0bc22f0258d19",
+      "bytes": 13541748,
+      "triangles": 185560,
+      "dimensionsMm": [
+        312.0,
+        221.0,
+        7.5
+      ],
+      "finish": "midnight",
+      "license": "CC0-1.0",
+      "finishes": {
+        "champagne": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.76,
+            0.67,
+            0.55
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.76,
+            0.67,
+            0.55
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.76,
+            0.67,
+            0.55
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.76,
+            0.67,
+            0.55
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "midnight": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.02,
+            0.027,
+            0.05
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.035,
+            0.045,
+            0.075
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.035,
+            0.045,
+            0.075
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.02,
+            0.027,
+            0.05
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "silver": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "sky": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.58,
+            0.67,
+            0.78
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.58,
+            0.67,
+            0.78
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.58,
+            0.67,
+            0.78
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.58,
+            0.67,
+            0.78
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "laptop-open",
+      "file": "laptop-open.glb",
+      "sha256": "634b547e7e03539226944db4b2bf790cdd96a8b410ccd5d196e042afa342c44b",
+      "bytes": 13813788,
+      "triangles": 199903,
+      "dimensionsMm": [
+        352.6,
+        237.5,
+        9.8
+      ],
+      "finish": "slate",
+      "license": "CC0-1.0",
+      "finishes": {
+        "mist": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.7,
+            0.72,
+            0.73
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.74,
+            0.75,
+            0.76
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.74,
+            0.75,
+            0.76
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.7,
+            0.72,
+            0.73
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "obsidian": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.02,
+            0.02,
+            0.022
+          ],
+          "backSurface": "gloss",
+          "deck": [
+            0.09,
+            0.09,
+            0.095
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.09,
+            0.09,
+            0.095
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.02,
+            0.02,
+            0.022
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "sage": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.38,
+            0.47,
+            0.38
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.6,
+            0.63,
+            0.58
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.6,
+            0.63,
+            0.58
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.38,
+            0.47,
+            0.38
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "slate": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "phone-minimal",
+      "file": "phone-minimal.glb",
+      "sha256": "5994d5055693eedb54dfa7e5b777e1bd57f114ebd21f21e4c22ead7e9bfcf3e4",
+      "bytes": 5810480,
+      "triangles": 76764,
+      "dimensionsMm": [
+        72.0,
+        150.0,
+        8.7
+      ],
+      "finish": "wine",
+      "license": "CC0-1.0",
+      "finishes": {
+        "black": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.032
+          ],
+          "back": [
+            0.028,
+            0.029,
+            0.032
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.028,
+            0.029,
+            0.032
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.028,
+            0.029,
+            0.032
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.04,
+            0.041,
+            0.045
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "ice": {
+          "antenna": [
+            0.2,
+            0.3,
+            0.48
+          ],
+          "back": [
+            0.22,
+            0.34,
+            0.56
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.22,
+            0.34,
+            0.56
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.22,
+            0.34,
+            0.56
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.27,
+            0.39,
+            0.6
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "silver": {
+          "antenna": [
+            0.68,
+            0.69,
+            0.7
+          ],
+          "back": [
+            0.78,
+            0.79,
+            0.8
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.78,
+            0.79,
+            0.8
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.78,
+            0.79,
+            0.8
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.82,
+            0.83,
+            0.84
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "wine": {
+          "antenna": [
+            0.075,
+            0.02,
+            0.03
+          ],
+          "back": [
+            0.11,
+            0.028,
+            0.042
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.11,
+            0.028,
+            0.042
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.11,
+            0.028,
+            0.042
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.135,
+            0.04,
+            0.056
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "phone-open",
+      "file": "phone-open.glb",
+      "sha256": "f700b99ddc078de493981dddacd05e636e8152f0515c06c3e18e1c74c36ccd58",
+      "bytes": 5750400,
+      "triangles": 86048,
+      "dimensionsMm": [
+        78.0,
+        163.5,
+        7.9
+      ],
+      "finish": "violet",
+      "license": "CC0-1.0",
+      "finishes": {
+        "black": {
+          "antenna": [
+            0.02,
+            0.02,
+            0.02
+          ],
+          "back": [
+            0.012,
+            0.012,
+            0.013
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.04,
+            0.04,
+            0.044
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.04,
+            0.04,
+            0.044
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.012,
+            0.012,
+            0.013
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "rose": {
+          "antenna": [
+            0.3,
+            0.21,
+            0.185
+          ],
+          "back": [
+            0.36,
+            0.25,
+            0.22
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.62,
+            0.45,
+            0.39
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.62,
+            0.45,
+            0.39
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.36,
+            0.25,
+            0.22
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "shadow": {
+          "antenna": [
+            0.2,
+            0.205,
+            0.21
+          ],
+          "back": [
+            0.26,
+            0.265,
+            0.27
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.5,
+            0.51,
+            0.52
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.5,
+            0.51,
+            0.52
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.26,
+            0.265,
+            0.27
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "sky": {
+          "antenna": [
+            0.16,
+            0.22,
+            0.31
+          ],
+          "back": [
+            0.2,
+            0.27,
+            0.38
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.4,
+            0.5,
+            0.64
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.4,
+            0.5,
+            0.64
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.2,
+            0.27,
+            0.38
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "violet": {
+          "antenna": [
+            0.025,
+            0.023,
+            0.05
+          ],
+          "back": [
+            0.031,
+            0.029,
+            0.062
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.17,
+            0.17,
+            0.27
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.17,
+            0.17,
+            0.27
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.031,
+            0.029,
+            0.062
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "white": {
+          "antenna": [
+            0.6,
+            0.6,
+            0.59
+          ],
+          "back": [
+            0.75,
+            0.75,
+            0.73
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.8,
+            0.8,
+            0.79
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.8,
+            0.8,
+            0.79
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.75,
+            0.75,
+            0.73
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "tablet-minimal",
+      "file": "tablet-minimal.glb",
+      "sha256": "bfa7d2cddd1a0fa9bffaaa06e2d587f7ae1a1bbf692dcc6dce71a28c80b7b2e8",
+      "bytes": 5511152,
+      "triangles": 88162,
+      "dimensionsMm": [
+        249.7,
+        177.5,
+        5.3
+      ],
+      "finish": "silver",
+      "license": "CC0-1.0",
+      "finishes": {
+        "black": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.032
+          ],
+          "back": [
+            0.045,
+            0.046,
+            0.05
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.045,
+            0.046,
+            0.05
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.045,
+            0.046,
+            0.05
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.045,
+            0.046,
+            0.05
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "silver": {
+          "antenna": [
+            0.7,
+            0.71,
+            0.72
+          ],
+          "back": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "backSurface": "metal",
+          "deck": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.8,
+            0.81,
+            0.82
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    },
+    {
+      "id": "tablet-open",
+      "file": "tablet-open.glb",
+      "sha256": "707635e50a5b491ce1adf0cb010f758022591db5740779d9c3bb88b13051d370",
+      "bytes": 5557836,
+      "triangles": 93760,
+      "dimensionsMm": [
+        254.0,
+        166.0,
+        6.8
+      ],
+      "finish": "mist",
+      "license": "CC0-1.0",
+      "finishes": {
+        "mist": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.7,
+            0.72,
+            0.73
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.74,
+            0.75,
+            0.76
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.74,
+            0.75,
+            0.76
+          ],
+          "frameRoughness": 0.3,
+          "inset": [
+            0.7,
+            0.72,
+            0.73
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "obsidian": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.02,
+            0.02,
+            0.022
+          ],
+          "backSurface": "gloss",
+          "deck": [
+            0.09,
+            0.09,
+            0.095
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.09,
+            0.09,
+            0.095
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.02,
+            0.02,
+            0.022
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "sage": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.38,
+            0.47,
+            0.38
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.6,
+            0.63,
+            0.58
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.6,
+            0.63,
+            0.58
+          ],
+          "frameRoughness": 0.32,
+          "inset": [
+            0.38,
+            0.47,
+            0.38
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        },
+        "slate": {
+          "antenna": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "back": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "backSurface": "matte",
+          "deck": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "deckSurface": "metal",
+          "frame": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "frameRoughness": 0.34,
+          "inset": [
+            0.16,
+            0.17,
+            0.18
+          ],
+          "key": [
+            0.03,
+            0.03,
+            0.03
+          ]
+        }
+      }
+    }
+  ]
+}
