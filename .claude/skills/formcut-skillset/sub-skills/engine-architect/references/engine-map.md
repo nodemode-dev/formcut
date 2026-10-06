@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 921 | /api/rpc | 2 |
+| automation.py | 927 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -32,6 +32,7 @@ The rest is written by hand.
 | cloud.py | 441 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 68 | /api/demo | 2 |
+| devices.py | 225 | /api/devices | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
 | focus_motion.py | 141 | /api/focus-motion | 1 |
@@ -46,7 +47,7 @@ The rest is written by hand.
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 472 | /api/health | 13 |
+| main.py | 474 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 773 | /api/models | 8 |
@@ -80,7 +81,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (957L)
+- `agent_mcp.py` (989L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
@@ -89,6 +90,9 @@ the automation transports.
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
 - `cutdown.py` (128L)
+- `device_assets.py` (285L)
+- `device_render.py` (621L)
+- `device_scene.py` (222L)
 - `discovery.py` (65L)
 - `durable.py` (84L)
 - `effect_packages.py` (435L)
