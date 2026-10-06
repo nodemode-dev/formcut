@@ -61,7 +61,7 @@ The rest is written by hand.
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1349 | /api/render | 13 |
+| render_api.py | 1357 | /api/render | 13 |
 | render_stream.py | 87 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -81,8 +81,9 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (1054L)
+- `agent_mcp.py` (1066L)
 - `ai_upscale.py` (141L)
+- `alpha_export.py` (126L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
 - `cadence.py` (151L)
@@ -99,7 +100,7 @@ the automation transports.
 - `effect_packages.py` (435L)
 - `encoders.py` (377L)
 - `expressions.py` (51L)
-- `fast_export.py` (309L)
+- `fast_export.py` (310L)
 - `fast_layers.py` (408L)
 - `features.py` (43L)
 - `ffmpeg_fetch.py` (165L)
