@@ -6,7 +6,7 @@ import { sampledTransform } from "../engine/keyframes";
 import { icon } from "./icons";
 import { t } from "../i18n";
 
-// Focus moves (beyond CapCut 12 of 13): numbered areas drawn on a clip's picture become a camera move, composed by
+// Focus moves (2D on any clip, 3D on device clips): numbered areas drawn on a clip's picture become a camera move, composed by
 // the engine (backend/app/focus_motion.py) and applied as the clip's scale, posX and posY keyframes in one replace,
 // so it undoes in one step and stays editable. Areas live in the clip's own picture coordinates (0 to 1), mapped to
 // the stage the way the preview places the clip (preview-manipulation.ts layerBox).
