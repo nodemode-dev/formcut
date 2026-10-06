@@ -26,6 +26,7 @@ from .video_source import acquire, recycle
 # Proxies may be switched off wholesale; the switch lives here so one import
 # covers both the preview path and the reverse builder.
 PROXIES_ENABLED = True
+from . import device_layer
 from .pixel_effects import apply_colour_panel, apply_effects
 from .render_document import flatten, nested_project, validate_document
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
@@ -2209,6 +2210,12 @@ class FrameRenderer:
                     if nested_image is None:
                         continue
                     image = nested_image
+                elif clip["kind"] == "device":
+                    try:
+                        image = device_layer.picture(self, clip, local)
+                    except Exception as exc:
+                        name = str((clip.get("device") or {}).get("id") or "device")
+                        image = placeholder(self.width, self.height, MediaUnreadable(name, str(exc)))
                 else:
                     # A video layer that goes straight to the device, with nothing on this side needing its pixels
                     # first, takes its frame as planes, and the device converts it (yuv.py)

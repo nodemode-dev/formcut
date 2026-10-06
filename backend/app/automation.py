@@ -30,11 +30,35 @@ def apply_edit(project: dict, command: dict):
     if operation == "clip.add":
         clip = copy.deepcopy(command["clip"])
         clip.setdefault("id", uuid.uuid4().hex)
+        if clip.get("kind") == "device":
+            from .device_layer import normalised
+
+            clip["device"] = normalised(clip.get("device") or {})
         timeline["tracks"][track_index]["clips"].append(clip)
     elif operation == "clip.remove":
         if not located:
             raise ValueError("Clip not found")
         located[0]["clips"].remove(located[1])
+    elif operation == "clip.device":
+        if not located or located[1].get("kind") != "device":
+            raise ValueError("Device clip not found")
+        from .device_layer import normalised
+
+        merged = copy.deepcopy(located[1].get("device") or {})
+        for key, value in (command.get("patch") or {}).items():
+            if key in ("camera", "pose", "screens") and isinstance(value, dict):
+                part = dict(merged.get(key) or {})
+                for name, item in value.items():
+                    if item is None:
+                        part.pop(name, None)
+                    else:
+                        part[name] = item
+                merged[key] = part
+            elif value is None:
+                merged.pop(key, None)
+            else:
+                merged[key] = value
+        located[1]["device"] = normalised(merged)
     elif operation == "clip.focus-motion":
         if not located:
             raise ValueError("Clip not found")
@@ -785,6 +809,7 @@ def dispatch(method: str, params: dict):
                 "clip.remove",
                 "clip.update",
                 "clip.focus-motion",
+                "clip.device",
                 "clip.move",
                 "clip.split",
                 "clips.move",

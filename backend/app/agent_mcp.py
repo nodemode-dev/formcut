@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from typing import Annotated, Any
 
 import httpx
@@ -640,6 +641,70 @@ def formcut_devices(
             f"backlit keyboard {'yes' if item['backlight'] else 'no'}; finishes {', '.join(sorted(item['finishes']))}"
         )
     return "\n".join(lines)
+
+
+@mcp.tool(
+    name="formcut_device",
+    description=(
+        "Add a device mockup clip, or change one. With device_id (from formcut_devices) it adds a device clip on a new "
+        "track; with clip_id it changes that clip. Each screen (inner, and cover on folding devices) shows a media id or "
+        'a timeline id, fitted by cover (crop to fill) or contain. pose sets parts in degrees, e.g. {"fold": 90} or '
+        '{"lid": 100, "stand": 40}; camera sets yaw, pitch, distance (1 frames the device), fov, roll, panX, panY; '
+        "backlight is the keyboard glow, 0 to about 1.5. Every number can then be keyframed as device.<name> "
+        "(device.yaw, device.fold, device.backlight). One undoable edit."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
+)
+def formcut_device(
+    project_id: Annotated[str, Field(description="Project id")],
+    revision: Annotated[int, Field(ge=0, description="Revision last seen for this project")],
+    device_id: Annotated[str | None, Field(description="Library device to add, or to switch an existing clip to")] = None,
+    clip_id: Annotated[str | None, Field(description="An existing device clip to change")] = None,
+    start: Annotated[float, Field(ge=0, description="Where a new clip starts, seconds")] = 0.0,
+    duration: Annotated[float, Field(gt=0, description="A new clip's length, seconds")] = 5.0,
+    finish: Annotated[str | None, Field(description="One of the device's finishes")] = None,
+    inner_media: Annotated[str | None, Field(description="Media shown on the inner screen")] = None,
+    inner_timeline: Annotated[str | None, Field(description="Timeline shown on the inner screen")] = None,
+    cover_media: Annotated[str | None, Field(description="Media shown on the cover screen")] = None,
+    cover_timeline: Annotated[str | None, Field(description="Timeline shown on the cover screen")] = None,
+    fit: Annotated[str, Field(description="cover or contain")] = "cover",
+    pose: Annotated[dict | None, Field(description="Parts in degrees: lid, fold, stand")] = None,
+    camera: Annotated[dict | None, Field(description="yaw, pitch, distance, fov, roll, panX, panY")] = None,
+    backlight: Annotated[float | None, Field(ge=0, le=3, description="Keyboard backlight level")] = None,
+) -> str:
+    patch: dict = {k: v for k, v in {"finish": finish, "pose": pose, "camera": camera, "backlight": backlight}.items() if v is not None}
+    screens = {}
+    for slot, media, timeline in (("inner", inner_media, inner_timeline), ("cover", cover_media, cover_timeline)):
+        if media or timeline:
+            screens[slot] = {"mediaId": media, "fit": fit} if media else {"timelineId": timeline, "fit": fit}
+    if screens:
+        patch["screens"] = screens
+    if clip_id:
+        if device_id:
+            patch["id"] = device_id
+        commands = [{"op": "clip.device", "clipId": clip_id, "patch": patch}]
+        new_id = clip_id
+    else:
+        if not device_id:
+            return "Give device_id (see formcut_devices) to add a device clip, or clip_id to change one"
+        ok, project = _rpc("project.get", {"id": project_id})
+        if not ok:
+            return project
+        tracks = project["timelines"][project.get("activeTimeline", 0)]["tracks"]
+        new_id = uuid.uuid4().hex
+        clip = {
+            "id": new_id,
+            "kind": "device",
+            "label": device_id,
+            "start": start,
+            "duration": duration,
+            "device": {"id": device_id, **patch},
+        }
+        commands = [{"op": "track.add", "name": "Device"}, {"op": "clip.add", "track": len(tracks), "clip": clip}]
+    ok, result = _rpc("project.edit", {"id": project_id, "revision": revision, "commands": commands})
+    if not ok:
+        return result
+    return f"device clip {new_id} {'changed' if clip_id else 'added'}; project revision {result.get('revision')}"
 
 
 @mcp.tool(

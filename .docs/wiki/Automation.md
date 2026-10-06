@@ -69,7 +69,7 @@ Title styles ride `clip.text` patches like any other style field, so the full pr
 
 ## MCP server
 
-The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 30 tools over stdio,
+The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 31 tools over stdio,
 each a thin, documented wrapper over the RPC above; the full listing is generated into
 `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`. By purpose:
 
@@ -84,6 +84,13 @@ each a thin, documented wrapper over the RPC above; the full listing is generate
 - Device library: `formcut_devices` (RPC `devices.list`, optional `id`; `GET /api/devices` and
   `GET /api/devices/{id}/model`): the ten device models with their screens (inner and cover, size, aspect, suggested
   pixels, cut-outs), the parts that pose (lid, fold, stand, ranges in degrees), backlight and finishes.
+- Device clips: `formcut_device` adds one on a new track (a clip of kind `device`, through `clip.add`) or changes one
+  (the `clip.device` edit: a patch merged into the clip's `device` block, `camera`, `pose` and `screens` key by key,
+  null removing a key, the result checked against the library). The block: `id`, `finish`, `screens.inner` and
+  `screens.cover` (each `mediaId` or `timelineId`, `offset` in seconds, `fit` cover or contain), `pose` (lid, fold,
+  stand in degrees, within the device's ranges), `camera` (yaw, pitch, distance with 1 framing the device, fov, roll,
+  panX, panY), `backlight`, `exposure`, `light`, `shadow`, `screenBrightness`. Each number is keyframable as
+  `device.<name>` (device.yaw, device.fold, device.backlight); other `device.` names are refused.
 - Camera moves: `formcut_focus_motion` (the `clip.focus-motion` edit: `areas` as `[x0, y0, x1, y1]` on the clip's
   picture in visiting order, `speed` fast, medium or slow, `loop`, optional `seed` and `margin`; the clip's scale,
   posX and posY keyframes replaced in one edit; `POST /api/focus-motion` returns the keyframes without applying them).

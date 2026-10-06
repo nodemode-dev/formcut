@@ -54,7 +54,7 @@ def validate_document(project: dict) -> dict:
                 value = clip.get(key)
                 if not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0 or value > 86400:
                     raise ValueError(f"Invalid clip {key}")
-            if clip["duration"] <= 0 or clip.get("kind") not in ("video", "image", "audio", "text", "filter", "timeline"):
+            if clip["duration"] <= 0 or clip.get("kind") not in ("video", "image", "audio", "text", "filter", "timeline", "device"):
                 raise ValueError("Invalid clip duration or kind")
             if len(clip.get("effects") or []) > 32 or len(clip.get("speedCurve") or []) > 256 or len(clip.get("words") or []) > 512:
                 raise ValueError("Clip processing limit exceeded")
