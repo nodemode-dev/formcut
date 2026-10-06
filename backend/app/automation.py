@@ -872,7 +872,7 @@ def dispatch(method: str, params: dict):
         if method == "project.get":
             return project
         if method in ("project.export", "project.export_audio"):
-            keys = ("codec", "tenBit", "exact", "size", "rate", "audioBitrate", "loudness", "truePeak")
+            keys = ("codec", "tenBit", "exact", "size", "rate", "audioBitrate", "loudness", "truePeak", "transparent")
             options = {k: params[k] for k in keys if params.get(k) is not None}
             body = RenderInput(project=project, format=params.get("format", "mp4"), quality=params.get("quality", "high"), **options)
             if method == "project.export_audio":

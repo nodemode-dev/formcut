@@ -17,7 +17,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
+from . import alpha_export, encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import CONTAINERS, addon_binary_for, estimate_bitrate, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -51,6 +51,7 @@ class RenderInput(BaseModel):
     exact: bool = False
     size: str | None = None
     rate: str | None = None
+    transparent: bool = False  # no background, alpha kept: format mov (ProRes 4444), webm (VP9 alpha) or png (a zip)
     audioBitrate: int | None = Field(default=None, ge=64, le=512)  # kbps; the encoder's default when unset
     loudness: float | None = Field(default=None, ge=-40, le=-5)  # integrated LUFS target; the mix as made when unset
     truePeak: float = Field(default=-1.0, ge=-9, le=0)  # dBTP the loudness gain never pushes past
@@ -1078,7 +1079,10 @@ def export_media(
 @router.post("/export", status_code=202)
 def export(body: RenderInput):
     project = checked(body)
-    if body.format not in ("mp4", "webm", "gif") or body.quality not in ("high", "medium", "low"):
+    if body.transparent:
+        if body.format not in alpha_export.FORMATS:
+            raise HTTPException(422, "A transparent export is mov (ProRes 4444), webm (VP9 with alpha) or png (a zip of frames)")
+    elif body.format not in ("mp4", "webm", "gif") or body.quality not in ("high", "medium", "low"):
         raise HTTPException(422, "Unknown export format or quality")
     if body.size is not None and body.size not in SIZE_PRESETS:
         raise HTTPException(422, "Unknown export size")
@@ -1094,6 +1098,10 @@ def export(body: RenderInput):
 
 def _export_operation(body: RenderInput, project: dict):
     def operation(job_id, report, cancelled):
+        if body.transparent:
+            num, den = RATE_PRESETS.get(body.rate or "", (0, 0))
+            fps = num / den if num else float(project["fps"])
+            return alpha_export.export_transparent(project, job_id, report, cancelled, body.format, fps, OUTPUTS)
         sound = {"audio_kbps": body.audioBitrate, "loudness": body.loudness, "true_peak": body.truePeak}
         picture = (body.format, body.quality, body.codec, body.tenBit, body.size, body.rate, body.exact)
         result = export_media(project, job_id, report, cancelled, *picture, **sound)

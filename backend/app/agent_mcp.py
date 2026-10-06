@@ -455,6 +455,9 @@ def formcut_render(
     file_format: Annotated[str, Field(description="Output container: mp4, webm or gif")] = "mp4",
     quality: Annotated[str, Field(description="Encoder ladder: low, medium or high")] = "high",
     rate: Annotated[str | None, Field(description="Output frame rate, e.g. 23.976 or 24; the project's when unset")] = None,
+    transparent: Annotated[
+        bool, Field(description="No background, alpha kept: file_format mov (ProRes 4444), webm (VP9 alpha) or png (zip)")
+    ] = False,
     size: Annotated[str | None, Field(description="Output size preset (see formcut_capabilities); the project's when unset")] = None,
     codec: Annotated[str | None, Field(description="Video codec, e.g. h264, hevc, av1, vp9; the container's default when unset")] = None,
     ten_bit: Annotated[bool, Field(description="Ten-bit video where the codec carries it")] = False,
@@ -463,11 +466,20 @@ def formcut_render(
     loudness: Annotated[float | None, Field(description="Integrated loudness target in LUFS, e.g. -14, -16 or -23")] = None,
     true_peak: Annotated[float, Field(description="True-peak ceiling in dBTP the loudness gain never passes")] = -1.0,
 ) -> str:
-    if file_format not in ("mp4", "webm", "gif"):
+    if transparent and file_format not in ("mov", "webm", "png"):
+        return "a transparent export is mov (ProRes 4444), webm (VP9 with alpha) or png (a zip of frames)"
+    if not transparent and file_format not in ("mp4", "webm", "gif"):
         return "format must be mp4, webm or gif"
     if quality not in ("low", "medium", "high"):
         return "quality must be low, medium or high"
-    options = {"rate": rate, "size": size, "codec": codec, "tenBit": ten_bit or None, "exact": exact or None}
+    options = {
+        "rate": rate,
+        "size": size,
+        "codec": codec,
+        "tenBit": ten_bit or None,
+        "exact": exact or None,
+        "transparent": transparent or None,
+    }
     options |= {"audioBitrate": audio_bitrate, "loudness": loudness, "truePeak": true_peak if loudness is not None else None}
     params = {"id": project_id, "format": file_format, "quality": quality} | {k: v for k, v in options.items() if v is not None}
     ok, job = _rpc("project.export", params)
