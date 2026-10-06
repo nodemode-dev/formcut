@@ -67,6 +67,7 @@ ABSENT = (
     "rampOut",
     "words",
     "timelineId",
+    "device",
     "angle",
     "audioAngle",
 )
