@@ -1,4 +1,5 @@
 import contextlib
+import os
 import threading
 import time
 import uuid
@@ -40,6 +41,39 @@ def _write_ledger() -> None:
             rows = {**{k: v for k, v in on_disk.items() if k not in rows}, **rows}
     with contextlib.suppress(OSError):  # a read-only data folder keeps jobs in memory only, as before
         write_json(_ledger_path(), rows)
+
+
+_claim = None
+
+
+def claim_data_dir() -> bool:
+    """One engine per data folder: an exclusive lock on <data>/engine.lock, held for the engine's life.
+
+    Two engines on one folder (the app opened twice, a second engine started beside a running one) each resumed the
+    same interrupted export and wrote the same frames: one renamed the other's half-written frame, and that one's
+    clean-up deleted the cache both were using. The second engine now stops before it resumes anything. Taking the
+    claim again in the same process is a no-op."""
+    global _claim
+    if _claim is not None:
+        return True
+    from .paths import DATA_DIR
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    handle = open(DATA_DIR / "engine.lock", "a+")  # noqa: SIM115 (held open for the engine's life)
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+    _claim = handle
+    return True
 
 
 def resume_pending() -> dict:

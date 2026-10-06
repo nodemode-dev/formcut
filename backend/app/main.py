@@ -82,6 +82,10 @@ async def _resume_jobs() -> None:
     # Jobs survive a restart: finished ones are found again, an export caught mid-render is re-queued under its id.
     from . import jobs, render_api  # noqa: F401 (render_api registers the export resumer)
 
+    if not jobs.claim_data_dir():
+        # a second engine on this folder must not resume the first one's jobs (it would render the same export into
+        # the same files); it stops here instead
+        raise RuntimeError("Another formcut engine is already using this data folder; close it or use another folder")
     jobs.resume_pending()
 
 

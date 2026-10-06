@@ -1016,7 +1016,7 @@ def export_media(
                     if picture is None:
                         picture = np.ascontiguousarray(renderer.frame(i / fps))
                         # written then renamed, so a frame cut off mid-write is never read back
-                        partial = frames_cache / f"{i:06d}.part.png"
+                        partial = frames_cache / f"{i:06d}.{os.getpid()}.part.png"
                         cv2.imwrite(str(partial), picture, [cv2.IMWRITE_PNG_COMPRESSION, 1])
                         partial.replace(kept)
                     picture = np.ascontiguousarray(picture)
