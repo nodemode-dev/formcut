@@ -155,7 +155,8 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
 
   // --- new project format ------------------------------------------------------
 
-  const ASPECTS: Array<[string, number, number, string]> = [["9:16", 1080, 1920, "format.vertical"], ["16:9", 1920, 1080, "format.wide"], ["1:1", 1080, 1080, "format.square"], ["4:5", 1080, 1350, "format.portrait"]];
+  const ASPECTS: Array<[string, number, number, string]> = [["9:16", 1080, 1920, "format.vertical"], ["16:9", 1920, 1080, "format.wide"], ["1:1", 1080, 1080, "format.square"], ["4:5", 1080, 1350, "format.portrait"],
+    ["1290×2796", 1290, 2796, "format.storephone"], ["2064×2752", 2064, 2752, "format.storetablet"], ["2880×1800", 2880, 1800, "format.storelaptop"]];
   const RATES = [24, 25, 30, 50, 60];
   let format = { width: 1080, height: 1920, fps: 30 };
   const sheet = document.createElement("div");

@@ -1,5 +1,8 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Device|Appareil|Dispositivo|デバイス|기기|Dispositivo|Устройство|Cihaz|设备|裝置
+const rows = `Phone screenshot|Capture téléphone|Screenshot telefono|スマートフォンのスクリーンショット|휴대폰 스크린샷|Captura de celular|Снимок для телефона|Telefon ekran görüntüsü|手机截图|手機截圖
+Tablet screenshot|Capture tablette|Screenshot tablet|タブレットのスクリーンショット|태블릿 스크린샷|Captura de tablet|Снимок для планшета|Tablet ekran görüntüsü|平板截图|平板截圖
+Laptop screenshot|Capture ordinateur portable|Screenshot portatile|ノートパソコンのスクリーンショット|노트북 스크린샷|Captura de notebook|Снимок для ноутбука|Dizüstü ekran görüntüsü|笔记本截图|筆電截圖
+Device|Appareil|Dispositivo|デバイス|기기|Dispositivo|Устройство|Cihaz|设备|裝置
 Device mockup|Maquette d'appareil|Mockup del dispositivo|デバイスモックアップ|기기 목업|Mockup de dispositivo|Макет устройства|Cihaz maketi|设备样机|裝置樣機
 Add a device mockup at the playhead|Ajouter une maquette d'appareil à la tête de lecture|Aggiungi un mockup del dispositivo alla testina|再生ヘッドの位置にデバイスモックアップを追加|재생 헤드 위치에 기기 목업 추가|Adicionar um mockup de dispositivo no cursor de reprodução|Добавить макет устройства в позицию воспроизведения|Oynatma kafasına bir cihaz maketi ekle|在播放头处添加设备样机|在播放頭處加入裝置樣機
 Cover screen|Écran externe|Schermo esterno|カバー画面|커버 화면|Tela externa|Внешний экран|Dış ekran|外屏|外螢幕
