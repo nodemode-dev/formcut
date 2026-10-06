@@ -8,8 +8,10 @@ It includes third-party components under their own licences, among them the
 timeline glyphs derived from the Lucide icon set (ISC) and, in release builds,
 formcut's LGPL-2.1 build of FFmpeg. The demo media in examples/demo keep their
 own licences (examples/demo/README.md). The device models in
-backend/app/device_library (from 3d-mock-models) are CC0-1.0; their keyboard
-legends were drawn with the Inter font (SIL Open Font License 1.1). Every component and its obligations are
+backend/app/device_library (from 3d-mock-models) are original designs, modelled
+from scratch in code, under CC0-1.0; their keyboard legends were drawn with the
+Inter font (SIL Open Font License 1.1). They are provided as is and used at
+each person's own risk, as USE_POLICY.md sets out. Every component and its obligations are
 listed in .docs/wiki/Licences.md.
 
 Use of formcut is set out in USE_POLICY.md. As the Apache License, Version 2.0 provides (sections 7 and 8), formcut

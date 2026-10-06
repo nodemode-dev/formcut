@@ -11,9 +11,10 @@ page is read alongside it.
   it, and any change you make to formcut or to your own build of it are your decisions.
 - You alone are responsible for complying with every law that applies to you, in every jurisdiction that applies to
   you, and with the licences and terms of any media, model or service you use through formcut.
-- To the fullest extent permitted by applicable law, formcut, its developers and contributors, and NodeMode are not
-  responsible for, and cannot be held liable for, any use or misuse of formcut, of a modified version of formcut, or
-  of anything made with either. As sections 7 and 8 of the Apache License state, formcut is provided "as is", without
+- To the fullest extent permitted by applicable law, nodemode-ai, NodeMode LLC, nodeagentc, formcut and the form
+  suite, and their developers and contributors, are not responsible for, and cannot be held liable for, any use or
+  misuse of formcut, of a modified version of formcut, or of anything made with either, including any infringement of
+  a third party's rights or any breach of a third party's licence or terms. As sections 7 and 8 of the Apache License state, formcut is provided "as is", without
   warranties or conditions of any kind, and no contributor is liable for damages arising from its use.
 
 ## Models formcut does not ship
@@ -28,6 +29,21 @@ page is read alongside it.
   on every picture; there is no option to install Krea 2 without it. Because formcut is open source you can remove it,
   but that is your own, knowing decision: formcut warns you when the filter is gone, Krea 2 keeps running, and the
   responsibility for using Krea 2 without it, and for any breach of its licence that follows, is yours alone.
+
+## Device models formcut ships
+
+- formcut includes ten device models for mockups: phones, tablets, folding phones, laptops and a 2-in-1. They are
+  original designs, modelled from scratch in code by 3d-mock-models, and released under CC0-1.0. They carry no
+  manufacturer's name, logo or trademark, and they are not affiliated with, sponsored by or endorsed by any device
+  maker.
+- You use them at your own risk. What you make with them, and where and how you publish it, are your decisions, and
+  you alone are responsible for making sure that use respects the rights of others, including trademarks, trade
+  dress, design rights and copyright, and the terms of any store, platform or marketplace you publish to.
+- To the fullest extent permitted by applicable law, nodemode-ai, NodeMode LLC, nodeagentc, formcut and the form
+  suite, and their developers and contributors, are not responsible for, and cannot be held liable for, any use or
+  misuse of these models or of anything made with them, including any infringement of a third party's rights or any
+  breach of a licence or terms of service. The models are provided "as is", without warranties or conditions of any
+  kind.
 
 ## What formcut will not do
 
