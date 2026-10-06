@@ -3,6 +3,7 @@ import io
 import json
 import math
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -11,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from pathlib import Path
 
+import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
@@ -493,6 +495,9 @@ def export_media(
     path = OUTPUTS / (job_id + "." + format)
     audio = OUTPUTS / (job_id + ".wav")
     log = OUTPUTS / (job_id + ".log")
+    # finished frames, kept losslessly while the job runs: a job resumed after the engine stopped (closed, crashed,
+    # the machine slept) reads them back instead of rendering them again; removed when the job ends any other way
+    frames_cache = OUTPUTS / (job_id + ".frames")
     renderer = FrameRenderer(project)
     process = None
     final, cisco = path, None
@@ -999,12 +1004,22 @@ def export_media(
             else:
                 max_cll, max_fall = 0.0, 0.0
 
+                frames_cache.mkdir(parents=True, exist_ok=True)
+
                 def produce(i: int):
                     if planar:
                         got = renderer.frame_planes(i / fps, layout)
                         if got is not None:
                             return got
-                    picture = np.ascontiguousarray(renderer.frame(i / fps))
+                    kept = frames_cache / f"{i:06d}.png"
+                    picture = cv2.imread(str(kept), cv2.IMREAD_UNCHANGED) if kept.exists() else None
+                    if picture is None:
+                        picture = np.ascontiguousarray(renderer.frame(i / fps))
+                        # written then renamed, so a frame cut off mid-write is never read back
+                        partial = frames_cache / f"{i:06d}.part.png"
+                        cv2.imwrite(str(partial), picture, [cv2.IMWRITE_PNG_COMPRESSION, 1])
+                        partial.replace(kept)
+                    picture = np.ascontiguousarray(picture)
                     if planar:
                         # the device did not pack this frame (nothing on screen, say): converted here as ffmpeg would
                         picture = _to_planes(picture, layout)
@@ -1074,6 +1089,7 @@ def export_media(
         renderer.close()
         audio.unlink(missing_ok=True)
         log.unlink(missing_ok=True)
+        shutil.rmtree(frames_cache, ignore_errors=True)
 
 
 @router.post("/export", status_code=202)
