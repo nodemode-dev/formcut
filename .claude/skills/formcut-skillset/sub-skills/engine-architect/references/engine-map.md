@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 952 | /api/rpc | 2 |
+| automation.py | 968 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -35,7 +35,7 @@ The rest is written by hand.
 | devices.py | 225 | /api/devices | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
-| focus_motion.py | 141 | /api/focus-motion | 1 |
+| focus_motion.py | 247 | /api/focus-motion | 1 |
 | fonts.py | 93 | /api/assets | 1 |
 | generate.py | 1113 | /api/generate | 6 |
 | generative.py | 152 | /api/generative | 5 |
@@ -81,7 +81,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (1066L)
+- `agent_mcp.py` (1068L)
 - `ai_upscale.py` (141L)
 - `alpha_export.py` (126L)
 - `audio_render.py` (231L)
