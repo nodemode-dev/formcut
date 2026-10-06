@@ -683,6 +683,9 @@ def formcut_device(
     pose: Annotated[dict | None, Field(description="Parts in degrees: lid, fold, stand")] = None,
     camera: Annotated[dict | None, Field(description="yaw, pitch, distance, fov, roll, panX, panY")] = None,
     backlight: Annotated[float | None, Field(ge=0, le=3, description="Keyboard backlight level")] = None,
+    template: Annotated[
+        str | None, Field(description="A ready animation: hero, push, reveal (flip, fold), opening (laptop, 2-in-1), stand (2-in-1)")
+    ] = None,
 ) -> str:
     patch: dict = {k: v for k, v in {"finish": finish, "pose": pose, "camera": camera, "backlight": backlight}.items() if v is not None}
     screens = {}
@@ -713,6 +716,30 @@ def formcut_device(
             "device": {"id": device_id, **patch},
         }
         commands = [{"op": "track.add", "name": "Device"}, {"op": "clip.add", "track": len(tracks), "clip": clip}]
+    if template:
+        from .device_templates import keyframes as template_keys
+        from .device_templates import touched
+        from .devices import device as library_device
+
+        ok, project = _rpc("project.get", {"id": project_id})
+        if not ok:
+            return project
+        found = next((c for tl in project["timelines"] for t in tl["tracks"] for c in t["clips"] if c["id"] == clip_id), None)
+        if clip_id and not found:
+            return f"No clip {clip_id}"
+        which = device_id or (found or {}).get("device", {}).get("id")
+        length = float(found["duration"]) if found else duration
+        try:
+            made = template_keys(template, library_device(str(which)), length)
+        except (KeyError, ValueError) as exc:
+            return str(exc)
+        replaced = touched(made)
+        kept = [{**k, "props": {p: v for p, v in k["props"].items() if p not in replaced}} for k in ((found or {}).get("keyframes") or [])]
+        merged = sorted([k for k in kept if k["props"]] + made, key=lambda k: k["t"])
+        if clip_id:
+            commands.append({"op": "clip.update", "clipId": clip_id, "patch": {"keyframes": merged}})
+        else:
+            commands[-1]["clip"]["keyframes"] = merged
     ok, result = _rpc("project.edit", {"id": project_id, "revision": revision, "commands": commands})
     if not ok:
         return result

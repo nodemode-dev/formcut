@@ -20,6 +20,7 @@ interface Device {
   screens: Screen[];
   articulations: Articulation[];
   backlight: unknown;
+  templates: string[];
 }
 
 // name -> [where it lives in the block, default, min, max, step, unit]
@@ -83,6 +84,7 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     <div class="section-head">${t("dev.title")} ${icon("chevD")}</div>
     <div class="prop-row"><span>${t("dev.model")}</span><select class="mini-select" data-dev-model aria-label="${t("dev.model")}"></select><span class="prop-aux"></span></div>
     <div class="prop-row"><span>${t("dev.finish")}</span><span class="device-swatches" data-dev-finishes></span><span class="prop-aux"></span></div>
+    <div class="prop-row"><span>${t("dev.template")}</span><select class="mini-select" data-dev-template aria-label="${t("dev.template")}"></select><span class="prop-aux"></span></div>
     <div data-dev-screens></div>
     <div data-dev-poses></div>
     ${["yaw", "pitch", "distance", "fov", "roll"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
@@ -140,6 +142,8 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     const device = info(clip);
     if (!device) return;
     builtFor = device.id;
+    section.querySelector<HTMLSelectElement>("[data-dev-template]")!.innerHTML = `<option value="">${t("dev.pick")}</option>`
+      + (device.templates ?? []).map((name) => `<option value="${name}">${t(`dev.tpl.${name}`)}</option>`).join("");
     finishes.innerHTML = Object.entries(device.finishes)
       .map(([name, spec]) => `<button type="button" class="device-swatch" data-dev-finish="${name}" title="${name}" aria-label="${name}" style="background: rgb(${spec.frame.map(display).join(",")})"></button>`)
       .join("");
@@ -191,6 +195,21 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     const clip = selected();
     const target = event.target as HTMLInputElement | HTMLSelectElement;
     if (!clip) return;
+    if (target.dataset.devTemplate !== undefined) {
+      const chosen = target.value;
+      target.value = "";
+      if (!chosen) return;
+      void api<{ keyframes: Array<{ t: number; props: Record<string, number>; interp?: string }> }>("/api/devices/template", {
+        device: clip.device!.id, template: chosen, duration: clip.duration,
+      }).then((made) => {
+        const replaced = new Set(made.keyframes.flatMap((k) => Object.keys(k.props)));
+        const kept = (clip.keyframes ?? [])
+          .map((k) => ({ ...k, props: Object.fromEntries(Object.entries(k.props).filter(([p]) => !replaced.has(p))) }))
+          .filter((k) => Object.keys(k.props).length);
+        engine.dispatch("clip.keyframes.replace", { clipId: clip.id, keyframes: [...kept, ...made.keyframes] });
+      }).catch((error) => window.alert((error as Error).message));
+      return;
+    }
     if (target === model) {
       const next = devices.find((d) => d.id === model.value);
       if (!next) return;

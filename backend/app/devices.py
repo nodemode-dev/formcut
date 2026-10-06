@@ -165,7 +165,10 @@ def _describe(entry: dict) -> dict:
     if extras.get("contract") != CONTRACT:
         raise ValueError(f"{entry['file']} follows device contract {extras.get('contract')}, formcut reads {CONTRACT}")
     legend = next((m for m in document["materials"] if m.get("name") == "M_KeyLegend"), None)
+    from .device_templates import KINDS  # imported here: device_templates reads this module
+
     return {
+        "templates": [name for name, kinds in KINDS.items() if kinds is None or extras["kind"] in kinds],
         "id": extras["id"],
         "kind": extras["kind"],
         "style": extras["style"],

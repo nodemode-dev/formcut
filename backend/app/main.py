@@ -101,6 +101,7 @@ app.add_middleware(LocalOnly)
 from .agent_connect import router as agents_router
 from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
+from .device_templates import router as device_templates_router
 from .devices import router as devices_router
 from .engine_report import router as engine_router
 from .focus_motion import router as focus_motion_router
@@ -132,6 +133,7 @@ app.include_router(engine_router)
 app.include_router(generative_router)
 app.include_router(planar_router)
 app.include_router(focus_motion_router)
+app.include_router(device_templates_router)
 app.include_router(devices_router)
 app.include_router(project_files_router)
 

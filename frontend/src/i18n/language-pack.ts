@@ -1,5 +1,11 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Transparent background (MP4 as ProRes 4444, GIF as PNG frames)|Fond transparent (MP4 en ProRes 4444, GIF en images PNG)|Sfondo trasparente (MP4 come ProRes 4444, GIF come fotogrammi PNG)|透明な背景（MP4 は ProRes 4444、GIF は PNG フレーム）|투명 배경 (MP4는 ProRes 4444, GIF는 PNG 프레임)|Fundo transparente (MP4 como ProRes 4444, GIF como quadros PNG)|Прозрачный фон (MP4 как ProRes 4444, GIF как кадры PNG)|Saydam arka plan (MP4 ProRes 4444 olarak, GIF PNG kareleri olarak)|透明背景（MP4 导出为 ProRes 4444，GIF 导出为 PNG 帧）|透明背景（MP4 匯出為 ProRes 4444，GIF 匯出為 PNG 影格）
+const rows = `Template|Modèle|Modello|テンプレート|템플릿|Modelo|Шаблон|Şablon|模板|範本
+Choose a template|Choisir un modèle|Scegli un modello|テンプレートを選択|템플릿 선택|Escolha um modelo|Выберите шаблон|Bir şablon seçin|选择模板|選擇範本
+Hero turn|Rotation de présentation|Rotazione di presentazione|ヒーローターン|히어로 회전|Giro de apresentação|Демонстрационный поворот|Tanıtım dönüşü|展示旋转|展示旋轉
+Fold reveal|Dépliage|Apertura della piega|折りたたみを開く|펼쳐 보이기|Abertura da dobra|Раскрытие|Katlanmayı açma|展开折叠|展開摺疊
+Lid opening|Ouverture du capot|Apertura del coperchio|ふたを開く|덮개 열기|Abertura da tampa|Открытие крышки|Kapak açılışı|开盖|開蓋
+On its stand|Sur sa béquille|Sul supporto|スタンドで立てる|스탠드에 세우기|No suporte|На подставке|Desteğinde|立于支架|立於支架
+Transparent background (MP4 as ProRes 4444, GIF as PNG frames)|Fond transparent (MP4 en ProRes 4444, GIF en images PNG)|Sfondo trasparente (MP4 come ProRes 4444, GIF come fotogrammi PNG)|透明な背景（MP4 は ProRes 4444、GIF は PNG フレーム）|투명 배경 (MP4는 ProRes 4444, GIF는 PNG 프레임)|Fundo transparente (MP4 como ProRes 4444, GIF como quadros PNG)|Прозрачный фон (MP4 как ProRes 4444, GIF как кадры PNG)|Saydam arka plan (MP4 ProRes 4444 olarak, GIF PNG kareleri olarak)|透明背景（MP4 导出为 ProRes 4444，GIF 导出为 PNG 帧）|透明背景（MP4 匯出為 ProRes 4444，GIF 匯出為 PNG 影格）
 Phone screenshot|Capture téléphone|Screenshot telefono|スマートフォンのスクリーンショット|휴대폰 스크린샷|Captura de celular|Снимок для телефона|Telefon ekran görüntüsü|手机截图|手機截圖
 Tablet screenshot|Capture tablette|Screenshot tablet|タブレットのスクリーンショット|태블릿 스크린샷|Captura de tablet|Снимок для планшета|Tablet ekran görüntüsü|平板截图|平板截圖
 Laptop screenshot|Capture ordinateur portable|Screenshot portatile|ノートパソコンのスクリーンショット|노트북 스크린샷|Captura de notebook|Снимок для ноутбука|Dizüstü ekran görüntüsü|笔记本截图|筆電截圖
