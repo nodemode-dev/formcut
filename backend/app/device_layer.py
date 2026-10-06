@@ -46,8 +46,12 @@ def normalised(block: dict) -> dict:
     out = {
         k: v
         for k, v in block.items()
-        if k in ("id", "finish", "screens", "pose", "camera", "fit", *[v[1] for v in VALUES.values() if v[0] is None])
+        if k in ("id", "finish", "screens", "pose", "camera", "fit", "lighting", *[v[1] for v in VALUES.values() if v[0] is None])
     }
+    from .device_scene import LIGHTS
+
+    if out.get("lighting", "studio") not in LIGHTS:
+        raise ValueError(f"lighting is {' or '.join(LIGHTS)}, not {out['lighting']}")
     finish = out.get("finish") or info["finish"]
     if finish not in info["finishes"]:
         raise ValueError(f"{info['id']} has no finish {finish}; it has {', '.join(sorted(info['finishes']))}")
@@ -176,4 +180,5 @@ def picture(renderer, clip: dict, local: float) -> np.ndarray:
         exposure=values.get("exposure", 1.0),
         shadow=values.get("shadow", 0.6),
         light_rotation=values.get("light", 0.0),
+        lighting=str(block.get("lighting") or "studio"),
     )

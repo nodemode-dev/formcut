@@ -15,15 +15,34 @@ import numpy as np
 ENV_WIDTH, ENV_HEIGHT = 512, 256
 ROUGHNESS_LEVELS = tuple(i / 6 for i in range(7))
 _lock = threading.Lock()
-_environment: dict | None = None
+_environment: dict[str, dict] = {}
 
-# softboxes: (azimuth deg, elevation deg, width deg, height deg, intensity, warmth)
-SOFTBOXES = (
-    (-35.0, 55.0, 70.0, 34.0, 5.0, 0.0),
-    (-105.0, 18.0, 16.0, 70.0, 2.6, -0.02),
-    (100.0, 22.0, 14.0, 64.0, 1.7, 0.02),
-    (175.0, 38.0, 60.0, 18.0, 1.4, 0.0),
-)
+# lighting presets: sky (base, rise above the horizon, fall below) and softboxes (azimuth deg, elevation deg, width
+# deg, height deg, intensity, warmth). Azimuth 0 looks toward -Z: behind a device seen from the front (the camera at
+# yaw 0 sits on +Z); 180 is the camera's side.
+LIGHTS = {
+    "studio": {
+        "sky": (0.42, 0.33, 0.24),
+        "boxes": (
+            (-35.0, 55.0, 70.0, 34.0, 5.0, 0.0),
+            (-105.0, 18.0, 16.0, 70.0, 2.6, -0.02),
+            (100.0, 22.0, 14.0, 64.0, 1.7, 0.02),
+            (175.0, 38.0, 60.0, 18.0, 1.4, 0.0),
+        ),
+    },
+    # dark, rim lit: two tall strips behind the device to either side draw its silhouette, a soft key above the camera
+    # and a faint low fill keep its faces readable
+    "rim": {
+        "sky": (0.012, 0.02, 0.008),
+        "boxes": (
+            (-62.0, 20.0, 14.0, 80.0, 12.0, -0.04),
+            (62.0, 20.0, 14.0, 80.0, 12.0, -0.04),
+            (0.0, 38.0, 80.0, 12.0, 5.0, -0.02),
+            (180.0, 50.0, 60.0, 30.0, 1.4, 0.03),
+            (150.0, 6.0, 70.0, 24.0, 0.25, 0.0),
+        ),
+    },
+}
 
 
 def _directions(width: int, height: int) -> np.ndarray:
@@ -38,15 +57,17 @@ def _directions(width: int, height: int) -> np.ndarray:
     ).astype(np.float32)
 
 
-def studio_map(width: int = ENV_WIDTH, height: int = ENV_HEIGHT) -> np.ndarray:
-    """The studio as linear RGB, shape (height, width, 3)."""
+def studio_map(width: int = ENV_WIDTH, height: int = ENV_HEIGHT, preset: str = "studio") -> np.ndarray:
+    """A lighting preset as linear RGB, shape (height, width, 3)."""
+    lights = LIGHTS.get(preset, LIGHTS["studio"])
+    base, rise, fall = lights["sky"]
     d = _directions(width, height)
     y = d[..., 1]
-    sky = np.where(y > 0, 0.42 + 0.33 * y, 0.42 + 0.24 * y)
+    sky = np.where(y > 0, base + rise * y, base + fall * y)
     image = np.repeat(sky[..., None], 3, axis=-1).astype(np.float32)
     azimuth = np.degrees(np.arctan2(d[..., 0], -d[..., 2]))
     elevation = np.degrees(np.arcsin(np.clip(y, -1, 1)))
-    for az, el, w, h, power, warmth in SOFTBOXES:
+    for az, el, w, h, power, warmth in lights["boxes"]:
         da = (azimuth - az + 180) % 360 - 180
         de = elevation - el
         edge = np.clip(1.6 - 2.0 * np.maximum(np.abs(da) / (w / 2), np.abs(de) / (h / 2)), 0, 1)
@@ -106,17 +127,17 @@ def _harmonics(image: np.ndarray) -> np.ndarray:
     return (coefficients * band / math.pi).astype(np.float32)
 
 
-def environment() -> dict:
-    """The studio prepared for lighting: one map per roughness level and the diffuse harmonics."""
-    global _environment
+def environment(preset: str = "studio") -> dict:
+    """A lighting preset prepared for lighting: one map per roughness level and the diffuse harmonics."""
+    preset = preset if preset in LIGHTS else "studio"
     with _lock:
-        if _environment is None:
-            base = studio_map()
-            _environment = {
+        if preset not in _environment:
+            base = studio_map(preset=preset)
+            _environment[preset] = {
                 "levels": np.stack([_prefilter(base, r) for r in ROUGHNESS_LEVELS]).astype(np.float32),
                 "harmonics": _harmonics(cv2.resize(base, (128, 64), interpolation=cv2.INTER_AREA)),
             }
-        return _environment
+        return _environment[preset]
 
 
 def perspective(fov_deg: float, aspect: float, near: float, far: float) -> np.ndarray:

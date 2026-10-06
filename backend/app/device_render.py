@@ -337,21 +337,27 @@ def _shared() -> dict:
     _state["repeat"] = device.create_sampler(address_mode_u="repeat", address_mode_v="repeat", mag_filter="linear", min_filter="linear", mipmap_filter="linear")
     _state["clamp"] = device.create_sampler(address_mode_u="clamp-to-edge", address_mode_v="clamp-to-edge", mag_filter="linear", min_filter="linear", mipmap_filter="linear")
     _state["env_sampler"] = device.create_sampler(address_mode_u="repeat", address_mode_v="clamp-to-edge", mag_filter="linear", min_filter="linear")
-    env = device_scene.environment()
-    levels = env["levels"]
-    count, h, w = levels.shape[:3]
-    texture = device.create_texture(
-        size=(w, h, count), format=wgpu.TextureFormat.rgba16float, usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST
-    )
-    rgba = np.concatenate([levels, np.ones((count, h, w, 1), np.float32)], axis=-1).astype(np.float16)
-    device.queue.write_texture({"texture": texture, "mip_level": 0, "origin": (0, 0, 0)}, rgba, {"offset": 0, "bytes_per_row": w * 8, "rows_per_image": h}, (w, h, count))
-    _state["env"] = texture.create_view(dimension="2d-array")
-    _state["levels"] = count
-    _state["harmonics"] = env["harmonics"]
     one = lambda colour: _texture(np.full((1, 1, 4), colour, np.uint8), srgb=False, mipmapped=False).create_view()  # noqa: E731
     _state["blank"] = {"white": one((255, 255, 255, 255)), "normal": one((128, 128, 255, 255)), "black": one((0, 0, 0, 255))}
     _state["frame"] = device.create_buffer(size=256, usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST)
     return _state
+
+
+def _env(preset: str) -> tuple:
+    """A lighting preset on the GPU (its prefiltered maps as a texture array), its level count and harmonics."""
+    key = ("env", preset)
+    if key not in _state:
+        wgpu, device = _gpu()
+        env = device_scene.environment(preset)
+        levels = env["levels"]
+        count, h, w = levels.shape[:3]
+        texture = device.create_texture(
+            size=(w, h, count), format=wgpu.TextureFormat.rgba16float, usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST
+        )
+        rgba = np.concatenate([levels, np.ones((count, h, w, 1), np.float32)], axis=-1).astype(np.float16)
+        device.queue.write_texture({"texture": texture, "mip_level": 0, "origin": (0, 0, 0)}, rgba, {"offset": 0, "bytes_per_row": w * 8, "rows_per_image": h}, (w, h, count))
+        _state[key] = (texture.create_view(dimension="2d-array"), count, env["harmonics"])
+    return _state[key]
 
 
 def _material_block(m: Material, screen: bool, legend: bool) -> np.ndarray:
@@ -517,6 +523,7 @@ def render(
     exposure: float = 1.0,
     shadow: float = 0.6,
     light_rotation: float = 0.0,
+    lighting: str = "studio",
 ) -> np.ndarray:
     """A device as an RGBA picture (height, width, 4), straight-alpha sRGB, transparent around it.
 
@@ -541,9 +548,10 @@ def render(
         frame = np.zeros(64, np.float32)
         frame[0:16] = view_proj.T.reshape(-1)
         frame[16:20] = [*eye, exposure]
-        frame[20:24] = [0.0, math.radians(light_rotation), shared["levels"], backlight]
+        env_view, env_levels, env_harmonics = _env(lighting)
+        frame[20:24] = [0.0, math.radians(light_rotation), env_levels, backlight]
         frame[24:28] = [*backlight_colour, screen_brightness]
-        frame[28:64] = np.c_[shared["harmonics"], np.zeros((9, 1), np.float32)].reshape(-1)
+        frame[28:64] = np.c_[env_harmonics, np.zeros((9, 1), np.float32)].reshape(-1)
         device.queue.write_buffer(shared["frame"], 0, frame.tobytes())
         views = {slot: prepared.screen(slot, (screens or {}).get(slot)) for slot in ("inner", "cover")}
 
@@ -567,7 +575,7 @@ def render(
             layout=shared["pipeline"].get_bind_group_layout(0),
             entries=[
                 {"binding": 0, "resource": {"buffer": shared["frame"], "offset": 0, "size": 256}},
-                {"binding": 1, "resource": shared["env"]},
+                {"binding": 1, "resource": env_view},
                 {"binding": 2, "resource": shared["env_sampler"]},
             ],
         )
