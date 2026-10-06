@@ -1,5 +1,6 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Phone screenshot|Capture téléphone|Screenshot telefono|スマートフォンのスクリーンショット|휴대폰 스크린샷|Captura de celular|Снимок для телефона|Telefon ekran görüntüsü|手机截图|手機截圖
+const rows = `Transparent background (MP4 as ProRes 4444, GIF as PNG frames)|Fond transparent (MP4 en ProRes 4444, GIF en images PNG)|Sfondo trasparente (MP4 come ProRes 4444, GIF come fotogrammi PNG)|透明な背景（MP4 は ProRes 4444、GIF は PNG フレーム）|투명 배경 (MP4는 ProRes 4444, GIF는 PNG 프레임)|Fundo transparente (MP4 como ProRes 4444, GIF como quadros PNG)|Прозрачный фон (MP4 как ProRes 4444, GIF как кадры PNG)|Saydam arka plan (MP4 ProRes 4444 olarak, GIF PNG kareleri olarak)|透明背景（MP4 导出为 ProRes 4444，GIF 导出为 PNG 帧）|透明背景（MP4 匯出為 ProRes 4444，GIF 匯出為 PNG 影格）
+Phone screenshot|Capture téléphone|Screenshot telefono|スマートフォンのスクリーンショット|휴대폰 스크린샷|Captura de celular|Снимок для телефона|Telefon ekran görüntüsü|手机截图|手機截圖
 Tablet screenshot|Capture tablette|Screenshot tablet|タブレットのスクリーンショット|태블릿 스크린샷|Captura de tablet|Снимок для планшета|Tablet ekran görüntüsü|平板截图|平板截圖
 Laptop screenshot|Capture ordinateur portable|Screenshot portatile|ノートパソコンのスクリーンショット|노트북 스크린샷|Captura de notebook|Снимок для ноутбука|Dizüstü ekran görüntüsü|笔记本截图|筆電截圖
 Device|Appareil|Dispositivo|デバイス|기기|Dispositivo|Устройство|Cihaz|设备|裝置

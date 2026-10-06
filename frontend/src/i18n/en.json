@@ -26,6 +26,7 @@
   "format.storephone": "Phone screenshot",
   "format.storetablet": "Tablet screenshot",
   "format.storelaptop": "Laptop screenshot",
+  "export.transparent": "Transparent background (MP4 as ProRes 4444, GIF as PNG frames)",
   "focus.title": "Focus moves",
   "focus.tip": "Draw areas on the picture and compose a camera move between them",
   "focus.hint": "Drag on the picture to draw a focus area",

@@ -329,6 +329,10 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
         <span>${t("export.exact")}</span>
         <button class="toggle" data-ref="exact" aria-label="${t("export.exact")}"></button>
       </div>
+      <div class="modal-row">
+        <span>${t("export.transparent")}</span>
+        <button class="toggle" data-ref="transparent" aria-label="${t("export.transparent")}"></button>
+      </div>
       <div class="modal-row export-estimate" data-ref="estimate"></div>
       <div class="modal-actions export-actions">
         <div class="export-share">
@@ -416,6 +420,9 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     (ev.currentTarget as HTMLElement).classList.toggle("is-on");
   });
   modal.querySelector('[data-ref="exact"]')?.addEventListener("click", (ev) => {
+    (ev.currentTarget as HTMLElement).classList.toggle("is-on");
+  });
+  modal.querySelector('[data-ref="transparent"]')?.addEventListener("click", (ev) => {
     (ev.currentTarget as HTMLElement).classList.toggle("is-on");
   });
   modal.addEventListener("click", (ev) => {
@@ -514,8 +521,11 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     showToast("Exporting 0%");
     try {
       const colour = (segValue("colour") || "bt709") as "bt709" | "hlg" | "pq";
-      const done = await exportProject({ ...state, outputColour: colour }, format, quality, showToast, exportController.signal, {
-        codec: segValue("codec") || null,
+      const transparent = modal.querySelector('[data-ref="transparent"]')!.classList.contains("is-on");
+      const sent = transparent ? ({ mp4: "mov", gif: "png" } as Record<string, string>)[format] ?? format : format;
+      const done = await exportProject({ ...state, outputColour: colour }, sent, quality, showToast, exportController.signal, {
+        transparent,
+        codec: transparent ? null : segValue("codec") || null,
         tenBit: modal.querySelector('[data-ref="tenbit"]')!.classList.contains("is-on"),
         exact: modal.querySelector('[data-ref="exact"]')!.classList.contains("is-on"),
         size: segValue("size") || null,

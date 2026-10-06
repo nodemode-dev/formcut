@@ -27,6 +27,7 @@
   "format.storephone": "צילום מסך לטלפון",
   "format.storetablet": "צילום מסך לטאבלט",
   "format.storelaptop": "צילום מסך למחשב נייד",
+  "export.transparent": "רקע שקוף (MP4 בתור ProRes 4444, GIF בתור פריימים של PNG)",
   "focus.title": "תנועות מיקוד",
   "focus.tip": "צייר אזורים על התמונה וחבר ביניהם תנועת מצלמה",
   "focus.hint": "גרור על התמונה כדי לצייר אזור מיקוד",

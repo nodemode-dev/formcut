@@ -27,6 +27,7 @@
   "format.storephone": "Snimka zaslona za telefon",
   "format.storetablet": "Snimka zaslona za tablet",
   "format.storelaptop": "Snimka zaslona za prijenosnik",
+  "export.transparent": "Prozirna pozadina (MP4 kao ProRes 4444, GIF kao PNG sličice)",
   "focus.title": "Pokreti fokusa",
   "focus.tip": "Nacrtajte područja na slici i složite pokret kamere između njih",
   "focus.hint": "Povucite po slici da nacrtate područje fokusa",

@@ -26,6 +26,7 @@
   "format.storephone": "Telefon-Screenshot",
   "format.storetablet": "Tablet-Screenshot",
   "format.storelaptop": "Laptop-Screenshot",
+  "export.transparent": "Transparenter Hintergrund (MP4 als ProRes 4444, GIF als PNG-Einzelbilder)",
   "focus.title": "Fokusfahrten",
   "focus.tip": "Bereiche ins Bild zeichnen und eine Kamerafahrt zwischen ihnen erstellen",
   "focus.hint": "Auf dem Bild ziehen, um einen Fokusbereich zu zeichnen",

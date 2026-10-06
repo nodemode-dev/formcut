@@ -27,6 +27,7 @@
   "format.storephone": "اسکرین‌شات گوشی",
   "format.storetablet": "اسکرین‌شات تبلت",
   "format.storelaptop": "اسکرین‌شات لپ‌تاپ",
+  "export.transparent": "پس‌زمینه شفاف (MP4 به صورت ProRes 4444 و GIF به صورت فریم‌های PNG)",
   "focus.title": "حرکت‌های فوکوس",
   "focus.tip": "روی تصویر ناحیه‌هایی بکشید و میان آن‌ها یک حرکت دوربین بسازید",
   "focus.hint": "روی تصویر بکشید تا ناحیهٔ فوکوس رسم شود",

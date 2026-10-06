@@ -26,6 +26,7 @@
   "format.storephone": "Captura de teléfono",
   "format.storetablet": "Captura de tableta",
   "format.storelaptop": "Captura de portátil",
+  "export.transparent": "Fondo transparente (MP4 como ProRes 4444, GIF como fotogramas PNG)",
   "focus.title": "Movimientos de enfoque",
   "focus.tip": "Dibuja áreas en la imagen y compón un movimiento de cámara entre ellas",
   "focus.hint": "Arrastra sobre la imagen para dibujar un área de enfoque",

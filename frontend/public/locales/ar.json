@@ -27,6 +27,7 @@
   "format.storephone": "لقطة شاشة للهاتف",
   "format.storetablet": "لقطة شاشة للجهاز اللوحي",
   "format.storelaptop": "لقطة شاشة للحاسوب المحمول",
+  "export.transparent": "خلفية شفافة (MP4 بصيغة ProRes 4444، وGIF كإطارات PNG)",
   "focus.title": "حركات التركيز",
   "focus.tip": "ارسم مناطق على الصورة وكوّن حركة كاميرا بينها",
   "focus.hint": "اسحب على الصورة لرسم منطقة تركيز",
