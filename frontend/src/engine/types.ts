@@ -103,6 +103,28 @@ export interface ClipKey {
   holdout?: string[];  // planar layers inside which the key takes nothing away: a tracked hold-out matte (P7)
 }
 
+/** What a screen of a device clip shows: a media item or a timeline, from an offset, filling or fitting the screen. */
+export interface DeviceScreen {
+  mediaId?: string;
+  timelineId?: string;
+  offset?: number;
+  fit?: "cover" | "contain";
+}
+
+/** A device clip's block (the engine's device_layer.normalised keeps it valid). Numbers are keyframable as device.<name>. */
+export interface DeviceSettings {
+  id: string;
+  finish?: string;
+  screens?: { inner?: DeviceScreen; cover?: DeviceScreen };
+  pose?: { lid?: number; fold?: number; stand?: number };
+  camera?: { yaw?: number; pitch?: number; distance?: number; fov?: number; roll?: number; panX?: number; panY?: number };
+  backlight?: number;
+  exposure?: number;
+  light?: number;
+  shadow?: number;
+  screenBrightness?: number;
+}
+
 export interface Clip {
   id: string;
   kind: MediaKind;
@@ -130,6 +152,8 @@ export interface Clip {
   textStyle?: TextStyle;
   /** For a timeline clip: the id of the timeline of this project it plays, as one clip. */
   timelineId?: string;
+  /** For a device clip: the library device, its finish, what its screens show, its pose, camera and light. */
+  device?: DeviceSettings;
   /** Multicam: the index of the one track of that timeline this cut shows; absent, the compound shows every track. */
   angle?: number;
   /** Multicam: the track whose sound this cut carries; absent, the picture's angle sounds. */

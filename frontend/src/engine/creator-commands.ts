@@ -2,7 +2,7 @@ import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
 import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings", "marker.add", "marker.remove", "marker.update"]);
+export const CREATOR_COMMANDS = new Set(["clip.device", "clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings", "marker.add", "marker.remove", "marker.update"]);
 
 /** Whether the given clips form a rejoinable chain; the reason key names why not. */
 export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
@@ -157,6 +157,24 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     const patch = p.patch as { name?: string; locked?: boolean; hidden?: boolean; muted?: boolean; magnetic?: boolean };
     if (patch.name !== undefined) target.name = patch.name.trim().slice(0, 120) || "Track";
     for (const key of ["locked", "hidden", "muted", "magnetic"] as const) if (key in patch) target[key] = Boolean(patch[key]);
+  } else if (command === "clip.device") {
+    // as the engine's clip.device edit: camera, pose and screens merge key by key, null removes a key
+    const clip = timeline.tracks.flatMap((track) => track.clips).find((c) => c.id === p.clipId);
+    if (!clip || clip.kind !== "device" || !clip.device) throw new Error("Device clip not found");
+    const block = structuredClone(clip.device) as unknown as Record<string, unknown>;
+    for (const [key, value] of Object.entries((p.patch ?? {}) as Record<string, unknown>)) {
+      if ((key === "camera" || key === "pose" || key === "screens") && value && typeof value === "object") {
+        const part = { ...((block[key] as Record<string, unknown>) ?? {}) };
+        for (const [name, item] of Object.entries(value as Record<string, unknown>)) {
+          if (item === null) delete part[name];
+          else part[name] = item;
+        }
+        block[key] = part;
+      } else if (value === null) delete block[key];
+      else block[key] = value;
+    }
+    clip.device = block as unknown as typeof clip.device;
+    if (typeof block.id === "string" && clip.label !== block.id) clip.label = block.id;
   } else if (command === "track.add") {
     timeline.tracks.push({ id: crypto.randomUUID(), name: String(p.name || `Track ${timeline.tracks.length + 1}`), clips: [] });
   } else if (command === "marker.add") {

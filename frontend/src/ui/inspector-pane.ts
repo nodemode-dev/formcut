@@ -12,6 +12,7 @@ import { sourceTime } from "../engine/timing";
 import { activeProfile, onInterfaceMode } from "./interface-mode";
 import { text } from "../i18n/text";
 import { sampledTransform } from "../engine/keyframes";
+import { mountDeviceSection } from "./device-inspector";
 
 const BLEND_MODES = ["Normal", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "Difference", "Add", "Subtract", "Soft Light"];
 
@@ -449,7 +450,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     </div>`;
 
   const TAB_VIEWS: Record<string, { sections: string[]; pages: string[] }> = {
-    "video:basic": { sections: ["multicam", "transform", "text", "blend", "canvas"], pages: [] },
+    "video:basic": { sections: ["device", "multicam", "transform", "text", "blend", "canvas"], pages: [] },
     "video:speed": { sections: ["timing"], pages: ["speed"] },
     "video:animation": { sections: ["track"], pages: ["motion"] },
     // Repair is a subtab of its own: stabilisation, flicker, noise, colour match
@@ -1723,6 +1724,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     let shown: string[];
     if (kind === "audio") shown = views["audio"] ?? ["audio"];
     else if (kind === "text") shown = ["transform", "timing", "blend"];
+    else if (kind === "device") shown = ["device", "transform", "timing", "blend"];
     else if (kind === "filter") shown = ["timing", ...(views["color"] ?? ["color"])];
     else {
       shown = [...(profile.inspector.subtabs ?? []).flatMap((subtab) => views[`video:${subtab}`] ?? []), ...(views["color"] ?? ["color"])];
@@ -1735,6 +1737,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   onInterfaceMode(applyEasyViews);
   engine.subscribe((_state, event) => { if (event === "clip-selection") applyEasyViews(); });
   applyEasyViews();
+  mountDeviceSection(el, engine, bin);
 
   return el;
 }

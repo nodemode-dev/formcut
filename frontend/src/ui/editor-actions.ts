@@ -6,6 +6,7 @@ import { rejoinEligibility } from "../engine/creator-commands";
 import { sourceTime } from "../engine/timing";
 import { t } from "../i18n";
 import { installFocusMoves } from "./focus-moves";
+import { addDeviceClip } from "./device-inspector";
 
 export const editorVerbs: Record<string, () => void> = {};
 
@@ -165,5 +166,6 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
   if (speak) { speak.disabled = false; speak.addEventListener("click", () => { document.querySelector<HTMLButtonElement>(".titlebar-right .tool-chip")?.click(); document.querySelector<HTMLButtonElement>('[data-page="speech"]')?.click(); }); }
   const focusChip = control("chip-focus");
   if (focusChip) installFocusMoves(focusChip, engine, bin);
+  control("chip-device")?.addEventListener("click", () => { void addDeviceClip(engine).catch((error) => window.alert(error.message)); });
   control("chip-detach")?.addEventListener("click", () => { void detach().catch(error => window.alert(error.message)); });
 }

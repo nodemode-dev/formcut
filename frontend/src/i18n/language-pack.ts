@@ -1,5 +1,24 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Focus moves|Mouvements de focus|Movimenti di focus|フォーカス移動|포커스 이동|Movimentos de foco|Движения к фокусу|Odak hareketleri|焦点运镜|焦點運鏡
+const rows = `Device|Appareil|Dispositivo|デバイス|기기|Dispositivo|Устройство|Cihaz|设备|裝置
+Device mockup|Maquette d'appareil|Mockup del dispositivo|デバイスモックアップ|기기 목업|Mockup de dispositivo|Макет устройства|Cihaz maketi|设备样机|裝置樣機
+Add a device mockup at the playhead|Ajouter une maquette d'appareil à la tête de lecture|Aggiungi un mockup del dispositivo alla testina|再生ヘッドの位置にデバイスモックアップを追加|재생 헤드 위치에 기기 목업 추가|Adicionar um mockup de dispositivo no cursor de reprodução|Добавить макет устройства в позицию воспроизведения|Oynatma kafasına bir cihaz maketi ekle|在播放头处添加设备样机|在播放頭處加入裝置樣機
+Cover screen|Écran externe|Schermo esterno|カバー画面|커버 화면|Tela externa|Внешний экран|Dış ekran|外屏|外螢幕
+Nothing|Rien|Niente|なし|없음|Nada|Ничего|Hiçbiri|无|無
+Fit|Ajustement|Adattamento|フィット|맞춤|Ajuste|Вписать|Sığdır|适配|適配
+Fill|Remplir|Riempi|塗りつぶし|채우기|Preencher|Заполнить|Doldur|填充|填滿
+Whole|Entier|Intero|全体|전체|Inteiro|Целиком|Tamamı|完整|完整
+Lid|Couvercle|Coperchio|ふた|덮개|Tampa|Крышка|Kapak|机盖|機蓋
+Fold|Pli|Piega|折りたたみ|접기|Dobra|Сгиб|Katlama|折叠|摺疊
+Stand|Béquille|Supporto|スタンド|스탠드|Suporte|Подставка|Destek|支架|支架
+Turn|Rotation|Rotazione|回転|회전|Giro|Поворот|Dönüş|转动|轉動
+Tilt|Inclinaison|Inclinazione|傾き|기울기|Inclinação|Наклон|Eğim|俯仰|俯仰
+Distance|Distance|Distanza|距離|거리|Distância|Расстояние|Mesafe|距离|距離
+Field of view|Champ de vision|Campo visivo|視野角|시야각|Campo de visão|Угол обзора|Görüş alanı|视场|視野
+Roll|Roulis|Rollio|ロール|롤|Rolagem|Крен|Yuvarlanma|滚转|滾轉
+Backlight|Rétroéclairage|Retroilluminazione|バックライト|백라이트|Retroiluminação|Подсветка|Arka ışık|背光|背光
+Light angle|Angle de lumière|Angolo della luce|光の角度|조명 각도|Ângulo da luz|Угол света|Işık açısı|光照角度|光照角度
+Timeline: {name}|Montage : {name}|Timeline: {name}|タイムライン: {name}|타임라인: {name}|Linha do tempo: {name}|Таймлайн: {name}|Zaman çizelgesi: {name}|时间线：{name}|時間軸：{name}
+Focus moves|Mouvements de focus|Movimenti di focus|フォーカス移動|포커스 이동|Movimentos de foco|Движения к фокусу|Odak hareketleri|焦点运镜|焦點運鏡
 Draw areas on the picture and compose a camera move between them|Dessinez des zones sur l'image et composez un mouvement de caméra entre elles|Disegna aree sull'immagine e componi un movimento di camera tra di esse|画像に領域を描き、その間をつなぐカメラの動きを作成|그림에 영역을 그리고 그 사이를 잇는 카메라 움직임을 구성|Desenhe áreas na imagem e componha um movimento de câmera entre elas|Нарисуйте области на изображении и составьте движение камеры между ними|Görüntüye alanlar çizin ve aralarında bir kamera hareketi oluşturun|在画面上绘制区域，并在它们之间生成镜头运动|在畫面上繪製區域，並在它們之間生成鏡頭運動
 Drag on the picture to draw a focus area|Faites glisser sur l'image pour dessiner une zone de focus|Trascina sull'immagine per disegnare un'area di focus|画像上をドラッグしてフォーカス領域を描く|그림 위를 드래그해 포커스 영역을 그리세요|Arraste na imagem para desenhar uma área de foco|Проведите по изображению, чтобы нарисовать область фокуса|Odak alanı çizmek için görüntü üzerinde sürükleyin|在画面上拖动以绘制焦点区域|在畫面上拖曳以繪製焦點區域
 Select an image or video clip first|Sélectionnez d'abord un clip image ou vidéo|Seleziona prima una clip immagine o video|先に画像または動画のクリップを選択してください|먼저 이미지나 동영상 클립을 선택하세요|Selecione primeiro um clipe de imagem ou vídeo|Сначала выберите клип с изображением или видео|Önce bir görüntü ya da video klibi seçin|请先选择一个图片或视频片段|請先選擇一個圖片或影片片段

@@ -1,0 +1,31 @@
+/* The Device section (ui/device-inspector.ts): finish swatches. Rows use the inspector's own prop-row styles. */
+
+.device-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.device-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid var(--edge-strong);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.device-section select[data-dev-source] {
+  width: 100%;
+  min-width: 0;
+  max-width: 150px;
+}
+
+.device-section select[data-dev-fit] {
+  width: 76px;
+}
+
+.device-swatch.is-on {
+  border-color: var(--cue);
+  box-shadow: 0 0 0 2px var(--cue-wash);
+}
