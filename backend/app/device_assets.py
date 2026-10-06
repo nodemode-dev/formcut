@@ -166,6 +166,14 @@ class Asset:
                 uvs1 = devices.accessor(document, blob, attrs["TEXCOORD_1"]).astype(np.float32) if "TEXCOORD_1" in attrs else uvs
                 self.primitives.append(Primitive(index, p.get("material", 0), positions, normals, tangents, uvs, indices, uvs1))
         self.signs = {a["name"]: self._direction(a) for a in self.info["articulations"]}
+        # Baked occlusion is shared per material, and the parts on a hinge share materials (so one atlas) with the
+        # body: the lid's outer face read the deck's darkening round the trackpad. It is also only right in the pose
+        # it was baked in. A hinged part's primitives on a material the fixed body also uses draw without it.
+        moving: set[int] = set()
+        for art in self.info["articulations"]:
+            moving |= set(self.subtree(self.by_name[art["node"]]))
+        fixed = {p.material for p in self.primitives if p.node not in moving}
+        self.no_occlusion = {i for i, p in enumerate(self.primitives) if p.node in moving and p.material in fixed}
 
     def subtree(self, index: int) -> list[int]:
         out, stack = [], [index]
@@ -230,7 +238,7 @@ class Asset:
         """The materials in a finish (the file's own when None or the default), by the generator's rules."""
         materials = copy.deepcopy(self.materials)
         if not finish or finish == self.info["finish"]:
-            return materials
+            return self._photographic(materials)
         spec = self.info["finishes"].get(finish)
         if spec is None:
             raise ValueError(f"{self.info['id']} has no finish {finish}; it has {', '.join(sorted(self.info['finishes']))}")
@@ -274,6 +282,33 @@ class Asset:
                 by["M_Deck"].textures = {k: v for k, v in by["M_Deck"].textures.items() if k == "occlusion"}
         if "M_Trackpad" in by:
             by["M_Trackpad"].base[:3] = [c * 0.88 for c in deck]
+        return self._photographic(materials)
+
+    def _photographic(self, materials: list[Material]) -> list[Material]:
+        """Materials as they read on camera, correcting what the files do at product distances.
+
+        The metals take roughness and metalness from one sixth of a 256 x 256 atlas, about 42 texels across a whole
+        lid or deck: magnified that far its variation reads as blotches that repeat. The tile's average replaces it.
+        Micro-normal maps at full strength read as a coarse pattern rather than a fine grain, so they are softened.
+        The trackpad, matte grey plastic as authored, becomes etched glass: darker, a little glossier, coated."""
+        softer = {"M_Frame": 0.3, "M_Deck": 0.35, "M_Back": 0.35, "M_BackInset": 0.35, "M_Trackpad": 0.3}
+        for m in materials:
+            ref = m.textures.get("orm")
+            if ref and m.name in ("M_Frame", "M_Deck", "M_Back", "M_BackInset", "M_Chamfer", "M_LensRing"):
+                image = self.images[ref["image"]]
+                h, w = image.shape[:2]
+                x0, y0 = ref["offset"][0] % 1.0, ref["offset"][1] % 1.0
+                x1, y1 = x0 + abs(ref["scale"][0]), y0 + abs(ref["scale"][1])
+                tile = image[int(y0 * h) : max(int(y0 * h) + 1, int(min(y1, 1.0) * h)), int(x0 * w) : max(int(x0 * w) + 1, int(min(x1, 1.0) * w))]
+                m.roughness *= float(tile[..., 1].mean()) / 255
+                m.metallic *= float(tile[..., 2].mean()) / 255
+                m.textures.pop("orm")
+            if "normal" in m.textures:
+                m.normal_scale *= softer.get(m.name, 0.5)
+            if m.name == "M_Trackpad":
+                m.base[:3] = [c * 0.7 for c in m.base[:3]]
+                m.roughness = min(m.roughness, 0.18)
+                m.clearcoat, m.clearcoat_roughness = 0.6, 0.08
         return materials
 
 

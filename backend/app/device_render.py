@@ -6,6 +6,7 @@ device's layer: transparent around it, a contact shadow under it, straight-alpha
 preview (frames from the engine) and the export are the same pass.
 """
 
+import dataclasses
 import math
 import threading
 
@@ -180,6 +181,12 @@ fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f32
         metal = metal * s.b;
     }
     rough = clamp(rough, 0.03, 1.0);
+    // specular anti-aliasing: where the normal turns faster than a pixel can show (thin bevels, chamfers), widen the
+    // lobe by the normal's variance across the pixel instead of letting highlights sparkle from sample to sample
+    let gn = normalize(i.nrm);
+    let variance = 0.5 * (dot(dpdx(gn), dpdx(gn)) + dot(dpdy(gn), dpdy(gn)));
+    let widen = min(2.0 * variance, 0.18);
+    rough = sqrt(sqrt(clamp(rough * rough * rough * rough + widen, 0.0, 1.0)));
     var t = i.tan.xyz - n * dot(n, i.tan.xyz);
     t = select(vec3<f32>(1.0, 0.0, 0.0), normalize(t), length(t) > 1e-6);
     let b = cross(n, t) * select(1.0, -1.0, i.tan.w < 0.0);
@@ -220,7 +227,8 @@ fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f32
     if (material.coat.x > 0.0) {
         let cv = clamp(dot(n, v), 1e-4, 1.0);
         let fc = (0.04 + 0.96 * pow(1.0 - cv, 5.0)) * material.coat.x;
-        let cr = clamp(material.coat.y, 0.03, 1.0);
+        let cr0 = clamp(material.coat.y, 0.03, 1.0);
+        let cr = sqrt(sqrt(clamp(cr0 * cr0 * cr0 * cr0 + widen, 0.0, 1.0)));
         colour = colour * (1.0 - fc) + prefiltered(reflect(-v, n), cr) * fc;
     }
     return vec4<f32>(neutral(colour * frame.eye.w), 1.0);
@@ -508,6 +516,31 @@ def _straight(premultiplied: np.ndarray) -> np.ndarray:
     return out
 
 
+SUPERSAMPLE = 1.5  # shading is per pixel under MSAA; rendering larger and averaging down settles what MSAA cannot
+
+
+def _finish(raw: np.ndarray, width: int, height: int, bloom: float) -> np.ndarray:
+    """The supersampled premultiplied sRGB target to the output: lens bloom on bright highlights (two radii, in linear
+    light, its glow extending the alpha), area-averaged down to the output size, straight-alpha sRGB bytes."""
+    alpha = raw[..., 3].astype(np.float32) / 255
+    linear = _DECODE[raw[..., :3]]
+    if bloom > 0:
+        bright = np.clip((linear.max(axis=2) - 0.7) / 0.3, 0, 1)[..., None] * linear
+        sigma = max(1.0, 0.004 * raw.shape[1])
+        halo = cv2.GaussianBlur(bright, (0, 0), sigma) * 0.6 + cv2.GaussianBlur(bright, (0, 0), sigma * 5) * 0.4
+        linear = linear + halo * bloom
+        alpha = np.maximum(alpha, np.clip(halo.max(axis=2) * bloom, 0, 1))
+    if raw.shape[:2] != (height, width):
+        linear = cv2.resize(linear, (width, height), interpolation=cv2.INTER_AREA)
+        alpha = cv2.resize(alpha, (width, height), interpolation=cv2.INTER_AREA)
+    straight = np.clip(linear / np.maximum(alpha, 1e-6)[..., None], 0, 1)
+    encoded = np.where(straight <= 0.0031308, straight * 12.92, 1.055 * np.power(straight, 1 / 2.4) - 0.055)
+    out = np.empty((height, width, 4), np.uint8)
+    out[..., :3] = np.where(alpha[..., None] > 0, np.round(encoded * 255), 0).astype(np.uint8)
+    out[..., 3] = np.round(np.clip(alpha, 0, 1) * 255).astype(np.uint8)
+    return out
+
+
 def render(
     device_id: str,
     width: int,
@@ -524,6 +557,7 @@ def render(
     shadow: float = 0.6,
     light_rotation: float = 0.0,
     lighting: str = "studio",
+    bloom: float = 0.35,
 ) -> np.ndarray:
     """A device as an RGBA picture (height, width, 4), straight-alpha sRGB, transparent around it.
 
@@ -589,6 +623,8 @@ def render(
         draws = []
         for index, p in enumerate(a.primitives):
             m = materials[p.material]
+            if index in a.no_occlusion:
+                m = dataclasses.replace(m, textures={k: v for k, v in m.textures.items() if k != "occlusion"})
             model = matrices[p.node]
             normal = np.eye(4)
             normal[:3, :3] = np.linalg.inv(model[:3, :3]).T
@@ -597,7 +633,8 @@ def render(
             device.queue.write_buffer(prepared.buffers[index]["material"], 0, _material_block(m, slot is not None, m.name == "M_KeyLegend").tobytes())
             draws.append((index, prepared.group(index, m, views[slot] if slot else shared["blank"]["black"])))
 
-        targets = _targets(width, height)
+        iw, ih = max(1, round(width * SUPERSAMPLE)), max(1, round(height * SUPERSAMPLE))
+        targets = _targets(iw, ih)
         encoder = device.create_command_encoder()
         rp = encoder.begin_render_pass(
             color_attachments=[{"view": targets["msaa"], "resolve_target": targets["resolve_view"], "clear_value": (0, 0, 0, 0), "load_op": "clear", "store_op": "discard"}],
@@ -622,8 +659,8 @@ def render(
         device.queue.submit([encoder.finish()])
         raw = device.queue.read_texture(
             {"texture": targets["resolve"], "mip_level": 0, "origin": (0, 0, 0)},
-            {"offset": 0, "bytes_per_row": width * 4, "rows_per_image": height},
-            (width, height, 1),
+            {"offset": 0, "bytes_per_row": iw * 4, "rows_per_image": ih},
+            (iw, ih, 1),
         )
-        pixels = np.frombuffer(raw, np.uint8).reshape(height, width, 4)
-        return _straight(pixels)
+        pixels = np.frombuffer(raw, np.uint8).reshape(ih, iw, 4)
+        return _finish(pixels, width, height, bloom)
