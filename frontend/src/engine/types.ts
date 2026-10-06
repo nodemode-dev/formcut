@@ -1,4 +1,4 @@
-export type MediaKind = "video" | "audio" | "image" | "text" | "filter" | "timeline";
+export type MediaKind = "video" | "audio" | "image" | "text" | "filter" | "timeline" | "device";
 
 export interface TextStyle {
   fontId?: string;
