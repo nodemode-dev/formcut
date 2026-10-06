@@ -190,7 +190,8 @@ export class ProjectEngine {
       if ((found && tracks[found.trackIndex].locked) || (data?.trackIndex !== undefined && tracks[data.trackIndex]?.locked)) return;
     }
     if (CREATOR_COMMANDS.has(command)) {
-      this.pushHistory();
+      // quiet: one history entry per gesture (a drag's later updates), as clip.keyframes.replace's quiet
+      if (!(payload as { quiet?: boolean } | undefined)?.quiet) this.pushHistory();
       try { creatorCommand(s, command, payload); }
       catch (error) { this.dropPending(true); throw error; }
       if (command === "project.settings" && s.timelines.length === 1) this.baseFormat = { width: s.width, height: s.height, fps: s.fps };
