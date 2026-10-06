@@ -32,7 +32,8 @@ The rest is written by hand.
 | cloud.py | 441 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 68 | /api/demo | 2 |
-| devices.py | 225 | /api/devices | 2 |
+| device_templates.py | 117 | /api/devices | 1 |
+| devices.py | 228 | /api/devices | 2 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
 | focus_motion.py | 247 | /api/focus-motion | 1 |
@@ -47,7 +48,7 @@ The rest is written by hand.
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 474 | /api/health | 13 |
+| main.py | 476 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 773 | /api/models | 8 |
@@ -81,7 +82,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (1068L)
+- `agent_mcp.py` (1095L)
 - `ai_upscale.py` (141L)
 - `alpha_export.py` (126L)
 - `audio_render.py` (231L)
