@@ -58,6 +58,7 @@ export function installDeviceStage(engine: ProjectEngine): void {
       const clip = selected();
       if (!stage || !clip || event.button !== 0 || !stage.contains(event.target as Node)) return;
       if (stage.dataset.boxCutout === "on") return;
+      if ((event.target as HTMLElement).closest(".focus-overlay, .focus-panel")) return;
       const handle = (event.target as HTMLElement).closest<HTMLElement>("[data-handle]")?.dataset.handle;
       if (handle && handle !== "move") return;
       event.preventDefault();
@@ -108,7 +109,7 @@ export function installDeviceStage(engine: ProjectEngine): void {
       event.preventDefault();
       event.stopPropagation();
       if (!wheelGesture || wheelGesture.clip !== clip.id) wheelGesture = { clip: clip.id, out: writer(clip), timer: 0 };
-      const next = Math.max(0.3, Math.min(3, current(clip, "distance") * Math.exp(event.deltaY * 0.001)));
+      const next = Math.max(0.1, Math.min(3, current(clip, "distance") * Math.exp(event.deltaY * 0.001)));
       wheelGesture.out.live({ distance: Math.round(next * 1000) / 1000 });
       window.clearTimeout(wheelGesture.timer);
       const gesture = wheelGesture;

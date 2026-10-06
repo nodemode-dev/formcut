@@ -726,7 +726,9 @@ def formcut_device(
         "[x0, y0, x1, y1] in 0 to 1; the move opens wide, frames each area in turn (centred, filling all but the margin, "
         "never showing an empty edge the wide shot did not) and holds on it, and with loop returns to the wide shot so "
         "it repeats. Written as the clip's scale, posX and posY keyframes in one undoable edit, editable afterwards. "
-        "speed is fast, medium or slow; a seed shuffles the order the areas are visited."
+        "speed is fast, medium or slow; a seed shuffles the order the areas are visited. On a device clip the areas are "
+        "on the stage and the move drives the device camera in 3D (turn, tilt, distance and pan keyframes, each area "
+        "centred on the device point under it)."
     ),
     annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
 )

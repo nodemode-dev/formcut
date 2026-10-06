@@ -62,11 +62,27 @@ def apply_edit(project: dict, command: dict):
     elif operation == "clip.focus-motion":
         if not located:
             raise ValueError("Clip not found")
-        from .focus_motion import compose, merged_keyframes
+        from .focus_motion import CAMERA_PROPS, compose, compose_camera, merged_keyframes
         from .media import _find
 
         clip = located[1]
         canvas = (float(project.get("width") or 1920), float(project.get("height") or 1080))
+        if clip.get("kind") == "device":
+            seed = command.get("seed")
+            made = compose_camera(
+                float(clip["duration"]),
+                command["areas"],
+                (clip.get("device") or {}).get("camera") or {},
+                canvas[0] / canvas[1],
+                str(command.get("speed") or "medium"),
+                bool(command.get("loop")),
+                int(seed) if seed is not None else None,
+                float(command.get("margin", 0.08)),
+                (clip.get("device") or {}).get("id"),
+                (clip.get("device") or {}).get("pose") or {},
+            )
+            clip["keyframes"] = merged_keyframes(clip.get("keyframes") or [], made["keyframes"], CAMERA_PROPS)
+            return
         record = _find(clip["mediaId"]) if clip.get("mediaId") else {}
         crop = clip.get("crop") or {}
         kept_w = 1 - float(crop.get("left") or 0) - float(crop.get("right") or 0)

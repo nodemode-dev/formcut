@@ -94,6 +94,9 @@ each a thin, documented wrapper over the RPC above; the full listing is generate
 - Camera moves: `formcut_focus_motion` (the `clip.focus-motion` edit: `areas` as `[x0, y0, x1, y1]` on the clip's
   picture in visiting order, `speed` fast, medium or slow, `loop`, optional `seed` and `margin`; the clip's scale,
   posX and posY keyframes replaced in one edit; `POST /api/focus-motion` returns the keyframes without applying them).
+  On a device clip the areas are in stage fractions and the move drives the camera: device.yaw, pitch, distance
+  (down to 0.1), panX and panY keyframes, each stop centred on the front-most device point under its area through the
+  renderer's own camera, with an alternating turn; the route takes `mode` camera, `camera`, `device` and `pose`.
 - Effect packages: `formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`, `formcut_list_packages`,
   `formcut_remove_package`.
 

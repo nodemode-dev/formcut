@@ -26,7 +26,7 @@ interface Device {
 const NUMBERS: Record<string, [string | null, number, number, number, number, string]> = {
   yaw: ["camera", 25, -180, 180, 1, "°"],
   pitch: ["camera", 12, -60, 85, 1, "°"],
-  distance: ["camera", 1, 0.3, 3, 0.01, "x"],
+  distance: ["camera", 1, 0.1, 3, 0.01, "x"],
   fov: ["camera", 30, 10, 75, 1, "°"],
   roll: ["camera", 0, -180, 180, 1, "°"],
   backlight: [null, 0.6, 0, 2, 0.05, ""],

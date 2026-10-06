@@ -14,6 +14,7 @@ import { t } from "../i18n";
 type Area = [number, number, number, number];
 type Speed = "fast" | "medium" | "slow";
 const FOCUS_PROPS = ["scale", "posX", "posY"];
+const CAMERA_PROPS = ["device.yaw", "device.pitch", "device.distance", "device.panX", "device.panY"];
 const PRESETS: Record<string, { areas: Area[]; speed: Speed; loop: boolean }> = {
   scan: { areas: [[0, 0.15, 0.45, 0.85], [0.55, 0.15, 1, 0.85]], speed: "slow", loop: false },
   down: { areas: [[0.1, 0, 0.9, 0.42], [0.1, 0.58, 0.9, 1]], speed: "slow", loop: false },
@@ -34,7 +35,7 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
   const clip = state.selectedClipId ? engine.findClip(state.selectedClipId)?.clip : undefined;
   const stage = document.querySelector<HTMLCanvasElement>(".render-canvas")?.parentElement;
   if (!stage) return null;
-  if (!clip || (clip.kind !== "video" && clip.kind !== "image")) {
+  if (!clip || (clip.kind !== "video" && clip.kind !== "image" && clip.kind !== "device")) {
     window.alert(t("focus.needClip"));
     return null;
   }
@@ -43,6 +44,8 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
   engine.dispatch("transport.seek", clip.start);
   const areas: Area[] = [];
   let speed: Speed = "medium", loop = false, composed = false, seed = 0;
+  const device = clip.kind === "device";
+  let motion: "2d" | "3d" = device ? "3d" : "2d";
 
   /** The clip's picture as stage fractions, as the preview draws it at the playhead. */
   const box = () => {
@@ -71,7 +74,7 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
       <button class="iconbtn" data-ref="done" title="${t("focus.done")}" aria-label="${t("focus.done")}">${icon("close")}</button></div>
     <p class="focus-hint" data-ref="hint">${t("focus.hint")}</p>
     <div class="focus-row"><span>${t("focus.motion")}</span><div class="focus-seg">
-      <button data-motion="2d" class="is-on">2D</button><button data-motion="3d" disabled title="${t("focus.only3d")}">3D</button></div></div>
+      <button data-motion="2d"${device ? "" : ' class="is-on"'}>2D</button><button data-motion="3d"${device ? ' class="is-on"' : ` disabled title="${t("focus.only3d")}"`}>3D</button></div></div>
     <div class="focus-row"><span>${t("focus.speed")}</span><div class="focus-seg">
       <button data-speed="fast">${t("focus.fast")}</button><button data-speed="medium" class="is-on">${t("focus.medium")}</button><button data-speed="slow">${t("focus.slow")}</button></div></div>
     <label class="focus-row focus-loop"><input type="checkbox" data-ref="loop" /> ${t("focus.loop")}</label>
@@ -176,12 +179,15 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
     const button = ref<HTMLButtonElement>("compose");
     button.disabled = true;
     try {
+      const camera = motion === "3d";
       const made = await api<{ keyframes: ClipKeyframe[] }>("/api/focus-motion", {
         duration: current.duration, canvas: [now.width, now.height], picture: [b.w, b.h], areas,
         base: current.transform, speed, loop, ...(seed ? { seed } : {}),
+        ...(camera ? { mode: "camera", camera: current.device?.camera ?? {}, device: current.device?.id, pose: current.device?.pose ?? {} } : {}),
       });
+      const replaced = camera ? CAMERA_PROPS : FOCUS_PROPS;
       const kept = (current.keyframes ?? [])
-        .map((frame) => ({ ...frame, props: Object.fromEntries(Object.entries(frame.props).filter(([prop]) => !FOCUS_PROPS.includes(prop))) }))
+        .map((frame) => ({ ...frame, props: Object.fromEntries(Object.entries(frame.props).filter(([prop]) => !replaced.includes(prop))) }))
         .filter((frame) => Object.keys(frame.props).length > 0);
       engine.dispatch("clip.keyframes.replace", { clipId, keyframes: [...kept, ...made.keyframes] as ClipKeyframe[] });
       composed = true;
@@ -207,6 +213,7 @@ function open(engine: ProjectEngine, bin: MediaBin, closed: () => void): { close
     }
   };
   pick("speed", (value) => { speed = value as Speed; });
+  pick("motion", (value) => { motion = value as "2d" | "3d"; composed = false; paint(); });
   ref<HTMLSelectElement>("preset").addEventListener("change", (event) => {
     const chosen = PRESETS[(event.target as HTMLSelectElement).value];
     if (!chosen) return;

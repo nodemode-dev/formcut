@@ -81,10 +81,15 @@ def compose(
     then (loop) a move back to the wide framing, so the clip ends where it began."""
     if not areas:
         raise ValueError("Draw at least one focus area")
-    move_w, hold_w, ease = SPEEDS.get(speed, SPEEDS["medium"])
     order = visiting_order(len(areas), seed)
     wide = {p: float(base.get(p, 100 if p == "scale" else 0)) for p in PROPS}
     stops = [framing(areas[i], canvas, picture, base, margin + (0.04 * (k % 3) if seed is not None else 0)) for k, i in enumerate(order)]
+    return {"keyframes": route(duration, wide, stops, speed, loop), "order": order}
+
+
+def route(duration: float, wide: dict, stops: list[dict], speed: str, loop: bool) -> list[dict]:
+    """Keyframes over the clip: a wide hold, a move to and a hold on each stop, and with loop a move back to wide."""
+    move_w, hold_w, ease = SPEEDS.get(speed, SPEEDS["medium"])
     # weights: the opening hold, a move and a hold per area, and for a loop a move back and a closing hold
     segments = [("hold", 1.0)]
     for _ in stops:
@@ -110,14 +115,106 @@ def compose(
             merged[-1] = key
         else:
             merged.append(key)
-    return {"keyframes": merged, "order": order}
+    return merged
 
 
-def merged_keyframes(existing: list[dict], made: list[dict]) -> list[dict]:
-    """The clip's keyframes with the move's in place of its scale, posX and posY ones; other properties kept."""
+CAMERA_PROPS = ("device.yaw", "device.pitch", "device.distance", "device.panX", "device.panY")
+CAMERA_BASE = {"yaw": 25.0, "pitch": 12.0, "distance": 1.0, "panX": 0.0, "panY": 0.0}
+
+
+def camera_framing(area: list[float], aspect: float, base: dict, margin: float, turn: float) -> dict:
+    """The device camera that puts a stage-fraction area in the middle of the frame, filling all but the margin.
+
+    The device layer covers the canvas, so an area drawn on the stage is in canvas fractions. Pan is in framed heights
+    at the current distance (device_scene.orbit: the target moves by pan times the half-height at that distance), so
+    the area's offset is added at the old distance and the pan rescaled for the new one. turn adds a small orbit."""
+    x0, y0, x1, y1 = (min(1.0, max(0.0, float(v))) for v in area)
+    x0, x1 = sorted((x0, x1))
+    y0, y1 = sorted((y0, y1))
+    size = max(x1 - x0, y1 - y0, 0.02)
+    old = float(base["distance"])
+    new = min(3.0, max(0.1, old * size / (1 - 2 * margin)))
+    pan_x = (float(base["panX"]) - ((x0 + x1) / 2 - 0.5) * 2 * aspect) * old / new
+    pan_y = (float(base["panY"]) + ((y0 + y1) / 2 - 0.5) * 2) * old / new
+    return {
+        "device.yaw": round(float(base["yaw"]) + turn, 3),
+        "device.pitch": round(float(base["pitch"]) - abs(turn) * 0.35, 3),
+        "device.distance": round(new, 4),
+        "device.panX": round(pan_x, 4),
+        "device.panY": round(pan_y, 4),
+    }
+
+
+def _centred(stop: dict, area: list[float], base: dict, aspect: float, device_id: str, pose: dict | None) -> dict:
+    """The stop with its pan corrected so the device point under the area's centre lands in the frame's centre.
+
+    camera_framing pans in the plane through the device's middle; a point on the screen sits in front of or behind
+    it, which perspective turns into an offset that grows as the camera comes close. With the device known, the point
+    is found (the front-most device point under the area's centre in the wide view) and the pan corrected in six
+    steps through the renderer's own camera (device_scene.orbit)."""
+    import numpy as np
+
+    from .device_assets import asset
+    from .device_scene import orbit
+
+    shape = asset(device_id)
+    points = shape.points(shape.world(pose))
+
+    def view(values: dict) -> tuple[np.ndarray, np.ndarray]:
+        cam = {"yaw": values["yaw"], "pitch": values["pitch"], "distance": values["distance"], "pan": (values["panX"], values["panY"])}
+        return orbit(points, aspect, cam)
+
+    def stage(matrix: np.ndarray, p: np.ndarray) -> np.ndarray:
+        clip = (matrix @ np.c_[p, np.ones(len(p))].T).T
+        return np.c_[(clip[:, 0] / clip[:, 3] + 1) / 2, (1 - clip[:, 1] / clip[:, 3]) / 2]
+
+    matrix, eye = view(base)
+    wanted = np.array([(area[0] + area[2]) / 2, (area[1] + area[3]) / 2])
+    near = np.linalg.norm(stage(matrix, points) - wanted, axis=1)
+    candidates = np.nonzero(near <= max(near.min() * 1.5, 0.004))[0]
+    if not len(candidates):
+        return stop
+    anchor = points[candidates[np.argmin(np.linalg.norm(points[candidates] - eye, axis=1))]][None, :]
+    values = {k[len("device.") :]: v for k, v in stop.items()}
+    for _ in range(6):
+        gx, gy = stage(view(values)[0], anchor)[0]
+        values["panX"] -= (gx - 0.5) * 2 * aspect
+        values["panY"] += (gy - 0.5) * 2
+    return {**stop, "device.panX": round(values["panX"], 4), "device.panY": round(values["panY"], 4)}
+
+
+def compose_camera(
+    duration: float,
+    areas: list[list[float]],
+    camera: dict,
+    aspect: float,
+    speed: str = "medium",
+    loop: bool = False,
+    seed: int | None = None,
+    margin: float = 0.08,
+    device_id: str | None = None,
+    pose: dict | None = None,
+) -> dict:
+    """A focus move for a device clip, as its camera's keyframes: the same route, each area framed in 3D (centred
+    exactly on the device point under it when the device is known)."""
+    if not areas:
+        raise ValueError("Draw at least one focus area")
+    base = {k: float((camera or {}).get(k, v)) for k, v in CAMERA_BASE.items()}
+    order = visiting_order(len(areas), seed)
+    amplitude = {"fast": 8.0, "medium": 12.0, "slow": 16.0}.get(speed, 12.0)
+    sign = -1 if seed and seed % 2 else 1
+    stops = [camera_framing(areas[i], aspect, base, margin, sign * amplitude * (1 if k % 2 == 0 else -1)) for k, i in enumerate(order)]
+    if device_id:
+        stops = [_centred(stop, areas[i], base, aspect, device_id, pose) for stop, i in zip(stops, order, strict=True)]
+    wide = {f"device.{k}": v for k, v in base.items()}
+    return {"keyframes": route(duration, wide, stops, speed, loop), "order": order}
+
+
+def merged_keyframes(existing: list[dict], made: list[dict], replaced: tuple = PROPS) -> list[dict]:
+    """The clip's keyframes with the move's in place of the replaced properties' keyframes; other properties kept."""
     kept = []
     for key in existing or []:
-        props = {p: v for p, v in (key.get("props") or {}).items() if p not in PROPS}
+        props = {p: v for p, v in (key.get("props") or {}).items() if p not in replaced}
         if props:
             kept.append({**key, "props": props})
     return sorted([*kept, *made], key=lambda k: k["t"])
@@ -133,9 +230,18 @@ class FocusMotionInput(BaseModel):
     loop: bool = False
     seed: int | None = None
     margin: float = Field(default=0.08, ge=0, le=0.4)
+    mode: str = "2d"  # "camera": a device clip's camera, areas in canvas fractions
+    camera: dict = {}
+    device: str | None = None
+    pose: dict = {}
 
 
 @router.post("")
 def plan(body: FocusMotionInput) -> dict:
     """The keyframes for a focus move; the interface applies them as one clip edit, so it undoes in one step."""
+    if body.mode == "camera":
+        aspect = float(body.canvas[0]) / float(body.canvas[1])
+        return compose_camera(
+            body.duration, body.areas, body.camera, aspect, body.speed, body.loop, body.seed, body.margin, body.device, body.pose
+        )
     return compose(body.duration, body.canvas, body.picture, body.areas, body.base, body.speed, body.loop, body.seed, body.margin)
