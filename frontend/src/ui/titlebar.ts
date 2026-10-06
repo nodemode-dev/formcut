@@ -459,7 +459,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     if (exporting) return;
     const state = engine.snapshot;
     const hasClips = state.timelines[state.activeTimeline].tracks.some((track) =>
-      track.clips.some((c) => c.mediaId || c.kind === "text"),
+      track.clips.some((c) => c.mediaId || c.kind === "text" || c.kind === "device" || c.kind === "timeline"),
     );
     if (!hasClips) {
       showToast("Nothing to export: add media clips first");
