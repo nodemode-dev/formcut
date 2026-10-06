@@ -41,14 +41,14 @@ The rest is written by hand.
 | generate.py | 1113 | /api/generate | 6 |
 | generative.py | 152 | /api/generative | 5 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
-| jobs.py | 182 | /api/jobs | 3 |
+| jobs.py | 216 | /api/jobs | 3 |
 | klein.py | 267 | /api/models/klein | 3 |
 | krea2.py | 797 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | linking.py | 347 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 476 | /api/health | 13 |
+| main.py | 480 | /api/health | 13 |
 | media.py | 1038 | /api/media | 25 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 773 | /api/models | 8 |
@@ -62,7 +62,7 @@ The rest is written by hand.
 | providers.py | 166 | /api/providers | 4 |
 | recovery.py | 89 | /api/recovery | 4 |
 | remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1357 | /api/render | 13 |
+| render_api.py | 1373 | /api/render | 13 |
 | render_stream.py | 87 | /api/render | 1 |
 | stock.py | 422 | /api/stock | 7 |
 | storage.py | 66 | /api/storage | 1 |
@@ -92,10 +92,10 @@ the automation transports.
 - `color_grade.py` (239L)
 - `content_filter.py` (64L)
 - `cutdown.py` (128L)
-- `device_assets.py` (285L)
-- `device_layer.py` (179L)
-- `device_render.py` (621L)
-- `device_scene.py` (222L)
+- `device_assets.py` (341L)
+- `device_layer.py` (184L)
+- `device_render.py` (726L)
+- `device_scene.py` (253L)
 - `discovery.py` (65L)
 - `durable.py` (84L)
 - `effect_packages.py` (435L)
@@ -132,7 +132,7 @@ the automation transports.
 - `proxies.py` (265L)
 - `qc.py` (166L)
 - `render_document.py` (130L)
-- `renderer.py` (2406L)
+- `renderer.py` (2410L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
