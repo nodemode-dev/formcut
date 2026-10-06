@@ -25,6 +25,50 @@
   width: 76px;
 }
 
+/* the guided tour (ui/tour.ts): a ring around the control in question and a card beside it */
+.tour-ring {
+  position: fixed;
+  z-index: var(--z-overlay);
+  border: 2px solid var(--cue);
+  border-radius: var(--radius-m);
+  box-shadow: 0 0 0 4px var(--cue-wash);
+  pointer-events: none;
+}
+
+.tour-card {
+  position: fixed;
+  z-index: var(--z-overlay);
+  width: min(300px, calc(100vw - 16px));
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-l);
+  background: var(--float);
+  color: var(--ink);
+  box-shadow: 0 8px 24px var(--veil);
+}
+
+.tour-count {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.tour-title {
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.tour-body {
+  margin: 6px 0 10px;
+  color: var(--ink-soft);
+}
+
+.tour-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .device-swatch.is-on {
   border-color: var(--cue);
   box-shadow: 0 0 0 2px var(--cue-wash);

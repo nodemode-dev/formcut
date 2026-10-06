@@ -4,6 +4,7 @@ import type { Clip, DeviceSettings, KeyframeProp } from "../engine/types";
 import { api } from "../engine/api";
 import { propPoints, samplePoints } from "../engine/keyframes";
 import { icon } from "./icons";
+import { deviceTour } from "./tour";
 import { t } from "../i18n";
 
 // The Device section of the inspector, for clips of kind device (the device layer: backend/app/device_layer.py).
@@ -71,6 +72,7 @@ export async function addDeviceClip(engine: ProjectEngine): Promise<void> {
   } as unknown as Clip;
   engine.dispatch("clip.add", { trackIndex: 0, clip });
   engine.dispatch("clip.select", clip.id);
+  window.setTimeout(() => deviceTour(true), 600);
 }
 
 export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin: MediaBin): void {
@@ -88,7 +90,8 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     <div data-dev-screens></div>
     <div data-dev-poses></div>
     ${["yaw", "pitch", "distance", "fov", "roll"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
-    ${["backlight", "exposure", "shadow", "light"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}`;
+    ${["backlight", "exposure", "shadow", "light"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
+    <div class="prop-row"><span></span><button type="button" class="tool-chip" data-dev-tour>${icon("help")}${t("tour.replay")}</button><span class="prop-aux"></span></div>`;
   body.querySelector(".inspector-empty")?.after(section);
   const model = section.querySelector<HTMLSelectElement>("[data-dev-model]")!;
   const finishes = section.querySelector<HTMLElement>("[data-dev-finishes]")!;
@@ -243,6 +246,10 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     const clip = selected();
     const target = event.target as HTMLElement;
     if (!clip) return;
+    if (target.closest("[data-dev-tour]")) {
+      deviceTour();
+      return;
+    }
     const swatch = target.closest<HTMLElement>("[data-dev-finish]");
     if (swatch) {
       engine.dispatch("clip.device", { clipId: clip.id, patch: { finish: swatch.dataset.devFinish } });
