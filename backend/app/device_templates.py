@@ -80,8 +80,16 @@ def keyframes(template: str, info: dict, duration: float) -> list[dict]:
     stand = ranges["stand"]
     return [
         {"t": 0.0, "props": {"device.stand": float(stand["closedDeg"]), "device.yaw": 205.0, "device.pitch": 12.0}, "interp": "smooth"},
-        {"t": round(d * 0.5, 4), "props": {"device.stand": float(stand["openDeg"]), "device.yaw": 180.0, "device.pitch": 10.0}, "interp": "smooth"},
-        {"t": round(d, 4), "props": {"device.stand": float(stand["openDeg"]), "device.yaw": 155.0, "device.pitch": 10.0}, "interp": "smooth"},
+        {
+            "t": round(d * 0.5, 4),
+            "props": {"device.stand": float(stand["openDeg"]), "device.yaw": 180.0, "device.pitch": 10.0},
+            "interp": "smooth",
+        },
+        {
+            "t": round(d, 4),
+            "props": {"device.stand": float(stand["openDeg"]), "device.yaw": 155.0, "device.pitch": 10.0},
+            "interp": "smooth",
+        },
     ]
 
 
