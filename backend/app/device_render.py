@@ -553,9 +553,10 @@ def _finish(raw: np.ndarray, width: int, height: int, bloom: float) -> np.ndarra
     alpha = raw[..., 3].astype(np.float32) / 255
     linear = _DECODE[raw[..., :3]]
     if bloom > 0:
-        bright = np.clip((linear.max(axis=2) - 0.7) / 0.3, 0, 1)[..., None] * linear
-        sigma = max(1.0, 0.004 * raw.shape[1])
-        halo = cv2.GaussianBlur(bright, (0, 0), sigma) * 0.6 + cv2.GaussianBlur(bright, (0, 0), sigma * 5) * 0.4
+        # only near-white highlights bloom, mostly in a tight halo: a wide strong glow reads as haze, not as a lens
+        bright = np.clip((linear.max(axis=2) - 0.9) / 0.1, 0, 1)[..., None] * linear
+        sigma = max(1.0, 0.0025 * raw.shape[1])
+        halo = cv2.GaussianBlur(bright, (0, 0), sigma) * 0.75 + cv2.GaussianBlur(bright, (0, 0), sigma * 3) * 0.25
         linear = linear + halo * bloom
         alpha = np.maximum(alpha, np.clip(halo.max(axis=2) * bloom, 0, 1))
     if raw.shape[:2] != (height, width):
@@ -585,7 +586,7 @@ def render(
     shadow: float = 0.6,
     light_rotation: float = 0.0,
     lighting: str = "studio",
-    bloom: float = 0.35,
+    bloom: float = 0.18,
 ) -> np.ndarray:
     """A device as an RGBA picture (height, width, 4), straight-alpha sRGB, transparent around it.
 

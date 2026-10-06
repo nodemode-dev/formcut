@@ -1266,7 +1266,11 @@ class FrameRenderer:
             layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
             paint_text(ImageDraw.Draw(layer), (x + offset[0], y + offset[1]), content, font, shadow, align, spacing, tracking, 0, None)
             if blur > 0:
-                layer = layer.filter(ImageFilter.GaussianBlur(blur))
+                # blurred as a shape and filled with the shadow's colour: blurring the RGBA layer itself mixes the
+                # black of its empty pixels into the edge and rings every glyph with a dark fringe (and dims a glow)
+                shape = layer.getchannel("A").filter(ImageFilter.GaussianBlur(blur))
+                layer = Image.new("RGBA", image.size, (*ImageColor.getrgb(shadow)[:3], 255))
+                layer.putalpha(shape)
             image.alpha_composite(layer)
             draw = ImageDraw.Draw(image)
         words = clip.get("words") or []
