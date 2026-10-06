@@ -24,7 +24,7 @@ The rest is written by hand.
 | addons.py | 194 | /api/addons | 3 |
 | agent_connect.py | 145 | /api/agents | 2 |
 | assets.py | 135 | /api/assets | 3 |
-| automation.py | 927 | /api/rpc | 2 |
+| automation.py | 952 | /api/rpc | 2 |
 | brush.py | 106 | /api/render | 2 |
 | catalogue.py | 870 | /api/catalogue | 1 |
 | checkpoints.py | 93 | /api/checkpoints | 1 |
@@ -81,7 +81,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (989L)
+- `agent_mcp.py` (1054L)
 - `ai_upscale.py` (141L)
 - `audio_render.py` (231L)
 - `bench.py` (713L)
@@ -91,6 +91,7 @@ the automation transports.
 - `content_filter.py` (64L)
 - `cutdown.py` (128L)
 - `device_assets.py` (285L)
+- `device_layer.py` (179L)
 - `device_render.py` (621L)
 - `device_scene.py` (222L)
 - `discovery.py` (65L)
@@ -129,7 +130,7 @@ the automation transports.
 - `proxies.py` (265L)
 - `qc.py` (166L)
 - `render_document.py` (130L)
-- `renderer.py` (2399L)
+- `renderer.py` (2406L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
@@ -144,7 +145,7 @@ the automation transports.
 - `text_templates.py` (393L)
 - `timing.py` (269L)
 - `tools.py` (299L)
-- `validation.py` (222L)
+- `validation.py` (227L)
 - `video_source.py` (649L)
 - `windows_console.py` (43L)
 - `yuv.py` (225L)
