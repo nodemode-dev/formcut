@@ -336,15 +336,29 @@ def _shared() -> dict:
     premultiplied = {"src_factor": "one", "dst_factor": "one-minus-src-alpha", "operation": "add"}
     _state["shadow_pipeline"] = device.create_render_pipeline(
         layout="auto",
-        vertex={"module": shadow_module, "entry_point": "vs_shadow", "buffers": [{"array_stride": 20, "attributes": [floats(3, 0, 0), floats(2, 1, 12)]}]},
+        vertex={
+            "module": shadow_module,
+            "entry_point": "vs_shadow",
+            "buffers": [{"array_stride": 20, "attributes": [floats(3, 0, 0), floats(2, 1, 12)]}],
+        },
         primitive={"topology": "triangle-list", "cull_mode": "none"},
         depth_stencil={"format": "depth32float", "depth_write_enabled": False, "depth_compare": "less"},
         multisample={"count": SAMPLES},
-        fragment={"module": shadow_module, "entry_point": "fs_shadow", "targets": [{"format": COLOUR, "blend": {"color": premultiplied, "alpha": premultiplied}}]},
+        fragment={
+            "module": shadow_module,
+            "entry_point": "fs_shadow",
+            "targets": [{"format": COLOUR, "blend": {"color": premultiplied, "alpha": premultiplied}}],
+        },
     )
-    _state["repeat"] = device.create_sampler(address_mode_u="repeat", address_mode_v="repeat", mag_filter="linear", min_filter="linear", mipmap_filter="linear")
-    _state["clamp"] = device.create_sampler(address_mode_u="clamp-to-edge", address_mode_v="clamp-to-edge", mag_filter="linear", min_filter="linear", mipmap_filter="linear")
-    _state["env_sampler"] = device.create_sampler(address_mode_u="repeat", address_mode_v="clamp-to-edge", mag_filter="linear", min_filter="linear")
+    _state["repeat"] = device.create_sampler(
+        address_mode_u="repeat", address_mode_v="repeat", mag_filter="linear", min_filter="linear", mipmap_filter="linear"
+    )
+    _state["clamp"] = device.create_sampler(
+        address_mode_u="clamp-to-edge", address_mode_v="clamp-to-edge", mag_filter="linear", min_filter="linear", mipmap_filter="linear"
+    )
+    _state["env_sampler"] = device.create_sampler(
+        address_mode_u="repeat", address_mode_v="clamp-to-edge", mag_filter="linear", min_filter="linear"
+    )
     one = lambda colour: _texture(np.full((1, 1, 4), colour, np.uint8), srgb=False, mipmapped=False).create_view()  # noqa: E731
     _state["blank"] = {"white": one((255, 255, 255, 255)), "normal": one((128, 128, 255, 255)), "black": one((0, 0, 0, 255))}
     _state["frame"] = device.create_buffer(size=256, usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST)
@@ -363,7 +377,12 @@ def _env(preset: str) -> tuple:
             size=(w, h, count), format=wgpu.TextureFormat.rgba16float, usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST
         )
         rgba = np.concatenate([levels, np.ones((count, h, w, 1), np.float32)], axis=-1).astype(np.float16)
-        device.queue.write_texture({"texture": texture, "mip_level": 0, "origin": (0, 0, 0)}, rgba, {"offset": 0, "bytes_per_row": w * 8, "rows_per_image": h}, (w, h, count))
+        device.queue.write_texture(
+            {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
+            rgba,
+            {"offset": 0, "bytes_per_row": w * 8, "rows_per_image": h},
+            (w, h, count),
+        )
         _state[key] = (texture.create_view(dimension="2d-array"), count, env["harmonics"])
     return _state[key]
 
@@ -433,7 +452,10 @@ class _Prepared:
         for p in self.asset.primitives:
             self.buffers.append(
                 {
-                    "vertex": [device.create_buffer_with_data(data=np.ascontiguousarray(a), usage=usage.VERTEX) for a in (p.positions, p.normals, p.tangents, p.uvs, p.uvs1)],
+                    "vertex": [
+                        device.create_buffer_with_data(data=np.ascontiguousarray(a), usage=usage.VERTEX)
+                        for a in (p.positions, p.normals, p.tangents, p.uvs, p.uvs1)
+                    ],
                     "index": device.create_buffer_with_data(data=np.ascontiguousarray(p.indices), usage=usage.INDEX),
                     "count": len(p.indices),
                     "draw": device.create_buffer(size=128, usage=usage.UNIFORM | usage.COPY_DST),
@@ -462,13 +484,19 @@ class _Prepared:
             texture = _texture(picture, srgb=True, mipmapped=False)
             self.screens[slot] = (texture, (w, h), texture.create_view())
         else:
-            _gpu()[1].queue.write_texture({"texture": held[0], "mip_level": 0, "origin": (0, 0, 0)}, np.ascontiguousarray(picture), {"offset": 0, "bytes_per_row": w * 4, "rows_per_image": h}, (w, h, 1))
+            _gpu()[1].queue.write_texture(
+                {"texture": held[0], "mip_level": 0, "origin": (0, 0, 0)},
+                np.ascontiguousarray(picture),
+                {"offset": 0, "bytes_per_row": w * 4, "rows_per_image": h},
+                (w, h, 1),
+            )
         return self.screens[slot][2]
 
     def group(self, index: int, material: Material, screen_view):
         _, device = _gpu()
         key = (index, tuple(sorted((k, v["image"]) for k, v in material.textures.items())), id(screen_view))
         if key not in self.groups:
+
             def tex(slot, srgb, fallback):
                 ref = material.textures.get(slot)
                 return self.view(ref["image"], srgb) if ref else _state["blank"][fallback]
@@ -592,13 +620,24 @@ def render(
         mask, (x0, z0, x1, z1) = device_scene.contact_shadow(points, floor)
         shadow_key = ("shadow", device_id)
         if shadow_key not in _state:
-            _state[shadow_key] = device.create_texture(size=(*mask.shape[::-1], 1), format=wgpu.TextureFormat.rgba8unorm, usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST)
+            _state[shadow_key] = device.create_texture(
+                size=(*mask.shape[::-1], 1),
+                format=wgpu.TextureFormat.rgba8unorm,
+                usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST,
+            )
         shadow_tex = _state[shadow_key]
         rgba = np.zeros((*mask.shape, 4), np.uint8)
         rgba[..., 0] = np.round(mask * 255)
-        device.queue.write_texture({"texture": shadow_tex, "mip_level": 0, "origin": (0, 0, 0)}, rgba, {"offset": 0, "bytes_per_row": mask.shape[1] * 4, "rows_per_image": mask.shape[0]}, (mask.shape[1], mask.shape[0], 1))
+        device.queue.write_texture(
+            {"texture": shadow_tex, "mip_level": 0, "origin": (0, 0, 0)},
+            rgba,
+            {"offset": 0, "bytes_per_row": mask.shape[1] * 4, "rows_per_image": mask.shape[0]},
+            (mask.shape[1], mask.shape[0], 1),
+        )
         y = floor - 0.0002
-        quad = np.array([[x0, y, z0, 0, 0], [x1, y, z0, 1, 0], [x1, y, z1, 1, 1], [x0, y, z0, 0, 0], [x1, y, z1, 1, 1], [x0, y, z1, 0, 1]], np.float32)
+        quad = np.array(
+            [[x0, y, z0, 0, 0], [x1, y, z0, 1, 0], [x1, y, z1, 1, 1], [x0, y, z0, 0, 0], [x1, y, z1, 1, 1], [x0, y, z1, 0, 1]], np.float32
+        )
         quad_buffer = device.create_buffer_with_data(data=quad, usage=wgpu.BufferUsage.VERTEX)
         shadow_frame = device.create_buffer(size=256, usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST)
         shadow_values = frame.copy()
@@ -614,7 +653,10 @@ def render(
             ],
         )
         shadow_groups = (
-            device.create_bind_group(layout=shared["shadow_pipeline"].get_bind_group_layout(0), entries=[{"binding": 0, "resource": {"buffer": shadow_frame, "offset": 0, "size": 256}}]),
+            device.create_bind_group(
+                layout=shared["shadow_pipeline"].get_bind_group_layout(0),
+                entries=[{"binding": 0, "resource": {"buffer": shadow_frame, "offset": 0, "size": 256}}],
+            ),
             device.create_bind_group(
                 layout=shared["shadow_pipeline"].get_bind_group_layout(1),
                 entries=[{"binding": 0, "resource": shadow_tex.create_view()}, {"binding": 1, "resource": shared["clamp"]}],
@@ -628,17 +670,34 @@ def render(
             model = matrices[p.node]
             normal = np.eye(4)
             normal[:3, :3] = np.linalg.inv(model[:3, :3]).T
-            device.queue.write_buffer(prepared.buffers[index]["draw"], 0, np.concatenate([model.T.reshape(-1), normal.T.reshape(-1)]).astype(np.float32).tobytes())
+            device.queue.write_buffer(
+                prepared.buffers[index]["draw"], 0, np.concatenate([model.T.reshape(-1), normal.T.reshape(-1)]).astype(np.float32).tobytes()
+            )
             slot = {"M_Screen": "inner", "M_ScreenCover": "cover"}.get(m.name)
-            device.queue.write_buffer(prepared.buffers[index]["material"], 0, _material_block(m, slot is not None, m.name == "M_KeyLegend").tobytes())
+            device.queue.write_buffer(
+                prepared.buffers[index]["material"], 0, _material_block(m, slot is not None, m.name == "M_KeyLegend").tobytes()
+            )
             draws.append((index, prepared.group(index, m, views[slot] if slot else shared["blank"]["black"])))
 
         iw, ih = max(1, round(width * SUPERSAMPLE)), max(1, round(height * SUPERSAMPLE))
         targets = _targets(iw, ih)
         encoder = device.create_command_encoder()
         rp = encoder.begin_render_pass(
-            color_attachments=[{"view": targets["msaa"], "resolve_target": targets["resolve_view"], "clear_value": (0, 0, 0, 0), "load_op": "clear", "store_op": "discard"}],
-            depth_stencil_attachment={"view": targets["depth"], "depth_clear_value": 1.0, "depth_load_op": "clear", "depth_store_op": "discard"},
+            color_attachments=[
+                {
+                    "view": targets["msaa"],
+                    "resolve_target": targets["resolve_view"],
+                    "clear_value": (0, 0, 0, 0),
+                    "load_op": "clear",
+                    "store_op": "discard",
+                }
+            ],
+            depth_stencil_attachment={
+                "view": targets["depth"],
+                "depth_clear_value": 1.0,
+                "depth_load_op": "clear",
+                "depth_store_op": "discard",
+            },
         )
         if shadow > 0:
             rp.set_pipeline(shared["shadow_pipeline"])

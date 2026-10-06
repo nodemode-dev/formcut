@@ -52,9 +52,9 @@ def _directions(width: int, height: int) -> np.ndarray:
     phi = (u - 0.5) * 2 * math.pi
     theta = v * math.pi
     st = np.sin(theta)[:, None]
-    return np.stack(
-        [st * np.sin(phi)[None, :], np.cos(theta)[:, None] * np.ones((1, width)), -st * np.cos(phi)[None, :]], axis=-1
-    ).astype(np.float32)
+    return np.stack([st * np.sin(phi)[None, :], np.cos(theta)[:, None] * np.ones((1, width)), -st * np.cos(phi)[None, :]], axis=-1).astype(
+        np.float32
+    )
 
 
 def studio_map(width: int = ENV_WIDTH, height: int = ENV_HEIGHT, preset: str = "studio") -> np.ndarray:
@@ -237,7 +237,17 @@ def test_pattern(width: int, height: int) -> np.ndarray:
     image[edge : edge + mark, -edge - mark : -edge, :3] = (30, 200, 60)
     image[-edge - mark : -edge, edge : edge + mark, :3] = (40, 80, 230)
     cx, top, span = width // 2, height // 8, min(width, height) // 6
-    arrow = np.array([[cx, top], [cx - span, top + span], [cx - span // 3, top + span], [cx - span // 3, top + 2 * span],
-                      [cx + span // 3, top + 2 * span], [cx + span // 3, top + span], [cx + span, top + span]], np.int32)
+    arrow = np.array(
+        [
+            [cx, top],
+            [cx - span, top + span],
+            [cx - span // 3, top + span],
+            [cx - span // 3, top + 2 * span],
+            [cx + span // 3, top + 2 * span],
+            [cx + span // 3, top + span],
+            [cx + span, top + span],
+        ],
+        np.int32,
+    )
     cv2.fillPoly(image, [arrow], (20, 20, 20, 255))
     return image

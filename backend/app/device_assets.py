@@ -159,10 +159,26 @@ class Asset:
                 attrs = p["attributes"]
                 positions = devices.accessor(document, blob, attrs["POSITION"]).astype(np.float32)
                 count = len(positions)
-                normals = devices.accessor(document, blob, attrs["NORMAL"]).astype(np.float32) if "NORMAL" in attrs else np.tile([0, 0, 1], (count, 1)).astype(np.float32)
-                tangents = devices.accessor(document, blob, attrs["TANGENT"]).astype(np.float32) if "TANGENT" in attrs else np.tile([1, 0, 0, 1], (count, 1)).astype(np.float32)
-                uvs = devices.accessor(document, blob, attrs["TEXCOORD_0"]).astype(np.float32) if "TEXCOORD_0" in attrs else np.zeros((count, 2), np.float32)
-                indices = devices.accessor(document, blob, p["indices"]).reshape(-1).astype(np.uint32) if "indices" in p else np.arange(count, dtype=np.uint32)
+                normals = (
+                    devices.accessor(document, blob, attrs["NORMAL"]).astype(np.float32)
+                    if "NORMAL" in attrs
+                    else np.tile([0, 0, 1], (count, 1)).astype(np.float32)
+                )
+                tangents = (
+                    devices.accessor(document, blob, attrs["TANGENT"]).astype(np.float32)
+                    if "TANGENT" in attrs
+                    else np.tile([1, 0, 0, 1], (count, 1)).astype(np.float32)
+                )
+                uvs = (
+                    devices.accessor(document, blob, attrs["TEXCOORD_0"]).astype(np.float32)
+                    if "TEXCOORD_0" in attrs
+                    else np.zeros((count, 2), np.float32)
+                )
+                indices = (
+                    devices.accessor(document, blob, p["indices"]).reshape(-1).astype(np.uint32)
+                    if "indices" in p
+                    else np.arange(count, dtype=np.uint32)
+                )
                 uvs1 = devices.accessor(document, blob, attrs["TEXCOORD_1"]).astype(np.float32) if "TEXCOORD_1" in attrs else uvs
                 self.primitives.append(Primitive(index, p.get("material", 0), positions, normals, tangents, uvs, indices, uvs1))
         self.signs = {a["name"]: self._direction(a) for a in self.info["articulations"]}
@@ -216,7 +232,7 @@ class Asset:
         moving = set(self.subtree(hinge))
         if art["name"] == "fold":
             screen = next(p for p in self.primitives if self.nodes[p.node].get("name") == "screen")
-            facing = (self.world()[screen.node][:3, :3] @ screen.normals.mean(axis=0).astype(np.float64))
+            facing = self.world()[screen.node][:3, :3] @ screen.normals.mean(axis=0).astype(np.float64)
             scores = {}
             for sign in (1, -1):
                 half = (art["closedDeg"] + art["openDeg"]) / 2
@@ -257,7 +273,10 @@ class Asset:
             old = min(SATIN_LIMIT, default["frameRoughness"] * SATIN_GAIN)
             by["M_Frame"].roughness *= min(SATIN_LIMIT, spec["frameRoughness"] * SATIN_GAIN) / max(old, 1e-3)
         metal_roughness = min(SATIN_LIMIT, spec["frameRoughness"] * SATIN_GAIN)
-        for name, colour, metal_r, other_r in (("M_Back", spec["back"], metal_roughness, BACK_ROUGHNESS.get(surface, 0.38)), ("M_BackInset", spec["inset"], 0.45, 0.32)):
+        for name, colour, metal_r, other_r in (
+            ("M_Back", spec["back"], metal_roughness, BACK_ROUGHNESS.get(surface, 0.38)),
+            ("M_BackInset", spec["inset"], 0.45, 0.32),
+        ):
             if name not in by:
                 continue
             m = by[name]
@@ -299,7 +318,9 @@ class Asset:
                 h, w = image.shape[:2]
                 x0, y0 = ref["offset"][0] % 1.0, ref["offset"][1] % 1.0
                 x1, y1 = x0 + abs(ref["scale"][0]), y0 + abs(ref["scale"][1])
-                tile = image[int(y0 * h) : max(int(y0 * h) + 1, int(min(y1, 1.0) * h)), int(x0 * w) : max(int(x0 * w) + 1, int(min(x1, 1.0) * w))]
+                tile = image[
+                    int(y0 * h) : max(int(y0 * h) + 1, int(min(y1, 1.0) * h)), int(x0 * w) : max(int(x0 * w) + 1, int(min(x1, 1.0) * w))
+                ]
                 m.roughness *= float(tile[..., 1].mean()) / 255
                 m.metallic *= float(tile[..., 2].mean()) / 255
                 m.textures.pop("orm")
