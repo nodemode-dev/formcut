@@ -1,5 +1,14 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Interchange|Échange|Interscambio|インターチェンジ|교환|Intercâmbio|Обмен|Değişim|交换|交換
+const rows = `Keys|Touches|Tasti|キー|키|Teclas|Клавиши|Tuşlar|按键|按鍵
+Layout|Disposition|Layout|レイアウト|레이아웃|Layout|Раскладка|Düzen|布局|配置
+Append to the end|Ajouter à la fin|Aggiungi alla fine|末尾に追加|끝에 추가|Adicionar ao final|Добавить в конец|Sona ekle|追加到末尾|附加到結尾
+Add edit at the playhead|Ajouter un point de montage à la tête de lecture|Aggiungi un taglio alla testina|再生ヘッドに編集点を追加|재생 헤드에 편집점 추가|Adicionar corte no cursor|Добавить склейку у курсора|Oynatma kafasına kesme ekle|在播放头处添加编辑点|在播放頭處新增編輯點
+Ripple delete|Supprimer et combler|Elimina con chiusura|リップル削除|리플 삭제|Excluir com fechamento|Удалить со сдвигом|Kaydırarak sil|波纹删除|波紋刪除
+Previous edit point|Point de montage précédent|Punto di montaggio precedente|前の編集点|이전 편집점|Ponto de edição anterior|Предыдущая склейка|Önceki kesme noktası|上一个编辑点|上一個編輯點
+Next edit point|Point de montage suivant|Punto di montaggio successivo|次の編集点|다음 편집점|Próximo ponto de edição|Следующая склейка|Sonraki kesme noktası|下一个编辑点|下一個編輯點
+Step a frame|Avancer d'une image|Avanza di un fotogramma|1 フレーム進む|한 프레임 이동|Avançar um quadro|На один кадр|Bir kare ilerle|逐帧移动|逐格移動
+Freeze frame|Arrêt sur image|Fermo immagine|フリーズフレーム|프레임 고정|Congelar quadro|Стоп-кадр|Kare dondur|定格帧|定格畫面
+Interchange|Échange|Interscambio|インターチェンジ|교환|Intercâmbio|Обмен|Değişim|交换|交換
 EDL track|Piste pour l'EDL|Traccia per l'EDL|EDL のトラック|EDL 트랙|Faixa para EDL|Дорожка для EDL|EDL izi|EDL 轨道|EDL 軌道
 Export timeline|Exporter la timeline|Esporta timeline|タイムラインを書き出す|타임라인 내보내기|Exportar linha do tempo|Экспорт таймлайна|Zaman çizelgesini dışa aktar|导出时间线|匯出時間軸
 Import timeline|Importer une timeline|Importa timeline|タイムラインを読み込む|타임라인 가져오기|Importar linha do tempo|Импорт таймлайна|Zaman çizelgesini içe aktar|导入时间线|匯入時間軸

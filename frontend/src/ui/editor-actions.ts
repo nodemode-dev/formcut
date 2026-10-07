@@ -8,6 +8,7 @@ import { t } from "../i18n";
 import { installFocusMoves } from "./focus-moves";
 import { addDeviceClip } from "./device-inspector";
 import { installDeviceStage } from "./device-stage";
+import { installKeymap } from "./keymap";
 
 export const editorVerbs: Record<string, () => void> = {};
 
@@ -169,5 +170,6 @@ export function installEditorActions(engine: ProjectEngine, bin: MediaBin): void
   if (focusChip) installFocusMoves(focusChip, engine, bin);
   control("chip-device")?.addEventListener("click", () => { void addDeviceClip(engine).catch((error) => window.alert(error.message)); });
   installDeviceStage(engine);
+  installKeymap(engine);
   control("chip-detach")?.addEventListener("click", () => { void detach().catch(error => window.alert(error.message)); });
 }

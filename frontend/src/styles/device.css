@@ -178,6 +178,33 @@
   font-size: 12px;
 }
 
+.pro-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.pro-keys li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pro-keys kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-s, 4px);
+  background: var(--panel-raised, var(--float));
+  color: var(--ink);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .pro-report {
   display: flex;
   flex-direction: column;

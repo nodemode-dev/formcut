@@ -3,6 +3,7 @@ import type { MediaBin, MediaItem } from "../engine/media";
 import { fileUrl } from "../engine/media";
 import type { Clip } from "../engine/types";
 import { t } from "../i18n";
+import { LAYOUTS, chooseLayout, currentLayout, keyLabel } from "./keymap";
 
 // The library panel's Pro tab (FilmCraft's Premiere workflow, which formcut lacked): a source monitor where a media
 // item is played, marked In and Out (buttons, or I and O while the tab is open), and sent to the timeline at the
@@ -75,6 +76,11 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     </div>
     <input type="file" data-pro="file" accept=".otio,.xml,.fcpxml,.edl,.json,.txt" hidden />
     <ul class="pro-report" data-pro="report"></ul>
+    <div class="pro-head">${t("pro.keys")}</div>
+    <div class="prop-row"><span>${t("pro.layout")}</span><select class="mini-select" data-pro="layout" aria-label="${t("pro.layout")}">
+      ${Object.entries(LAYOUTS).map(([id, layout]) => `<option value="${id}">${layout.name}</option>`).join("")}
+    </select><span class="prop-aux"></span></div>
+    <ul class="pro-keys" data-pro="keylist"></ul>
     <p class="devices-hint">${t("pro.hint")}</p>`;
   const pick = el.querySelector<HTMLSelectElement>('[data-pro="pick"]')!;
   const video = el.querySelector<HTMLVideoElement>('[data-pro="video"]')!;
@@ -173,13 +179,13 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     showTime();
   }
 
-  function edit(kind: "edit.insert" | "edit.overwrite") {
+  function edit(kind: "edit.insert" | "edit.overwrite", at = engine.snapshot.playhead) {
     if (!source || markOut - markIn <= 0.01) return;
     const clip = {
       id: crypto.randomUUID(),
       kind: source.kind,
       label: source.name,
-      start: Math.round(engine.snapshot.playhead * 1000) / 1000,
+      start: Math.round(at * 1000) / 1000,
       duration: Math.round((markOut - markIn) * 1000) / 1000,
       mediaId: source.id,
       sourceIn: Math.round(markIn * 1000) / 1000,
@@ -283,6 +289,57 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     if (file) void importTimeline(file);
     fileInput.value = "";
   });
+
+  const layoutPick = el.querySelector<HTMLSelectElement>('[data-pro="layout"]')!;
+  const keyList = el.querySelector<HTMLElement>('[data-pro="keylist"]')!;
+  const ACTION_LABELS: Record<string, string> = {
+    play: "key.play",
+    markIn: "pro.markin",
+    markOut: "pro.markout",
+    insert: "pro.insert",
+    overwrite: "pro.overwrite",
+    append: "key.append",
+    lift: "pro.lift",
+    extract: "pro.extract",
+    addEdit: "key.addedit",
+    rippleDelete: "key.ripple",
+    prevEdit: "key.prev",
+    nextEdit: "key.next",
+  };
+  // formcut's own keys (editor-actions.ts), shown when its layout is chosen
+  const FORMCUT_KEYS: Array<[string, string[]]> = [
+    ["key.play", ["space", "k", "l"]],
+    ["key.step", ["j", "arrowleft", "arrowright"]],
+    ["key.split", ["s", "mod+b"]],
+    ["key.freeze", ["f"]],
+    ["pro.markin", ["i"]],
+    ["pro.markout", ["o"]],
+  ];
+
+  function showKeys() {
+    const id = currentLayout();
+    if (layoutPick.value !== id) layoutPick.value = id;
+    const rows: Array<[string, string[]]> =
+      id === "formcut" ? FORMCUT_KEYS : Object.entries(LAYOUTS[id].keys).map(([action, keys]) => [ACTION_LABELS[action], keys ?? []]);
+    const html = rows.map(([label, keys]) => `<li><span>${t(label)}</span><kbd>${keys.map(keyLabel).join(", ")}</kbd></li>`).join("");
+    if (keyList.innerHTML !== html) keyList.innerHTML = html;
+  }
+
+  layoutPick.addEventListener("change", () => {
+    chooseLayout(layoutPick.value);
+    showKeys();
+  });
+  document.addEventListener("formcut:pro", (event) => {
+    const action = (event as CustomEvent<string>).detail;
+    const sourceReady = !el.hidden && !!source;
+    if (action === "markIn") act(sourceReady ? "in" : "tin");
+    else if (action === "markOut") act(sourceReady ? "out" : "tout");
+    else if (action === "insert" || action === "overwrite" || action === "lift" || action === "extract") act(action);
+    else if (action === "append") {
+      const tracks = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks;
+      edit("edit.overwrite", Math.max(0, ...tracks.flatMap((track) => track.clips.map((c) => c.start + c.duration))));
+    }
+  });
   scrub.addEventListener("input", () => {
     position = (Number(scrub.value) / 1000) * length();
     if (usable && !video.paused) video.currentTime = position;
@@ -355,6 +412,7 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
       fillTracks();
       showMarks();
       showTime();
+      showKeys();
     },
   };
 }
