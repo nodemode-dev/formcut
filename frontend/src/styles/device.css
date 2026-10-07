@@ -170,6 +170,21 @@
   gap: 6px;
 }
 
+.pro-trim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.pro-status {
+  min-height: 14px;
+  margin: 0;
+  color: var(--cue);
+  font-size: 11px;
+}
+
 .pro-buttons button {
   padding: 5px 10px;
   border: 1px solid var(--edge);

@@ -409,6 +409,60 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "edit.roll":
+      case "edit.slip":
+      case "edit.slide": {
+        // The Pro tab's trims on one clip, by delta seconds. Roll moves the edit point after it (it lengthens, the
+        // next clip starts later and plays on from further in its source). Slip moves which part of its source plays
+        // (same place, same length). Slide moves it between its neighbours (the one before meets it, the one after
+        // starts with it, its source moved on). Refused, with nothing changed, if a clip would fall under 0.05 s or a
+        // source would be read from before its start.
+        const p = payload as { clipId: string; delta: number };
+        const found = this.findClip(p.clipId);
+        const delta = Number(p.delta) || 0;
+        if (!found || Math.abs(delta) < 1e-6) break;
+        const clips = [...s.timelines[s.activeTimeline].tracks[found.trackIndex].clips].sort((a, b) => a.start - b.start);
+        const clip = found.clip;
+        const at = clips.indexOf(clip);
+        const touching = (a?: Clip, b?: Clip) => !!a && !!b && Math.abs(a.start + a.duration - b.start) < 0.01;
+        const before = touching(clips[at - 1], clip) ? clips[at - 1] : undefined;
+        const after = touching(clip, clips[at + 1]) ? clips[at + 1] : undefined;
+        const MIN = 0.05;
+        if (command === "edit.roll") {
+          if (!after || clip.duration + delta < MIN || after.duration - delta < MIN || (after.sourceIn ?? 0) + delta < 0) break;
+          this.pushHistory();
+          clip.duration += delta;
+          after.start += delta;
+          after.duration -= delta;
+          after.sourceIn = (after.sourceIn ?? 0) + delta;
+        } else if (command === "edit.slip") {
+          if ((clip.sourceIn ?? 0) + delta < 0) break;
+          this.pushHistory();
+          clip.sourceIn = (clip.sourceIn ?? 0) + delta;
+        } else {
+          const room = { start: clips[at - 1] && !before ? clips[at - 1].start + clips[at - 1].duration : 0, end: clips[at + 1] && !after ? clips[at + 1].start : Infinity };
+          if (clip.start + delta < room.start - 1e-6 || clip.start + clip.duration + delta > room.end + 1e-6) break;
+          if (before && before.duration + delta < MIN) break;
+          if (after && (after.duration - delta < MIN || (after.sourceIn ?? 0) + delta < 0)) break;
+          this.pushHistory();
+          clip.start += delta;
+          if (before) before.duration += delta;
+          if (after) {
+            after.start += delta;
+            after.duration -= delta;
+            after.sourceIn = (after.sourceIn ?? 0) + delta;
+          }
+        }
+        for (const each of [clip, before, after]) {
+          if (!each) continue;
+          each.start = Math.round(each.start * 1000) / 1000;
+          each.duration = Math.round(each.duration * 1000) / 1000;
+          if (each.sourceIn !== undefined) each.sourceIn = Math.round(each.sourceIn * 1000) / 1000;
+        }
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
       case "edit.lift":
       case "edit.overwrite":
       case "edit.insert": {

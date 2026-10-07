@@ -52,6 +52,18 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
       <button type="button" class="chip" data-act="lift">${t("pro.lift")}</button>
       <button type="button" class="chip" data-act="extract">${t("pro.extract")}</button>
     </div>
+    <div class="pro-head">${t("pro.trim")}</div>
+    <div class="prop-row"><span>${t("pro.step")}</span><select class="mini-select" data-pro="step" aria-label="${t("pro.step")}">
+      <option value="frame">${t("pro.frame")}</option><option value="frames5">${t("pro.frames5")}</option><option value="second">${t("pro.second")}</option>
+    </select><span class="prop-aux"></span></div>
+    ${["roll", "slip", "slide"]
+      .map(
+        (name) => `<div class="pro-trim"><span>${t(`pro.${name}`)}</span><div class="pro-buttons">
+          <button type="button" data-trim="${name}" data-dir="-1">${t("pro.earlier")}</button>
+          <button type="button" data-trim="${name}" data-dir="1">${t("pro.later")}</button></div></div>`,
+      )
+      .join("")}
+    <p class="pro-status" data-pro="trimstatus"></p>
     <p class="devices-hint">${t("pro.hint")}</p>`;
   const pick = el.querySelector<HTMLSelectElement>('[data-pro="pick"]')!;
   const video = el.querySelector<HTMLVideoElement>('[data-pro="video"]')!;
@@ -205,8 +217,34 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     if (!video.paused) position = video.currentTime;
     showTime();
   });
+  const trimStatus = el.querySelector<HTMLElement>('[data-pro="trimstatus"]')!;
+  const stepPick = el.querySelector<HTMLSelectElement>('[data-pro="step"]')!;
+
+  function trim(name: string, direction: number) {
+    const clipId = engine.snapshot.selectedClipId;
+    const found = clipId ? engine.findClip(clipId) : null;
+    if (!clipId || !found) {
+      trimStatus.textContent = t("pro.select");
+      return;
+    }
+    const fps = (engine.snapshot as unknown as { fps?: number }).fps || 30;
+    const step = stepPick.value === "second" ? 1 : stepPick.value === "frames5" ? 5 / fps : 1 / fps;
+    const track = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks[found.trackIndex];
+    const was = JSON.stringify(track.clips);
+    engine.dispatch(`edit.${name}`, { clipId, delta: direction * step });
+    const changed = JSON.stringify(engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks[found.trackIndex].clips) !== was;
+    const text = changed ? "" : t("pro.refused");
+    if (trimStatus.textContent !== text) trimStatus.textContent = text;
+  }
+
   el.addEventListener("click", (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLElement>("[data-act]");
+    const target = event.target as HTMLElement;
+    const trimButton = target.closest<HTMLElement>("[data-trim]");
+    if (trimButton) {
+      trim(trimButton.dataset.trim!, Number(trimButton.dataset.dir));
+      return;
+    }
+    const button = target.closest<HTMLElement>("[data-act]");
     if (button) act(button.dataset.act!);
   });
   // I and O mark the source while the tab is open (Premiere's keys); the other edit keys wait for the Keys section,

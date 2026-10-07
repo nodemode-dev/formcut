@@ -1,5 +1,16 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Pro|Pro|Pro|プロ|프로|Pro|Про|Pro|专业|專業
+const rows = `Trim|Raccord|Rifila|トリム|트림|Aparar|Подрезка|Kırp|修剪|修剪
+Step|Pas|Passo|ステップ|단계|Passo|Шаг|Adım|步长|步長
+1 frame|1 image|1 fotogramma|1 フレーム|1 프레임|1 quadro|1 кадр|1 kare|1 帧|1 格
+5 frames|5 images|5 fotogrammi|5 フレーム|5 프레임|5 quadros|5 кадров|5 kare|5 帧|5 格
+1 second|1 seconde|1 secondo|1 秒|1초|1 segundo|1 секунда|1 saniye|1 秒|1 秒
+Roll edit|Montage par roulement|Modifica a rullo|ローリング編集|롤링 편집|Edição de rolagem|Сдвиг склейки|Kaydırmalı kesme|滚动编辑|滾動編輯
+Slip edit|Montage par glissement de source|Modifica a scorrimento sorgente|スリップ編集|슬립 편집|Edição de deslize da origem|Сдвиг источника|Kaynak kaydırma|外滑编辑|外滑編輯
+Slide edit|Montage par glissement|Modifica a scorrimento|スライド編集|슬라이드 편집|Edição de deslize|Сдвиг клипа|Klip kaydırma|内滑编辑|內滑編輯
+Earlier|Plus tôt|Prima|前へ|이전|Antes|Раньше|Daha erken|提前|提前
+Later|Plus tard|Dopo|後へ|이후|Depois|Позже|Daha geç|延后|延後
+Not possible here: a clip would vanish or run out of source|Impossible ici : un clip disparaîtrait ou manquerait de source|Non possibile qui: una clip sparirebbe o finirebbe la sorgente|ここではできません：クリップが消えるかソースが足りなくなります|여기서는 할 수 없습니다: 클립이 사라지거나 소스가 부족해집니다|Não é possível aqui: um clipe desapareceria ou ficaria sem origem|Здесь нельзя: клип исчезнет или закончится источник|Burada olmaz: bir klip yok olur ya da kaynağı biter|此处无法操作：片段会消失或源素材不足|此處無法操作：片段會消失或來源素材不足
+Pro|Pro|Pro|プロ|프로|Pro|Про|Pro|专业|專業
 Source|Source|Sorgente|ソース|소스|Origem|Источник|Kaynak|源|來源
 Choose media to load it in the source monitor|Choisissez un média pour le charger dans le moniteur source|Scegli un media da caricare nel monitor sorgente|メディアを選ぶとソースモニターに読み込みます|미디어를 선택하면 소스 모니터에 불러옵니다|Escolha uma mídia para carregá-la no monitor de origem|Выберите медиа, чтобы загрузить его в монитор источника|Kaynak monitörüne yüklemek için bir medya seçin|选择媒体以加载到源监视器|選擇媒體以載入來源監看器
 Scrub|Défiler|Scorri|スクラブ|스크럽|Percorrer|Прокрутка|Kaydır|拖动|拖曳
