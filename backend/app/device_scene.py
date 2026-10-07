@@ -151,12 +151,51 @@ def environment(preset: str = "studio") -> dict:
     preset = preset if preset in LIGHTS else "studio"
     with _lock:
         if preset not in _environment:
-            base = studio_map(preset=preset)
-            _environment[preset] = {
-                "levels": np.stack([_prefilter(base, r) for r in ROUGHNESS_LEVELS]).astype(np.float32),
-                "harmonics": _harmonics(cv2.resize(base, (128, 64), interpolation=cv2.INTER_AREA)),
-            }
+            _environment[preset] = _prepared(preset)
         return _environment[preset]
+
+
+def _prepared(preset: str) -> dict:
+    """The preset's prefiltered maps and harmonics, from the data folder when they were prepared before.
+
+    Prefiltering takes about six seconds on any machine (it runs on the CPU), which stalled the first preview frame
+    after each lighting change in every session. The result depends only on the preset, the map size and the
+    environment file, so it is kept, keyed by those, and recomputed only when one of them changes."""
+    import hashlib
+    import json
+    import os
+
+    from .paths import DATA_DIR
+
+    lights = LIGHTS[preset]
+    source = Path(__file__).parent / "device_library" / "environments" / lights["hdri"] if "hdri" in lights else None
+    spec = {
+        "lights": lights,
+        "size": [ENV_WIDTH, ENV_HEIGHT],
+        "levels": list(ROUGHNESS_LEVELS),
+        "source": source.stat().st_size if source else 0,
+    }
+    key = hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:16]
+    path = DATA_DIR / "device-environments" / f"{preset}-{key}.npz"
+    if path.is_file():
+        try:
+            with np.load(path) as kept:
+                return {"levels": kept["levels"], "harmonics": kept["harmonics"]}
+        except (OSError, ValueError, KeyError):
+            pass  # a damaged copy is prepared again below
+    base = studio_map(preset=preset)
+    made = {
+        "levels": np.stack([_prefilter(base, r) for r in ROUGHNESS_LEVELS]).astype(np.float32),
+        "harmonics": _harmonics(cv2.resize(base, (128, 64), interpolation=cv2.INTER_AREA)),
+    }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_name(f"{path.stem}.{os.getpid()}.part.npz")
+        np.savez(partial, **made)
+        partial.replace(path)
+    except OSError:
+        pass  # kept in memory for this session regardless
+    return made
 
 
 def perspective(fov_deg: float, aspect: float, near: float, far: float) -> np.ndarray:
