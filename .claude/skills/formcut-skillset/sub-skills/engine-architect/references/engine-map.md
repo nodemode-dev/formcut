@@ -33,7 +33,7 @@ The rest is written by hand.
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 68 | /api/demo | 2 |
 | device_templates.py | 117 | /api/devices | 1 |
-| devices.py | 228 | /api/devices | 2 |
+| devices.py | 256 | /api/devices | 3 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
 | focus_motion.py | 247 | /api/focus-motion | 1 |
