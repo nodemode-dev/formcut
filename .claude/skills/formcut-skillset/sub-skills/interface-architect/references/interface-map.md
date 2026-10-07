@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1333L)
+- `engine/project.ts` (1387L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
 - `engine/types.ts` (372L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1550L)
+- `i18n/language-pack.ts` (1561L)
 - `i18n/text.ts` (29L)
 - `main.ts` (99L)
 - `types/assets.d.ts` (6L)
@@ -68,7 +68,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/planar-workspace.ts` (1406L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
-- `ui/pro-view.ts` (243L)
+- `ui/pro-view.ts` (281L)
 - `ui/recorder.ts` (344L)
 - `ui/remote-settings.ts` (93L)
 - `ui/render-preview.ts` (244L)
@@ -148,6 +148,9 @@ and a UI module that mutates state directly is a defect.
 - `edit.insert`
 - `edit.lift`
 - `edit.overwrite`
+- `edit.roll`
+- `edit.slide`
+- `edit.slip`
 - `history.redo`
 - `history.undo`
 - `media.relink`
