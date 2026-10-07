@@ -79,8 +79,9 @@ def _match(name: str, url: str, media: list[dict]) -> dict | None:
 # ----------------------------------------------------------------------------------------------- OTIO
 
 
-def export_otio(project: dict, timeline_index: int | None = None) -> tuple[dict, list[str]]:
+def export_otio(project: dict, timeline_index: int | None = None, media: list[dict] | None = None) -> tuple[dict, list[str]]:
     fps = float(project.get("fps") or 30)
+    durations = {item["id"]: float(item.get("duration") or 0.0) for item in media or []}
     index = project.get("activeTimeline", 0) if timeline_index is None else timeline_index
     timeline = project["timelines"][index]
     report: list[str] = []
@@ -105,7 +106,7 @@ def export_otio(project: dict, timeline_index: int | None = None) -> tuple[dict,
                 report.append(
                     f"{track.get('name', track_index)}: {clip.get('label', clip['id'])} overlaps the clip before it and starts where that ends"
                 )
-            items.append(_otio_clip(clip, fps, report))
+            items.append(_otio_clip(clip, fps, report, durations.get(clip.get("mediaId") or "", 0.0)))
             position = max(position, clip["start"]) + clip["duration"]
         children.append(
             {
@@ -137,15 +138,16 @@ def export_otio(project: dict, timeline_index: int | None = None) -> tuple[dict,
     return document, report
 
 
-def _otio_clip(clip: dict, fps: float, report: list[str]) -> dict:
+def _otio_clip(clip: dict, fps: float, report: list[str], available: float = 0.0) -> dict:
     name = clip.get("label") or clip.get("kind", "clip")
     path = _media_file(clip["mediaId"]) if clip.get("mediaId") else None
     if path:
+        # the file's extent: OTIO's FCP XML writer (and other tools) need it to place the clip in its source
         reference = {
             "OTIO_SCHEMA": "ExternalReference.1",
             "name": name,
             "target_url": f"file://{path}",
-            "available_range": None,
+            "available_range": _range(0, available, fps) if available > 0 else None,
             "metadata": {},
         }
     else:
@@ -330,6 +332,164 @@ def import_edl(text: str, media: list[dict], fps: float) -> tuple[dict, list[str
     return {"id": str(uuid.uuid4()), "name": "Imported EDL", "tracks": tracks}, report
 
 
+# ----------------------------------------------------------------------------------------------- FCP 7 XML
+
+
+def _timebase(fps: float) -> tuple[int, bool]:
+    """FCP 7 rates are a whole timebase plus an NTSC flag (29.97 is 30 with ntsc TRUE)."""
+    return max(1, round(fps)), abs(fps - round(fps)) > 1e-3
+
+
+def _xml_rate(parent, fps: float) -> None:
+    from xml.etree.ElementTree import SubElement
+
+    timebase, ntsc = _timebase(fps)
+    rate = SubElement(parent, "rate")
+    SubElement(rate, "timebase").text = str(timebase)
+    SubElement(rate, "ntsc").text = "TRUE" if ntsc else "FALSE"
+
+
+def export_fcp7(project: dict, media: list[dict], timeline_index: int | None = None) -> tuple[str, list[str]]:
+    """xmeml 5, the dialect Premiere Pro imports and exports. V1 is the bottom track; each file is written once in full
+    and then referenced by its id; paths are file://localhost URLs."""
+    from urllib.parse import quote
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    fps = float(project.get("fps") or 30)
+    index = project.get("activeTimeline", 0) if timeline_index is None else timeline_index
+    timeline = project["timelines"][index]
+    report: list[str] = []
+    library = {item["id"]: item for item in media}
+    frames = lambda seconds: round(seconds * fps)  # noqa: E731
+    end = max((c["start"] + c["duration"] for t in timeline["tracks"] for c in t.get("clips", [])), default=0.0)
+    root = Element("xmeml", version="5")
+    sequence = SubElement(root, "sequence", id="sequence-1")
+    SubElement(sequence, "name").text = timeline.get("name") or project.get("title") or "formcut"
+    SubElement(sequence, "duration").text = str(frames(end))
+    _xml_rate(sequence, fps)
+    timecode = SubElement(sequence, "timecode")
+    _xml_rate(timecode, fps)
+    SubElement(timecode, "string").text = "01:00:00:00"
+    SubElement(timecode, "frame").text = str(3600 * _timebase(fps)[0])
+    SubElement(timecode, "displayformat").text = "NDF"
+    holder = SubElement(sequence, "media")
+    video = SubElement(holder, "video")
+    characteristics = SubElement(SubElement(video, "format"), "samplecharacteristics")
+    SubElement(characteristics, "width").text = str(project.get("width") or 1920)
+    SubElement(characteristics, "height").text = str(project.get("height") or 1080)
+    _xml_rate(characteristics, fps)
+    audio = SubElement(holder, "audio")
+    written: dict[str, str] = {}
+    count = 0
+    for track in reversed(timeline["tracks"]):
+        clips = sorted(track.get("clips", []), key=lambda c: c["start"])
+        lane = SubElement(audio if clips and all(c.get("kind") == "audio" for c in clips) else video, "track")
+        for clip in clips:
+            name = clip.get("label") or clip.get("kind", "clip")
+            if not clip.get("mediaId"):
+                report.append(f"{name}: a {clip.get('kind', 'clip')} clip has no media file and is left out of FCP 7 XML")
+                continue
+            speed = float(clip.get("speed") or 1.0)
+            if abs(speed - 1.0) > 1e-6:
+                report.append(f"{name}: its speed ({speed:g}x) is not carried; it plays at normal speed")
+            snapped = (frames(clip["start"] + clip["duration"]) - frames(clip["start"])) / fps
+            if abs(clip["start"] * fps - frames(clip["start"])) > 1e-3 or abs(snapped - clip["duration"]) > 1e-3:
+                report.append(f"{name}: snapped to whole frames at {fps:g} fps ({clip['duration']:.3f} s becomes {snapped:.3f} s)")
+            count += 1
+            item = SubElement(lane, "clipitem", id=f"clipitem-{count}")
+            source_in = float(clip.get("sourceIn") or 0.0)
+            known = library.get(clip["mediaId"], {})
+            SubElement(item, "name").text = name
+            SubElement(item, "enabled").text = "TRUE"
+            SubElement(item, "duration").text = str(frames(float(known.get("duration") or source_in + clip["duration"])))
+            _xml_rate(item, fps)
+            SubElement(item, "start").text = str(frames(clip["start"]))
+            SubElement(item, "end").text = str(frames(clip["start"] + clip["duration"]))
+            SubElement(item, "in").text = str(frames(source_in))
+            SubElement(item, "out").text = str(frames(source_in + clip["duration"]))
+            if clip["mediaId"] in written:
+                SubElement(item, "file", id=written[clip["mediaId"]])
+                continue
+            written[clip["mediaId"]] = f"file-{len(written) + 1}"
+            file = SubElement(item, "file", id=written[clip["mediaId"]])
+            SubElement(file, "name").text = known.get("name") or name
+            path = _media_file(clip["mediaId"])
+            SubElement(file, "pathurl").text = f"file://localhost{quote(path)}" if path else ""
+            _xml_rate(file, fps)
+            SubElement(file, "duration").text = str(frames(float(known.get("duration") or 0.0)))
+            kinds = SubElement(file, "media")
+            if clip.get("kind") in ("video", "image"):
+                SubElement(kinds, "video")
+            if clip.get("kind") in ("video", "audio"):
+                SubElement(kinds, "audio")
+    xml = tostring(root, encoding="unicode")
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n{xml}\n', report
+
+
+def import_fcp7(text: str, media: list[dict]) -> tuple[dict, list[str]]:
+    from urllib.parse import unquote
+
+    # files from elsewhere: defusedxml refuses entity expansion and external entities
+    from defusedxml.ElementTree import fromstring
+
+    report: list[str] = []
+    root = fromstring(text.split("<!DOCTYPE xmeml>")[-1].strip() if "<!DOCTYPE" in text else text)
+    sequence = root if root.tag == "sequence" else root.find(".//sequence")
+    if sequence is None:
+        raise ValueError("No FCP 7 sequence in this file")
+    timebase = int(sequence.findtext("rate/timebase") or 30)
+    fps = timebase * 1000 / 1001 if (sequence.findtext("rate/ntsc") or "").upper() == "TRUE" else float(timebase)
+    files: dict[str, tuple[str, str]] = {}
+    for file in root.iter("file"):
+        if file.find("name") is not None or file.find("pathurl") is not None:
+            files[file.get("id", "")] = (file.findtext("name") or "", unquote(file.findtext("pathurl") or ""))
+
+    def lanes(kind: str) -> list:
+        return sequence.findall(f"media/{kind}/track")
+
+    tracks = []
+    for kind, label in (("video", "V"), ("audio", "A")):
+        ordered = list(reversed(lanes(kind))) if kind == "video" else lanes(kind)
+        for number, lane in enumerate(ordered, start=1):
+            name = f"{label}{len(ordered) - number + 1 if kind == 'video' else number}"
+            out = {"id": str(uuid.uuid4()), "name": name, "clips": []}
+            for element in lane:
+                if element.tag in ("transitionitem", "generatoritem"):
+                    report.append(
+                        f"{name}: a {element.tag} ({element.findtext('name') or element.findtext('effect/name') or ''}) is not carried"
+                    )
+                    continue
+                if element.tag != "clipitem":
+                    continue
+                start, end = int(element.findtext("start") or -1), int(element.findtext("end") or -1)
+                source_in = int(element.findtext("in") or 0)
+                if start < 0 or end < 0:
+                    report.append(f"{name}: {element.findtext('name')} sits on a transition edge and is left out")
+                    continue
+                file = element.find("file")
+                file_name, path = files.get(file.get("id", "") if file is not None else "", (element.findtext("name") or "", ""))
+                found = _match(file_name or element.findtext("name") or "", path, media)
+                if not found:
+                    report.append(f"{name}: {file_name or element.findtext('name')} is not in the media library")
+                    continue
+                clip = {
+                    "id": str(uuid.uuid4()),
+                    "kind": found["kind"],
+                    "label": found["name"],
+                    "start": round(start / fps, 6),
+                    "duration": round((end - start) / fps, 6),
+                    "mediaId": found["id"],
+                    "sourceIn": round(source_in / fps, 6),
+                }
+                if found["kind"] == "video":
+                    clip["filmstrip"] = True
+                out["clips"].append(clip)
+            tracks.append(out)
+    if not tracks:
+        raise ValueError("The sequence has no tracks")
+    return {"id": str(uuid.uuid4()), "name": sequence.findtext("name") or "Imported XML", "tracks": tracks}, report
+
+
 # ----------------------------------------------------------------------------------------------- routes
 
 
@@ -350,11 +510,14 @@ def export_route(fmt: str, body: ExportBody) -> Response:
     import json
 
     if fmt == "otio":
-        document, report = export_otio(body.project, body.timeline)
+        document, report = export_otio(body.project, body.timeline, list_media())
         data, media_type, suffix = json.dumps(document, indent=2), "application/json", "otio"
     elif fmt == "edl":
         data, report = export_edl(body.project, body.track, body.timeline)
         media_type, suffix = "text/plain", "edl"
+    elif fmt == "fcp7":
+        data, report = export_fcp7(body.project, list_media(), body.timeline)
+        media_type, suffix = "application/xml", "xml"
     else:
         raise HTTPException(404, f"No exporter for {fmt}")
     title = re.sub(r"[^A-Za-z0-9_-]+", "_", body.project.get("title") or "formcut").strip("_") or "formcut"
@@ -373,8 +536,10 @@ def import_route(fmt: str, body: ImportBody) -> dict:
             timeline, report = import_otio(json.loads(body.text), media)
         elif fmt == "edl":
             timeline, report = import_edl(body.text, media, body.fps if math.isfinite(body.fps) and body.fps > 0 else 30.0)
+        elif fmt == "fcp7":
+            timeline, report = import_fcp7(body.text, media)
         else:
             raise HTTPException(404, f"No importer for {fmt}")
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, SyntaxError) as exc:
         raise HTTPException(422, f"Could not read this {fmt.upper()} file: {exc}") from None
     return {"timeline": timeline, "report": report}
