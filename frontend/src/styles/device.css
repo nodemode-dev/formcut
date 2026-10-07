@@ -178,6 +178,26 @@
   font-size: 12px;
 }
 
+.pro-report {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.pro-report:empty {
+  display: none;
+}
+
+.pro-report .is-done {
+  margin-left: -14px;
+  color: var(--ink);
+  list-style: none;
+}
+
 .pro-status {
   min-height: 14px;
   margin: 0;

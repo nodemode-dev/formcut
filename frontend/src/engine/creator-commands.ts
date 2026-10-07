@@ -2,7 +2,7 @@ import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
 import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
-export const CREATOR_COMMANDS = new Set(["clip.device", "clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings", "marker.add", "marker.remove", "marker.update"]);
+export const CREATOR_COMMANDS = new Set(["timeline.import", "clip.device", "clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings", "marker.add", "marker.remove", "marker.update"]);
 
 /** Whether the given clips form a rejoinable chain; the reason key names why not. */
 export function rejoinEligibility(state: ProjectState, clipIds: string[]): { ok: true; ordered: Clip[]; trackIndex: number } | { ok: false, reason: string } {
@@ -206,6 +206,25 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     // the tabs stop being a way to find anything.
     if (state.timelines.length >= 13) throw new Error("Thirteen timelines is the limit");
     state.timelines.push({ id: crypto.randomUUID(), name: String(p.name || `Timeline ${state.timelines.length + 1}`), tracks: [{ id: crypto.randomUUID(), name: "Video", clips: [] }, { id: crypto.randomUUID(), name: "Audio", clips: [] }] });
+    state.activeTimeline = state.timelines.length - 1;
+    state.selectedClipId = null;
+  } else if (command === "timeline.import") {
+    // A timeline read from an OpenTimelineIO or EDL file (the Pro tab's Interchange), added beside the others with
+    // fresh ids for it, its tracks and its clips, and opened.
+    if (state.timelines.length >= 13) throw new Error("Thirteen timelines is the limit");
+    const incoming = p.timeline as { name?: string; tracks?: Array<{ name?: string; clips?: unknown[] }> } | undefined;
+    if (!incoming || !Array.isArray(incoming.tracks) || !incoming.tracks.length) throw new Error("The file holds no tracks");
+    state.timelines.push({
+      ...(incoming as object),
+      id: crypto.randomUUID(),
+      name: String(incoming.name || `Timeline ${state.timelines.length + 1}`),
+      tracks: incoming.tracks.map((track) => ({
+        ...(track as object),
+        id: crypto.randomUUID(),
+        name: String(track.name || "Track"),
+        clips: (track.clips || []).map((clip) => ({ ...(clip as object), id: crypto.randomUUID() })),
+      })),
+    } as never);
     state.activeTimeline = state.timelines.length - 1;
     state.selectedClipId = null;
   } else if (command === "timeline.remove") {

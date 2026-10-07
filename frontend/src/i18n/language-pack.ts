@@ -1,5 +1,10 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Trim|Raccord|Rifila|トリム|트림|Aparar|Подрезка|Kırp|修剪|修剪
+const rows = `Interchange|Échange|Interscambio|インターチェンジ|교환|Intercâmbio|Обмен|Değişim|交换|交換
+EDL track|Piste pour l'EDL|Traccia per l'EDL|EDL のトラック|EDL 트랙|Faixa para EDL|Дорожка для EDL|EDL izi|EDL 轨道|EDL 軌道
+Export timeline|Exporter la timeline|Esporta timeline|タイムラインを書き出す|타임라인 내보내기|Exportar linha do tempo|Экспорт таймлайна|Zaman çizelgesini dışa aktar|导出时间线|匯出時間軸
+Import timeline|Importer une timeline|Importa timeline|タイムラインを読み込む|타임라인 가져오기|Importar linha do tempo|Импорт таймлайна|Zaman çizelgesini içe aktar|导入时间线|匯入時間軸
+Imported as a new timeline:|Importé comme nouvelle timeline :|Importato come nuova timeline:|新しいタイムラインとして読み込みました：|새 타임라인으로 가져왔습니다:|Importado como nova linha do tempo:|Импортировано как новый таймлайн:|Yeni bir zaman çizelgesi olarak içe aktarıldı:|已作为新时间线导入：|已作為新時間軸匯入：
+Trim|Raccord|Rifila|トリム|트림|Aparar|Подрезка|Kırp|修剪|修剪
 Step|Pas|Passo|ステップ|단계|Passo|Шаг|Adım|步长|步長
 1 frame|1 image|1 fotogramma|1 フレーム|1 프레임|1 quadro|1 кадр|1 kare|1 帧|1 格
 5 frames|5 images|5 fotogrammi|5 フレーム|5 프레임|5 quadros|5 кадров|5 kare|5 帧|5 格

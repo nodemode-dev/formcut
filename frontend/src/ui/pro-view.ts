@@ -64,6 +64,17 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
       )
       .join("")}
     <p class="pro-status" data-pro="trimstatus"></p>
+    <div class="pro-head">${t("pro.interchange")}</div>
+    <div class="prop-row"><span>${t("pro.format")}</span><select class="mini-select" data-pro="format" aria-label="${t("pro.format")}">
+      <option value="otio">OpenTimelineIO (.otio)</option><option value="edl">CMX 3600 EDL (.edl)</option>
+    </select><span class="prop-aux"></span></div>
+    <div class="prop-row" data-pro="edlrow" hidden><span>${t("pro.edltrack")}</span><select class="mini-select" data-pro="edltrack" aria-label="${t("pro.edltrack")}"></select><span class="prop-aux"></span></div>
+    <div class="pro-buttons">
+      <button type="button" data-act="export">${t("pro.export")}</button>
+      <button type="button" data-act="import">${t("pro.import")}</button>
+    </div>
+    <input type="file" data-pro="file" accept=".otio,.edl,.json,.txt" hidden />
+    <ul class="pro-report" data-pro="report"></ul>
     <p class="devices-hint">${t("pro.hint")}</p>`;
   const pick = el.querySelector<HTMLSelectElement>('[data-pro="pick"]')!;
   const video = el.querySelector<HTMLVideoElement>('[data-pro="video"]')!;
@@ -134,6 +145,9 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
       trackPick.innerHTML = html;
       trackPick.dataset.html = html;
       if (kept && Number(kept) < tracks.length) trackPick.value = kept;
+      const keptEdl = edlTrack.value;
+      edlTrack.innerHTML = html;
+      if (keptEdl && Number(keptEdl) < tracks.length) edlTrack.value = keptEdl;
     }
   }
 
@@ -174,6 +188,61 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     engine.dispatch(kind, { trackIndex: Number(trackPick.value), clip });
   }
 
+  const formatPick = el.querySelector<HTMLSelectElement>('[data-pro="format"]')!;
+  const edlRow = el.querySelector<HTMLElement>('[data-pro="edlrow"]')!;
+  const edlTrack = el.querySelector<HTMLSelectElement>('[data-pro="edltrack"]')!;
+  const fileInput = el.querySelector<HTMLInputElement>('[data-pro="file"]')!;
+  const reportList = el.querySelector<HTMLElement>('[data-pro="report"]')!;
+  const LOCAL = { "content-type": "application/json", "x-formcut-local": "1" };
+
+  function showReport(done: string, lines: string[]) {
+    reportList.innerHTML = [done, ...lines].map((line, i) => `<li${i ? "" : ' class="is-done"'}>${line.replace(/</g, "&lt;")}</li>`).join("");
+  }
+
+  async function exportTimeline() {
+    const format = formatPick.value;
+    const response = await fetch(`/api/interchange/export/${format}`, {
+      method: "POST",
+      headers: LOCAL,
+      body: JSON.stringify({ project: engine.snapshot, timeline: engine.snapshot.activeTimeline, track: Number(edlTrack.value || 0) }),
+    });
+    if (!response.ok) {
+      showReport(t("pro.failed"), []);
+      return;
+    }
+    const name = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") || "")?.[1] || `timeline.${format}`;
+    let report: string[] = [];
+    try {
+      report = JSON.parse(response.headers.get("x-formcut-report") || "[]");
+    } catch {
+      report = [];
+    }
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await response.blob());
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showReport(`${t("pro.exported")} ${name}`, report);
+  }
+
+  async function importTimeline(file: File) {
+    const format = /\.edl$/i.test(file.name) ? "edl" : "otio";
+    const fps = (engine.snapshot as unknown as { fps?: number }).fps || 30;
+    const response = await fetch(`/api/interchange/import/${format}`, { method: "POST", headers: LOCAL, body: JSON.stringify({ text: await file.text(), fps }) });
+    const answer = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      showReport(String(answer.detail || t("pro.failed")), []);
+      return;
+    }
+    try {
+      engine.dispatch("timeline.import", { timeline: answer.timeline });
+    } catch (error) {
+      showReport((error as Error).message, []);
+      return;
+    }
+    showReport(`${t("pro.imported")} ${file.name}`, answer.report || []);
+  }
+
   function act(name: string) {
     if (name === "in") markIn = Math.min(now(), markOut);
     else if (name === "out") markOut = Math.max(now(), markIn);
@@ -193,6 +262,8 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     }
     else if (name === "insert") edit("edit.insert");
     else if (name === "overwrite") edit("edit.overwrite");
+    else if (name === "export") void exportTimeline();
+    else if (name === "import") fileInput.click();
     else if (name === "tin") rangeIn = engine.snapshot.playhead;
     else if (name === "tout") rangeOut = engine.snapshot.playhead;
     else if ((name === "lift" || name === "extract") && rangeIn !== null && rangeOut !== null) {
@@ -204,6 +275,14 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
   }
 
   pick.addEventListener("change", () => choose(pick.value));
+  formatPick.addEventListener("change", () => {
+    edlRow.hidden = formatPick.value !== "edl";
+  });
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    if (file) void importTimeline(file);
+    fileInput.value = "";
+  });
   scrub.addEventListener("input", () => {
     position = (Number(scrub.value) / 1000) * length();
     if (usable && !video.paused) video.currentTime = position;
