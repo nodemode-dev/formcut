@@ -68,7 +68,7 @@ export async function addDeviceClip(engine: ProjectEngine, deviceId?: string): P
     label: first.id,
     start: engine.snapshot.playhead,
     duration: 5,
-    device: { id: first.id, finish: first.finish },
+    device: { id: first.id, finish: first.finish, lighting: "photo" },
   } as unknown as Clip;
   engine.dispatch("clip.add", { trackIndex: 0, clip });
   engine.dispatch("clip.select", clip.id);
@@ -87,6 +87,9 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     <div class="prop-row"><span>${t("dev.model")}</span><select class="mini-select" data-dev-model aria-label="${t("dev.model")}"></select><span class="prop-aux"></span></div>
     <div class="prop-row"><span>${t("dev.finish")}</span><span class="device-swatches" data-dev-finishes></span><span class="prop-aux"></span></div>
     <div class="prop-row"><span>${t("dev.template")}</span><select class="mini-select" data-dev-template aria-label="${t("dev.template")}"></select><span class="prop-aux"></span></div>
+    <div class="prop-row"><span>${t("dev.lighting")}</span><select class="mini-select" data-dev-lighting aria-label="${t("dev.lighting")}">
+      ${["photo", "loft", "dark", "studio", "rim"].map((name) => `<option value="${name}">${t(`dev.light.${name}`)}</option>`).join("")}
+    </select><span class="prop-aux"></span></div>
     <div data-dev-screens></div>
     <div data-dev-poses></div>
     ${["yaw", "pitch", "distance", "fov", "roll"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
@@ -169,6 +172,9 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     }
     if (builtFor !== clip.device!.id) build(clip);
     if (model.value !== clip.device!.id) model.value = clip.device!.id;
+    const lighting = section.querySelector<HTMLSelectElement>("[data-dev-lighting]")!;
+    const wantedLight = clip.device!.lighting ?? "studio";
+    if (document.activeElement !== lighting && lighting.value !== wantedLight) lighting.value = wantedLight;
     const finish = clip.device!.finish ?? info(clip)?.finish;
     for (const swatch of finishes.querySelectorAll<HTMLElement>("[data-dev-finish]")) swatch.classList.toggle("is-on", swatch.dataset.devFinish === finish);
     for (const select of screensBox.querySelectorAll<HTMLSelectElement>("[data-dev-source]")) {
@@ -198,6 +204,10 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     const clip = selected();
     const target = event.target as HTMLInputElement | HTMLSelectElement;
     if (!clip) return;
+    if (target.dataset.devLighting !== undefined) {
+      engine.dispatch("clip.device", { clipId: clip.id, patch: { lighting: target.value } });
+      return;
+    }
     if (target.dataset.devTemplate !== undefined) {
       const chosen = target.value;
       target.value = "";

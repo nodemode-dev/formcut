@@ -553,14 +553,17 @@ SUPERSAMPLE = 1.5  # shading is per pixel under MSAA; rendering larger and avera
 SUPERSAMPLE_GPU = 2.5  # on a hardware GPU the extra samples cost little and settle the glints of thin bevels
 
 
-def _supersample() -> float:
-    """2.5x on a hardware GPU, 1.5x on a CPU adapter (llvmpipe and the like), where every sample costs seconds."""
+def _supersample(width: int, height: int) -> float:
+    """2.5x on a hardware GPU, 1.5x on a CPU adapter (llvmpipe and the like), where every sample costs seconds; never
+    less than a full-HD internal picture (a half-size preview's thin rims broke into dots at 1.5x), never more than
+    6144 pixels across (a 4K export on a GPU with unified memory)."""
     if "supersample" not in _state:
         adapter = getattr(_gpu()[1], "adapter", None)
         info = getattr(adapter, "info", None) or {}
         kind = str(info.get("adapter_type", "cpu")).lower()
         _state["supersample"] = SUPERSAMPLE if "cpu" in kind else SUPERSAMPLE_GPU
-    return _state["supersample"]
+    wide = max(width, height, 1)
+    return max(1.0, min(max(_state["supersample"], 1920 / wide), 6144 / wide))
 
 
 # The models build a display as layers laid on the body's front in one plane (the lid's front face, the border plate
@@ -709,7 +712,7 @@ def render(
             )
             draws.append((index, prepared.group(index, m, views[slot] if slot else shared["blank"]["black"])))
 
-        ss = _supersample()
+        ss = _supersample(width, height)
         iw, ih = max(1, round(width * ss)), max(1, round(height * ss))
         targets = _targets(iw, ih)
         encoder = device.create_command_encoder()

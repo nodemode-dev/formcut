@@ -1,5 +1,11 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Devices|Appareils|Dispositivi|デバイス|기기|Dispositivos|Устройства|Cihazlar|设备|裝置
+const rows = `Lighting|Éclairage|Illuminazione|ライティング|조명|Iluminação|Освещение|Aydınlatma|照明|照明
+Photo studio|Studio photo|Studio fotografico|撮影スタジオ|사진 스튜디오|Estúdio fotográfico|Фотостудия|Fotoğraf stüdyosu|摄影棚|攝影棚
+Loft daylight|Lumière du jour en loft|Luce diurna in loft|ロフトの自然光|로프트 자연광|Luz do dia no loft|Дневной свет в лофте|Loft gün ışığı|阁楼日光|閣樓日光
+Dark studio|Studio sombre|Studio scuro|暗いスタジオ|어두운 스튜디오|Estúdio escuro|Тёмная студия|Karanlık stüdyo|暗调摄影棚|暗調攝影棚
+Drawn studio|Studio dessiné|Studio disegnato|描画スタジオ|그린 스튜디오|Estúdio desenhado|Нарисованная студия|Çizilmiş stüdyo|绘制摄影棚|繪製攝影棚
+Dark, rim lit|Sombre, éclairage de contour|Scuro, luce di contorno|暗め・リムライト|어둡게, 림 라이트|Escuro, luz de contorno|Тёмный, контровой свет|Karanlık, kenar ışığı|暗调轮廓光|暗調輪廓光
+Devices|Appareils|Dispositivi|デバイス|기기|Dispositivos|Устройства|Cihazlar|设备|裝置
 Click a device to add it at the playhead|Cliquez sur un appareil pour l'ajouter à la tête de lecture|Fai clic su un dispositivo per aggiungerlo alla testina|デバイスをクリックすると再生ヘッドの位置に追加されます|기기를 클릭하면 재생 헤드 위치에 추가됩니다|Clique em um dispositivo para adicioná-lo no cursor de reprodução|Нажмите на устройство, чтобы добавить его в позицию воспроизведения|Oynatma kafasına eklemek için bir cihaza tıklayın|点击设备即可添加到播放头处|點擊裝置即可加入到播放頭處
 Phone|Téléphone|Telefono|スマートフォン|휴대폰|Celular|Телефон|Telefon|手机|手機
 Tablet|Tablette|Tablet|タブレット|태블릿|Tablet|Планшет|Tablet|平板|平板

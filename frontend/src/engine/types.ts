@@ -119,6 +119,8 @@ export interface DeviceSettings {
   pose?: { lid?: number; fold?: number; stand?: number };
   camera?: { yaw?: number; pitch?: number; distance?: number; fov?: number; roll?: number; panX?: number; panY?: number };
   backlight?: number;
+  /** The lighting preset: photo (photographed studio), loft, dark, studio (drawn) or rim. */
+  lighting?: string;
   exposure?: number;
   light?: number;
   shadow?: number;

@@ -8,6 +8,7 @@ Both are computed once per process.
 
 import math
 import threading
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -30,6 +31,13 @@ LIGHTS = {
             (175.0, 38.0, 60.0, 18.0, 1.4, 0.0),
         ),
     },
+    # photographed studios (Poly Haven, CC0; device_library/environments): real rooms give metal and glass the
+    # reflections and falloff that read as a photograph, where a drawn studio reads as computer generated. target is the
+    # mean brightness each is normalised to, peak the cap on its light sources (so prefiltering stays clean), turn the
+    # azimuth that puts its key light where a product shot wants it.
+    "photo": {"hdri": "photo_studio.hdr", "target": 0.75, "peak": 40.0, "turn": 0.0},
+    "loft": {"hdri": "loft.hdr", "target": 0.6, "peak": 30.0, "turn": 0.0},
+    "dark": {"hdri": "dark_studio.hdr", "target": 0.5, "peak": 60.0, "turn": 0.0},
     # dark, rim lit: two tall strips behind the device to either side draw its silhouette, a soft key above the camera
     # and a faint low fill keep its faces readable
     "rim": {
@@ -60,6 +68,17 @@ def _directions(width: int, height: int) -> np.ndarray:
 def studio_map(width: int = ENV_WIDTH, height: int = ENV_HEIGHT, preset: str = "studio") -> np.ndarray:
     """A lighting preset as linear RGB, shape (height, width, 3)."""
     lights = LIGHTS.get(preset, LIGHTS["studio"])
+    if "hdri" in lights:
+        source = cv2.imread(
+            str(Path(__file__).parent / "device_library" / "environments" / lights["hdri"]), cv2.IMREAD_ANYDEPTH | cv2.IMREAD_COLOR
+        )
+        if source is None:
+            raise FileNotFoundError(f"The {preset} lighting environment is missing from the device library")
+        image = cv2.resize(cv2.cvtColor(source, cv2.COLOR_BGR2RGB).astype(np.float32), (width, height), interpolation=cv2.INTER_AREA)
+        image = np.roll(image, round(lights["turn"] / 360 * width), axis=1)
+        luminance = image @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+        image *= lights["target"] / max(float(luminance.mean()), 1e-6)
+        return np.minimum(image, lights["peak"]).astype(np.float32)
     base, rise, fall = lights["sky"]
     d = _directions(width, height)
     y = d[..., 1]
