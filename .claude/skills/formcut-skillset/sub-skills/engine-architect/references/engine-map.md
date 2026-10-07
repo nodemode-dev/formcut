@@ -41,6 +41,7 @@ The rest is written by hand.
 | generate.py | 1113 | /api/generate | 6 |
 | generative.py | 152 | /api/generative | 5 |
 | instagram.py | 206 | /api/connect/instagram | 4 |
+| interchange.py | 380 | /api/interchange | 2 |
 | jobs.py | 216 | /api/jobs | 3 |
 | klein.py | 267 | /api/models/klein | 3 |
 | krea2.py | 797 | /api/models/krea-2 | 6 |
@@ -48,7 +49,7 @@ The rest is written by hand.
 | linking.py | 352 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
-| main.py | 480 | /api/health | 13 |
+| main.py | 482 | /api/health | 13 |
 | media.py | 1069 | /api/media | 26 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 773 | /api/models | 8 |
