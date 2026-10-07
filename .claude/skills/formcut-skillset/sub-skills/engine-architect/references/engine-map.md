@@ -32,7 +32,7 @@ The rest is written by hand.
 | cloud.py | 441 | /api/cloud | 9 |
 | codecs_api.py | 45 | /api/codecs | 4 |
 | demo.py | 68 | /api/demo | 2 |
-| device_templates.py | 117 | /api/devices | 1 |
+| device_templates.py | 257 | /api/devices | 2 |
 | devices.py | 256 | /api/devices | 3 |
 | effect_previews.py | 271 | /api/catalogue/preview | 1 |
 | engine_report.py | 94 | /api/engine | 1 |
@@ -93,9 +93,9 @@ the automation transports.
 - `content_filter.py` (64L)
 - `cutdown.py` (128L)
 - `device_assets.py` (360L)
-- `device_layer.py` (184L)
-- `device_render.py` (759L)
-- `device_scene.py` (311L)
+- `device_layer.py` (193L)
+- `device_render.py` (767L)
+- `device_scene.py` (335L)
 - `discovery.py` (65L)
 - `durable.py` (84L)
 - `effect_packages.py` (435L)
