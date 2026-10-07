@@ -32,6 +32,8 @@ VALUES = {
     "screenBrightness": (None, "screenBrightness", 1.0),
     # depth of field: strength (0 off) and focus (device sizes nearer, negative, or farther than the device's centre)
     "dof": (None, "dof", 0.0),
+    # the reflective floor: the device mirrored beneath itself, fading downward (0 off)
+    "reflection": (None, "reflection", 0.0),
     "focus": (None, "focus", 0.0),
     # the device itself moving before a still camera (degrees; moves in fractions of the device's size, Z toward the
     # camera): the browser presets, a floating device
@@ -188,6 +190,7 @@ def picture(renderer, clip: dict, local: float) -> np.ndarray:
         motion=values["motion"],
         dof=values.get("dof", 0.0),
         focus=values.get("focus", 0.0),
+        reflection=values.get("reflection", 0.0),
         screens=screens,
         backlight=values.get("backlight", 0.6),
         screen_brightness=values.get("screenBrightness", 1.0),

@@ -41,6 +41,7 @@
   "dev.shadow": "Schatten",
   "dev.light": "Lichtwinkel",
   "dev.dof": "Schärfentiefe",
+  "dev.reflection": "Spiegelung",
   "dev.focus": "Fokus",
   "dev.timeline": "Zeitleiste: {name}",
   "dev.template": "Vorlage",

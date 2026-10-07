@@ -42,6 +42,7 @@ const NUMBERS: Record<string, [string | null, number, number, number, number, st
   backlight: [null, 0.6, 0, 2, 0.05, ""],
   exposure: [null, 1, 0.3, 2.5, 0.05, ""],
   shadow: [null, 0.6, 0, 1, 0.05, ""],
+  reflection: [null, 0, 0, 1, 0.05, ""],
   // depth of field: strength (0 off) and focus (device sizes nearer, negative, or farther than the device's centre)
   dof: [null, 0, 0, 1, 0.05, ""],
   focus: [null, 0, -1, 1, 0.05, ""],
@@ -106,7 +107,7 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     <div data-dev-poses></div>
     ${["yaw", "pitch", "distance", "fov", "roll"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
     ${["rotateX", "rotateY", "rotateZ", "moveX", "moveY", "moveZ"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
-    ${["backlight", "exposure", "shadow", "light", "dof", "focus"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
+    ${["backlight", "exposure", "shadow", "reflection", "light", "dof", "focus"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
     <div class="prop-row"><span></span><button type="button" class="tool-chip" data-dev-tour>${icon("help")}${t("tour.replay")}</button><span class="prop-aux"></span></div>`;
   body.querySelector(".inspector-empty")?.after(section);
   const model = section.querySelector<HTMLSelectElement>("[data-dev-model]")!;

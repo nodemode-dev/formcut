@@ -42,6 +42,7 @@
   "dev.shadow": "צל",
   "dev.light": "זווית האור",
   "dev.dof": "עומק שדה",
+  "dev.reflection": "השתקפות",
   "dev.focus": "מיקוד",
   "dev.timeline": "ציר זמן: {name}",
   "dev.template": "תבנית",

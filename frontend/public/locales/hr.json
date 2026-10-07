@@ -42,6 +42,7 @@
   "dev.shadow": "Sjena",
   "dev.light": "Kut svjetla",
   "dev.dof": "Dubinska oštrina",
+  "dev.reflection": "Odraz",
   "dev.focus": "Fokus",
   "dev.timeline": "Vremenska crta: {name}",
   "dev.template": "Predložak",

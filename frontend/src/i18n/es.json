@@ -41,6 +41,7 @@
   "dev.shadow": "Sombra",
   "dev.light": "Ángulo de la luz",
   "dev.dof": "Profundidad de campo",
+  "dev.reflection": "Reflejo",
   "dev.focus": "Enfoque",
   "dev.timeline": "Línea de tiempo: {name}",
   "dev.template": "Plantilla",

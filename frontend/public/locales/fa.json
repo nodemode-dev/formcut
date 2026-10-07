@@ -42,6 +42,7 @@
   "dev.shadow": "سایه",
   "dev.light": "زاویه نور",
   "dev.dof": "عمق میدان",
+  "dev.reflection": "بازتاب",
   "dev.focus": "فوکوس",
   "dev.timeline": "خط زمانی: {name}",
   "dev.template": "الگو",

@@ -1,5 +1,6 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Depth of field|Profondeur de champ|Profondità di campo|被写界深度|피사계 심도|Profundidade de campo|Глубина резкости|Alan derinliği|景深|景深
+const rows = `Reflection|Reflet|Riflesso|反射|반사|Reflexo|Отражение|Yansıma|倒影|倒影
+Depth of field|Profondeur de champ|Profondità di campo|被写界深度|피사계 심도|Profundidade de campo|Глубина резкости|Alan derinliği|景深|景深
 Focus|Mise au point|Messa a fuoco|フォーカス|초점|Foco|Фокус|Odak|对焦|對焦
 Rotate X|Rotation X|Ruota X|回転 X|회전 X|Girar X|Поворот X|Döndür X|旋转 X|旋轉 X
 Rotate Y|Rotation Y|Ruota Y|回転 Y|회전 Y|Girar Y|Поворот Y|Döndür Y|旋转 Y|旋轉 Y

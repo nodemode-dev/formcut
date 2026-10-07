@@ -42,6 +42,7 @@
   "dev.shadow": "الظل",
   "dev.light": "زاوية الضوء",
   "dev.dof": "عمق الميدان",
+  "dev.reflection": "الانعكاس",
   "dev.focus": "التركيز",
   "dev.timeline": "المخطط الزمني: {name}",
   "dev.template": "القالب",

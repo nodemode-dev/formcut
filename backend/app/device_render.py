@@ -177,7 +177,8 @@ struct FOut {
 @fragment
 fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> FOut {
     var n = normalize(i.nrm);
-    if (!front) {
+    // a reflection (layer.y > 0) is the device mirrored about the floor, its winding reversed: facing inverts
+    if (front == (draw.layer.y > 0.0)) {
         n = -n;
     }
     let v = normalize(frame.eye.xyz - i.world);
@@ -243,7 +244,14 @@ fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> FOut {
         let cr = sqrt(sqrt(clamp(cr0 * cr0 * cr0 * cr0 + widen, 0.0, 1.0)));
         colour = colour * (1.0 - fc) + prefiltered(reflect(-v, n), cr) * fc;
     }
-    return FOut(vec4<f32>(neutral(colour * frame.eye.w), 1.0), vec4<f32>(length(frame.eye.xyz - i.world), 0.0, 0.0, 1.0));
+    var shown = vec4<f32>(neutral(colour * frame.eye.w), 1.0);
+    if (draw.layer.y > 0.0) {
+        // the reflective floor: strength (layer.y), fading over layer.w below the floor at layer.z, premultiplied
+        let below = max(draw.layer.z - i.world.y, 0.0);
+        let fade = draw.layer.y * pow(clamp(1.0 - below / max(draw.layer.w, 1e-4), 0.0, 1.0), 2.0);
+        shown = vec4<f32>(shown.rgb * fade, fade);
+    }
+    return FOut(shown, vec4<f32>(length(frame.eye.xyz - i.world), 0.0, 0.0, 1.0));
 }
 """
 
@@ -479,6 +487,7 @@ class _Prepared:
                     "index": device.create_buffer_with_data(data=np.ascontiguousarray(p.indices), usage=usage.INDEX),
                     "count": len(p.indices),
                     "draw": device.create_buffer(size=144, usage=usage.UNIFORM | usage.COPY_DST),
+                    "mirror": device.create_buffer(size=144, usage=usage.UNIFORM | usage.COPY_DST),
                     "material": device.create_buffer(size=256, usage=usage.UNIFORM | usage.COPY_DST),
                 }
             )
@@ -512,9 +521,9 @@ class _Prepared:
             )
         return self.screens[slot][2]
 
-    def group(self, index: int, material: Material, screen_view):
+    def group(self, index: int, material: Material, screen_view, mirror: bool = False):
         _, device = _gpu()
-        key = (index, tuple(sorted((k, v["image"]) for k, v in material.textures.items())), id(screen_view))
+        key = (index, tuple(sorted((k, v["image"]) for k, v in material.textures.items())), id(screen_view), mirror)
         if key not in self.groups:
 
             def tex(slot, srgb, fallback):
@@ -522,7 +531,7 @@ class _Prepared:
                 return self.view(ref["image"], srgb) if ref else _state["blank"][fallback]
 
             entries = [
-                {"binding": 0, "resource": {"buffer": self.buffers[index]["draw"], "offset": 0, "size": 144}},
+                {"binding": 0, "resource": {"buffer": self.buffers[index]["mirror" if mirror else "draw"], "offset": 0, "size": 144}},
                 {"binding": 1, "resource": {"buffer": self.buffers[index]["material"], "offset": 0, "size": 256}},
                 {"binding": 2, "resource": tex("base", True, "white")},
                 {"binding": 3, "resource": tex("orm", False, "white")},
@@ -677,6 +686,7 @@ def render(
     motion: dict | None = None,
     dof: float = 0.0,
     focus: float = 0.0,
+    reflection: float = 0.0,
 ) -> np.ndarray:
     """A device as an RGBA picture (height, width, 4), straight-alpha sRGB, transparent around it.
 
@@ -764,6 +774,10 @@ def render(
             ),
         )
         draws = []
+        reflections = []
+        mirror_floor = np.diag([1.0, -1.0, 1.0, 1.0])
+        mirror_floor[1, 3] = 2 * floor
+        fade_length = 0.5 * float(points[:, 1].max() - points[:, 1].min())
         for index, p in enumerate(a.primitives):
             if index in a.hidden:
                 continue
@@ -784,6 +798,19 @@ def render(
                 prepared.buffers[index]["material"], 0, _material_block(m, slot is not None, m.name == "M_KeyLegend").tobytes()
             )
             draws.append((index, prepared.group(index, m, views[slot] if slot else shared["blank"]["black"])))
+            if reflection > 0:
+                # the reflective floor: the device mirrored about the floor at rest, fading over half its height
+                mirrored = mirror_floor @ model
+                mirrored_normal = np.eye(4)
+                mirrored_normal[:3, :3] = np.linalg.inv(mirrored[:3, :3]).T
+                device.queue.write_buffer(
+                    prepared.buffers[index]["mirror"],
+                    0,
+                    np.concatenate([mirrored.T.reshape(-1), mirrored_normal.T.reshape(-1), [layer, reflection, floor, fade_length]])
+                    .astype(np.float32)
+                    .tobytes(),
+                )
+                reflections.append((index, prepared.group(index, m, views[slot] if slot else shared["blank"]["black"], mirror=True)))
 
         ss = _supersample(width, height)
         iw, ih = max(1, round(width * ss)), max(1, round(height * ss))
@@ -813,6 +840,17 @@ def render(
                 "depth_store_op": "discard",
             },
         )
+        if reflections:
+            # the reflection first: it lies below the floor, the contact shadow blends over it, the device over both
+            rp.set_pipeline(shared["pipeline"])
+            rp.set_bind_group(0, frame_group)
+            for index, group in reflections:
+                b = prepared.buffers[index]
+                rp.set_bind_group(1, group)
+                for slot_index, buffer in enumerate(b["vertex"]):
+                    rp.set_vertex_buffer(slot_index, buffer)
+                rp.set_index_buffer(b["index"], wgpu.IndexFormat.uint32)
+                rp.draw_indexed(b["count"])
         if shadow > 0:
             rp.set_pipeline(shared["shadow_pipeline"])
             rp.set_bind_group(0, shadow_groups[0])
