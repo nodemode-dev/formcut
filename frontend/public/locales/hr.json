@@ -1819,6 +1819,7 @@
   "cap.import": "Uvezi titlove",
   "cap.exportSrt": "Izvezi SRT",
   "cap.exportVtt": "Izvezi VTT",
+  "cap.exportScc": "Izvezi SCC",
   "cap.import.none": "U toj datoteci nisu pronađeni titlovi: trebala bi biti SRT ili WebVTT",
   "cap.export.none": "Na toj traci nema titlova",
   "cap.exported": "Izvezeno",

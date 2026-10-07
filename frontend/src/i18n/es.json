@@ -1425,6 +1425,7 @@
   "cap.import": "Importar subtítulos",
   "cap.exportSrt": "Exportar SRT",
   "cap.exportVtt": "Exportar VTT",
+  "cap.exportScc": "Exportar SCC",
   "cap.import.none": "No se encontraron subtítulos en ese archivo: debería ser SRT o WebVTT",
   "cap.export.none": "No hay subtítulos en esa pista",
   "cap.exported": "Exportado",

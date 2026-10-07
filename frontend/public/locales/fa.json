@@ -1819,6 +1819,7 @@
   "cap.import": "وارد کردن زیرنویس",
   "cap.exportSrt": "خروجی SRT",
   "cap.exportVtt": "خروجی VTT",
+  "cap.exportScc": "خروجی SCC",
   "cap.import.none": "زیرنویسی در آن پرونده پیدا نشد: باید SRT یا WebVTT باشد",
   "cap.export.none": "زیرنویسی روی آن ترک نیست",
   "cap.exported": "خروجی گرفته شد",

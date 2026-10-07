@@ -1819,6 +1819,7 @@
   "cap.import": "استيراد الترجمات",
   "cap.exportSrt": "تصدير SRT",
   "cap.exportVtt": "تصدير VTT",
+  "cap.exportScc": "تصدير SCC",
   "cap.import.none": "لم يُعثر على ترجمات في ذلك الملف: يجب أن يكون SRT أو WebVTT",
   "cap.export.none": "لا توجد ترجمات على ذلك المسار",
   "cap.exported": "تم التصدير",

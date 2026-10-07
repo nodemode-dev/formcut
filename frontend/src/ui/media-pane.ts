@@ -162,8 +162,9 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
             <button class="tool-chip" data-ref="cap-import">${icon("plus")}${t("cap.import")}</button>
             <button class="tool-chip" data-ref="cap-export-srt">${icon("export")}${t("cap.exportSrt")}</button>
             <button class="tool-chip" data-ref="cap-export-vtt">${icon("export")}${t("cap.exportVtt")}</button>
+            <button class="tool-chip" data-ref="cap-export-scc">${icon("export")}${t("cap.exportScc")}</button>
           </div>
-          <input type="file" data-ref="cap-file" accept=".srt,.vtt,text/vtt,application/x-subrip" hidden />
+          <input type="file" data-ref="cap-file" accept=".srt,.vtt,.scc,text/vtt,application/x-subrip" hidden />
           <div class="text-add-hint">${t("cap.transcript")}</div>
           <div class="cap-transcript" data-ref="cap-transcript"></div>
           <div class="text-add-hint">${t("title.gallery")}</div>
@@ -897,7 +898,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     engine.dispatch("captions.add", { trackIndex: Number(capPick("cap-track")) || 0, clips });
     capSay(`${t("cap.added")}: ${clips.length}`);
   });
-  const exportCaptions = async (format: "srt" | "vtt") => {
+  const exportCaptions = async (format: "srt" | "vtt" | "scc") => {
     const snapshot = engine.snapshot;
     const track = snapshot.timelines[snapshot.activeTimeline]?.tracks[Number(capPick("cap-track")) || 0];
     const cues = (track?.clips ?? [])
@@ -938,6 +939,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     capSay(`${t("cap.share.saved")}: ${file}`);
   })());
   el.querySelector('[data-ref="cap-export-vtt"]')!.addEventListener("click", () => void exportCaptions("vtt"));
+  el.querySelector('[data-ref="cap-export-scc"]')!.addEventListener("click", () => void exportCaptions("scc"));
 
   // Phase 9: the caption track's text as an editable transcript. Rows are
   // keyed by clip id and patched in place, and a focused input is never

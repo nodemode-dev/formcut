@@ -1425,6 +1425,7 @@
   "cap.import": "Untertitel importieren",
   "cap.exportSrt": "SRT exportieren",
   "cap.exportVtt": "VTT exportieren",
+  "cap.exportScc": "SCC exportieren",
   "cap.import.none": "Keine Untertitel in dieser Datei gefunden: sie sollte SRT oder WebVTT sein",
   "cap.export.none": "Keine Untertitel auf dieser Spur",
   "cap.exported": "Exportiert",

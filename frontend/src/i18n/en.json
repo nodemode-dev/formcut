@@ -1425,6 +1425,7 @@
   "cap.import": "Import subtitles",
   "cap.exportSrt": "Export SRT",
   "cap.exportVtt": "Export VTT",
+  "cap.exportScc": "Export SCC",
   "cap.import.none": "No captions found in that file: it should be SRT or WebVTT",
   "cap.export.none": "No captions on that track",
   "cap.exported": "Exported",

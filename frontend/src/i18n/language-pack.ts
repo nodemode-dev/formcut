@@ -544,6 +544,7 @@ Subtitle files: bring captions in from an SRT or VTT file, or take this track's 
 Import subtitles|Importer des sous-titres|Importa sottotitoli|字幕を読み込む|자막 가져오기|Importar legendas|Импортировать субтитры|Altyazı içe aktar|导入字幕|匯入字幕
 Export SRT|Exporter en SRT|Esporta SRT|SRT を書き出す|SRT 내보내기|Exportar SRT|Экспортировать SRT|SRT olarak dışa aktar|导出 SRT|匯出 SRT
 Export VTT|Exporter en VTT|Esporta VTT|VTT を書き出す|VTT 내보내기|Exportar VTT|Экспортировать VTT|VTT olarak dışa aktar|导出 VTT|匯出 VTT
+Export SCC|Exporter en SCC|Esporta SCC|SCC を書き出す|SCC 내보내기|Exportar SCC|Экспортировать SCC|SCC olarak dışa aktar|导出 SCC|匯出 SCC
 No captions found in that file: it should be SRT or WebVTT|Aucun sous-titre trouvé dans ce fichier : il doit être au format SRT ou WebVTT|Nessun sottotitolo trovato in quel file: dovrebbe essere SRT o WebVTT|そのファイルに字幕が見つかりません。SRT か WebVTT が必要です|해당 파일에서 자막을 찾을 수 없습니다. SRT 또는 WebVTT여야 합니다|Nenhuma legenda encontrada nesse arquivo: ele deve ser SRT ou WebVTT|В этом файле не найдено субтитров: он должен быть в формате SRT или WebVTT|Bu dosyada altyazı bulunamadı: SRT veya WebVTT olmalı|该文件中未找到字幕：应为 SRT 或 WebVTT|該檔案中找不到字幕：應為 SRT 或 WebVTT
 No captions on that track|Aucun sous-titre sur cette piste|Nessun sottotitolo su quella traccia|そのトラックに字幕はありません|해당 트랙에 자막이 없습니다|Nenhuma legenda nessa faixa|На этой дорожке нет субтитров|Bu parçada altyazı yok|该轨道上没有字幕|該軌道上沒有字幕
 Exported|Exporté|Esportato|書き出しました|내보냈습니다|Exportado|Экспортировано|Dışa aktarıldı|已导出|已匯出
