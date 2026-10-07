@@ -218,6 +218,34 @@ def list_devices() -> dict:
     return catalogue()
 
 
+_thumb_lock = threading.Lock()
+
+
+@router.get("/{device_id}/thumbnail")
+def thumbnail(device_id: str) -> FileResponse:
+    """A device's picture for the library's Devices tab: rendered once by the 3D pass and kept in the data folder."""
+    try:
+        item = device(device_id)
+    except KeyError:
+        raise HTTPException(404, f"No device {device_id}") from None
+    import cv2
+
+    from .device_render import render
+    from .paths import DATA_DIR
+
+    path = DATA_DIR / "device-thumbnails" / f"{device_id}-{str(item.get('sha256', 'v1'))[:12]}.png"
+    with _thumb_lock:
+        if not path.is_file():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            ramp = np.linspace(0, 1, 360, dtype=np.float32)[:, None, None]
+            screen = np.round((np.array([255, 174, 43]) * (1 - ramp) + np.array([40, 24, 70]) * ramp) * 0.9).astype(np.uint8)
+            screen = np.ascontiguousarray(np.broadcast_to(screen, (360, 480, 3)))
+            pose = {"fold": 140} if item["kind"] in ("fold", "flip") else None
+            picture = render(device_id, 480, 320, pose=pose, camera={"yaw": 28, "pitch": 14}, screens={"inner": screen})
+            cv2.imwrite(str(path), cv2.cvtColor(picture, cv2.COLOR_RGBA2BGRA))
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "max-age=86400"})
+
+
 @router.get("/{device_id}/model")
 def model_file(device_id: str) -> FileResponse:
     """A device's model file (binary glTF), for the interface's device picker."""

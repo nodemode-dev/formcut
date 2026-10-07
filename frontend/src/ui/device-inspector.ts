@@ -57,9 +57,9 @@ function sliderRow(name: string, label: string, min: number, max: number, step: 
 }
 
 /** Adds a device mockup clip at the playhead on a new top track, and selects it. */
-export async function addDeviceClip(engine: ProjectEngine): Promise<void> {
+export async function addDeviceClip(engine: ProjectEngine, deviceId?: string): Promise<void> {
   const devices = await deviceLibrary();
-  const first = devices.find((d) => d.kind === "phone") ?? devices[0];
+  const first = devices.find((d) => d.id === deviceId) ?? devices.find((d) => d.kind === "phone") ?? devices[0];
   if (!first) return;
   engine.dispatch("track.insert", { index: 0, name: t("dev.title") });
   const clip = {

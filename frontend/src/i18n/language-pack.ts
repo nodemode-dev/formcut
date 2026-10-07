@@ -1,5 +1,15 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Step {n} of {total}|Étape {n} sur {total}|Passo {n} di {total}|ステップ {n}/{total}|{total}단계 중 {n}단계|Etapa {n} de {total}|Шаг {n} из {total}|Adım {n}/{total}|第 {n} 步，共 {total} 步|第 {n} 步，共 {total} 步
+const rows = `Devices|Appareils|Dispositivi|デバイス|기기|Dispositivos|Устройства|Cihazlar|设备|裝置
+Click a device to add it at the playhead|Cliquez sur un appareil pour l'ajouter à la tête de lecture|Fai clic su un dispositivo per aggiungerlo alla testina|デバイスをクリックすると再生ヘッドの位置に追加されます|기기를 클릭하면 재생 헤드 위치에 추가됩니다|Clique em um dispositivo para adicioná-lo no cursor de reprodução|Нажмите на устройство, чтобы добавить его в позицию воспроизведения|Oynatma kafasına eklemek için bir cihaza tıklayın|点击设备即可添加到播放头处|點擊裝置即可加入到播放頭處
+Phone|Téléphone|Telefono|スマートフォン|휴대폰|Celular|Телефон|Telefon|手机|手機
+Tablet|Tablette|Tablet|タブレット|태블릿|Tablet|Планшет|Tablet|平板|平板
+Flip phone|Téléphone à clapet|Telefono a conchiglia|フリップ型スマートフォン|플립폰|Celular flip|Раскладушка|Kapaklı telefon|翻盖手机|翻蓋手機
+Fold phone|Téléphone pliable|Telefono pieghevole|折りたたみスマートフォン|폴더블폰|Celular dobrável|Складной телефон|Katlanabilir telefon|折叠屏手机|摺疊手機
+Laptop|Ordinateur portable|Portatile|ノートパソコン|노트북|Notebook|Ноутбук|Dizüstü|笔记本电脑|筆電
+2-in-1|2-en-1|2 in 1|2-in-1|2-in-1|2 em 1|2-в-1|2'si 1 arada|二合一|二合一
+Minimal|Minimal|Minimale|ミニマル|미니멀|Mínimo|Минимальный|Minimal|简约|簡約
+Open|Ouvert|Aperto|オープン|오픈|Aberto|Открытый|Açık|开放式|開放式
+Step {n} of {total}|Étape {n} sur {total}|Passo {n} di {total}|ステップ {n}/{total}|{total}단계 중 {n}단계|Etapa {n} de {total}|Шаг {n} из {total}|Adım {n}/{total}|第 {n} 步，共 {total} 步|第 {n} 步，共 {total} 步
 Device tour|Visite des appareils|Tour dei dispositivi|デバイスツアー|기기 둘러보기|Tour de dispositivos|Обзор устройств|Cihaz turu|设备导览|裝置導覽
 Add a device|Ajouter un appareil|Aggiungi un dispositivo|デバイスを追加|기기 추가|Adicionar um dispositivo|Добавьте устройство|Bir cihaz ekleyin|添加设备|加入裝置
 Device mockup puts a phone, tablet, folding phone or laptop on a new top track.|Maquette d'appareil place un téléphone, une tablette, un pliable ou un portable sur une nouvelle piste en haut.|Mockup del dispositivo mette un telefono, un tablet, un pieghevole o un portatile su una nuova traccia in alto.|デバイスモックアップは、スマートフォン、タブレット、折りたたみ端末、ノートパソコンを一番上の新しいトラックに置きます。|기기 목업은 휴대폰, 태블릿, 폴더블 또는 노트북을 맨 위 새 트랙에 놓습니다.|Mockup de dispositivo coloca um celular, tablet, dobrável ou notebook em uma nova faixa no topo.|Макет устройства добавляет телефон, планшет, складной телефон или ноутбук на новую верхнюю дорожку.|Cihaz maketi bir telefon, tablet, katlanabilir telefon ya da dizüstünü en üstte yeni bir parçaya koyar.|设备样机会把手机、平板、折叠屏或笔记本放到最上方的新轨道。|裝置樣機會把手機、平板、摺疊機或筆電放到最上方的新軌道。

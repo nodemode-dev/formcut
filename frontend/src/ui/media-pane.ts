@@ -21,9 +21,11 @@ import { openTikTok } from "./tiktok-dialog";
 import { openInstagram } from "./instagram";
 import { openCloudBrowser } from "./cloud";
 import { compact } from "./compact";
+import { buildDevicesView } from "./devices-view";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
+  ["Devices", "tab.devices"],
   ["Text", "tab.text"],
   ["Transitions", "tab.transitions"],
   ["Effects", "tab.effects"],
@@ -676,7 +678,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const textView = el.querySelector<HTMLElement>('[data-view="text"]')!;
   const transView = el.querySelector<HTMLElement>('[data-view="transitions"]')!;
   const tmplView = el.querySelector<HTMLElement>('[data-view="templates"]')!;
-  const libraries = (["stickers", "music", "sounds"] as const).map((kind) => buildLibraryView(kind, bin));
+  const libraries = [...(["stickers", "music", "sounds"] as const).map((kind) => buildLibraryView(kind, bin)), buildDevicesView(engine)];
   tmplView.after(...libraries.map((library) => library.el));
   tabs.addEventListener("click", (ev) => {
     const hit = (ev.target as HTMLElement).closest<HTMLElement>(".pane-tab");
@@ -1130,6 +1132,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     card.setAttribute("role", "button");
     card.tabIndex = 0;
     card.setAttribute("aria-label", item.name);
+    card.title = item.name;
     // P9: video cards carry their proxy's state, so a person can see what is
     // queued, building or ready without opening anything.
     if (item.kind === "video") {
