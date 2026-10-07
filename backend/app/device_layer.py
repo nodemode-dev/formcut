@@ -30,6 +30,14 @@ VALUES = {
     "light": (None, "light", 0.0),
     "shadow": (None, "shadow", 0.6),
     "screenBrightness": (None, "screenBrightness", 1.0),
+    # the device itself moving before a still camera (degrees; moves in fractions of the device's size, Z toward the
+    # camera): the browser presets, a floating device
+    "rotateX": ("motion", "rotateX", 0.0),
+    "rotateY": ("motion", "rotateY", 0.0),
+    "rotateZ": ("motion", "rotateZ", 0.0),
+    "moveX": ("motion", "moveX", 0.0),
+    "moveY": ("motion", "moveY", 0.0),
+    "moveZ": ("motion", "moveZ", 0.0),
 }
 FITS = ("cover", "contain")
 
@@ -46,7 +54,7 @@ def normalised(block: dict) -> dict:
     out = {
         k: v
         for k, v in block.items()
-        if k in ("id", "finish", "screens", "pose", "camera", "fit", "lighting", *[v[1] for v in VALUES.values() if v[0] is None])
+        if k in ("id", "finish", "screens", "pose", "camera", "motion", "fit", "lighting", *[v[1] for v in VALUES.values() if v[0] is None])
     }
     from .device_scene import LIGHTS
 
@@ -86,7 +94,7 @@ def normalised(block: dict) -> dict:
 def settings_at(clip: dict, local: float) -> dict:
     """The device block's values at a moment of the clip, keyframes applied."""
     block = clip.get("device") or {}
-    out = {"camera": dict(block.get("camera") or {}), "pose": dict(block.get("pose") or {})}
+    out = {"camera": dict(block.get("camera") or {}), "pose": dict(block.get("pose") or {}), "motion": dict(block.get("motion") or {})}
     for name, (group, key, default) in VALUES.items():
         base = (block.get(group) or {}).get(key, default) if group else block.get(key, default)
         value = property_at(clip, f"device.{name}", local, base)
@@ -174,6 +182,7 @@ def picture(renderer, clip: dict, local: float) -> np.ndarray:
         finish=block.get("finish"),
         pose=values["pose"],
         camera=camera,
+        motion=values["motion"],
         screens=screens,
         backlight=values.get("backlight", 0.6),
         screen_brightness=values.get("screenBrightness", 1.0),

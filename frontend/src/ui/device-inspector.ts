@@ -58,22 +58,23 @@ function sliderRow(name: string, label: string, min: number, max: number, step: 
 }
 
 /** Adds a device mockup clip at the playhead on a new top track, and selects it. */
-export async function addDeviceClip(engine: ProjectEngine, deviceId?: string): Promise<void> {
+export async function addDeviceClip(engine: ProjectEngine, deviceId?: string, duration = 5): Promise<string | null> {
   const devices = await deviceLibrary();
   const first = devices.find((d) => d.id === deviceId) ?? devices.find((d) => d.kind === "phone") ?? devices[0];
-  if (!first) return;
+  if (!first) return null;
   engine.dispatch("track.insert", { index: 0, name: t("dev.title") });
   const clip = {
     id: crypto.randomUUID(),
     kind: "device",
     label: first.id,
     start: engine.snapshot.playhead,
-    duration: 5,
+    duration,
     device: { id: first.id, finish: first.finish, lighting: "photo" },
   } as unknown as Clip;
   engine.dispatch("clip.add", { trackIndex: 0, clip });
   engine.dispatch("clip.select", clip.id);
   window.setTimeout(() => deviceTour(true), 600);
+  return clip.id;
 }
 
 export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin: MediaBin): void {

@@ -198,6 +198,21 @@ def _prepared(preset: str) -> dict:
     return made
 
 
+def object_matrix(motion: dict, centre: np.ndarray, size: float) -> np.ndarray:
+    """The device's own motion before a still camera: turned about its centre (rotateY, then rotateX, then rotateZ,
+    degrees) and moved by moveX, moveY, moveZ in device sizes (Z toward a camera in front)."""
+    rx, ry, rz = (math.radians(float(motion.get(k, 0.0))) for k in ("rotateX", "rotateY", "rotateZ"))
+    cx, sx, cy, sy, cz, sz = math.cos(rx), math.sin(rx), math.cos(ry), math.sin(ry), math.cos(rz), math.sin(rz)
+    turn_x = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+    turn_y = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+    turn_z = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
+    move = np.array([float(motion.get(k, 0.0)) for k in ("moveX", "moveY", "moveZ")]) * size
+    out = np.eye(4)
+    out[:3, :3] = turn_y @ turn_x @ turn_z
+    out[:3, 3] = centre + move - out[:3, :3] @ centre
+    return out
+
+
 def perspective(fov_deg: float, aspect: float, near: float, far: float) -> np.ndarray:
     """A right-handed perspective projection to WebGPU clip space (depth 0 to 1)."""
     f = 1.0 / math.tan(math.radians(fov_deg) / 2)

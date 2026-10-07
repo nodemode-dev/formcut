@@ -614,6 +614,7 @@ def render(
     light_rotation: float = 0.0,
     lighting: str = "studio",
     bloom: float = 0.18,
+    motion: dict | None = None,
 ) -> np.ndarray:
     """A device as an RGBA picture (height, width, 4), straight-alpha sRGB, transparent around it.
 
@@ -634,7 +635,13 @@ def render(
         matrices = a.world(pose)
         points = a.points(matrices)
         floor = float(points[:, 1].min())
+        # the camera is fitted to the device at rest, so a device moving on its own (motion) moves in a still frame
         view_proj, eye = device_scene.orbit(points, width / height, camera or {})
+        if motion and any(float(v) for v in motion.values()):
+            low, high = points.min(axis=0), points.max(axis=0)
+            root = device_scene.object_matrix(motion, (low + high) / 2, float(np.linalg.norm(high - low)) / 2)
+            matrices = [root @ m for m in matrices]
+            points = a.points(matrices)
         frame = np.zeros(64, np.float32)
         frame[0:16] = view_proj.T.reshape(-1)
         frame[16:20] = [*eye, exposure]
