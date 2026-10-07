@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1219L)
+- `engine/project.ts` (1333L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
 - `engine/types.ts` (372L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1534L)
+- `i18n/language-pack.ts` (1550L)
 - `i18n/text.ts` (29L)
 - `main.ts` (99L)
 - `types/assets.d.ts` (6L)
@@ -62,12 +62,13 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
 - `ui/library-view.ts` (145L)
-- `ui/media-pane.ts` (1442L)
+- `ui/media-pane.ts` (1445L)
 - `ui/missing-media.ts` (103L)
 - `ui/mode-popout.ts` (157L)
 - `ui/planar-workspace.ts` (1406L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
+- `ui/pro-view.ts` (243L)
 - `ui/recorder.ts` (344L)
 - `ui/remote-settings.ts` (93L)
 - `ui/render-preview.ts` (244L)
@@ -144,6 +145,9 @@ and a UI module that mutates state directly is a defect.
 - `clips.mute`
 - `clips.remove`
 - `clips.split`
+- `edit.insert`
+- `edit.lift`
+- `edit.overwrite`
 - `history.redo`
 - `history.undo`
 - `media.relink`

@@ -49,7 +49,7 @@ The rest is written by hand.
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
 | main.py | 480 | /api/health | 13 |
-| media.py | 1038 | /api/media | 25 |
+| media.py | 1069 | /api/media | 26 |
 | media_check.py | 130 | /api/media/health | 1 |
 | model_manager.py | 773 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
