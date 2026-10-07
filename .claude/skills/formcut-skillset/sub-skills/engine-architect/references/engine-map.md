@@ -132,7 +132,7 @@ the automation transports.
 - `proxies.py` (265L)
 - `qc.py` (166L)
 - `render_document.py` (130L)
-- `renderer.py` (2410L)
+- `renderer.py` (2425L)
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
