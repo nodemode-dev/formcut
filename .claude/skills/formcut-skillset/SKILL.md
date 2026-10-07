@@ -3,13 +3,13 @@ name: formcut-skillset
 description: "Use for any work on formcut, the local video editor: its Python FastAPI engine, vanilla TypeScript interface, Tauri shell, JSON-RPC automation surface, orchestration event stream and MCP server. Carries the codebase as it stands: module and route maps, the state engine and its commands, the shared renderer, timeline and keyframe behaviour, appearance profiles and tokens, locale keys, and the invariants that explain most bugs. Trigger on formcut, formcut engine, render session, clip visuals, keyframe lanes, appearance profile, formcut MCP, orchestration session, project.edit, api/rpc, or any file under backend/app, frontend/src or src-tauri. Also for adding an engine endpoint, changing a pane, extending the automation or MCP tools, wiring an external orchestrator in, or reviewing a change against this project build discipline. Route through formcut-director unless the question is narrow and owned by one specialist."
 license: Apache-2.0
 metadata:
-  formcut.version: "2.7.2"
+  formcut.version: "2.7.3"
   formcut.compiled: "2026-09-25"
 ---
 
 # formcut skillset
 
-Working knowledge of formcut as it stands at v2.7.2: what each part is, why it is shaped that way, and the rules a change has to satisfy. It exists so that local development, and later an orchestrator driving formcut from outside, can act on the codebase without rediscovering it.
+Working knowledge of formcut as it stands at v2.7.3: what each part is, why it is shaped that way, and the rules a change has to satisfy. It exists so that local development, and later an orchestrator driving formcut from outside, can act on the codebase without rediscovering it.
 
 The premise: formcut is small enough to read and structured enough that most mistakes come from not knowing an invariant rather than from writing bad code. One renderer serves preview and export, one engine owns document state, every colour is a token, every string is a key, and every automated caller goes through one JSON-RPC surface. Break one of those and the symptom appears somewhere else entirely, which is what this pack is written to prevent.
 
