@@ -40,6 +40,8 @@
   "dev.exposure": "Belichtung",
   "dev.shadow": "Schatten",
   "dev.light": "Lichtwinkel",
+  "dev.dof": "Schärfentiefe",
+  "dev.focus": "Fokus",
   "dev.timeline": "Zeitleiste: {name}",
   "dev.template": "Vorlage",
   "dev.lighting": "Beleuchtung",

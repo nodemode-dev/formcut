@@ -1,5 +1,7 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Rotate X|Rotation X|Ruota X|回転 X|회전 X|Girar X|Поворот X|Döndür X|旋转 X|旋轉 X
+const rows = `Depth of field|Profondeur de champ|Profondità di campo|被写界深度|피사계 심도|Profundidade de campo|Глубина резкости|Alan derinliği|景深|景深
+Focus|Mise au point|Messa a fuoco|フォーカス|초점|Foco|Фокус|Odak|对焦|對焦
+Rotate X|Rotation X|Ruota X|回転 X|회전 X|Girar X|Поворот X|Döndür X|旋转 X|旋轉 X
 Rotate Y|Rotation Y|Ruota Y|回転 Y|회전 Y|Girar Y|Поворот Y|Döndür Y|旋转 Y|旋轉 Y
 Rotate Z|Rotation Z|Ruota Z|回転 Z|회전 Z|Girar Z|Поворот Z|Döndür Z|旋转 Z|旋轉 Z
 Move X|Déplacer X|Sposta X|移動 X|이동 X|Mover X|Сдвиг X|Taşı X|移动 X|移動 X

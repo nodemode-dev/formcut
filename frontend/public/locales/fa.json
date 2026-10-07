@@ -41,6 +41,8 @@
   "dev.exposure": "نوردهی",
   "dev.shadow": "سایه",
   "dev.light": "زاویه نور",
+  "dev.dof": "عمق میدان",
+  "dev.focus": "فوکوس",
   "dev.timeline": "خط زمانی: {name}",
   "dev.template": "الگو",
   "dev.lighting": "نورپردازی",

@@ -41,6 +41,8 @@
   "dev.exposure": "التعريض",
   "dev.shadow": "الظل",
   "dev.light": "زاوية الضوء",
+  "dev.dof": "عمق الميدان",
+  "dev.focus": "التركيز",
   "dev.timeline": "المخطط الزمني: {name}",
   "dev.template": "القالب",
   "dev.lighting": "الإضاءة",

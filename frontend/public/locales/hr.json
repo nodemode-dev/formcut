@@ -41,6 +41,8 @@
   "dev.exposure": "Ekspozicija",
   "dev.shadow": "Sjena",
   "dev.light": "Kut svjetla",
+  "dev.dof": "Dubinska oštrina",
+  "dev.focus": "Fokus",
   "dev.timeline": "Vremenska crta: {name}",
   "dev.template": "Predložak",
   "dev.lighting": "Osvjetljenje",

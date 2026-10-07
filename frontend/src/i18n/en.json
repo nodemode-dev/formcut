@@ -40,6 +40,8 @@
   "dev.exposure": "Exposure",
   "dev.shadow": "Shadow",
   "dev.light": "Light angle",
+  "dev.dof": "Depth of field",
+  "dev.focus": "Focus",
   "dev.timeline": "Timeline: {name}",
   "dev.template": "Template",
   "dev.lighting": "Lighting",

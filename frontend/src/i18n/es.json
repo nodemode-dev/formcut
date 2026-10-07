@@ -40,6 +40,8 @@
   "dev.exposure": "Exposición",
   "dev.shadow": "Sombra",
   "dev.light": "Ángulo de la luz",
+  "dev.dof": "Profundidad de campo",
+  "dev.focus": "Enfoque",
   "dev.timeline": "Línea de tiempo: {name}",
   "dev.template": "Plantilla",
   "dev.lighting": "Iluminación",

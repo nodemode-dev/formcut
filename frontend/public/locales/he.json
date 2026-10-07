@@ -41,6 +41,8 @@
   "dev.exposure": "חשיפה",
   "dev.shadow": "צל",
   "dev.light": "זווית האור",
+  "dev.dof": "עומק שדה",
+  "dev.focus": "מיקוד",
   "dev.timeline": "ציר זמן: {name}",
   "dev.template": "תבנית",
   "dev.lighting": "תאורה",

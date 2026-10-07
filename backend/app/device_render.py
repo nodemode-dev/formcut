@@ -18,6 +18,7 @@ from .device_assets import Material, asset
 
 SAMPLES = 4
 COLOUR = "rgba8unorm-srgb"
+DEPTH_COLOUR = "rgba16float"  # each pixel's distance from the camera, for depth of field (resolvable, unlike depth)
 _lock = threading.Lock()
 _state: dict = {}
 
@@ -167,8 +168,14 @@ fn neutral(c0: vec3<f32>) -> vec3<f32> {
     return mix(c, vec3<f32>(top), g);
 }
 
+// colour, and the pixel's distance from the camera (for depth of field, averaged over the samples like the colour)
+struct FOut {
+    @location(0) colour: vec4<f32>,
+    @location(1) depth: vec4<f32>,
+};
+
 @fragment
-fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {
+fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> FOut {
     var n = normalize(i.nrm);
     if (!front) {
         n = -n;
@@ -236,7 +243,7 @@ fn fs_main(i: VOut, @builtin(front_facing) front: bool) -> @location(0) vec4<f32
         let cr = sqrt(sqrt(clamp(cr0 * cr0 * cr0 * cr0 + widen, 0.0, 1.0)));
         colour = colour * (1.0 - fc) + prefiltered(reflect(-v, n), cr) * fc;
     }
-    return vec4<f32>(neutral(colour * frame.eye.w), 1.0);
+    return FOut(vec4<f32>(neutral(colour * frame.eye.w), 1.0), vec4<f32>(length(frame.eye.xyz - i.world), 0.0, 0.0, 1.0));
 }
 """
 
@@ -265,10 +272,15 @@ fn vs_shadow(@location(0) pos: vec3<f32>, @location(1) uv: vec2<f32>) -> SOut {
     return o;
 }
 
+struct ShadowOut {
+    @location(0) colour: vec4<f32>,
+    @location(1) depth: vec4<f32>,
+};
+
 @fragment
-fn fs_shadow(i: SOut) -> @location(0) vec4<f32> {
+fn fs_shadow(i: SOut) -> ShadowOut {
     let a = textureSample(shadow_map, shadow_sampler, i.uv).r * frame.glow.w;
-    return vec4<f32>(0.0, 0.0, 0.0, a);
+    return ShadowOut(vec4<f32>(0.0, 0.0, 0.0, a), vec4<f32>(0.0));
 }
 """
 
@@ -336,7 +348,7 @@ def _shared() -> dict:
         primitive={"topology": "triangle-list", "cull_mode": "none"},
         depth_stencil={"format": "depth32float", "depth_write_enabled": True, "depth_compare": "less"},
         multisample={"count": SAMPLES},
-        fragment={"module": module, "entry_point": "fs_main", "targets": [{"format": COLOUR}]},
+        fragment={"module": module, "entry_point": "fs_main", "targets": [{"format": COLOUR}, {"format": DEPTH_COLOUR}]},
     )
     premultiplied = {"src_factor": "one", "dst_factor": "one-minus-src-alpha", "operation": "add"}
     _state["shadow_pipeline"] = device.create_render_pipeline(
@@ -352,7 +364,10 @@ def _shared() -> dict:
         fragment={
             "module": shadow_module,
             "entry_point": "fs_shadow",
-            "targets": [{"format": COLOUR, "blend": {"color": premultiplied, "alpha": premultiplied}}],
+            "targets": [
+                {"format": COLOUR, "blend": {"color": premultiplied, "alpha": premultiplied}},
+                {"format": DEPTH_COLOUR, "write_mask": 0},
+            ],
         },
     )
     _state["repeat"] = device.create_sampler(
@@ -530,7 +545,17 @@ def _targets(width: int, height: int) -> dict:
         msaa = device.create_texture(size=(width, height, 1), format=COLOUR, usage=usage.RENDER_ATTACHMENT, sample_count=SAMPLES)
         resolve = device.create_texture(size=(width, height, 1), format=COLOUR, usage=usage.RENDER_ATTACHMENT | usage.COPY_SRC)
         depth = device.create_texture(size=(width, height, 1), format="depth32float", usage=usage.RENDER_ATTACHMENT, sample_count=SAMPLES)
-        _state[key] = {"msaa": msaa.create_view(), "resolve": resolve, "resolve_view": resolve.create_view(), "depth": depth.create_view()}
+        far = device.create_texture(size=(width, height, 1), format=DEPTH_COLOUR, usage=usage.RENDER_ATTACHMENT, sample_count=SAMPLES)
+        far_resolve = device.create_texture(size=(width, height, 1), format=DEPTH_COLOUR, usage=usage.RENDER_ATTACHMENT | usage.COPY_SRC)
+        _state[key] = {
+            "msaa": msaa.create_view(),
+            "resolve": resolve,
+            "resolve_view": resolve.create_view(),
+            "depth": depth.create_view(),
+            "far": far.create_view(),
+            "far_resolve": far_resolve,
+            "far_resolve_view": far_resolve.create_view(),
+        }
     return _state[key]
 
 
@@ -574,7 +599,40 @@ def _supersample(width: int, height: int) -> float:
 LAYER_STEP = 0.0002
 
 
-def _finish(raw: np.ndarray, width: int, height: int, bloom: float) -> np.ndarray:
+def _defocus(linear: np.ndarray, alpha: np.ndarray, far: np.ndarray, focus_at: float, dof: float, width: int, height: int):
+    """Depth of field, as a lens: each pixel blurred by how far its distance is from the focus, relative to that
+    distance, at most 2.5% of the width at full strength. Empty pixels take the blur of the device beside them,
+    so an out-of-focus edge softens outward. Blended from progressively blurred copies, one at a time (premultiplied)."""
+    if far.shape != (height, width):
+        far = cv2.resize(far, (width, height), interpolation=cv2.INTER_AREA)
+    has = far > 1e-4
+    defocus = np.zeros_like(far)
+    defocus[has] = np.abs(far[has] - focus_at) / far[has]
+    reach = 0.025 * width
+    coc = np.clip(defocus * 2.5, 0, 1) * reach * min(max(dof, 0.0), 1.0)
+    spread = max(1, round(reach * min(dof, 1.0)))
+    near = cv2.dilate(coc, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * spread + 1, 2 * spread + 1)))
+    coc = np.where(has, coc, near)
+    scale = width / 1920
+    radii = [r * scale for r in (0.0, 1.0, 2.5, 5.0, 10.0, 20.0, 40.0)]
+    radii = [r for r in radii if r <= max(float(coc.max()), 1e-6) * 1.001] or [0.0]
+    if radii[-1] < coc.max():
+        radii.append(float(coc.max()))
+    premultiplied = np.dstack([linear, alpha]).astype(np.float32)
+    position = np.interp(coc, radii, np.arange(len(radii), dtype=np.float32))
+    out = np.zeros_like(premultiplied)
+    for i, r in enumerate(radii):
+        weight = np.clip(1.0 - np.abs(position - i), 0.0, 1.0)
+        if not weight.any():
+            continue
+        layer = premultiplied if r < 0.5 else cv2.GaussianBlur(premultiplied, (0, 0), r / 2)
+        out += layer * weight[..., None]
+    return out[..., :3], out[..., 3]
+
+
+def _finish(
+    raw: np.ndarray, width: int, height: int, bloom: float, far: np.ndarray | None = None, focus_at: float = 0.0, dof: float = 0.0
+) -> np.ndarray:
     """The supersampled premultiplied sRGB target to the output: lens bloom on bright highlights (two radii, in linear
     light, its glow extending the alpha), area-averaged down to the output size, straight-alpha sRGB bytes."""
     alpha = raw[..., 3].astype(np.float32) / 255
@@ -589,6 +647,8 @@ def _finish(raw: np.ndarray, width: int, height: int, bloom: float) -> np.ndarra
     if raw.shape[:2] != (height, width):
         linear = cv2.resize(linear, (width, height), interpolation=cv2.INTER_AREA)
         alpha = cv2.resize(alpha, (width, height), interpolation=cv2.INTER_AREA)
+    if dof > 0 and far is not None:
+        linear, alpha = _defocus(linear, alpha, far, focus_at, dof, width, height)
     straight = np.clip(linear / np.maximum(alpha, 1e-6)[..., None], 0, 1)
     encoded = np.where(straight <= 0.0031308, straight * 12.92, 1.055 * np.power(straight, 1 / 2.4) - 0.055)
     out = np.empty((height, width, 4), np.uint8)
@@ -615,6 +675,8 @@ def render(
     lighting: str = "studio",
     bloom: float = 0.18,
     motion: dict | None = None,
+    dof: float = 0.0,
+    focus: float = 0.0,
 ) -> np.ndarray:
     """A device as an RGBA picture (height, width, 4), straight-alpha sRGB, transparent around it.
 
@@ -643,6 +705,9 @@ def render(
             matrices = [root @ m for m in matrices]
             rest, points = points, a.points(matrices)
             view_proj, eye = device_scene.orbit(rest, width / height, camera or {}, reach=points)
+        # in focus: the device's centre where it now is, nearer (negative) or farther by Focus in device sizes
+        low_now, high_now = points.min(axis=0), points.max(axis=0)
+        focus_at = float(np.linalg.norm(eye[:3] - (low_now + high_now) / 2) + focus * np.linalg.norm(high_now - low_now) / 2)
         frame = np.zeros(64, np.float32)
         frame[0:16] = view_proj.T.reshape(-1)
         frame[16:20] = [*eye, exposure]
@@ -732,7 +797,14 @@ def render(
                     "clear_value": (0, 0, 0, 0),
                     "load_op": "clear",
                     "store_op": "discard",
-                }
+                },
+                {
+                    "view": targets["far"],
+                    "resolve_target": targets["far_resolve_view"],
+                    "clear_value": (0, 0, 0, 0),
+                    "load_op": "clear",
+                    "store_op": "discard",
+                },
             ],
             depth_stencil_attachment={
                 "view": targets["depth"],
@@ -764,4 +836,12 @@ def render(
             (iw, ih, 1),
         )
         pixels = np.frombuffer(raw, np.uint8).reshape(ih, iw, 4)
-        return _finish(pixels, width, height, bloom)
+        far = None
+        if dof > 0:
+            got = device.queue.read_texture(
+                {"texture": targets["far_resolve"], "mip_level": 0, "origin": (0, 0, 0)},
+                {"offset": 0, "bytes_per_row": iw * 8, "rows_per_image": ih},
+                (iw, ih, 1),
+            )
+            far = np.frombuffer(got, np.float16).reshape(ih, iw, 4)[..., 0].astype(np.float32)
+        return _finish(pixels, width, height, bloom, far, focus_at, dof)
