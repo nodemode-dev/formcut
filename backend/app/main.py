@@ -106,11 +106,11 @@ from .agent_connect import router as agents_router
 from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
 from .device_templates import router as device_templates_router
-from .interchange import router as interchange_router
 from .devices import router as devices_router
 from .engine_report import router as engine_router
 from .focus_motion import router as focus_motion_router
 from .generative import router as generative_router
+from .interchange import router as interchange_router
 from .klein import router as klein_router
 from .krea2 import router as krea2_router
 from .linking import router as linking_router
