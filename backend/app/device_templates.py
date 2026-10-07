@@ -244,7 +244,14 @@ def template_thumbnail(device_id: str, name: str):
             motion = {name: at[f"device.{name}"] for name in moving}
             screen = sample_page(finish == "dark")
             picture = render(
-                info["id"], 480, 300, finish=finish, camera={"yaw": 0, "pitch": 0}, screens={"inner": screen}, lighting="photo", motion=motion
+                info["id"],
+                480,
+                300,
+                finish=finish,
+                camera={"yaw": 0, "pitch": 0},
+                screens={"inner": screen},
+                lighting="photo",
+                motion=motion,
             )
             cv2.imwrite(str(path), cv2.cvtColor(picture, cv2.COLOR_RGBA2BGRA))
     return FileResponse(path, media_type="image/png", headers={"Cache-Control": "max-age=86400"})

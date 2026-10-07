@@ -39,7 +39,9 @@ def outline(x0, y0, x1, y1, radii, segments=12):
 
 
 def disc(cx, cy, r, segments=32):
-    return np.array([(cx + r * math.cos(2 * math.pi * k / segments), cy + r * math.sin(2 * math.pi * k / segments)) for k in range(segments)])
+    return np.array(
+        [(cx + r * math.cos(2 * math.pi * k / segments), cy + r * math.sin(2 * math.pi * k / segments)) for k in range(segments)]
+    )
 
 
 def flat(points, z, facing, uv_box=None):
@@ -133,7 +135,10 @@ def build() -> tuple[bytes, int]:
     for index, (name, (p, n, u, t)) in enumerate(parts.items()):
         colour, metallic, roughness = colours[name]
         materials.append(
-            {"name": name, "pbrMetallicRoughness": {"baseColorFactor": [*colour, 1.0], "metallicFactor": metallic, "roughnessFactor": roughness}}
+            {
+                "name": name,
+                "pbrMetallicRoughness": {"baseColorFactor": [*colour, 1.0], "metallicFactor": metallic, "roughnessFactor": roughness},
+            }
         )
         tangents = np.tile([1.0, 0.0, 0.0, 1.0], (len(p), 1))
         primitives.append(
