@@ -163,7 +163,7 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     if (!clip || clip.kind !== "device" || !clip.device) throw new Error("Device clip not found");
     const block = structuredClone(clip.device) as unknown as Record<string, unknown>;
     for (const [key, value] of Object.entries((p.patch ?? {}) as Record<string, unknown>)) {
-      if ((key === "camera" || key === "pose" || key === "screens") && value && typeof value === "object") {
+      if ((key === "camera" || key === "pose" || key === "screens" || key === "motion") && value && typeof value === "object") {
         const part = { ...((block[key] as Record<string, unknown>) ?? {}) };
         for (const [name, item] of Object.entries(value as Record<string, unknown>)) {
           if (item === null) delete part[name];

@@ -32,6 +32,13 @@ const NUMBERS: Record<string, [string | null, number, number, number, number, st
   distance: ["camera", 1, 0.1, 3, 0.01, "x"],
   fov: ["camera", 30, 10, 75, 1, "°"],
   roll: ["camera", 0, -180, 180, 1, "°"],
+  // the device itself moving before a still camera (the browser presets set these)
+  rotateX: ["motion", 0, -90, 90, 1, "°"],
+  rotateY: ["motion", 0, -180, 180, 1, "°"],
+  rotateZ: ["motion", 0, -180, 180, 1, "°"],
+  moveX: ["motion", 0, -2, 2, 0.01, ""],
+  moveY: ["motion", 0, -2, 2, 0.01, ""],
+  moveZ: ["motion", 0, -0.9, 0.9, 0.01, ""],
   backlight: [null, 0.6, 0, 2, 0.05, ""],
   exposure: [null, 1, 0.3, 2.5, 0.05, ""],
   shadow: [null, 0.6, 0, 1, 0.05, ""],
@@ -95,6 +102,7 @@ export function mountDeviceSection(pane: HTMLElement, engine: ProjectEngine, bin
     <div data-dev-screens></div>
     <div data-dev-poses></div>
     ${["yaw", "pitch", "distance", "fov", "roll"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
+    ${["rotateX", "rotateY", "rotateZ", "moveX", "moveY", "moveZ"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
     ${["backlight", "exposure", "shadow", "light"].map((n) => sliderRow(n, t(`dev.${n}`), NUMBERS[n][2], NUMBERS[n][3], NUMBERS[n][4], NUMBERS[n][5])).join("")}
     <div class="prop-row"><span></span><button type="button" class="tool-chip" data-dev-tour>${icon("help")}${t("tour.replay")}</button><span class="prop-aux"></span></div>`;
   body.querySelector(".inspector-empty")?.after(section);

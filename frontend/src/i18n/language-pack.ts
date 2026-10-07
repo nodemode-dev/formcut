@@ -1,5 +1,11 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Browser|Navigateur|Browser|ブラウザ|브라우저|Navegador|Браузер|Tarayıcı|浏览器|瀏覽器
+const rows = `Rotate X|Rotation X|Ruota X|回転 X|회전 X|Girar X|Поворот X|Döndür X|旋转 X|旋轉 X
+Rotate Y|Rotation Y|Ruota Y|回転 Y|회전 Y|Girar Y|Поворот Y|Döndür Y|旋转 Y|旋轉 Y
+Rotate Z|Rotation Z|Ruota Z|回転 Z|회전 Z|Girar Z|Поворот Z|Döndür Z|旋转 Z|旋轉 Z
+Move X|Déplacer X|Sposta X|移動 X|이동 X|Mover X|Сдвиг X|Taşı X|移动 X|移動 X
+Move Y|Déplacer Y|Sposta Y|移動 Y|이동 Y|Mover Y|Сдвиг Y|Taşı Y|移动 Y|移動 Y
+Move Z|Déplacer Z|Sposta Z|移動 Z|이동 Z|Mover Z|Сдвиг Z|Taşı Z|移动 Z|移動 Z
+Browser|Navigateur|Browser|ブラウザ|브라우저|Navegador|Браузер|Tarayıcı|浏览器|瀏覽器
 Click a preset to add a browser window that moves|Cliquez sur un préréglage pour ajouter une fenêtre de navigateur animée|Fai clic su un preset per aggiungere una finestra del browser in movimento|プリセットをクリックすると動くブラウザウィンドウを追加します|프리셋을 클릭하면 움직이는 브라우저 창이 추가됩니다|Clique em uma predefinição para adicionar uma janela de navegador em movimento|Нажмите на пресет, чтобы добавить движущееся окно браузера|Hareket eden bir tarayıcı penceresi eklemek için bir hazır ayara tıklayın|点击预设即可添加一个移动的浏览器窗口|點擊預設即可加入一個移動的瀏覽器視窗
 Low-angle pan up|Panoramique montant en contre-plongée|Panoramica dal basso verso l'alto|ローアングルから上へパン|로우 앵글에서 위로 팬|Panorâmica de baixo para cima|Подъём с нижнего ракурса|Alt açıdan yukarı kaydırma|低角度向上摇移|低角度向上搖移
 Slow zoom out|Dézoom lent|Zoom indietro lento|ゆっくりズームアウト|천천히 줌 아웃|Afastamento lento|Медленное отдаление|Yavaş uzaklaşma|缓慢拉远|緩慢拉遠

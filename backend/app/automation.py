@@ -46,7 +46,7 @@ def apply_edit(project: dict, command: dict):
 
         merged = copy.deepcopy(located[1].get("device") or {})
         for key, value in (command.get("patch") or {}).items():
-            if key in ("camera", "pose", "screens") and isinstance(value, dict):
+            if key in ("camera", "pose", "screens", "motion") and isinstance(value, dict):
                 part = dict(merged.get(key) or {})
                 for name, item in value.items():
                     if item is None:
