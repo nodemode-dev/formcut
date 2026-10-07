@@ -490,6 +490,211 @@ def import_fcp7(text: str, media: list[dict]) -> tuple[dict, list[str]]:
     return {"id": str(uuid.uuid4()), "name": sequence.findtext("name") or "Imported XML", "tracks": tracks}, report
 
 
+# ----------------------------------------------------------------------------------------------- FCPXML
+
+
+def _fcp_time(seconds: float, fps: float) -> str:
+    """Rational seconds on the frame grid: 75/30s at 30 fps, multiples of 1001/30000s at 29.97."""
+    timebase, ntsc = _timebase(fps)
+    frames = round(seconds * fps)
+    if frames == 0:
+        return "0s"
+    return f"{frames * 1001}/{timebase * 1000}s" if ntsc else f"{frames}/{timebase}s"
+
+
+def _fcp_seconds(value: str | None) -> float:
+    if not value:
+        return 0.0
+    text = value.strip().rstrip("s")
+    if "/" in text:
+        top, bottom = text.split("/", 1)
+        return float(top) / float(bottom)
+    return float(text)
+
+
+def export_fcpxml(project: dict, media: list[dict], timeline_index: int | None = None) -> tuple[str, list[str]]:
+    """FCPXML 1.10. FCP has no tracks: formcut's bottom video track is the primary storyline (spine) with gaps; video
+    tracks above it are connected clips on lanes 1, 2...; audio tracks on lanes -1, -2... Each connected clip hangs on
+    the spine item holding its start, its offset in that item's time."""
+    from urllib.parse import quote
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    fps = float(project.get("fps") or 30)
+    timebase, ntsc = _timebase(fps)
+    index = project.get("activeTimeline", 0) if timeline_index is None else timeline_index
+    timeline = project["timelines"][index]
+    report: list[str] = []
+    library = {item["id"]: item for item in media}
+    tracks = timeline["tracks"]
+    end = max((c["start"] + c["duration"] for t in tracks for c in t.get("clips", [])), default=0.0)
+    root = Element("fcpxml", version="1.10")
+    resources = SubElement(root, "resources")
+    SubElement(
+        resources,
+        "format",
+        id="r1",
+        frameDuration=f"1001/{timebase * 1000}s" if ntsc else f"1/{timebase}s",
+        width=str(project.get("width") or 1920),
+        height=str(project.get("height") or 1080),
+    )
+    assets: dict[str, str] = {}
+
+    def asset(clip: dict) -> str:
+        if clip["mediaId"] not in assets:
+            assets[clip["mediaId"]] = f"r{len(assets) + 2}"
+            known = library.get(clip["mediaId"], {})
+            path = _media_file(clip["mediaId"]) or ""
+            element = SubElement(
+                resources,
+                "asset",
+                id=assets[clip["mediaId"]],
+                name=known.get("name") or clip.get("label") or "media",
+                start="0s",
+                duration=_fcp_time(float(known.get("duration") or 0.0), fps),
+                hasVideo="1" if clip.get("kind") in ("video", "image") else "0",
+                hasAudio="1" if clip.get("kind") in ("video", "audio") else "0",
+                format="r1",
+            )
+            SubElement(element, "media-rep", kind="original-media", src=f"file://{quote(path)}")
+        return assets[clip["mediaId"]]
+
+    def media_clips(track: dict) -> list[dict]:
+        kept = []
+        for clip in sorted(track.get("clips", []), key=lambda c: c["start"]):
+            name = clip.get("label") or clip.get("kind", "clip")
+            if not clip.get("mediaId"):
+                report.append(f"{name}: a {clip.get('kind', 'clip')} clip has no media file and is left out of FCPXML")
+                continue
+            if abs(float(clip.get("speed") or 1.0) - 1.0) > 1e-6:
+                report.append(f"{name}: its speed is not carried; it plays at normal speed")
+            snapped = (round((clip["start"] + clip["duration"]) * fps) - round(clip["start"] * fps)) / fps
+            if abs(clip["start"] * fps - round(clip["start"] * fps)) > 1e-3 or abs(snapped - clip["duration"]) > 1e-3:
+                report.append(f"{name}: snapped to whole frames at {fps:g} fps ({clip['duration']:.3f} s becomes {snapped:.3f} s)")
+            kept.append(clip)
+        return kept
+
+    def clip_element(parent, clip: dict, offset: float, lane: int | None = None):
+        attributes = {
+            "ref": asset(clip),
+            "name": clip.get("label") or "clip",
+            "offset": _fcp_time(offset, fps),
+            "start": _fcp_time(float(clip.get("sourceIn") or 0.0), fps),
+            "duration": _fcp_time(clip["duration"], fps),
+        }
+        if lane is not None:
+            attributes["lane"] = str(lane)
+        if clip.get("kind") == "video":
+            attributes["format"] = "r1"
+        return SubElement(parent, "asset-clip", attributes)
+
+    video = [i for i, t in enumerate(tracks) if not (t.get("clips") and all(c.get("kind") == "audio" for c in t["clips"]))]
+    audio = [i for i in range(len(tracks)) if i not in video]
+    base = video[-1] if video else None
+    event = SubElement(SubElement(root, "library"), "event", name="formcut")
+    project_element = SubElement(event, "project", name=timeline.get("name") or "formcut")
+    sequence = SubElement(project_element, "sequence", format="r1", duration=_fcp_time(end, fps), tcStart="0s", tcFormat="NDF")
+    spine = SubElement(sequence, "spine")
+    holders: list[tuple[float, float, float, object]] = []  # (offset, duration, start in its own time, element)
+
+    def gap(at: float, length: float) -> tuple[float, float, float, object]:
+        element = SubElement(spine, "gap", name="Gap", offset=_fcp_time(at, fps), start="0s", duration=_fcp_time(length, fps))
+        return (at, length, 0.0, element)
+
+    position = 0.0
+    for clip in media_clips(tracks[base]) if base is not None else []:
+        if clip["start"] > position + 1e-6:
+            holders.append(gap(position, clip["start"] - position))
+        element = clip_element(spine, clip, clip["start"])
+        holders.append((clip["start"], clip["duration"], float(clip.get("sourceIn") or 0.0), element))
+        position = clip["start"] + clip["duration"]
+    if end > position + 1e-6:
+        holders.append(gap(position, end - position))
+    lanes = [(i, n) for n, i in enumerate(reversed(video[:-1]), start=1)] + [(i, -n) for n, i in enumerate(audio, start=1)]
+    for track_index, lane in lanes:
+        for clip in media_clips(tracks[track_index]):
+            holder = next((h for h in holders if h[0] - 1e-6 <= clip["start"] < h[0] + h[1] - 1e-6), holders[-1] if holders else None)
+            if holder is None:
+                continue
+            clip_element(holder[3], clip, holder[2] + (clip["start"] - holder[0]), lane)
+    xml = tostring(root, encoding="unicode")
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE fcpxml>\n{xml}\n', report
+
+
+def import_fcpxml(text: str, media: list[dict]) -> tuple[dict, list[str]]:
+    from urllib.parse import unquote
+
+    # files from elsewhere: defusedxml refuses entity expansion and external entities
+    from defusedxml.ElementTree import fromstring
+
+    report: list[str] = []
+    root = fromstring(text.split("<!DOCTYPE fcpxml>")[-1].strip() if "<!DOCTYPE" in text else text)
+    sequence = root.find(".//sequence")
+    spine = sequence.find("spine") if sequence is not None else None
+    if spine is None:
+        raise ValueError("No FCPXML sequence in this file")
+    assets = {}
+    for element in root.iter("asset"):
+        rep = element.find("media-rep")
+        source = unquote((rep.get("src") if rep is not None else element.get("src")) or "")
+        assets[element.get("id")] = (element.get("name") or "", source, _fcp_seconds(element.get("start")))
+    lanes: dict[int, list[dict]] = {}
+
+    def place(element, at: float, lane: int) -> None:
+        # an asset-clip names its asset; a clip (as OTIO's adapter and other tools write) wraps a video or audio element
+        # that does, possibly inside a gap, and its source point is the clip's start in that element's time
+        if element.tag == "asset-clip":
+            ref, source_point = element.get("ref"), _fcp_seconds(element.get("start"))
+        elif element.tag == "clip":
+            inner = next((e for e in element.iter() if e.tag in ("video", "audio") and e.get("ref")), None)
+            if inner is None:
+                report.append(f"lane {lane}: the clip {element.get('name') or ''} holds no media")
+                return
+            ref = inner.get("ref")
+            source_point = _fcp_seconds(element.get("start")) - _fcp_seconds(inner.get("offset")) + _fcp_seconds(inner.get("start"))
+        else:
+            if element.tag != "gap":
+                report.append(f"lane {lane}: a {element.tag} ({element.get('name') or ''}) is not carried")
+            return
+        name, source, asset_start = assets.get(ref, ("", "", 0.0))
+        found = _match(name or element.get("name") or "", source, media)
+        if not found:
+            report.append(f"{element.get('name') or name}: not in the media library")
+            return
+        clip = {
+            "id": str(uuid.uuid4()),
+            "kind": found["kind"],
+            "label": found["name"],
+            "start": round(at, 6),
+            "duration": round(_fcp_seconds(element.get("duration")), 6),
+            "mediaId": found["id"],
+            "sourceIn": round(max(0.0, source_point - asset_start), 6),
+        }
+        if found["kind"] == "video":
+            clip["filmstrip"] = True
+        lanes.setdefault(lane, []).append(clip)
+
+    for item in spine:
+        at = _fcp_seconds(item.get("offset"))
+        if item.tag == "transition":
+            report.append("a transition on the primary storyline is not carried; the cut stays")
+            continue
+        place(item, at, 0)
+        own_start = _fcp_seconds(item.get("start"))
+        for child in item:
+            if child.get("lane") is None:
+                continue
+            place(child, at + _fcp_seconds(child.get("offset")) - own_start, int(child.get("lane")))
+    if not lanes:
+        raise ValueError("The sequence holds no media clips formcut can carry")
+    tracks = []
+    for lane in sorted(lanes, reverse=True):
+        name = f"V{lane + 1}" if lane >= 0 else f"A{-lane}"
+        tracks.append({"id": str(uuid.uuid4()), "name": name, "clips": sorted(lanes[lane], key=lambda c: c["start"])})
+    project = root.find(".//project")
+    name = (project.get("name") if project is not None else None) or "Imported FCPXML"
+    return {"id": str(uuid.uuid4()), "name": name, "tracks": tracks}, report
+
+
 # ----------------------------------------------------------------------------------------------- routes
 
 
@@ -518,6 +723,9 @@ def export_route(fmt: str, body: ExportBody) -> Response:
     elif fmt == "fcp7":
         data, report = export_fcp7(body.project, list_media(), body.timeline)
         media_type, suffix = "application/xml", "xml"
+    elif fmt == "fcpxml":
+        data, report = export_fcpxml(body.project, list_media(), body.timeline)
+        media_type, suffix = "application/xml", "fcpxml"
     else:
         raise HTTPException(404, f"No exporter for {fmt}")
     title = re.sub(r"[^A-Za-z0-9_-]+", "_", body.project.get("title") or "formcut").strip("_") or "formcut"
@@ -538,6 +746,8 @@ def import_route(fmt: str, body: ImportBody) -> dict:
             timeline, report = import_edl(body.text, media, body.fps if math.isfinite(body.fps) and body.fps > 0 else 30.0)
         elif fmt == "fcp7":
             timeline, report = import_fcp7(body.text, media)
+        elif fmt == "fcpxml":
+            timeline, report = import_fcpxml(body.text, media)
         else:
             raise HTTPException(404, f"No importer for {fmt}")
     except (ValueError, KeyError, TypeError, SyntaxError) as exc:

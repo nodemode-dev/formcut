@@ -66,14 +66,14 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     <p class="pro-status" data-pro="trimstatus"></p>
     <div class="pro-head">${t("pro.interchange")}</div>
     <div class="prop-row"><span>${t("pro.format")}</span><select class="mini-select" data-pro="format" aria-label="${t("pro.format")}">
-      <option value="otio">OpenTimelineIO (.otio)</option><option value="fcp7">Final Cut Pro 7 XML, Premiere (.xml)</option><option value="edl">CMX 3600 EDL (.edl)</option>
+      <option value="otio">OpenTimelineIO (.otio)</option><option value="fcp7">Final Cut Pro 7 XML, Premiere (.xml)</option><option value="fcpxml">Final Cut Pro X (.fcpxml)</option><option value="edl">CMX 3600 EDL (.edl)</option>
     </select><span class="prop-aux"></span></div>
     <div class="prop-row" data-pro="edlrow" hidden><span>${t("pro.edltrack")}</span><select class="mini-select" data-pro="edltrack" aria-label="${t("pro.edltrack")}"></select><span class="prop-aux"></span></div>
     <div class="pro-buttons">
       <button type="button" data-act="export">${t("pro.export")}</button>
       <button type="button" data-act="import">${t("pro.import")}</button>
     </div>
-    <input type="file" data-pro="file" accept=".otio,.xml,.edl,.json,.txt" hidden />
+    <input type="file" data-pro="file" accept=".otio,.xml,.fcpxml,.edl,.json,.txt" hidden />
     <ul class="pro-report" data-pro="report"></ul>
     <p class="devices-hint">${t("pro.hint")}</p>`;
   const pick = el.querySelector<HTMLSelectElement>('[data-pro="pick"]')!;
@@ -226,7 +226,7 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
   }
 
   async function importTimeline(file: File) {
-    const format = /\.edl$/i.test(file.name) ? "edl" : /\.xml$/i.test(file.name) ? "fcp7" : "otio";
+    const format = /\.edl$/i.test(file.name) ? "edl" : /\.fcpxml$/i.test(file.name) ? "fcpxml" : /\.xml$/i.test(file.name) ? "fcp7" : "otio";
     const fps = (engine.snapshot as unknown as { fps?: number }).fps || 30;
     const response = await fetch(`/api/interchange/import/${format}`, { method: "POST", headers: LOCAL, body: JSON.stringify({ text: await file.text(), fps }) });
     const answer = await response.json().catch(() => ({}));
