@@ -21,6 +21,47 @@ import type { ClipKey, ClipMask, KeyframeProp, TransformProp } from "./types";
 
 type Listener = (state: ProjectState, changed: string) => void;
 
+/**
+ * The Pro tab's three-point edits (from FilmCraft's Premiere workflow): [start, end) taken out of one track in place.
+ * A clip inside goes; one straddling an end keeps the part outside (cut into a head and a tail when it spans the whole
+ * range, the tail's source moved on by the cut); nothing moves. Returns the clips kept, in order, and the ids removed.
+ */
+function carveRange(clips: Clip[], start: number, end: number): { kept: Clip[]; removed: string[] } {
+  const kept: Clip[] = [];
+  const removed: string[] = [];
+  for (const clip of clips) {
+    const clipEnd = clip.start + clip.duration;
+    if (clipEnd <= start + 1e-6 || clip.start >= end - 1e-6) {
+      kept.push(clip);
+      continue;
+    }
+    if (clip.start >= start - 1e-6 && clipEnd <= end + 1e-6) {
+      removed.push(clip.id);
+      continue;
+    }
+    if (clip.start < start - 1e-6) {
+      kept.push(clip);
+      if (clipEnd > end + 1e-6) {
+        kept.push({
+          ...structuredClone(clip),
+          id: crypto.randomUUID(),
+          start: end,
+          duration: clipEnd - end,
+          sourceIn: (clip.sourceIn ?? 0) + (end - clip.start),
+        } as Clip);
+      }
+      clip.duration = start - clip.start;
+      continue;
+    }
+    clip.sourceIn = (clip.sourceIn ?? 0) + (end - clip.start);
+    clip.duration = clipEnd - end;
+    clip.start = end;
+    kept.push(clip);
+  }
+  kept.sort((a, b) => a.start - b.start);
+  return { kept, removed };
+}
+
 export class ProjectEngine {
   private state: ProjectState;
   private listeners = new Set<Listener>();
@@ -364,6 +405,79 @@ export class ProjectEngine {
         };
         clip.duration = Math.max(0.05, p.start - clip.start);
         track.clips.splice(track.clips.indexOf(clip) + 1, 0, tail);
+        s.saved = false;
+        this.emit("clips");
+        break;
+      }
+      case "edit.lift":
+      case "edit.overwrite":
+      case "edit.insert": {
+        // The Pro tab's three-point edits. Lift takes [start, end) out of every track (or the ones named) and leaves
+        // the gap; overwrite replaces the target track's range with the source clip; insert cuts every track at the
+        // edit point and moves what follows later by the source's length (tracks stay in sync), then places the clip.
+        // Extract is timeline.cut-range.
+        const p = payload as { start?: number; end?: number; tracks?: number[]; trackIndex?: number; clip?: Clip };
+        const tracks = s.timelines[s.activeTimeline].tracks;
+        const forget = (ids: string[]) => {
+          for (const id of ids) {
+            if (s.selectedClipId === id) s.selectedClipId = null;
+            const at = s.selection.indexOf(id);
+            if (at >= 0) s.selection.splice(at, 1);
+          }
+        };
+        if (command === "edit.lift") {
+          const start = Math.max(0, Math.min(p.start ?? 0, p.end ?? 0));
+          const end = Math.max(p.start ?? 0, p.end ?? 0);
+          if (end - start <= 0.01) break;
+          this.pushHistory();
+          tracks.forEach((track, index) => {
+            if (p.tracks && !p.tracks.includes(index)) return;
+            const { kept, removed } = carveRange(track.clips, start, end);
+            track.clips = kept;
+            forget(removed);
+          });
+          s.saved = false;
+          this.emit("clips");
+          break;
+        }
+        const target = tracks[p.trackIndex ?? -1];
+        const clip = p.clip;
+        if (!target || !clip || clip.duration <= 0.01) break;
+        this.pushHistory();
+        if (command === "edit.overwrite") {
+          const { kept, removed } = carveRange(target.clips, clip.start, clip.start + clip.duration);
+          target.clips = kept;
+          forget(removed);
+        } else {
+          const at = clip.start;
+          const length = clip.duration;
+          for (const track of tracks) {
+            const next: Clip[] = [];
+            for (const each of track.clips) {
+              const eachEnd = each.start + each.duration;
+              if (eachEnd <= at + 1e-6) {
+                next.push(each);
+              } else if (each.start >= at - 1e-6) {
+                each.start = Math.round((each.start + length) * 1000) / 1000;
+                next.push(each);
+              } else {
+                next.push(each, {
+                  ...structuredClone(each),
+                  id: crypto.randomUUID(),
+                  start: Math.round((at + length) * 1000) / 1000,
+                  duration: eachEnd - at,
+                  sourceIn: (each.sourceIn ?? 0) + (at - each.start),
+                } as Clip);
+                each.duration = at - each.start;
+              }
+            }
+            track.clips = next;
+          }
+        }
+        target.clips.push(clip);
+        target.clips.sort((a, b) => a.start - b.start);
+        s.selectedClipId = clip.id;
+        s.selection = [clip.id];
         s.saved = false;
         this.emit("clips");
         break;

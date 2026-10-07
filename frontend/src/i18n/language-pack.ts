@@ -1,5 +1,21 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Glow strength|Intensité de la lueur|Intensità del bagliore|グローの強さ|글로우 강도|Intensidade do brilho|Сила свечения|Parıltı gücü|发光强度|發光強度
+const rows = `Pro|Pro|Pro|プロ|프로|Pro|Про|Pro|专业|專業
+Source|Source|Sorgente|ソース|소스|Origem|Источник|Kaynak|源|來源
+Choose media to load it in the source monitor|Choisissez un média pour le charger dans le moniteur source|Scegli un media da caricare nel monitor sorgente|メディアを選ぶとソースモニターに読み込みます|미디어를 선택하면 소스 모니터에 불러옵니다|Escolha uma mídia para carregá-la no monitor de origem|Выберите медиа, чтобы загрузить его в монитор источника|Kaynak monitörüne yüklemek için bir medya seçin|选择媒体以加载到源监视器|選擇媒體以載入來源監看器
+Scrub|Défiler|Scorri|スクラブ|스크럽|Percorrer|Прокрутка|Kaydır|拖动|拖曳
+Mark in|Marquer l'entrée|Segna attacco|インをマーク|시작 표시|Marcar entrada|Отметить начало|Giriş işaretle|标记入点|標記入點
+Mark out|Marquer la sortie|Segna stacco|アウトをマーク|끝 표시|Marcar saída|Отметить конец|Çıkış işaretle|标记出点|標記出點
+Target track|Piste cible|Traccia di destinazione|ターゲットトラック|대상 트랙|Faixa de destino|Целевая дорожка|Hedef iz|目标轨道|目標軌道
+Insert|Insérer|Inserisci|インサート|삽입|Inserir|Вставка|Ekle|插入|插入
+Overwrite|Écraser|Sovrascrivi|上書き|덮어쓰기|Sobrescrever|Перезапись|Üzerine yaz|覆盖|覆蓋
+Timeline range|Plage de la timeline|Intervallo della timeline|タイムラインの範囲|타임라인 범위|Intervalo da linha do tempo|Диапазон таймлайна|Zaman çizelgesi aralığı|时间线范围|時間軸範圍
+Lift range|Supprimer la plage (garder le vide)|Rimuovi intervallo (lascia vuoto)|範囲をリフト|범위 들어내기|Remover intervalo (manter vazio)|Поднять диапазон|Aralığı kaldır|提升范围|提升範圍
+Extract range|Extraire la plage|Estrai intervallo|範囲を抽出|범위 추출|Extrair intervalo|Извлечь диапазон|Aralığı çıkar|提取范围|提取範圍
+Choose media|Choisir un média|Scegli media|メディアを選択|미디어 선택|Escolher mídia|Выбрать медиа|Medya seç|选择媒体|選擇媒體
+In|Entrée|Attacco|イン|시작|Entrada|Начало|Giriş|入点|入點
+Out|Sortie|Stacco|アウト|끝|Saída|Конец|Çıkış|出点|出點
+I and O mark the source. Insert makes room; overwrite replaces what is there. Lift leaves a gap; extract closes it.|I et O marquent la source. Insérer fait de la place ; écraser remplace l'existant. Supprimer laisse un vide ; extraire le referme.|I e O segnano la sorgente. Inserisci fa spazio; sovrascrivi sostituisce ciò che c'è. Rimuovi lascia un vuoto; estrai lo chiude.|I と O でソースをマークします。インサートは場所を空け、上書きは既存を置き換えます。リフトは隙間を残し、抽出は詰めます。|I와 O로 소스를 표시합니다. 삽입은 자리를 만들고 덮어쓰기는 기존 내용을 바꿉니다. 들어내기는 빈자리를 남기고 추출은 메웁니다.|I e O marcam a origem. Inserir abre espaço; sobrescrever substitui o que existe. Remover deixa um vazio; extrair o fecha.|I и O отмечают источник. Вставка освобождает место; перезапись заменяет имеющееся. Подъём оставляет пробел; извлечение его закрывает.|I ve O kaynağı işaretler. Ekleme yer açar; üzerine yazma olanı değiştirir. Kaldırma boşluk bırakır; çıkarma kapatır.|I 和 O 标记源。插入会腾出空间；覆盖会替换原有内容。提升留下空隙；提取会将其闭合。|I 和 O 標記來源。插入會騰出空間；覆蓋會取代原有內容。提升留下空隙；提取會將其閉合。
+Glow strength|Intensité de la lueur|Intensità del bagliore|グローの強さ|글로우 강도|Intensidade do brilho|Сила свечения|Parıltı gücü|发光强度|發光強度
 Reflection|Reflet|Riflesso|反射|반사|Reflexo|Отражение|Yansıma|倒影|倒影
 Depth of field|Profondeur de champ|Profondità di campo|被写界深度|피사계 심도|Profundidade de campo|Глубина резкости|Alan derinliği|景深|景深
 Focus|Mise au point|Messa a fuoco|フォーカス|초점|Foco|Фокус|Odak|对焦|對焦

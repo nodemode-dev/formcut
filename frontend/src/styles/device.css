@@ -89,6 +89,103 @@
   font-size: 11px;
 }
 
+/* the library's Pro tab (ui/pro-view.ts): source monitor, three-point editing, lift and extract */
+.pro-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 10px 12px;
+  overflow-y: auto;
+}
+
+.pro-head {
+  margin-top: 4px;
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pro-pick {
+  width: 100%;
+}
+
+.pro-monitor {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: #000;
+}
+
+.pro-monitor video,
+.pro-monitor img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pro-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--ink-faint);
+  font-size: 12px;
+  text-align: center;
+}
+
+.pro-scrub {
+  width: 100%;
+  accent-color: var(--cue);
+}
+
+.pro-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 16px;
+  font-size: 11px;
+}
+
+.pro-time {
+  color: var(--ink);
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+.pro-marks {
+  color: var(--ink-faint);
+  font-family: var(--mono, ui-monospace, monospace);
+  text-align: right;
+}
+
+.pro-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pro-buttons button {
+  padding: 5px 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--panel-raised, var(--float));
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pro-buttons button:hover,
+.pro-buttons button:focus-visible {
+  border-color: var(--cue);
+  box-shadow: 0 0 0 2px var(--cue-wash);
+}
+
 /* the guided tour (ui/tour.ts): a ring around the control in question and a card beside it */
 .tour-ring {
   position: fixed;

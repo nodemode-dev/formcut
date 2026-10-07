@@ -23,11 +23,13 @@ import { openCloudBrowser } from "./cloud";
 import { compact } from "./compact";
 import { buildDevicesView } from "./devices-view";
 import { buildBrowserView } from "./browser-view";
+import { buildProView } from "./pro-view";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
   ["Devices", "tab.devices"],
   ["Browser", "tab.browser"],
+  ["Pro", "tab.pro"],
   ["Text", "tab.text"],
   ["Transitions", "tab.transitions"],
   ["Effects", "tab.effects"],
@@ -684,6 +686,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     ...(["stickers", "music", "sounds"] as const).map((kind) => buildLibraryView(kind, bin)),
     buildDevicesView(engine),
     buildBrowserView(engine),
+    buildProView(engine, bin),
   ];
   tmplView.after(...libraries.map((library) => library.el));
   tabs.addEventListener("click", (ev) => {

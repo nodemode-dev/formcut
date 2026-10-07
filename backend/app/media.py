@@ -416,6 +416,37 @@ def get_file(media_id: str) -> FileResponse:
     return FileResponse(matches[0], media_type=media_type, filename=item["name"])
 
 
+@router.get("/{media_id}/frame")
+def get_frame(media_id: str, t: float = 0.0, width: int = 640):
+    """A frame at t seconds, decoded by the engine, as JPEG: the Pro tab's source monitor scrubs with these, so it shows
+    any file formcut reads, not only the codecs the window's own video element can play."""
+    import cv2
+    from fastapi.responses import Response
+
+    item = _find(media_id)
+    matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="file missing")
+    if item.get("kind") == "image":
+        picture = cv2.imread(str(matches[0]), cv2.IMREAD_COLOR)
+    else:
+        capture = cv2.VideoCapture(str(matches[0]))
+        try:
+            capture.set(cv2.CAP_PROP_POS_MSEC, max(0.0, float(t)) * 1000)
+            ok, picture = capture.read()
+        finally:
+            capture.release()
+        if not ok:
+            picture = None
+    if picture is None:
+        raise HTTPException(status_code=404, detail="no frame at that time")
+    wide = max(64, min(int(width), 1280))
+    if picture.shape[1] > wide:
+        picture = cv2.resize(picture, (wide, round(picture.shape[0] * wide / picture.shape[1])), interpolation=cv2.INTER_AREA)
+    ok, encoded = cv2.imencode(".jpg", picture, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    return Response(encoded.tobytes(), media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
+
+
 class FreezeBody(BaseModel):
     time: float
 
