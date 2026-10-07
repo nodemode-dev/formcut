@@ -8,6 +8,8 @@
   "dev.kind.fold": "Sklopivi telefon",
   "dev.kind.laptop": "Prijenosnik",
   "dev.kind.detachable": "2-u-1",
+  "dev.kind.browser": "Prozor preglednika",
+  "dev.style.window": "Prozor",
   "dev.style.minimal": "Minimalni",
   "dev.style.open": "Otvoreni",
   "dev.title": "Uređaj",

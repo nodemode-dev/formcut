@@ -7,6 +7,8 @@
   "dev.kind.fold": "Teléfono plegable",
   "dev.kind.laptop": "Portátil",
   "dev.kind.detachable": "2 en 1",
+  "dev.kind.browser": "Ventana de navegador",
+  "dev.style.window": "Ventana",
   "dev.style.minimal": "Mínimo",
   "dev.style.open": "Abierto",
   "dev.title": "Dispositivo",

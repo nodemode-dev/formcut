@@ -8,6 +8,8 @@
   "dev.kind.fold": "טלפון מתקפל",
   "dev.kind.laptop": "מחשב נייד",
   "dev.kind.detachable": "שניים באחד",
+  "dev.kind.browser": "חלון דפדפן",
+  "dev.style.window": "חלון",
   "dev.style.minimal": "מינימלי",
   "dev.style.open": "פתוח",
   "dev.title": "מכשיר",

@@ -29,7 +29,7 @@ export function buildDevicesView(engine: ProjectEngine) {
       grid.innerHTML = devices
         .map((d) => {
           const kind = t(`dev.kind.${d.kind}`);
-          const style = t(d.id.endsWith("minimal") ? "dev.style.minimal" : "dev.style.open");
+          const style = t(`dev.style.${d.style}`);
           return `<button type="button" class="device-card" data-device="${d.id}" title="${kind} · ${style}">
             <img src="/api/devices/${d.id}/thumbnail" alt="" loading="lazy" draggable="false" />
             <span class="device-name">${kind}</span><span class="device-style">${style}</span>

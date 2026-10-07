@@ -16,6 +16,7 @@ interface Screen { slot: string; pixels: [number, number] }
 interface Device {
   id: string;
   kind: string;
+  style: string;
   finish: string;
   finishes: Record<string, { frame: [number, number, number] }>;
   screens: Screen[];

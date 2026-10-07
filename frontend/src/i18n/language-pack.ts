@@ -1,5 +1,7 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Lighting|Éclairage|Illuminazione|ライティング|조명|Iluminação|Освещение|Aydınlatma|照明|照明
+const rows = `Browser window|Fenêtre de navigateur|Finestra del browser|ブラウザウィンドウ|브라우저 창|Janela do navegador|Окно браузера|Tarayıcı penceresi|浏览器窗口|瀏覽器視窗
+Window|Fenêtre|Finestra|ウィンドウ|창|Janela|Окно|Pencere|窗口|視窗
+Lighting|Éclairage|Illuminazione|ライティング|조명|Iluminação|Освещение|Aydınlatma|照明|照明
 Photo studio|Studio photo|Studio fotografico|撮影スタジオ|사진 스튜디오|Estúdio fotográfico|Фотостудия|Fotoğraf stüdyosu|摄影棚|攝影棚
 Loft daylight|Lumière du jour en loft|Luce diurna in loft|ロフトの自然光|로프트 자연광|Luz do dia no loft|Дневной свет в лофте|Loft gün ışığı|阁楼日光|閣樓日光
 Dark studio|Studio sombre|Studio scuro|暗いスタジオ|어두운 스튜디오|Estúdio escuro|Тёмная студия|Karanlık stüdyo|暗调摄影棚|暗調攝影棚

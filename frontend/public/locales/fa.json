@@ -8,6 +8,8 @@
   "dev.kind.fold": "گوشی تاشو",
   "dev.kind.laptop": "لپ‌تاپ",
   "dev.kind.detachable": "دو کاره",
+  "dev.kind.browser": "پنجره مرورگر",
+  "dev.style.window": "پنجره",
   "dev.style.minimal": "ساده",
   "dev.style.open": "باز",
   "dev.title": "دستگاه",

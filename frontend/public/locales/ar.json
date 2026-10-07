@@ -8,6 +8,8 @@
   "dev.kind.fold": "هاتف قابل للطي",
   "dev.kind.laptop": "حاسوب محمول",
   "dev.kind.detachable": "اثنان في واحد",
+  "dev.kind.browser": "نافذة متصفح",
+  "dev.style.window": "نافذة",
   "dev.style.minimal": "بسيط",
   "dev.style.open": "مفتوح",
   "dev.title": "الجهاز",

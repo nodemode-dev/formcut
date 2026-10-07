@@ -7,6 +7,8 @@
   "dev.kind.fold": "Faltbares Telefon",
   "dev.kind.laptop": "Laptop",
   "dev.kind.detachable": "2-in-1",
+  "dev.kind.browser": "Browserfenster",
+  "dev.style.window": "Fenster",
   "dev.style.minimal": "Minimal",
   "dev.style.open": "Offen",
   "dev.title": "Gerät",
