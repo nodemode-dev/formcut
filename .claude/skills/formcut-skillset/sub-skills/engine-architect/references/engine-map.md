@@ -45,7 +45,7 @@ The rest is written by hand.
 | klein.py | 267 | /api/models/klein | 3 |
 | krea2.py | 797 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
-| linking.py | 347 | /api/media/link | 6 |
+| linking.py | 352 | /api/media/link | 6 |
 | local_speech.py | 425 | /api/speech | 4 |
 | loras.py | 487 | /api/loras | 5 |
 | main.py | 480 | /api/health | 13 |
@@ -55,8 +55,8 @@ The rest is written by hand.
 | orchestration.py | 150 | /api/orchestration | 4 |
 | planar_api.py | 1273 | /api/planar | 19 |
 | presets.py | 620 | /api/presets | 9 |
-| project_files.py | 308 | /api/project-files | 6 |
-| project_packages.py | 312 | /api/projects | 4 |
+| project_files.py | 321 | /api/project-files | 6 |
+| project_packages.py | 327 | /api/projects | 4 |
 | project_tracking.py | 89 | /api/track | 1 |
 | projects.py | 184 | /api/projects | 9 |
 | providers.py | 166 | /api/providers | 4 |
