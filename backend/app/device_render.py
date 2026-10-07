@@ -32,6 +32,7 @@ struct Frame {
 struct Draw {
     model: mat4x4<f32>,
     normal: mat4x4<f32>,
+    layer: vec4<f32>,
 };
 struct Material {
     base: vec4<f32>,
@@ -83,7 +84,11 @@ struct VOut {
 @vertex
 fn vs_main(v: VIn) -> VOut {
     var o: VOut;
-    let w = draw.model * vec4<f32>(v.pos, 1.0);
+    var w = draw.model * vec4<f32>(v.pos, 1.0);
+    // The models lay their display layers (border glass, screen, cover glass, lens) in the very plane of the body's
+    // front, so the depth test had no winner and the lid's rim came out as marching dashes. A layered surface slides
+    // toward the eye along its own sightline: it lands on the same pixel, and its order over the body is certain.
+    w = vec4<f32>(w.xyz + normalize(frame.eye.xyz - w.xyz) * draw.layer.x, 1.0);
     o.world = w.xyz;
     o.clip = frame.view_proj * w;
     o.nrm = (draw.normal * vec4<f32>(v.nrm, 0.0)).xyz;
@@ -458,7 +463,7 @@ class _Prepared:
                     ],
                     "index": device.create_buffer_with_data(data=np.ascontiguousarray(p.indices), usage=usage.INDEX),
                     "count": len(p.indices),
-                    "draw": device.create_buffer(size=128, usage=usage.UNIFORM | usage.COPY_DST),
+                    "draw": device.create_buffer(size=144, usage=usage.UNIFORM | usage.COPY_DST),
                     "material": device.create_buffer(size=256, usage=usage.UNIFORM | usage.COPY_DST),
                 }
             )
@@ -502,7 +507,7 @@ class _Prepared:
                 return self.view(ref["image"], srgb) if ref else _state["blank"][fallback]
 
             entries = [
-                {"binding": 0, "resource": {"buffer": self.buffers[index]["draw"], "offset": 0, "size": 128}},
+                {"binding": 0, "resource": {"buffer": self.buffers[index]["draw"], "offset": 0, "size": 144}},
                 {"binding": 1, "resource": {"buffer": self.buffers[index]["material"], "offset": 0, "size": 256}},
                 {"binding": 2, "resource": tex("base", True, "white")},
                 {"binding": 3, "resource": tex("orm", False, "white")},
@@ -545,6 +550,25 @@ def _straight(premultiplied: np.ndarray) -> np.ndarray:
 
 
 SUPERSAMPLE = 1.5  # shading is per pixel under MSAA; rendering larger and averaging down settles what MSAA cannot
+SUPERSAMPLE_GPU = 2.5  # on a hardware GPU the extra samples cost little and settle the glints of thin bevels
+
+
+def _supersample() -> float:
+    """2.5x on a hardware GPU, 1.5x on a CPU adapter (llvmpipe and the like), where every sample costs seconds."""
+    if "supersample" not in _state:
+        adapter = getattr(_gpu()[1], "adapter", None)
+        info = getattr(adapter, "info", None) or {}
+        kind = str(info.get("adapter_type", "cpu")).lower()
+        _state["supersample"] = SUPERSAMPLE if "cpu" in kind else SUPERSAMPLE_GPU
+    return _state["supersample"]
+
+
+# The models build a display as layers laid on the body's front in one plane (the lid's front face, the border plate
+# and the screen all at the same depth), which no depth test can order: in the owner's 4K GPU export the lid's rim
+# alternated border and aluminium as marching dashes. Each primitive's layer (device_assets Asset.layers) moves it
+# this far toward the eye per step: 0.2 mm, far above depth precision at product distances (micrometres) and far
+# below any real gap that should hide a layer (a lid's 6 to 8 mm of aluminium seen from behind).
+LAYER_STEP = 0.0002
 
 
 def _finish(raw: np.ndarray, width: int, height: int, bloom: float) -> np.ndarray:
@@ -665,14 +689,19 @@ def render(
         )
         draws = []
         for index, p in enumerate(a.primitives):
+            if index in a.hidden:
+                continue
             m = materials[p.material]
             if index in a.no_occlusion:
                 m = dataclasses.replace(m, textures={k: v for k, v in m.textures.items() if k != "occlusion"})
             model = matrices[p.node]
             normal = np.eye(4)
             normal[:3, :3] = np.linalg.inv(model[:3, :3]).T
+            layer = a.layers.get(index, 0) * LAYER_STEP
             device.queue.write_buffer(
-                prepared.buffers[index]["draw"], 0, np.concatenate([model.T.reshape(-1), normal.T.reshape(-1)]).astype(np.float32).tobytes()
+                prepared.buffers[index]["draw"],
+                0,
+                np.concatenate([model.T.reshape(-1), normal.T.reshape(-1), [layer, 0.0, 0.0, 0.0]]).astype(np.float32).tobytes(),
             )
             slot = {"M_Screen": "inner", "M_ScreenCover": "cover"}.get(m.name)
             device.queue.write_buffer(
@@ -680,7 +709,8 @@ def render(
             )
             draws.append((index, prepared.group(index, m, views[slot] if slot else shared["blank"]["black"])))
 
-        iw, ih = max(1, round(width * SUPERSAMPLE)), max(1, round(height * SUPERSAMPLE))
+        ss = _supersample()
+        iw, ih = max(1, round(width * ss)), max(1, round(height * ss))
         targets = _targets(iw, ih)
         encoder = device.create_command_encoder()
         rp = encoder.begin_render_pass(

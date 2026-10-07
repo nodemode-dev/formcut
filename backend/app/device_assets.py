@@ -23,6 +23,8 @@ from . import devices
 SATIN_GAIN, SATIN_LIMIT = 1.6, 0.8
 ALBEDO_GAIN, ALBEDO_LIMIT = 2.2, 0.85
 BACK_ROUGHNESS = {"gloss": 0.05, "matte": 0.38}
+# a display's separate parts in stacking order above the body (see Asset.layers)
+DISPLAY_LAYERS = {"M_DisplayBorder": 1, "M_Screen": 2, "M_ScreenCover": 2, "M_Lens": 3}
 _lock = threading.Lock()
 _assets: dict[str, "Asset"] = {}
 
@@ -190,6 +192,23 @@ class Asset:
             moving |= set(self.subtree(self.by_name[art["node"]]))
         fixed = {p.material for p in self.primitives if p.node not in moving}
         self.no_occlusion = {i for i, p in enumerate(self.primitives) if p.node in moving and p.material in fixed}
+        # Display layers lie in the very plane of the body's front, where no depth test can order them (the owner's 4K
+        # GPU export showed the lid's rim as marching dashes). Separate display parts (the border plate, the screen,
+        # its cover, the lens) sit a step nearer the eye per layer. Every model also builds a display face into the
+        # body part that carries the plate (the lid, the phone's body): covered by the plate and screen, it only
+        # showed as a sliver 0.18 mm short of the edge that broke the aluminium rim into dashes, so it is not drawn.
+        # Display faces on parts with no plate over them (camera modules) are drawn as before.
+        names = {i: self.materials[p.material].name for i, p in enumerate(self.primitives)}
+        body_nodes = {p.node for i, p in enumerate(self.primitives) if names[i] not in DISPLAY_LAYERS}
+        plates = {p.node for i, p in enumerate(self.primitives) if names[i] == "M_DisplayBorder" and p.node not in body_nodes}
+        self.layers = {
+            i: DISPLAY_LAYERS[names[i]] for i, p in enumerate(self.primitives) if names[i] in DISPLAY_LAYERS and p.node not in body_nodes
+        }
+        self.hidden = {
+            i
+            for i, p in enumerate(self.primitives)
+            if names[i] in DISPLAY_LAYERS and p.node in body_nodes and any(n in plates for n in self.subtree(p.node) if n != p.node)
+        }
 
     def subtree(self, index: int) -> list[int]:
         out, stack = [], [index]
