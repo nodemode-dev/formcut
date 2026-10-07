@@ -198,15 +198,18 @@ def _prepared(preset: str) -> dict:
     return made
 
 
-def object_matrix(motion: dict, centre: np.ndarray, size: float) -> np.ndarray:
+def object_matrix(motion: dict, centre: np.ndarray, size: float, eye: np.ndarray | None = None) -> np.ndarray:
     """The device's own motion before a still camera: turned about its centre (rotateY, then rotateX, then rotateZ,
-    degrees) and moved by moveX, moveY, moveZ in device sizes (Z toward a camera in front)."""
+    degrees), moved by moveX and moveY in device sizes and by moveZ as a fraction of the way to the camera (0.5 brings
+    it halfway, twice the size; in device sizes, a move in depth was too small beside the camera's distance to read)."""
     rx, ry, rz = (math.radians(float(motion.get(k, 0.0))) for k in ("rotateX", "rotateY", "rotateZ"))
     cx, sx, cy, sy, cz, sz = math.cos(rx), math.sin(rx), math.cos(ry), math.sin(ry), math.cos(rz), math.sin(rz)
     turn_x = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
     turn_y = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
     turn_z = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
-    move = np.array([float(motion.get(k, 0.0)) for k in ("moveX", "moveY", "moveZ")]) * size
+    move = np.array([float(motion.get("moveX", 0.0)) * size, float(motion.get("moveY", 0.0)) * size, 0.0])
+    depth = float(motion.get("moveZ", 0.0))
+    move += (np.asarray(eye, float) - centre) * depth if eye is not None else np.array([0.0, 0.0, depth * size])
     out = np.eye(4)
     out[:3, :3] = turn_y @ turn_x @ turn_z
     out[:3, 3] = centre + move - out[:3, :3] @ centre
@@ -237,7 +240,7 @@ def look_at(eye: np.ndarray, target: np.ndarray, up: np.ndarray) -> np.ndarray:
     return m
 
 
-def orbit(points: np.ndarray, aspect: float, camera: dict) -> tuple[np.ndarray, np.ndarray]:
+def orbit(points: np.ndarray, aspect: float, camera: dict, reach: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
     """The view-projection and eye for an orbit camera around the device, framed so the device fits at distance 1.
 
     camera: yaw and pitch in degrees (0, 0 looks at the screen side along -Z), distance (1 frames the device),
@@ -266,7 +269,13 @@ def orbit(points: np.ndarray, aspect: float, camera: dict) -> tuple[np.ndarray, 
         r[:2, :2] = [[math.cos(roll), -math.sin(roll)], [math.sin(roll), math.cos(roll)]]
         view = r @ view
     near = max(distance - radius * 1.5, distance * 0.02)
-    return perspective(fov, aspect, near, distance + radius * 2.0) @ view, eye
+    far = distance + radius * 2.0
+    if reach is not None and len(reach):
+        # a device moving on its own (motion) may come close to the camera or go far: the planes take in where it is
+        depths = np.linalg.norm(np.asarray(reach, float) - eye, axis=1)
+        near = max(min(near, float(depths.min()) - radius * 0.5), distance * 0.02)
+        far = max(far, float(depths.max()) + radius)
+    return perspective(fov, aspect, near, far) @ view, eye
 
 
 def contact_shadow(points: np.ndarray, floor: float, size: int = 256) -> tuple[np.ndarray, tuple[float, float, float, float]]:

@@ -22,10 +22,12 @@ import { openInstagram } from "./instagram";
 import { openCloudBrowser } from "./cloud";
 import { compact } from "./compact";
 import { buildDevicesView } from "./devices-view";
+import { buildBrowserView } from "./browser-view";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
   ["Devices", "tab.devices"],
+  ["Browser", "tab.browser"],
   ["Text", "tab.text"],
   ["Transitions", "tab.transitions"],
   ["Effects", "tab.effects"],
@@ -678,7 +680,11 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   const textView = el.querySelector<HTMLElement>('[data-view="text"]')!;
   const transView = el.querySelector<HTMLElement>('[data-view="transitions"]')!;
   const tmplView = el.querySelector<HTMLElement>('[data-view="templates"]')!;
-  const libraries = [...(["stickers", "music", "sounds"] as const).map((kind) => buildLibraryView(kind, bin)), buildDevicesView(engine)];
+  const libraries = [
+    ...(["stickers", "music", "sounds"] as const).map((kind) => buildLibraryView(kind, bin)),
+    buildDevicesView(engine),
+    buildBrowserView(engine),
+  ];
   tmplView.after(...libraries.map((library) => library.el));
   tabs.addEventListener("click", (ev) => {
     const hit = (ev.target as HTMLElement).closest<HTMLElement>(".pane-tab");

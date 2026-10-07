@@ -51,7 +51,15 @@ BROWSER = {
     "tilt-up": ("light", [(0, _move(45)), (1, _move(6))]),
     "dolly-in": ("dark", [(0, _move(6, 16, 0, 0, 0, -0.25)), (1, _move(6, 16, 0, 0, 0, 0.6))]),
     "dutch": ("dark", [(0, _move(4, 18, -9)), (1, _move(4, 14, 4))]),
-    "float": ("light", [(0, _move(4, -6, 0, 0, 0.03)), (1 / 3, _move(-2, 6, 0, 0, -0.02)), (2 / 3, _move(6, -4, 0, 0, 0.02)), (1, _move(2, 6, 0, 0, -0.03))]),
+    "float": (
+        "light",
+        [
+            (0, _move(4, -6, 0, 0, 0.03)),
+            (1 / 3, _move(-2, 6, 0, 0, -0.02)),
+            (2 / 3, _move(6, -4, 0, 0, 0.02)),
+            (1, _move(2, 6, 0, 0, -0.03)),
+        ],
+    ),
     "flip-in": ("dark", [(0, _move(4, 88)), (0.6, _move(4, -4)), (1, _move(4, 0))]),
     "corner-focus": ("light", [(0, _move(6, 18)), (1, _move(6, 18, 0, 0.5, -0.32, 0.75))]),
     "side-glide": ("dark", [(0, _move(6, 42, 0, 0.5)), (1, _move(6, 42, 0, -0.5))]),
@@ -232,7 +240,8 @@ def template_thumbnail(device_id: str, name: str):
         if not path.is_file():
             path.parent.mkdir(parents=True, exist_ok=True)
             at = camera_at(name, 0.5)
-            motion = {k[len("device.") :]: v for k, v in at.items() if k[len("device.") :] in ("rotateX", "rotateY", "rotateZ", "moveX", "moveY", "moveZ")}
+            moving = ("rotateX", "rotateY", "rotateZ", "moveX", "moveY", "moveZ")
+            motion = {name: at[f"device.{name}"] for name in moving}
             screen = sample_page(finish == "dark")
             picture = render(
                 info["id"], 480, 300, finish=finish, camera={"yaw": 0, "pitch": 0}, screens={"inner": screen}, lighting="photo", motion=motion

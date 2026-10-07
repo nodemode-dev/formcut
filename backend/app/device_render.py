@@ -639,9 +639,10 @@ def render(
         view_proj, eye = device_scene.orbit(points, width / height, camera or {})
         if motion and any(float(v) for v in motion.values()):
             low, high = points.min(axis=0), points.max(axis=0)
-            root = device_scene.object_matrix(motion, (low + high) / 2, float(np.linalg.norm(high - low)) / 2)
+            root = device_scene.object_matrix(motion, (low + high) / 2, float(np.linalg.norm(high - low)) / 2, eye[:3])
             matrices = [root @ m for m in matrices]
-            points = a.points(matrices)
+            rest, points = points, a.points(matrices)
+            view_proj, eye = device_scene.orbit(rest, width / height, camera or {}, reach=points)
         frame = np.zeros(64, np.float32)
         frame[0:16] = view_proj.T.reshape(-1)
         frame[16:20] = [*eye, exposure]

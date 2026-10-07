@@ -1,5 +1,19 @@
 const codes = ["fr", "it", "ja", "ko", "pt-BR", "ru", "tr", "zh-Hans", "zh-Hant"];
-const rows = `Browser window|Fenêtre de navigateur|Finestra del browser|ブラウザウィンドウ|브라우저 창|Janela do navegador|Окно браузера|Tarayıcı penceresi|浏览器窗口|瀏覽器視窗
+const rows = `Browser|Navigateur|Browser|ブラウザ|브라우저|Navegador|Браузер|Tarayıcı|浏览器|瀏覽器
+Click a preset to add a browser window that moves|Cliquez sur un préréglage pour ajouter une fenêtre de navigateur animée|Fai clic su un preset per aggiungere una finestra del browser in movimento|プリセットをクリックすると動くブラウザウィンドウを追加します|프리셋을 클릭하면 움직이는 브라우저 창이 추가됩니다|Clique em uma predefinição para adicionar uma janela de navegador em movimento|Нажмите на пресет, чтобы добавить движущееся окно браузера|Hareket eden bir tarayıcı penceresi eklemek için bir hazır ayara tıklayın|点击预设即可添加一个移动的浏览器窗口|點擊預設即可加入一個移動的瀏覽器視窗
+Low-angle pan up|Panoramique montant en contre-plongée|Panoramica dal basso verso l'alto|ローアングルから上へパン|로우 앵글에서 위로 팬|Panorâmica de baixo para cima|Подъём с нижнего ракурса|Alt açıdan yukarı kaydırma|低角度向上摇移|低角度向上搖移
+Slow zoom out|Dézoom lent|Zoom indietro lento|ゆっくりズームアウト|천천히 줌 아웃|Afastamento lento|Медленное отдаление|Yavaş uzaklaşma|缓慢拉远|緩慢拉遠
+Overhead pan|Panoramique en plongée|Panoramica dall'alto|俯瞰パン|오버헤드 팬|Panorâmica de cima|Панорама сверху|Yukarıdan kaydırma|俯视摇移|俯視搖移
+Hero reveal|Révélation héroïque|Rivelazione principale|ヒーローリビール|히어로 리빌|Revelação principal|Эффектное появление|Kahraman açılışı|主角亮相|主角亮相
+Slow turn|Rotation lente|Rotazione lenta|ゆっくり回転|천천히 회전|Giro lento|Медленный поворот|Yavaş dönüş|缓慢转动|緩慢轉動
+Tilt up|Redressement|Raddrizzamento|起き上がり|일으켜 세우기|Inclinar para cima|Подъём|Doğrulma|向上倾斜|向上傾斜
+Glide closer|Approche glissée|Avvicinamento fluido|すべるように近づく|부드럽게 다가오기|Aproximação suave|Плавное приближение|Süzülerek yaklaşma|滑近|滑近
+Dutch angle|Angle hollandais|Inquadratura obliqua|ダッチアングル|더치 앵글|Ângulo holandês|Голландский угол|Eğik açı|荷兰角|荷蘭角
+Floating|Flottement|Fluttuante|浮遊|떠다니기|Flutuando|Парение|Süzülme|漂浮|漂浮
+Flip in|Entrée en rotation|Entrata con rotazione|フリップイン|플립 인|Entrada girando|Появление с поворотом|Dönerek giriş|翻转入场|翻轉入場
+Corner focus|Focus sur le coin|Focus sull'angolo|コーナーにフォーカス|모서리 포커스|Foco no canto|Фокус на углу|Köşe odağı|聚焦角落|聚焦角落
+Side glide|Glissement latéral|Scivolamento laterale|横にすべる|옆으로 미끄러지기|Deslize lateral|Скольжение вбок|Yana süzülme|侧向滑动|側向滑動
+Browser window|Fenêtre de navigateur|Finestra del browser|ブラウザウィンドウ|브라우저 창|Janela do navegador|Окно браузера|Tarayıcı penceresi|浏览器窗口|瀏覽器視窗
 Window|Fenêtre|Finestra|ウィンドウ|창|Janela|Окно|Pencere|窗口|視窗
 Lighting|Éclairage|Illuminazione|ライティング|조명|Iluminação|Освещение|Aydınlatma|照明|照明
 Photo studio|Studio photo|Studio fotografico|撮影スタジオ|사진 스튜디오|Estúdio fotográfico|Фотостудия|Fotoğraf stüdyosu|摄影棚|攝影棚

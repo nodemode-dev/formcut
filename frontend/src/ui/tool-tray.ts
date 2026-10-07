@@ -70,6 +70,7 @@ export function buildToolTray(engine: ProjectEngine): HTMLElement {
       { id: "add", label: "tray.addmedia", run: () => { press('.pane-tab[data-tab="Media"]'); press('[data-ref="file"]'); }, ready: anchored('[data-ref="file"]') },
       { id: "text", label: "tray.text", run: () => press('.pane-tab[data-tab="Text"]'), ready: anchored('.pane-tab[data-tab="Text"]') },
       { id: "devices", label: "tab.devices", run: () => press('.pane-tab[data-tab="Devices"]'), ready: anchored('.pane-tab[data-tab="Devices"]') },
+      { id: "browser", label: "tab.browser", run: () => press('.pane-tab[data-tab="Browser"]'), ready: anchored('.pane-tab[data-tab="Browser"]') },
       { id: "focus", label: "focus.title", run: () => press('[data-ref="chip-focus"]'), ready: anchored('[data-ref="chip-focus"]') },
       { id: "captions", label: "tray.captions", run: () => press('[data-feature="chip.captions"]'), ready: anchored('[data-feature="chip.captions"]') },
       { id: "voice", label: "tray.voice", run: () => press('[data-feature="chip.speak"]', '[data-feature="titlebar.studio"]'), ready: anchored('[data-feature="chip.speak"]', '[data-feature="titlebar.studio"]') },
