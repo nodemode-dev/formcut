@@ -665,6 +665,8 @@
   "title.outline": "Kontur",
   "title.shadow": "Schatten",
   "title.shadowoffset": "Schattenversatz",
+  "title.glow": "Leuchten",
+  "title.glowstrength": "Leuchtstärke",
   "title.plate": "Hintergrundfläche",
   "title.platebox": "Abstand und Radius",
   "title.lineheight": "Zeilenhöhe",

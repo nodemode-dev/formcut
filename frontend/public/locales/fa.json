@@ -666,6 +666,8 @@
   "title.outline": "خط دور",
   "title.shadow": "سایه",
   "title.shadowoffset": "جابه‌جایی سایه",
+  "title.glow": "درخشش",
+  "title.glowstrength": "شدت درخشش",
   "title.plate": "صفحهٔ پس‌زمینه",
   "title.platebox": "فاصلهٔ درونی و گردی صفحه",
   "title.lineheight": "ارتفاع خط",

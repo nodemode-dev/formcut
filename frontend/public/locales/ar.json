@@ -666,6 +666,8 @@
   "title.outline": "الحدّ",
   "title.shadow": "الظل",
   "title.shadowoffset": "إزاحة الظل",
+  "title.glow": "توهج",
+  "title.glowstrength": "شدة التوهج",
   "title.plate": "لوحة الخلفية",
   "title.platebox": "حشو اللوحة وتدويرها",
   "title.lineheight": "ارتفاع السطر",

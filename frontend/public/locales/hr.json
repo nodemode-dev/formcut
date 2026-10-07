@@ -666,6 +666,8 @@
   "title.outline": "Obrub",
   "title.shadow": "Sjena",
   "title.shadowoffset": "Pomak sjene",
+  "title.glow": "Sjaj",
+  "title.glowstrength": "Jačina sjaja",
   "title.plate": "Pozadinska ploča",
   "title.platebox": "Unutarnji razmak i zaobljenost ploče",
   "title.lineheight": "Visina retka",

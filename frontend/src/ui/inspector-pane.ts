@@ -128,6 +128,8 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
         <div class="prop-row"><span>${t("title.outline")}</span><input type="color" class="color-field" data-xkey="outlineColor" value="#000000" /><span class="num-field"><input data-xkey="outlineWidth" value="" placeholder="3" /></span></div>
         <div class="prop-row"><span>${t("title.shadow")}</span><input type="color" class="color-field" data-xkey="shadowColor" value="#000000" /><span class="num-field"><input data-xkey="shadowBlur" value="" placeholder="0" /></span></div>
         <div class="prop-row"><span>${t("title.shadowoffset")}</span><span class="num-field"><input data-xkey="shadowX" value="" placeholder="0" /></span><span class="num-field"><input data-xkey="shadowY" value="" placeholder="0" /></span></div>
+        <div class="prop-row"><span>${t("title.glow")}</span><input type="color" class="color-field" data-xkey="glowColor" value="#ff8a1f" /><span class="num-field"><input data-xkey="glowSize" value="" placeholder="0" /></span></div>
+        <div class="prop-row"><span>${t("title.glowstrength")}</span><span class="num-field"><input data-xkey="glowStrength" value="" placeholder="1" /></span><span class="prop-aux"></span></div>
         <div class="prop-row"><span>${t("title.plate")}</span><input type="color" class="color-field" data-xkey="plateColor" value="#101416" /><span class="num-field"><input data-xkey="plateOpacity" value="" placeholder="0.8" /></span></div>
         <div class="prop-row"><span>${t("title.platebox")}</span><span class="num-field"><input data-xkey="platePadding" value="" placeholder="12" /></span><span class="num-field"><input data-xkey="plateRadius" value="" placeholder="8" /></span></div>
         <div class="prop-row"><span>${t("title.lineheight")}</span><span class="num-field"><input data-xkey="lineHeight" value="" placeholder="1.2" /></span><span class="prop-aux"></span></div>
@@ -682,6 +684,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
       else {
         const bounds: Record<string, [number, number]> = {
           weight: [100, 900], outlineWidth: [0, 50], shadowBlur: [0, 100], shadowX: [-200, 200], shadowY: [-200, 200],
+          glowSize: [0, 100], glowStrength: [0, 3],
           plateOpacity: [0, 1], platePadding: [0, 200], plateRadius: [0, 200], lineHeight: [0.5, 4],
           letterSpacing: [-50, 200], wrapWidth: [5, 100], textOpacity: [0, 1],
         };

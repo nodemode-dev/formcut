@@ -666,6 +666,8 @@
   "title.outline": "קו מתאר",
   "title.shadow": "צל",
   "title.shadowoffset": "היסט הצל",
+  "title.glow": "זוהר",
+  "title.glowstrength": "עוצמת הזוהר",
   "title.plate": "לוח רקע",
   "title.platebox": "ריפוד ועיגול הלוח",
   "title.lineheight": "גובה שורה",

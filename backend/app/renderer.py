@@ -1273,6 +1273,21 @@ class FrameRenderer:
                 layer.putalpha(shape)
             image.alpha_composite(layer)
             draw = ImageDraw.Draw(image)
+        glow = text.get("glowColor")
+        glow_size = float(text.get("glowSize") or 0)
+        if glow and glow_size > 0:
+            # a glow of its own (titles had borrowed the shadow): the glyphs blurred as a shape, filled with the glow's
+            # colour, its strength scaling the light; under the text and over any shadow
+            layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            paint_text(ImageDraw.Draw(layer), (x, y), content, font, glow, align, spacing, tracking, 0, None)
+            shape = layer.getchannel("A").filter(ImageFilter.GaussianBlur(glow_size / 100 * size))
+            strength = max(0.0, float(text.get("glowStrength", 1.0)))
+            if strength != 1.0:
+                shape = shape.point(lambda v: min(255, round(v * strength)))
+            light = Image.new("RGBA", image.size, (*ImageColor.getrgb(glow)[:3], 255))
+            light.putalpha(shape)
+            image.alpha_composite(light)
+            draw = ImageDraw.Draw(image)
         words = clip.get("words") or []
         word_mode = (text.get("wordStyle") or {}).get("mode")
         # Per-word emphasis: a word with its own colour is drawn in it whether

@@ -665,6 +665,8 @@
   "title.outline": "Outline",
   "title.shadow": "Shadow",
   "title.shadowoffset": "Shadow offset",
+  "title.glow": "Glow",
+  "title.glowstrength": "Glow strength",
   "title.plate": "Background plate",
   "title.platebox": "Plate padding and radius",
   "title.lineheight": "Line height",

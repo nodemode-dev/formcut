@@ -665,6 +665,8 @@
   "title.outline": "Contorno",
   "title.shadow": "Sombra",
   "title.shadowoffset": "Desplazamiento de sombra",
+  "title.glow": "Resplandor",
+  "title.glowstrength": "Intensidad del resplandor",
   "title.plate": "Fondo",
   "title.platebox": "Relleno y radio del fondo",
   "title.lineheight": "Altura de línea",
