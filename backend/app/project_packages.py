@@ -47,6 +47,17 @@ def _clips(document: dict):
             yield from track.get("clips") or []
 
 
+def _media_uses(document: dict):
+    """(clip, media id) for every media a clip uses: its own, and a device clip's screen sources (which a device-only
+    project would otherwise leave out of its package, and whose ids a package restore would leave pointing nowhere)."""
+    for clip in _clips(document):
+        if clip.get("mediaId"):
+            yield clip, clip["mediaId"]
+        for screen in ((clip.get("device") or {}).get("screens") or {}).values():
+            if isinstance(screen, dict) and screen.get("mediaId"):
+                yield clip, screen["mediaId"]
+
+
 def _safe_name(title: str) -> str:
     kept = "".join(ch if ch.isalnum() or ch in " -_." else "-" for ch in title).strip(" .")
     return (kept or "project")[:80]
@@ -82,9 +93,8 @@ def build(project_id: str) -> Path:
     library = {item["id"]: item for item in _read()}
     media_index = {}
     files = []
-    for clip in _clips(document):
-        media_id = clip.get("mediaId")
-        if not media_id or media_id in media_index:
+    for clip, media_id in _media_uses(document):
+        if media_id in media_index:
             continue
         matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
         if not matches:
@@ -271,6 +281,9 @@ def unpack(path: Path) -> dict:
         for holder, field in [(clip, "lutId"), (clip, "shaderId"), (clip, "mediaId"), (clip.get("textStyle") or {}, "fontId")]:
             if holder.get(field) in replacements:
                 holder[field] = replacements[holder[field]]
+        for screen in ((clip.get("device") or {}).get("screens") or {}).values():
+            if isinstance(screen, dict) and screen.get("mediaId") in replacements:
+                screen["mediaId"] = replacements[screen["mediaId"]]
     validate_document({k: v for k, v in document.items() if k != "revision"})
     title = str(document.get("title") or manifest.get("title") or "Imported project")
     record = {
@@ -283,6 +296,8 @@ def unpack(path: Path) -> dict:
         "activeTimeline": int(document.get("activeTimeline", 0)),
         "revision": 0,
     }
+    # the project's other settings travel too (its background among them), not only the fields named above
+    record.update({k: v for k, v in document.items() if k not in record and k not in ("id", "revision")})
     with _lock:
         saved = store.save_project(record)
     return {"id": saved["id"], "title": saved.get("title"), "media": len([k for k in replacements if k in media_index])}

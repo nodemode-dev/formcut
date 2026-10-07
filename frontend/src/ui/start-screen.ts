@@ -659,7 +659,7 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       // a .fmc from anywhere on this computer: its project in, its media linked back, the rest offered to Locate
       const fromFile = chip(t("file.openFile"), () => void (async () => {
         try {
-          const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", title: t("file.openFile"), types: ["fmc"] });
+          const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", title: t("file.openFile"), types: ["fc", "fmc"] });
           if (!chosen.paths.length) return;
           const opened = await api<{ project: { id: string }; missing: MissingItem[] }>("/api/project-files/open", { path: chosen.paths[0] });
           if (await openProject(engine, opened.project.id)) dismiss();

@@ -240,7 +240,12 @@ def choose(
         elif kind == "save":
             script = f'POSIX path of (choose file name with prompt "{quoted}" default name "{default_name.replace(chr(34), "")}")'
         else:
-            of_type = f" of type {{{', '.join(chr(34) + t.lstrip('.') + chr(34) for t in types)}}}" if types else ""
+            # macOS matches "of type" against registered file types; formcut's own (.fc, .fmc, .fcpreset, .fcui) are not
+            # registered, so a filter naming them greyed formcut's own files out. Those dialogs go unfiltered and the
+            # caller checks what was chosen; other filters (video, audio, images) stay.
+            own = {"fc", "fmc", "fcpreset", "fcui"}
+            unfiltered = not types or own.intersection(t.lstrip(".").lower() for t in types)
+            of_type = "" if unfiltered else f" of type {{{', '.join(chr(34) + t.lstrip('.') + chr(34) for t in types)}}}"
             many = " with multiple selections allowed" if multiple else ""
             script = (
                 f'set chosen to choose file with prompt "{quoted}"{of_type}{many}\n'

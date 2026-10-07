@@ -294,7 +294,20 @@ class OpenBody(BaseModel):
 
 @router.post("/open")
 def open_project_file(body: OpenBody) -> dict:
-    return open_file(Path(body.path))
+    """Opens a project file chosen on this computer: an .fmc (linked to its media where it lies) or a .fc package
+    (unpacked into the library with its media, as a dropped package is). The chooser on macOS cannot filter by
+    formcut's own types, so anything else is refused here."""
+    path = Path(body.path)
+    suffix = path.suffix.lower()
+    if suffix == ".fc":
+        from .project_packages import unpack
+
+        if not path.is_file():
+            raise HTTPException(404, f"{path.name} was not found")
+        return {"project": unpack(path), "missing": []}
+    if suffix != ".fmc":
+        raise HTTPException(400, f"{path.name} is not a formcut project: open a .fc or .fmc file")
+    return open_file(path)
 
 
 @router.get("/recent")

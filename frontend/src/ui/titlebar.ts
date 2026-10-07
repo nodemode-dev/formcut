@@ -249,7 +249,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     } else if (hit.dataset.act === "open-file") {
       // a .fmc file: its project into the editor, its media linked back where found, the rest offered to Locate
       try {
-        const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", title: t("file.openFile"), types: ["fmc"] });
+        const chosen = await api<{ paths: string[] }>("/api/system/choose", { kind: "open", title: t("file.openFile"), types: ["fc", "fmc"] });
         if (!chosen.paths.length) return;
         const opened = await api<{ project: { id: string }; missing: MissingItem[] }>("/api/project-files/open", { path: chosen.paths[0] });
         const ok = await openProject(engine, opened.project.id);
