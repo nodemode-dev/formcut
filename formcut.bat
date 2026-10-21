@@ -5,6 +5,16 @@ setlocal
 set "ROOT=%~dp0"
 cd /d "%ROOT%"
 
+REM Agents, as in ./formcut: formcut.bat mcp (MCP over stdio), formcut.bat agents install|sync|status.
+if /i "%~1"=="mcp" (
+    python "%ROOT%setup\mcp_stdio.py" %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%~1"=="agents" (
+    python "%ROOT%setup\agents.py" %2 %3 %4 %5 %6
+    exit /b %ERRORLEVEL%
+)
+
 REM Boot banner. Never allowed to fail the launch.
 call "%ROOT%setup\formcut_banner.bat"
 

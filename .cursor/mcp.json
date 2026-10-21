@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "formcut": {
+      "command": "${workspaceFolder}/formcut",
+      "args": ["mcp"]
+    }
+  }
+}

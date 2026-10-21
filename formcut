@@ -10,6 +10,17 @@ if [ "${1:-}" = desktop ] && [ "${2:-}" = build ]; then
   exec setup/build_linux_app
 fi
 
+# Agents: ./formcut mcp serves formcut over MCP's stdio (starting the engine when nothing answers), ./formcut claude
+# starts Claude Code here connected to it, ./formcut agents install|sync|status sets Claude Code, Codex and Cursor up.
+case "${1:-}" in
+  mcp) shift; exec python3 setup/mcp_stdio.py "$@" ;;
+  agents) shift; exec python3 setup/agents.py "$@" ;;
+  claude)
+    shift
+    command -v claude >/dev/null 2>&1 || { echo "[formcut] Claude Code is not installed: https://claude.com/claude-code"; exit 1; }
+    exec claude --mcp-config "{\"mcpServers\":{\"formcut\":{\"type\":\"stdio\",\"command\":\"$ROOT/formcut\",\"args\":[\"mcp\"]}}}" --allowedTools mcp__formcut "$@" ;;
+esac
+
 chmod +x setup/formcut_banner setup/formcut_oc_install setup/formcut_boot 2>/dev/null || true
 
 # Boot banner. Never allowed to fail the launch: cosmetics do not gate startup.

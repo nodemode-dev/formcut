@@ -1,0 +1,6 @@
+# formcut for Codex in this repository (trusted projects only). From any folder: ./formcut agents install codex.
+[mcp_servers.formcut]
+command = "sh"
+args = ["-c", "exec \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/formcut\" mcp"]
+startup_timeout_sec = 120
+tool_timeout_sec = 900

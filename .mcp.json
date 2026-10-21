@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "formcut": {
+      "type": "stdio",
+      "command": "${CLAUDE_PROJECT_DIR:-.}/formcut",
+      "args": ["mcp"]
+    }
+  }
+}

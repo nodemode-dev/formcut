@@ -38,7 +38,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `main.ts` (99L)
 - `types/assets.d.ts` (6L)
 - `ui/accordion.ts` (55L)
-- `ui/appearance.ts` (213L)
+- `ui/appearance.ts` (225L)
 - `ui/browser-view.ts` (51L)
 - `ui/category-icons.ts` (37L)
 - `ui/clip-visuals.ts` (158L)

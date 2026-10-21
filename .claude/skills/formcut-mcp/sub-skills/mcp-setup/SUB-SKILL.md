@@ -11,7 +11,11 @@ Get the 31 formcut tools reachable from an MCP client and driving the formcut th
 
 ## Where the server comes from
 
-The installed app includes it: its engine, run as `formcut-engine --mcp`, is the MCP server, over stdio. Nothing else is installed. From a checkout, `mcp/formcut_mcp.py` runs the same server (`backend/app/agent_mcp.py`) with the engine's virtualenv, or with one of its own from `cd mcp && ./oc_install`.
+The installed app includes it: its engine, run as `formcut-engine --mcp`, is the MCP server, over stdio. Nothing else is installed. From a checkout, `./formcut mcp` runs the same server (`backend/app/agent_mcp.py`) with the engine's virtualenv (or `mcp/.venv` from `cd mcp && ./oc_install`), and starts the engine on 127.0.0.1:8040 first when nothing answers (`FORMCUT_MCP_NO_START=1` skips that; its log is `formcut-engine-mcp.log` in the temp folder). `mcp/formcut_mcp.py` is the bare launcher without the engine start.
+
+## A checkout is already connected
+
+Opened in a formcut checkout, Claude Code reads `.mcp.json`, Codex `.codex/config.toml` and Cursor `.cursor/mcp.json`, and all three run `./formcut mcp`; `./formcut claude` starts Claude Code there with the server connected and its tools allowed. To set the clients up for the user account instead, so formcut is reachable from any folder, run `./formcut agents install` (or name one: `claude`, `codex`, `cursor`; `--dry-run` shows what it would write). It registers `./formcut mcp` from that checkout and copies this skill to `~/.claude/skills` and `~/.agents/skills`. `./formcut agents status` lists the clients found.
 
 ## Add it to a client
 

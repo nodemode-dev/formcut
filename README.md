@@ -169,7 +169,7 @@ formcut carries an MCP server, so Claude Code, Codex, Cursor, Claude Desktop, VS
 
 The installed app includes it. Open **Settings, Connections, AI agents**: it shows, for each client, the exact command or config to add, with this copy of formcut's path already filled in, and a Copy button. The client runs the app's own engine as `formcut-engine --mcp`; nothing else is installed. While formcut is running, the server finds it by itself: the engine publishes its address in `engine.json` in formcut's data folder, and every call reads it afresh, so quitting and reopening formcut breaks no connection. If formcut is not running, a call says so and asks for it to be opened.
 
-From a checkout, the same server runs as `mcp/formcut_mcp.py` with the engine's virtualenv, or with its own from `cd mcp && ./oc_install`.
+From a checkout, the same server runs as `./formcut mcp`, which starts the engine when nothing answers. The checkout is already connected for agents opened in it: `.mcp.json` (Claude Code), `.codex/config.toml` (Codex) and `.cursor/mcp.json` (Cursor) run `./formcut mcp`, `AGENTS.md` briefs agents other than Claude Code, and `.agents/skills/formcut-mcp` mirrors the skill for them. `./formcut claude` starts Claude Code here with the server connected; `./formcut agents install` sets Claude Code, Codex and Cursor up for your account so formcut is reachable from any folder; `./formcut agents sync` keeps the tool reference and the mirror in step after a tool changes. `mcp/formcut_mcp.py` is the bare launcher, with the engine's virtualenv or its own from `cd mcp && ./oc_install`.
 
 The tools are workflow shaped rather than one per endpoint: `formcut_status`,
 `formcut_import_media`, `formcut_create_project`, `formcut_add_clip`,

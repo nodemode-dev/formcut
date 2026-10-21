@@ -1,4 +1,20 @@
-# Working on formcut
+# formcut
+
+A local video editor in the form family beside formvfx and formvis: a vanilla TypeScript and Vite interface, a Python
+FastAPI engine, and a Tauri 2 desktop shell that runs the engine as a sidecar.
+
+## Two kinds of work
+
+**Editing video with formcut** (a cut, an assembly, captions, a render): use the `formcut` MCP server (`.mcp.json`
+runs `./formcut mcp`, which starts the engine when nothing answers) with the `formcut-mcp` skill in
+`.claude/skills/formcut-mcp`. Start with `formcut_status`, import with `formcut_import_media`, build with
+`formcut_create_project` and `formcut_add_clip`, change with `formcut_edit` carrying the last revision, and render
+with `formcut_render` then `formcut_render_status`. `./formcut claude` starts Claude Code here already connected.
+
+**Changing formcut's code**: route through `.claude/skills/formcut-skillset/SKILL.md` (subsystem map, invariants,
+specialists), as below.
+
+## Changing the code
 
 Read .docs/wiki/Home.md first, then the page for the area you are changing: timing and
 rendering through .docs/wiki/Architecture.md, the editing surface through
@@ -36,10 +52,21 @@ Anything outside the interface drives formcut through `POST /api/rpc`: 21
 methods, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
 engine's MCP server (`backend/app/agent_mcp.py`, run as `formcut-engine --mcp`,
-or from a checkout through `mcp/`) is that surface packaged as 21 MCP tools
+or from a checkout as `./formcut mcp`) is that surface packaged as 31 MCP tools
 over stdio. ANA
 connecting in will use this surface, so extend it rather than adding a second
 path.
+
+## Agents and the MCP tools
+
+`.mcp.json` (Claude Code), `.codex/config.toml` (Codex) and `.cursor/mcp.json`
+(Cursor) connect this checkout; `AGENTS.md` is the brief for agents other than
+Claude Code, and `.agents/skills/formcut-mcp` mirrors the skill for them.
+`./formcut agents install` sets all three clients up for the user account from
+any folder, and `./formcut agents status` says what it found. After changing the
+MCP tools, run `./formcut agents sync` so the tool reference and the mirror
+follow; `./formcut agents sync --check` fails while they drift, and
+`setup/preflight.py` runs it before a release.
 
 The reasoning behind a change belongs in its commit message, and releases, with
 their notes, are on the GitHub Releases page. The repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
