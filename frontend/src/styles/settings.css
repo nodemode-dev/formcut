@@ -40,7 +40,8 @@
 }
 .set-tab svg { width: 18px; height: 18px; flex: none; }
 .set-tab:hover { color: var(--ink); background: var(--control); border-color: var(--edge-strong); }
-.set-tab.is-active { background: var(--cue); border-color: var(--cue); color: var(--on-cue); font-weight: 600; }
+.set-tab.is-active { background: var(--raise); border-color: var(--raise-edge); color: var(--ink); font-weight: 500; }
+.set-tab.is-active svg { color: var(--cue-ink); }
 .set-collapse {
   margin-top: auto;
   display: flex; align-items: center; justify-content: center;
@@ -194,7 +195,7 @@
 .format-rates { display: flex; align-items: center; gap: var(--sp-3); font-size: 12.5px; color: var(--ink-soft); }
 .format-rates .seg > button { min-width: 44px; min-height: 32px; }
 .format-actions { justify-content: flex-end; }
-.format-actions .tool-chip.is-primary { background: var(--cue); color: var(--on-cue); border-color: var(--cue); }
+.format-actions .tool-chip.is-primary { background: var(--cue-soft); color: var(--ink); border-color: var(--cue-line); }
 .conflict-bar {
   position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: var(--sp-2);
@@ -213,4 +214,4 @@
   font-size: 12.5px; color: var(--ink);
 }
 .restore-bar > span { flex: 1; }
-.restore-bar .tool-chip.is-primary { background: var(--cue); color: var(--on-cue); border-color: var(--cue); }
+.restore-bar .tool-chip.is-primary { background: var(--cue-soft); color: var(--ink); border-color: var(--cue-line); }

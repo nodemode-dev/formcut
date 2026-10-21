@@ -74,11 +74,17 @@ installs as it is and which `setup/registry_entry.py` lists in the registry
 
 ## Appearance and layout
 
-Thirty appearance profiles live under Settings, Appearance: twenty-eight
-palettes generated from one ladder table, plus two behaviours that pick a
-palette (on every click, or every twenty seconds). The accent is separate and
+Thirty-one appearance profiles live under Settings, Appearance: Studio, the
+form family's profile shared with formvfx and formvis and the default since
+2.9.1, twenty-eight palettes generated from one ladder table, plus two
+behaviours that pick a palette (on every click, or every twenty seconds). Every
+profile wears the same family chrome: panes with a near-black rim, tabs in a
+darker strip, the chosen tab as a raised pill, and the accent as a tint with a
+line on primary actions rather than a solid fill. The accent is separate and
 free; a profile names a default and a chosen accent overrides it. A stored
-profile and accent are applied before the first paint, so nothing flashes.
+profile and accent are applied before the first paint, so nothing flashes; a
+store from before 2.9.1 that held formcut Dark, the old default, opens in
+Studio once, and choosing formcut Dark again is kept.
 
 Panes resize by dragging the dividers between them, or from the keyboard with
 arrow keys, Home and End once a divider has focus. The side panels can swap and

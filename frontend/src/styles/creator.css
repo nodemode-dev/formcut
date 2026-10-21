@@ -32,8 +32,8 @@
 .studio-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .studio-actions .tool-chip { border: 1px solid var(--edge); background: var(--inset); }
 .studio-actions .tool-chip:hover { background: var(--control); }
-.tool-chip.is-primary { background: var(--cue); color: var(--on-cue); border-color: var(--cue); font-weight: 600; }
-.tool-chip.is-primary:hover { background: var(--cue-hover); color: var(--on-cue); }
+.tool-chip.is-primary { background: var(--cue-soft); color: var(--ink); border-color: var(--cue-line); font-weight: 500; }
+.tool-chip.is-primary:hover { background: var(--cue-soft-hover); color: var(--ink); }
 .stock-filters label { gap: var(--sp-2); }
 .stock-filters select { min-width: 110px; }
 .studio-content .stock-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }

@@ -522,7 +522,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   clearAppearance.className = "tool-chip";
   clearAppearance.textContent = t("set.reset.appearance");
   clearAppearance.addEventListener("click", () => {
-    setTheme("formcut-dark");
+    setTheme("studio");
     setAccent(null);
     markTheme();
     markAccent();

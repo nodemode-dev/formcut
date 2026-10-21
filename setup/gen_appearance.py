@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate frontend/src/styles/themes.css: the appearance profiles.
 
-One ladder table drives every profile, so all 28 palettes keep the same
+One ladder table drives every profile but the fixed Studio one, so all 29 palettes keep the same
 contrast relationships between page, panel, field and text. Edit the table and
 regenerate; do not hand-tune a single value in the output.
 
@@ -20,6 +20,7 @@ def hexed(h, s, lightness):
 
 
 DARK = [
+    ("studio", "Studio", 0, 0, "studio", "#f97316"),
     ("formcut-dark", "formcut Dark", 188, 12, "dark", "#ffae2b"),
     ("high-contrast", "High Contrast", 0, 0, "hard", "#ffffff"),
     ("obsidian", "Obsidian", 220, 8, "deep", "#7dd3fc"),
@@ -66,9 +67,23 @@ LADDER = {
 # on, input fields included, in every profile of that ladder, with soft and faint
 # kept at least 12 steps apart; the earlier faint steps measured 2.4 to 2.9:1.
 TEXT = {"dark": [96, 73, 61], "deep": [95, 72, 60], "hard": [100, 78, 58], "light": [14, 25, 37], "semi": [16, 22, 34]}
+# Studio is the form family's shared profile (formvfx and formvis): its surfaces are fixed values rather than a ladder,
+# so the family reads the same in every app. Soft and faint text are lifted from the family's #a4a4a4 and #717072 to
+# keep this file's rule: at least 4.5:1 on every surface text sits on, and 12 steps apart.
+FIXED = {
+    "studio": dict(
+        light=False, page="#0a0a0a", well="#0e0e0e", panel="#111111", raised="#17151b", field="#222127",
+        hover="#2a2930", active="#34333a", fg="#f7f7f7", muted="#adadb0", dim="#8e8d91", accent_hover="#fb8f4e",
+        line="rgb(255 255 255 / 0.1)", strong="rgb(255 255 255 / 0.2)", lane="#141414", lane_alt="#161616",
+        ruler="#0d0d0d", stage="#000000", scrim="rgb(0 0 0 / 0.6)", on_accent="#271407",
+    ),
+}
 
 
 def values(hue, sat, kind, accent):
+    if kind in FIXED:
+        rgb = " ".join(str(int(accent.lstrip("#")[i : i + 2], 16)) for i in (0, 2, 4))
+        return dict(FIXED[kind], accent=accent, accent_rgb=rgb)
     ladder, text = LADDER[kind], TEXT[kind]
     light = kind in ("light", "semi")
     ss = min(sat, 18 if light else 12)

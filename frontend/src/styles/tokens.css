@@ -1,26 +1,26 @@
 :root {
   color-scheme: dark;
 
-  --ground: #121617;
-  --inset: #161c1d;
-  --pane: #1d2425;
-  --float: #262f31;
-  --control: #2d3739;
-  --control-hover: #364345;
-  --control-press: #3f4e50;
+  --ground: #0a0a0a;
+  --inset: #0e0e0e;
+  --pane: #111111;
+  --float: #17151b;
+  --control: #222127;
+  --control-hover: #2a2930;
+  --control-press: #34333a;
 
   --edge: rgb(255 255 255 / 0.1);
   --edge-strong: rgb(255 255 255 / 0.2);
 
-  --ink: #f4f5f6;
-  --ink-soft: #a1adaf;
-  --ink-faint: #6a797c;
+  --ink: #f7f7f7;
+  --ink-soft: #adadb0;
+  --ink-faint: #8e8d91;
 
-  --cue: #ffae2b;
-  --cue-hover: #ffc15e;
-  --cue-wash: rgb(255 174 43 / 0.22);
+  --cue: #f97316;
+  --cue-hover: #fb8f4e;
+  --cue-wash: rgb(249 115 22 / 0.22);
   --guide: #35d0ff;
-  --on-cue: #271b07;
+  --on-cue: #271407;
   --fault: #ff475a;
   --fault-wash: rgb(255 71 90 / 0.14);
 
@@ -37,16 +37,28 @@
   --tag-ink: #ffffff;
   --tag-plate: rgb(0 0 0 / 0.35);
 
-  --track-bed: #191f1f;
-  --track-bed-alt: #1b2122;
-  --timescale: #101314;
+  --track-bed: #141414;
+  --track-bed-alt: #161616;
+  --timescale: #0d0d0d;
   --now-line: #ff475a;
   --screen: #000000;
-  --veil: rgb(0 0 0 / 0.55);
+  --veil: rgb(0 0 0 / 0.6);
+
+  /* The form family's chrome, derived from each profile's own tokens so every profile wears it: the near-black rim
+     round a pane, the darker strip its tabs sit in, the raised pill that marks the chosen tab, and the accent as a
+     tint with a line (a primary action, a control that is on) rather than a solid fill. */
+  --rim: color-mix(in srgb, var(--ground) 55%, #000);
+  --head: color-mix(in srgb, var(--ground) 45%, #000);
+  --raise: color-mix(in srgb, var(--pane) 86%, var(--ink) 10%);
+  --raise-edge: color-mix(in srgb, var(--control-press) 75%, var(--ink-faint));
+  --cue-soft: color-mix(in srgb, var(--cue) 20%, var(--pane));
+  --cue-soft-hover: color-mix(in srgb, var(--cue) 30%, var(--pane));
+  --cue-line: color-mix(in srgb, var(--cue) 48%, var(--control-press));
+  --cue-ink: color-mix(in srgb, var(--cue) 80%, var(--ink));
 
   --radius-s: 6px;
-  --radius-m: 10px;
-  --radius-l: 14px;
+  --radius-m: 8px;
+  --radius-l: 10px;
 
   --sp-1: 4px;
   --sp-2: 8px;
@@ -54,8 +66,8 @@
   --sp-4: 16px;
   --sp-5: 24px;
 
-  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Mono", ui-monospace, monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "JetBrains Mono", "Cascadia Mono", monospace;
 
   --z-base: 0;
   --z-clip: 100;
@@ -67,4 +79,14 @@
   --z-overlay: 700;
   --z-viewer: 750; /* a full-screen picture above an overlay such as Studio */
   --z-toast: 800;
+}
+
+/* The light profiles keep the family chrome without black strips: the rim is the profile's edge and the tab strip a
+   step below the pane, as formvfx's light profiles do it. */
+:root[data-theme="light"], :root[data-theme="sand"], :root[data-theme="linen"],
+:root[data-theme="mist"], :root[data-theme="pearl"], :root[data-theme="dove-grey"] {
+  --rim: var(--edge);
+  --head: var(--inset);
+  --raise: var(--float);
+  --cue-ink: color-mix(in srgb, var(--cue) 85%, var(--ink));
 }

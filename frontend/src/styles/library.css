@@ -13,7 +13,7 @@
 .library-row:hover { background: var(--control); }
 .library-play, .library-add { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--edge); border-radius: 50%; background: var(--control); color: var(--ink); cursor: pointer; }
 .library-play:hover, .library-add:hover { background: var(--control-hover); }
-.library-play.is-playing { border-color: var(--cue); background: var(--cue); color: var(--on-cue); }
+.library-play.is-playing { border-color: var(--cue-line); background: var(--cue-soft); color: var(--cue-ink); }
 .library-play svg, .library-add svg { width: 14px; height: 14px; }
 .library-name { overflow: hidden; color: var(--ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .library-meta { color: var(--ink-faint); font: 11px/1 var(--font-mono); white-space: nowrap; }

@@ -1,4 +1,4 @@
-// Appearance: 30 profiles and a free accent, applied by writing custom
+// Appearance: 31 profiles and a free accent, applied by writing custom
 // properties on the root element. Nothing re-renders, so a theme change cannot
 // flash, rebuild a container or lose focus. The palettes live in themes.css as
 // [data-theme] blocks; this module owns the choice, its persistence and the two
@@ -12,6 +12,7 @@ export interface Profile {
 }
 
 export const PROFILES: Profile[] = [
+  { id: "studio", label: "Studio" },
   { id: "formcut-dark", label: "formcut Dark" },
   { id: "high-contrast", label: "High Contrast" },
   { id: "obsidian", label: "Obsidian" },
@@ -55,7 +56,12 @@ export interface Appearance {
   light?: string;
   accent: string | null;
   derived: Record<string, string> | null;
+  family?: number;
 }
+
+// 1: Studio, the form family's profile, became the default in 2.9.1. A store written before it carried formcut Dark as
+// the default, so that one value moves to Studio once; choosing formcut Dark afterwards is kept. index.html agrees.
+const FAMILY = 1;
 
 const clamp = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
 
@@ -93,7 +99,7 @@ export function osPrefersDark(): boolean {
 
 export function resolveTheme(state: Appearance): string {
   if (state.theme !== AUTOMATIC) return state.theme;
-  return osPrefersDark() ? (state.dark ?? "formcut-dark") : (state.light ?? "light");
+  return osPrefersDark() ? (state.dark ?? "studio") : (state.light ?? "light");
 }
 
 export function read(): Appearance {
@@ -101,18 +107,24 @@ export function read(): Appearance {
     const raw = localStorage.getItem(STORE);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Appearance>;
-      return {
-        theme: typeof parsed.theme === "string" ? parsed.theme : "formcut-dark",
-        dark: typeof parsed.dark === "string" ? parsed.dark : "formcut-dark",
+      const moved = (id: string | undefined) => (parsed.family !== FAMILY && id === "formcut-dark" ? "studio" : id);
+      const theme = moved(parsed.theme);
+      const dark = moved(parsed.dark);
+      const state: Appearance = {
+        theme: typeof theme === "string" ? theme : "studio",
+        dark: typeof dark === "string" ? dark : "studio",
         light: typeof parsed.light === "string" ? parsed.light : "light",
         accent: typeof parsed.accent === "string" ? parsed.accent : null,
         derived: parsed.derived && typeof parsed.derived === "object" ? parsed.derived as Record<string, string> : null,
+        family: FAMILY,
       };
+      if (parsed.family !== FAMILY) write(state);
+      return state;
     }
   } catch {
     // A blocked or corrupt store must not stop the editor from opening.
   }
-  return { theme: "formcut-dark", dark: "formcut-dark", light: "light", accent: null, derived: null };
+  return { theme: "studio", dark: "studio", light: "light", accent: null, derived: null, family: FAMILY };
 }
 
 function write(state: Appearance): void {
@@ -178,7 +190,7 @@ export function apply(state: Appearance, persist = true): void {
   } else if (profile?.behaviour === "click") {
     paint(randomPalette());
   } else {
-    paint(profile ? profile.id : "formcut-dark");
+    paint(profile ? profile.id : "studio");
   }
   paintAccent(state.accent, state.derived);
   if (persist) write(state);

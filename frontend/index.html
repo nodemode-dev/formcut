@@ -6,7 +6,7 @@
     <title>formcut</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#101013" />
+    <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <script>
       // Pre-paint appearance. Runs before the first paint and before any module
@@ -29,10 +29,12 @@
           if (saved && typeof saved.theme === "string") {
             // P5: Automatic resolves here too, so following the OS is applied
             // before the first paint rather than after the module loads.
-            var theme = saved.theme;
+            // Studio became the default in 2.9.1: a store from before it moves formcut Dark to Studio, as appearance.ts does.
+            var moved = function (id) { return saved.family !== 1 && id === "formcut-dark" ? "studio" : id; };
+            var theme = moved(saved.theme);
             if (theme === "automatic") {
               var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-              theme = dark ? (saved.dark || "formcut-dark") : (saved.light || "light");
+              theme = dark ? (moved(saved.dark) || "studio") : (saved.light || "light");
             }
             document.documentElement.dataset.theme = theme;
           }

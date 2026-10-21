@@ -9,7 +9,8 @@ html, body, #app {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
 }
@@ -20,7 +21,7 @@ input, select { font: inherit; color: inherit; }
 
 #app {
   display: grid;
-  grid-template-rows: 44px 1fr;
+  grid-template-rows: 40px 1fr;
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -30,7 +31,8 @@ input, select { font: inherit; color: inherit; }
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 0 var(--sp-3);
-  background: var(--ground);
+  background: linear-gradient(to bottom, var(--float), var(--pane));
+  border-bottom: 1px solid var(--rim);
 }
 .titlebar-left { display: flex; align-items: center; gap: var(--sp-2); }
 /* The logo is the way back to the start screen, so it is a real button with a
@@ -66,25 +68,28 @@ input, select { font: inherit; color: inherit; }
 input[type="range"], input[type="checkbox"], input[type="radio"], input[type="color"], progress { accent-color: var(--cue); }
 .btn-export {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-s);
-  background: var(--cue);
-  color: var(--on-cue);
-  font-weight: 600;
+  height: 28px; padding: 0 12px;
+  border: 1px solid var(--cue-line);
+  border-radius: var(--radius-m);
+  background: var(--cue-soft);
+  color: var(--ink);
+  font-weight: 500;
 }
-.btn-export:hover { background: var(--cue-hover); }
+.btn-export:hover { background: var(--cue-soft-hover); }
+.btn-export svg { color: var(--cue-ink); }
 
 .workspace {
   display: grid;
   grid-template-columns: minmax(300px, 27%) minmax(360px, 1fr) minmax(280px, 21%);
   grid-template-rows: minmax(0, 1fr) minmax(240px, 42%);
-  gap: 7px;
-  padding: 0 7px 7px;
+  gap: 4px;
+  padding: 4px;
   min-height: 0;
 }
 .pane {
   background: var(--pane);
-  border-radius: var(--radius-l);
+  border: 1px solid var(--rim);
+  border-radius: var(--radius-m);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -99,7 +104,9 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
    The chip sits outside the scroller so it stays put at any pane width. */
 .pane-tabs {
   display: flex; flex-wrap: nowrap; align-items: center; gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
+  min-height: 36px;
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--head);
   min-width: 0;
 }
 .pane-tab-strip {
@@ -114,13 +121,13 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .tl-toolbar[data-labels="true"] .iconbtn[data-label]::after { content: attr(data-label); font-size: 12px; }
 .tl-toolbar[data-labels="true"] .iconbtn[data-label].is-accent { background: var(--cue-wash); border-color: var(--cue); }
 .pane-tab {
-  padding: 6px 12px;
-  border-radius: var(--radius-s);
+  padding: 5px 10px;
+  border-radius: var(--radius-m);
   color: var(--ink-soft);
   white-space: nowrap;
 }
 .pane-tab:hover { color: var(--ink); }
-.pane-tab.is-active { background: var(--cue); color: var(--on-cue); }
+.pane-tab.is-active { background: var(--raise); box-shadow: inset 0 0 0 1px var(--raise-edge); color: var(--ink); font-weight: 500; }
 .pane-tab-strip > .pane-tab { flex: 0 0 auto; }
 
 .media-body { display: flex; flex: 1; min-height: 0; }
@@ -211,7 +218,9 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: var(--sp-2) var(--sp-3);
+  min-height: 36px;
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--head);
 }
 .pane-header .title { font-weight: 500; }
 .pane-header .meta { color: var(--ink-faint); font-size: 12px; text-align: center; }
@@ -337,13 +346,13 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   color: var(--ink-soft);
   white-space: nowrap;
 }
-.seg > button.is-active { background: var(--cue); color: var(--on-cue); }
+.seg > button.is-active { background: var(--raise); box-shadow: inset 0 0 0 1px var(--raise-edge); color: var(--ink); }
 .multicam-angles { flex-wrap: wrap; }
 .multicam-angles > button { min-width: 28px; font-variant-numeric: tabular-nums; }
 .multicam-hint { padding: 0 var(--sp-2) var(--sp-2); }
-.inspector-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
+.inspector-head { display: flex; align-items: center; gap: var(--sp-2); min-height: 36px; padding: var(--sp-1) var(--sp-2); background: var(--head); }
 .inspector-head .seg { flex: 1; }
-.inspector-subtabs { padding: 0 var(--sp-3) var(--sp-2); }
+.inspector-subtabs { padding: var(--sp-2) var(--sp-3); }
 .inspector-body { flex: 1; overflow-y: auto; padding: 0 var(--sp-3) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
 .section {
   background: var(--float);
@@ -412,17 +421,17 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* The timeline header is tighter in the redesign: the tab row and the tool row
    give back about 43 css pixels between them, which is the 86 device pixels the
    diff measured, and every track moves up by the same amount. */
-.tl-tabs { display: flex; align-items: center; padding: 4px var(--sp-3); gap: var(--sp-2); }
+.tl-tabs { display: flex; align-items: center; min-height: 36px; padding: var(--sp-1) var(--sp-2); gap: var(--sp-2); background: var(--head); }
 .tl-tabs > .iconbtn, .tl-tabs > .select-chip, .tl-tabs > .tool-chip { flex: 0 0 auto; }
 .tl-tabs .divider { width: 1px; height: 18px; background: var(--edge); margin: 0 var(--sp-2); }
 .tl-tabs .tl-tc { font-variant-numeric: tabular-nums; color: var(--ink-soft); margin: 0 var(--sp-2); }
 .tl-tabs .spacer { flex: 1 1 var(--sp-4); min-width: var(--sp-4); }
 .tl-tab {
-  padding: 4px 14px;
-  border-radius: var(--radius-s) var(--radius-s) 0 0;
+  padding: 4px 12px;
+  border-radius: var(--radius-m);
   color: var(--ink-soft);
 }
-.tl-tab.is-active { background: var(--float); color: var(--ink); }
+.tl-tab.is-active { background: var(--raise); box-shadow: inset 0 0 0 1px var(--raise-edge); color: var(--ink); font-weight: 500; }
 /* The tool row is gone as a band of its own: the redesign puts the editing
    tools in the black corner above the track heads, level with the ruler, and
    everything else, the timeline actions and the zoom controls, on the tab row.
@@ -1255,7 +1264,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 /* F7: the keyframe and graph toggle share a height and a baseline. */
 .kfb-toggle { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: var(--radius-s); background: var(--inset); }
 .kfb-toggle > button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: calc(var(--radius-s) - 1px); background: transparent; color: var(--ink-soft); }
-.kfb-toggle > button.is-active { background: var(--cue); color: var(--on-cue); }
+.kfb-toggle > button.is-active { background: var(--cue-soft); box-shadow: inset 0 0 0 1px var(--cue-line); color: var(--cue-ink); }
 .kfb-toggle > button svg { width: 15px; height: 15px; }
 
 /* F20: the marquee and the selected keyframes. */
@@ -1324,7 +1333,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   background: var(--float); display: flex; flex-direction: column; gap: var(--sp-3);
 }
 .place-rows { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.place-track.is-on { background: var(--cue); color: var(--on-cue); }
+.place-track.is-on { background: var(--cue-soft); box-shadow: inset 0 0 0 1px var(--cue-line); color: var(--ink); }
 .place-at { display: flex; align-items: center; gap: var(--sp-2); }
 .set-view { position: relative; }
 
@@ -1633,7 +1642,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pw-empty { color: var(--ink-faint); font-size: 12px; padding: var(--sp-2) 0; }
 .pw-seg { display: inline-flex; background: var(--inset); border-radius: var(--radius-s); padding: 2px; gap: 2px; align-self: flex-start; }
 .pw-seg button { border: 0; background: transparent; color: var(--ink-soft); padding: 4px 10px; border-radius: 4px; white-space: nowrap; display: inline-flex; align-items: center; cursor: pointer; }
-.pw-seg button.is-active { background: var(--cue); color: var(--on-cue); }
+.pw-seg button.is-active { background: var(--raise); box-shadow: inset 0 0 0 1px var(--raise-edge); color: var(--ink); }
 .pw-motions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px var(--sp-2); font-size: 12px; }
 .pw-motions label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .pw-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px; align-items: center; gap: var(--sp-2); font-size: 12px; }
@@ -1642,7 +1651,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .pw-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .pw-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .pw-views { display: flex; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--edge); overflow-x: auto; }
-.pw-views .tool-chip.is-on { background: var(--cue); color: var(--on-cue); }
+.pw-views .tool-chip.is-on { background: var(--cue-soft); border-color: var(--cue-line); color: var(--ink); }
 .pw-view { flex: 1; min-height: 0; display: grid; place-items: center; padding: var(--sp-3); overflow: hidden; background: #0b0d0e; }
 .pw-stage { position: relative; aspect-ratio: var(--ar, 16 / 9); width: 100%; max-height: 100%; max-width: calc((100vh - 220px) * 16 / 9); overflow: hidden; }
 .pw-inner { position: absolute; inset: 0; transform-origin: 0 0; }
