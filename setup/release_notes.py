@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write a formcut release's notes, as the release workflow publishes them.
+"""Write a formcut release's notes, as setup/release_assets writes them for the release.
 
     python setup/release_notes.py --version 1.32.0 > notes.md
 

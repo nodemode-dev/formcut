@@ -14,7 +14,7 @@ one, say).
 
     python setup/bundle_ffmpeg.py --target aarch64-apple-darwin
 
-Run by .github/workflows/release.yml and setup/build_macos_app, in an environment
+Run by setup/build_release and setup/build_macos_app, in an environment
 with the engine's requirements installed.
 """
 

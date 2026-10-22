@@ -3,7 +3,7 @@
 The release stages formcut's verified LGPL build as a Tauri resource under plain
 program names. These check that an installed engine finds it where each
 platform's installer puts it, that adopting it writes nothing, and that the
-workflow and the bundle config agree on the folder.
+release build script and the bundle config agree on the folder.
 """
 
 from __future__ import annotations
@@ -66,23 +66,23 @@ def test_a_plainly_named_bundle_is_adopted_without_writing(monkeypatch, tmp_path
 
 
 def workflow() -> str:
-    return (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    return (ROOT / "setup" / "build_release").read_text(encoding="utf-8")
 
 
 def test_the_release_bundles_ffmpeg_on_every_platform():
     text = workflow()
-    step = text[text.index("- name: bundle ffmpeg") : text.index("- name: build the app")]
-    assert "runner.os" not in step
+    step = text[text.index('say "bundle ffmpeg"') : text.index('say "build the app"')]
+    assert "RUNNER_OS" not in step and "if [" not in step
 
 
 def test_ffmpeg_is_staged_before_the_app_is_built():
     text = workflow()
-    assert text.index("- name: bundle ffmpeg") < text.index("- name: build the app")
+    assert text.index('say "bundle ffmpeg"') < text.index('say "build the app"')
 
 
 def test_the_release_checks_the_bundle_with_the_apps_own_check():
     text = workflow()
-    step = text[text.index("- name: bundle ffmpeg") : text.index("- name: build the app")]
+    step = text[text.index('say "bundle ffmpeg"') : text.index('say "build the app"')]
     assert "python setup/bundle_ffmpeg.py --target" in step
     script = (ROOT / "setup" / "bundle_ffmpeg.py").read_text(encoding="utf-8")
     assert "ffmpeg_fetch.install(" in script and "ffmpeg_fetch.pins(" in script

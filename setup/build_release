@@ -1,0 +1,112 @@
+#!/bin/bash
+# Builds formcut's release zip for one platform, from the repository root.
+#
+#   setup/build_release --target aarch64-apple-darwin      (macOS, Apple Silicon; run on macOS 14)
+#   setup/build_release --target x86_64-pc-windows-msvc    (Windows, x86_64; run in bash on Windows)
+#   setup/build_release --target x86_64-unknown-linux-gnu  (Linux, x86_64; run on Ubuntu 22.04)
+#
+# The steps are the former release workflow's build job, in its order: the minimum
+# macOS, the interface, the frozen engine, formcut's LGPL ffmpeg, the app, the zip
+# in release-dist/, and on macOS a check of the app as a person downloads it.
+#
+# This repository builds nothing itself: nodemode-ai/formcompiler runs this script
+# for each platform from a compile_vX.Y.Z branch and opens the draft release.
+#
+# Why Ubuntu 22.04: the AppImage then runs on glibc 2.35 and newer.
+# Intel Macs are not built here: setup/build_macos_app --intel builds one on any Mac.
+# The macOS app is signed ad hoc (tauri.conf.json: signingIdentity "-"), which
+# needs no Apple account: without it Tauri leaves the bundle unsealed and macOS
+# calls a downloaded copy damaged, with no way to open it. It is not notarized,
+# so the release notes say how to open it the first time. Hardened runtime is
+# off: it matters only for notarization, and its library validation would stop
+# the one-file engine loading its own libraries and OpenH264 loading Cisco's.
+# The Windows app is unsigned.
+#
+# The caller provides (formerly actions): Python 3.12 (python on PATH), Node 20
+# with npm, a Rust toolchain with the target installed, and on Linux the apt
+# packages libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
+# librsvg2-dev patchelf file. Network access to the formcut-binaries release,
+# where the LGPL ffmpeg comes from.
+set -euo pipefail
+
+say() { printf '\n== %s ==\n' "$1"; }
+
+TARGET=
+case "${1:-}" in
+  --target) TARGET="${2:-}" ;;
+esac
+case "$TARGET" in
+  aarch64-apple-darwin) BUNDLES="--bundles app" ;;
+  x86_64-pc-windows-msvc) BUNDLES="--no-bundle" ;;
+  x86_64-unknown-linux-gnu) BUNDLES="--bundles appimage" ;;
+  *) echo "usage: setup/build_release --target aarch64-apple-darwin|x86_64-pc-windows-msvc|x86_64-unknown-linux-gnu"; exit 1 ;;
+esac
+
+cd "$(dirname "$0")/.."
+
+case "$(uname -s)" in
+  Darwin) RUNNER_OS=macOS ;;
+  Linux) RUNNER_OS=Linux ;;
+  *) RUNNER_OS=Windows ;;
+esac
+
+if [ "$RUNNER_OS" = macOS ]; then
+  say "the minimum macOS"
+  MACOSX_DEPLOYMENT_TARGET=$(python -c "import json; print(json.load(open('src-tauri/tauri.conf.json'))['bundle']['macOS']['minimumSystemVersion'])")
+  export MACOSX_DEPLOYMENT_TARGET
+fi
+
+# The interface is built first because the frozen engine carries it.
+say "build the interface"
+(
+  cd frontend
+  npm ci
+  npm run build
+)
+
+# The Rust kernels go into the engine, and an engine without them is refused,
+# as setup/build_macos_app does. PyPI's OpenCV brings its own FFmpeg, which
+# freeze.py refuses, so prepare_cv.py rebuilds it first.
+say "freeze the engine"
+(
+  cd backend
+  python -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
+  python -m maturin build --release --manifest-path native/Cargo.toml --target "$TARGET" --features gpu --out native-dist
+  python -m pip install --force-reinstall --no-deps native-dist/*.whl
+  python -c "import formcut_native; print('kernels load:', formcut_native.__file__)"
+  # the executor every speed reading used (GpuFrame exists only with --features gpu): a release without it is refused
+  python -c "import formcut_native, sys; sys.exit(0 if hasattr(formcut_native, 'GpuFrame') else 'the Rust kernels were built without the GPU executor')"
+  python prepare_cv.py
+  python freeze.py --onefile
+  suffix=""
+  if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
+  check=$(./dist/formcut-engine$suffix --selfcheck)
+  echo "$check"
+  case "$check" in *'"native_kernels": true'*) ;; *) echo "the engine was frozen without formcut's Rust kernels"; exit 1 ;; esac
+  mkdir -p ../src-tauri/binaries
+  cp "dist/formcut-engine$suffix" "../src-tauri/binaries/formcut-engine-$TARGET$suffix"
+)
+
+# formcut's LGPL ffmpeg from the formcut-binaries release, every file checked
+# against the record by the code the app's first-run fetch uses.
+say "bundle ffmpeg"
+python setup/bundle_ffmpeg.py --target "$TARGET"
+
+say "build the app"
+# linuxdeploy is an AppImage; extracting it lets it run without FUSE.
+APPIMAGE_EXTRACT_AND_RUN=1 npx --yes @tauri-apps/cli@2 build --target "$TARGET" $BUNDLES
+
+say "package the zip"
+python setup/package_release.py --target "$TARGET"
+
+# The app as a person gets it: unzipped from the release zip, then checked
+# as Gatekeeper checks it. A signature that does not seal the bundle is what
+# macOS reports as damaged, so it stops the release here.
+if [ "$RUNNER_OS" = macOS ]; then
+  say "the downloaded macOS app is sealed"
+  unpacked=$(mktemp -d)
+  ditto -x -k release-dist/*.zip "$unpacked"
+  codesign --verify --deep --strict --verbose=2 "$unpacked/formcut.app"
+  codesign -dv "$unpacked/formcut.app" 2>&1 | tee /dev/stderr | grep -q "Signature=adhoc"
+  codesign --verify --strict "$unpacked/formcut.app/Contents/MacOS/formcut-engine"
+fi

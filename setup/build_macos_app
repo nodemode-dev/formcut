@@ -59,7 +59,7 @@ $RUN python3 -m venv "$VENV"
 PY="$RUN $VENV/bin/python"
 $PY -m pip install --upgrade pip >/dev/null
 $PY -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
-# The kernels release.yml builds, for the engine's own architecture.
+# The kernels setup/build_release builds, for the engine's own architecture.
 rm -rf native-dist
 $PY -m maturin build --release --manifest-path native/Cargo.toml --target "$TRIPLE" --interpreter "$VENV/bin/python" --features gpu --out native-dist
 $PY -m pip install --force-reinstall --no-deps native-dist/*.whl

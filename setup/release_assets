@@ -1,0 +1,35 @@
+#!/bin/bash
+# Writes a release's manifest.json, SHA256SUMS and notes.md, from the repository root.
+#
+#   setup/release_assets --version 2.9.2 --dir release-dist
+#
+# Run after every zip, apk and ipa is in the folder (setup/build_release, then
+# setup/build_phone). manifest.json and SHA256SUMS are written into the folder;
+# notes.md is written to the repository root, as the release workflow's publish
+# job did. Nothing is published here: nodemode-ai/formcompiler does that.
+#
+# The caller provides: Python 3.12 with python on PATH, sha256sum, and a checkout
+# with its tags (git fetch --tags), because the notes list the commits since the
+# previous v* tag.
+set -euo pipefail
+
+VERSION=
+DIR=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --version) VERSION="${2:-}"; shift 2 ;;
+    --dir) DIR="${2:-}"; shift 2 ;;
+    *) break ;;
+  esac
+done
+if [ -z "$VERSION" ] || [ -z "$DIR" ] || [ "$#" -gt 0 ]; then
+  echo "usage: setup/release_assets --version X.Y.Z --dir release-dist"
+  exit 1
+fi
+
+cd "$(dirname "$0")/.."
+
+python setup/release_manifest.py --version "$VERSION" --dir "$DIR" > manifest.json
+(cd "$DIR" && sha256sum -- *.zip *.apk *.ipa > SHA256SUMS)
+mv manifest.json "$DIR/manifest.json"
+python setup/release_notes.py --version "$VERSION" > notes.md

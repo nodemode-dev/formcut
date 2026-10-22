@@ -63,7 +63,9 @@ def check_files() -> None:
         "src-tauri/Cargo.toml",
         "src-tauri/binaries/ffmpeg-licence.json",
         "src-tauri/ffmpeg/README.md",
-        ".github/workflows/release.yml",
+        "setup/build_release",
+        "setup/build_phone",
+        "setup/release_assets",
         ".github/workflows/checks.yml",
         "frontend/package.json",
         "frontend/index.html",
@@ -97,11 +99,14 @@ def check_tauri() -> None:
 
 
 def check_workflows() -> None:
-    for relative in (".github/workflows/release.yml", ".github/workflows/checks.yml"):
-        text = read(ROOT / relative)
-        if "\t" in text:
-            problems.append(f"{relative} contains a tab, which YAML forbids for indentation")
-        for referenced in re.findall(r"(?:python|run:\s*python)\s+(setup/[\w./-]+|backend/[\w./-]+)", text):
+    checks = ROOT / ".github/workflows/checks.yml"
+    if "\t" in read(checks):
+        problems.append(".github/workflows/checks.yml contains a tab, which YAML forbids for indentation")
+    # The build lives in setup/build_release, run by nodemode-ai/formcompiler.
+    relative = "setup/build_release"
+    script = ROOT / relative
+    if script.is_file():
+        for referenced in re.findall(r"(?:python|run:\s*python)\s+(setup/[\w./-]+|backend/[\w./-]+)", read(script)):
             if not (ROOT / referenced).exists():
                 problems.append(f"{relative} calls {referenced}, which does not exist")
 
@@ -153,7 +158,7 @@ def check_licences() -> None:
         problems.append("Licences.md does not say which ffmpeg build is shipped; a GPL build imposes its terms on the bundle")
     else:
         notes.append("an ffmpeg licence is recorded")
-    release = ROOT / ".github/workflows/release.yml"
+    release = ROOT / "setup/build_release"
     if not release.is_file():
         # check_files has already named it; reading it here would end the run
         # with a traceback instead of a list of problems, and a preflight that
@@ -162,7 +167,7 @@ def check_licences() -> None:
     workflow = read(release)
     if "--allow-gpl" in workflow or "fetch_ffmpeg" in workflow:
         problems.append(
-            "the release workflow fetches an ffmpeg of its own; the app fetches formcut's LGPL build on first run, "
+            "the release build (setup/build_release) fetches an ffmpeg of its own; the app fetches formcut's LGPL build on first run, "
             "and a GPL build in the bundle would make it GPL-3.0 rather than Apache-2.0"
         )
     elif "setup/bundle_ffmpeg.py" in workflow:

@@ -4,8 +4,10 @@ name: checks
 # and type-checks, the engine passes its lint and its full test suite, and the
 # desktop shell compiles and is formatted.
 #
-# Only main is checked: pushes to it, and pull requests into it. Other branches
-# run nothing until they are proposed for main. A push to main that touches only
+# Only main and compile_v* branches are checked: pushes to them, and pull requests
+# into main. A compile_vX.Y.Z branch is cut from a release commit for
+# nodemode-ai/formcompiler to build. Other branches run nothing until they are
+# proposed for main. A push to main that touches only
 # documentation skips the run; the Markdown under .claude is generated from the
 # code and held by the tests, so a change there still runs. Pull requests always
 # run, whatever they touch, because a ruleset that requires these checks would
@@ -15,7 +17,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, 'compile_v*']
     paths:
       - "**"
       - "!**/*.md"

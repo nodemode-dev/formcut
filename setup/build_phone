@@ -1,0 +1,60 @@
+#!/bin/bash
+# Builds formcut's phone apps, from the repository root.
+#
+#   setup/build_phone android 2.9.2    on Linux (Ubuntu 24.04): release-dist/formcut-2.9.2-android-arm64.apk
+#   setup/build_phone ios 2.9.2        on macOS: release-dist/formcut-2.9.2-ios-arm64.ipa
+#
+# The steps are the former release workflow's android and ios jobs. The phone apps
+# are unsigned as the owner chose: an APK signed with Android's debug key (an APK
+# needs some signature to install at all; the debug key needs no account or
+# secret), and an iOS IPA with no signature, which AltStore, SideStore or
+# Sideloadly sign with the installer's own Apple ID. Each takes the release's
+# version through --config, so the phone apps report the version they were
+# released as.
+#
+# This repository builds nothing itself: nodemode-ai/formcompiler runs this script.
+#
+# The caller provides (formerly actions): Node 22 with npm and a Rust toolchain
+# with the target installed (aarch64-linux-android for android, aarch64-apple-ios
+# for ios). For android also Java 17 (temurin) and the Android SDK with
+# sdkmanager on PATH and ANDROID_SDK_ROOT set; the NDK is installed here.
+set -euo pipefail
+
+usage() { echo "usage: setup/build_phone android|ios VERSION"; exit 1; }
+
+PLATFORM="${1:-}"
+VERSION="${2:-}"
+[ -n "$VERSION" ] || usage
+
+cd "$(dirname "$0")/../mobile"
+
+case "$PLATFORM" in
+  android)
+    sdkmanager --install "ndk;27.0.12077973"
+    export NDK_HOME="$ANDROID_SDK_ROOT/ndk/27.0.12077973"
+    npm install
+    npx tauri android init --ci
+    npx tauri icon ../src-tauri/icons/icon.png
+    # the APK, signed with the debug key
+    npx tauri android build --debug --apk --target aarch64 --config "{\"version\":\"$VERSION\"}"
+    # name it for the release
+    apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -n 1)
+    test -n "$apk" || { echo "no APK was built"; exit 1; }
+    mkdir -p ../release-dist
+    cp "$apk" "../release-dist/formcut-$VERSION-android-arm64.apk"
+    ;;
+  ios)
+    npm install
+    npx tauri ios init --ci
+    npx tauri icon ../src-tauri/icons/icon.png
+    # --no-sign (Tauri CLI 2.11.0 and later) archives without signing and packs
+    # the .app into an IPA for third-party installers.
+    npx tauri ios build --no-sign --target aarch64 --config "{\"version\":\"$VERSION\"}"
+    # name it for the release
+    ipa=$(find src-tauri/gen/apple -name '*.ipa' | head -n 1)
+    test -n "$ipa" || { echo "no IPA was built"; exit 1; }
+    mkdir -p ../release-dist
+    cp "$ipa" "../release-dist/formcut-$VERSION-ios-arm64.ipa"
+    ;;
+  *) usage ;;
+esac

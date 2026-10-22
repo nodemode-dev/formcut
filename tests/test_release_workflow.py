@@ -1,22 +1,24 @@
-"""The release workflow: when it builds, what it builds, and what it publishes.
+"""The release build scripts: what they build, and what they write for the release.
 
-It cannot run here, so its rules are checked from the file: only the maintainer
-starts it, by hand and from main; it builds only a version with no tag yet unless
-asked to rebuild, every platform is checked and packaged the same way,
-nothing is published unless every build succeeded, and the notes name exactly the
-zips setup/package_release.py writes.
+The name is kept from when a workflow here did this. Now nodemode-ai/formcompiler
+builds and publishes formcut, and calls setup/build_release, setup/build_phone and
+setup/release_assets; when it runs, who starts it and the publishing live there.
+These scripts cannot run here, so their rules are checked from the files: the
+three targets, every platform checked, bundled and packaged the same way, the
+phone apps built unsigned, the macOS app sealed and checked after packaging, and
+the notes naming exactly the zips setup/package_release.py writes.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
-import yaml
-
 ROOT = Path(__file__).resolve().parent.parent
-WORKFLOW = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
-JOBS = WORKFLOW["jobs"]
+BUILD = (ROOT / "setup" / "build_release").read_text(encoding="utf-8")
+PHONE = (ROOT / "setup" / "build_phone").read_text(encoding="utf-8")
+ASSETS = (ROOT / "setup" / "release_assets").read_text(encoding="utf-8")
 
 
 def _load(name: str):
@@ -27,25 +29,7 @@ def _load(name: str):
 
 
 def _targets() -> list[str]:
-    return [entry["target"] for entry in JOBS["build"]["strategy"]["matrix"]["include"]]
-
-
-def _runs(job: str) -> str:
-    return "\n".join(step.get("run", "") for step in JOBS[job]["steps"])
-
-
-def test_only_a_hand_run_from_main_starts_it():
-    triggers = WORKFLOW[True]  # YAML reads the key "on" as true
-    assert set(triggers) == {"workflow_dispatch"}, "no push, tag or schedule may start a release"
-    rebuild = triggers["workflow_dispatch"]["inputs"]["rebuild"]
-    assert rebuild["type"] == "boolean" and rebuild["default"] is False
-    assert 'if [ "$GITHUB_REF" != "refs/heads/main" ]' in _runs("version")
-
-
-def test_only_a_version_without_a_tag_builds():
-    assert "refs/tags/v$version" in _runs("version")
-    for job in ("build", "publish"):
-        assert JOBS[job]["if"] == "needs.version.outputs.build == 'true'"
+    return re.findall(r"^  (\S+)\) BUNDLES=", BUILD, re.MULTILINE)
 
 
 def test_the_three_platforms_it_ships():
@@ -53,18 +37,13 @@ def test_the_three_platforms_it_ships():
 
 
 def test_every_platform_is_checked_bundled_and_packaged_alike():
-    runs = _runs("build")
-    assert '"native_kernels": true' in runs
-    assert "setup/bundle_ffmpeg.py" in runs
-    assert "setup/package_release.py" in runs
-    assert any(step.get("uses", "").startswith("actions/upload-artifact") for step in JOBS["build"]["steps"])
-
-
-def test_nothing_is_published_unless_every_build_succeeded():
-    assert JOBS["publish"]["needs"] == ["version", "build", "android", "ios"]
-    runs = _runs("publish")
-    assert "setup/release_notes.py" in runs and "gh release create" in runs and "--clobber" in runs
-    assert "setup/release_manifest.py" in runs and "SHA256SUMS" in runs and "release-dist/*" in runs
+    assert '"native_kernels": true' in BUILD
+    assert "setup/bundle_ffmpeg.py" in BUILD
+    assert "setup/package_release.py" in BUILD
+    for step in ("freeze the engine", "bundle ffmpeg", "build the app", "package the zip"):
+        assert f'say "{step}"' in BUILD
+    assert "setup/release_notes.py" in ASSETS and "setup/release_manifest.py" in ASSETS
+    assert "SHA256SUMS" in ASSETS and "manifest.json" in ASSETS
 
 
 def test_the_notes_name_exactly_the_zips_that_are_built():
@@ -75,15 +54,10 @@ def test_the_notes_name_exactly_the_zips_that_are_built():
         assert f"`formcut-9.9.9-{platform}-{arch}.zip`" in text
 
 
-def test_the_phone_apps_are_built_unsigned_and_gate_the_release():
-    jobs = JOBS
-    assert set(jobs["publish"]["needs"]) >= {"build", "android", "ios"}
-    android = " ".join(step.get("run", "") for step in jobs["android"]["steps"])
-    ios = " ".join(step.get("run", "") for step in jobs["ios"]["steps"])
-    assert "tauri android build --debug --apk --target aarch64" in android and "android-arm64.apk" in android
-    assert "tauri ios build --no-sign --target aarch64" in ios and "ios-arm64.ipa" in ios
-    for job in ("android", "ios"):
-        assert jobs[job]["env"]["VERSION"] == "${{ needs.version.outputs.version }}"
+def test_the_phone_apps_are_built_unsigned_with_the_release_version():
+    assert "tauri android build --debug --apk --target aarch64" in PHONE and "android-arm64.apk" in PHONE
+    assert "tauri ios build --no-sign --target aarch64" in PHONE and "ios-arm64.ipa" in PHONE
+    assert PHONE.count('--config "{\\"version\\":\\"$VERSION\\"}"') == 2
 
 
 def test_the_macos_app_is_sealed_and_checked_as_a_download():
@@ -93,8 +67,7 @@ def test_the_macos_app_is_sealed_and_checked_as_a_download():
     mac = json.loads((ROOT / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))["bundle"]["macOS"]
     assert mac["signingIdentity"] == "-", "ad hoc: seals the bundle with no Apple account"
     assert mac["hardenedRuntime"] is False, "library validation would stop the one-file engine and OpenH264"
-    check = next(step for step in JOBS["build"]["steps"] if step.get("name") == "the downloaded macOS app is sealed")
-    assert check["if"] == "runner.os == 'macOS'"
-    assert "ditto -x -k release-dist/*.zip" in check["run"] and "codesign --verify --deep --strict" in check["run"]
-    names = [step.get("name") for step in JOBS["build"]["steps"]]
-    assert names.index("the downloaded macOS app is sealed") > names.index("package the zip")
+    sealed = BUILD.index('say "the downloaded macOS app is sealed"')
+    assert BUILD.rindex('if [ "$RUNNER_OS" = macOS ]; then', 0, sealed) > BUILD.index('say "package the zip"')
+    check = BUILD[sealed:]
+    assert "ditto -x -k release-dist/*.zip" in check and "codesign --verify --deep --strict" in check
