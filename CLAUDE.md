@@ -69,6 +69,6 @@ follow; `./formcut agents sync --check` fails while they drift, and
 `setup/preflight.py` runs it before a release.
 
 The reasoning behind a change belongs in its commit message, and releases, with
-their notes, are on the GitHub Releases page. The repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
+their notes, are on formcompiler's release page (github.com/nodemode-ai/formcompiler/releases). The repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
 the project skills under `.claude/skills/` and code. Licences for assets and
 dependencies are in `.docs/wiki/Licences.md`.

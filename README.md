@@ -199,7 +199,7 @@ generated from the server by `setup/mcp_tool_reference.py`.
 
 ## Releasing
 
-A release is a version, and only the maintainer makes one: bump it, push to `main` (which runs the checks), then run the release workflow on `main` from the Actions tab, or `gh workflow run release.yml --ref main`. `.github/workflows/release.yml` then builds macOS (Apple silicon), Windows and Linux and publishes one zip for each on the release `v<version>`. Run `python setup/preflight.py` before pushing: it refuses a version that disagrees anywhere, a build that refers to a missing file, or an ffmpeg licence that has not been decided. See [RELEASING.md](RELEASING.md).
+formcut builds nothing in its own repository. A release is a version, and only the maintainer makes one: bump it, push to `main` (which runs the checks), then push a branch `compile_vX.Y.Z` cut from main's head. nodemode-ai/formcompiler picks the branch up on its 8-hourly watch or a manual run, builds macOS (Apple silicon), Windows, Linux and the phone apps with `setup/build_release`, `setup/build_phone` and `setup/release_assets`, and opens a draft `formcut-vX.Y.Z` on [its release page](https://github.com/nodemode-ai/formcompiler/releases) for the maintainer to review and publish. Run `python setup/preflight.py` before pushing: it refuses a version that disagrees anywhere, a build that refers to a missing file, or an ffmpeg licence that has not been decided. See [RELEASING.md](RELEASING.md).
 
 ## Development
 

@@ -30,7 +30,7 @@ A claim that was not run is not a result. Before reporting finished:
 
 Every turn that changes the repository bumps the version in all eight places (frontend package.json and its lockfile twice, backend main.py, tauri.conf.json, Cargo.toml, Cargo.lock and the readme badge) and hands back a versioned artifact. Commits are scoped to a feature or a fix, never to a version dump, and their messages say what changed, why, and what was measured.
 
-The reasoning behind a change belongs in its commit message; releases and their notes are on the GitHub Releases page. The repository carries the readme, the contributor guide, the wiki source, the project skills and code.
+The reasoning behind a change belongs in its commit message; releases and their notes are on formcompiler's release page. The repository carries the readme, the contributor guide, the wiki source, the project skills and code.
 
 ## Naming
 

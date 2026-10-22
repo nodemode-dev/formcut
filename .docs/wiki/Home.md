@@ -25,4 +25,4 @@ formcut is a local video editor: a TypeScript interface, a Python engine that re
 | `src-tauri/` | the desktop shell |
 | `.docs/wiki` | these pages |
 
-Every release is on the [Releases page](https://github.com/nodemode-ai/formcut/releases), with its downloads, checksums and the changes it carries.
+Every release is on the [Releases page](https://github.com/nodemode-ai/formcompiler/releases), with its downloads, checksums and the changes it carries.
