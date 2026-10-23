@@ -17,6 +17,7 @@ Route a formcut MCP request to the right specialist, and make sure the ground is
 | --- | --- |
 | install, register, config, host, cannot see the tools, not answering, FORMCUT_ENGINE | `../mcp-setup/SUB-SKILL.md` |
 | cutdowns: :06, :15 or :30 spots cut from a longer master, versions of an ad, bar-aligned joins, delivery QC | `../cutdown/SUB-SKILL.md` |
+| remove, cut out or delete a sentence, line, mistake or filler word by what is said | `../remove-speech/SUB-SKILL.md` |
 | make, cut, assemble, edit, trim, add effects, find scenes, render, export, where is my file | `../mcp-workflows/SUB-SKILL.md` |
 | make or design a look, filter, preset or effect package; list or remove packages | `../mcp-workflows/SUB-SKILL.md` (workflow 4) |
 | add a tool, change a tool, rename, parameter, SDK, formcut_mcp.py itself | `../mcp-development/SUB-SKILL.md` |

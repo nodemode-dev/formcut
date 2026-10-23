@@ -52,7 +52,7 @@ Anything outside the interface drives formcut through `POST /api/rpc`: 21
 methods, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
 engine's MCP server (`backend/app/agent_mcp.py`, run as `formcut-engine --mcp`,
-or from a checkout as `./formcut mcp`) is that surface packaged as 31 MCP tools
+or from a checkout as `./formcut mcp`) is that surface packaged as 32 MCP tools
 over stdio. ANA
 connecting in will use this surface, so extend it rather than adding a second
 path.
@@ -89,6 +89,7 @@ The transcript marks and the timeline cuts. Keep it that way, in the interface, 
 - A range's edges come from the audio (speech onset and offset, `speech_range` in `backend/app/speech.py`), never from caption or word times, and nothing falls back to caption times when no speech is found.
 - A transcript row or a selection of its words never selects footage or clips; the time button only seeks.
 - No word-level selection that snaps a range to word boundaries, no sharing a transcript selection as a video clip with another person, and no cutting by deleting words from the transcript text.
+- An agent removes what someone says through `formcut_transcribe`, `formcut_speech_range` and `timeline.cut-range` (the `remove-speech` sub-skill of `formcut-mcp`); the app gains no transcript-panel cut control for it.
 - The filler-word finder stays automatic: it finds ranges for review and cuts them as a batch, never "select filler text, then cut".
 
 ## Commits

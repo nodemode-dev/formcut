@@ -69,14 +69,16 @@ Title styles ride `clip.text` patches like any other style field, so the full pr
 
 ## MCP server
 
-The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 31 tools over stdio,
+The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 32 tools over stdio,
 each a thin, documented wrapper over the RPC above; the full listing is generated into
 `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`. By purpose:
 
 - Engine and projects: `formcut_status`, `formcut_capabilities`, `formcut_catalogue`, `formcut_list_projects`,
   `formcut_create_project`, `formcut_get_project`, `formcut_edit`, `formcut_add_clip`, `formcut_set_frame`.
 - Media: `formcut_import_media`, `formcut_list_media`, `formcut_media_proxy`, `formcut_find_scenes`,
-  `formcut_transcribe` (sentences with their times; the small model by default).
+  `formcut_transcribe` (sentences with their times; the small model by default), `formcut_speech_range` (RPC
+  `speech.range`: `mediaId`, `start`, `end` in source seconds; answers `start`, `end` and `source`, the span someone
+  speaks found in the audio, refused when there is none).
 - Rendering: `formcut_render` (format, quality, rate, size, codec, ten bit, exact, audio bitrate, a loudness target
   with a true-peak ceiling), `formcut_render_audio`, `formcut_render_status`, `formcut_cancel_render`.
 - Delivery checks: `formcut_qc`, `formcut_frame_check`, `formcut_speech_check`.
@@ -103,7 +105,8 @@ each a thin, documented wrapper over the RPC above; the full listing is generate
 `formcut_render_status` opens every reply with `state:` and a numeric `progress:` (then `file:`, or `reason:` when a job
 failed or was interrupted). Tools that need a measurement of a source first (the frame, speech and cutdown checks)
 start a job on the first call and say so; poll `formcut_render_status` with its id, then call again. The `cutdown`
-sub-skill in `.claude/skills/formcut-mcp` walks a whole cutdown through these tools.
+sub-skill in `.claude/skills/formcut-mcp` walks a whole cutdown through these tools, and the `remove-speech` sub-skill
+removes the footage of sentences a person names (transcribe, `formcut_speech_range`, then `timeline.cut-range`).
 
 ### v2.5.7 to v2.6.2: delivery and cutdowns
 
