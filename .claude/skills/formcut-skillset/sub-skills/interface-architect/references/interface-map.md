@@ -28,12 +28,12 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/media.ts` (82L)
 - `engine/motion.ts` (25L)
 - `engine/persistence.ts` (237L)
-- `engine/project.ts` (1387L)
+- `engine/project.ts` (1404L)
 - `engine/seed.ts` (52L)
 - `engine/timing.ts` (96L)
 - `engine/types.ts` (372L)
 - `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1576L)
+- `i18n/language-pack.ts` (1581L)
 - `i18n/text.ts` (29L)
 - `main.ts` (99L)
 - `types/assets.d.ts` (6L)
@@ -56,20 +56,20 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/focus-moves.ts` (259L)
 - `ui/font-tools.ts` (25L)
 - `ui/icons-lucide.ts` (48L)
-- `ui/icons.ts` (58L)
+- `ui/icons.ts` (59L)
 - `ui/inspector-pane.ts` (1746L)
 - `ui/instagram.ts` (185L)
 - `ui/interface-mode.ts` (246L)
 - `ui/keyed-list.ts` (12L)
 - `ui/keymap.ts` (152L)
 - `ui/library-view.ts` (145L)
-- `ui/media-pane.ts` (1447L)
+- `ui/media-pane.ts` (1478L)
 - `ui/missing-media.ts` (103L)
 - `ui/mode-popout.ts` (157L)
 - `ui/planar-workspace.ts` (1406L)
 - `ui/preset-grid.ts` (20L)
 - `ui/preview-manipulation.ts` (559L)
-- `ui/pro-view.ts` (418L)
+- `ui/pro-view.ts` (427L)
 - `ui/recorder.ts` (344L)
 - `ui/remote-settings.ts` (93L)
 - `ui/render-preview.ts` (244L)
@@ -80,7 +80,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/studio-tools.ts` (1464L)
 - `ui/tiktok-dialog.ts` (258L)
 - `ui/tiktok-settings.ts` (89L)
-- `ui/timeline-pane.ts` (768L)
+- `ui/timeline-pane.ts` (798L)
 - `ui/timeline-structure.ts` (50L)
 - `ui/title-speech.ts` (53L)
 - `ui/titlebar.ts` (550L)
@@ -160,6 +160,8 @@ and a UI module that mutates state directly is a defect.
 - `project.rename`
 - `project.saved`
 - `project.sync-folder`
+- `range.clear`
+- `range.set`
 - `timeline.activate`
 - `timeline.cut-range`
 - `timeline.move`

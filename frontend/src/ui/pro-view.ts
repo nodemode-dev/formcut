@@ -270,8 +270,11 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
     else if (name === "overwrite") edit("edit.overwrite");
     else if (name === "export") void exportTimeline();
     else if (name === "import") fileInput.click();
-    else if (name === "tin") rangeIn = engine.snapshot.playhead;
-    else if (name === "tout") rangeOut = engine.snapshot.playhead;
+    else if (name === "tin" || name === "tout") {
+      if (name === "tin") rangeIn = engine.snapshot.playhead;
+      else rangeOut = engine.snapshot.playhead;
+      if (rangeIn !== null && rangeOut !== null) engine.dispatch("range.set", { start: rangeIn, end: rangeOut });
+    }
     else if ((name === "lift" || name === "extract") && rangeIn !== null && rangeOut !== null) {
       const start = Math.min(rangeIn, rangeOut);
       const end = Math.max(rangeIn, rangeOut);
@@ -399,6 +402,12 @@ export function buildProView(engine: ProjectEngine, bin: MediaBin) {
   });
   engine.subscribe((_state, changed) => {
     if (!el.hidden && (changed === "timeline" || changed === "project" || changed === "clips")) fillTracks();
+    if (changed === "timeline" || changed === "clips") {
+      const shared = engine.range;
+      if (shared) { rangeIn = shared.start; rangeOut = shared.end; }
+      else if (rangeIn !== null && rangeOut !== null) { rangeIn = null; rangeOut = null; }
+      showMarks();
+    }
   });
 
   return {

@@ -54,6 +54,7 @@
   --cue-soft: color-mix(in srgb, var(--cue) 20%, var(--pane));
   --cue-soft-hover: color-mix(in srgb, var(--cue) 30%, var(--pane));
   --cue-line: color-mix(in srgb, var(--cue) 48%, var(--control-press));
+  --cue-veil: color-mix(in srgb, var(--cue) 16%, transparent);
   --cue-ink: color-mix(in srgb, var(--cue) 80%, var(--ink));
 
   --radius-s: 6px;
@@ -72,6 +73,7 @@
   --z-base: 0;
   --z-clip: 100;
   --z-handles: 200;
+  --z-range: 250;
   --z-ruler: 300;
   --z-playhead: 400;
   --z-sticky: 500;

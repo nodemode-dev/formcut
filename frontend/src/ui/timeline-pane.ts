@@ -43,6 +43,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     paintMarkers();
     el.dataset.scale = String(PX_PER_SEC);
   reconcile();
+    paintRange();
     scroller.scrollLeft = Math.max(0, engine.snapshot.playhead * PX_PER_SEC - scroller.clientWidth / 2);
     playhead.style.left = `${HEAD_W + engine.snapshot.playhead * PX_PER_SEC}px`;
   };
@@ -68,6 +69,10 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       <button class="tool-chip" data-ref="chip-focus" data-feature="chip.focus" title="${t("focus.tip")}">${icon("pip")}${t("focus.title")}</button>
       <button class="tool-chip" data-ref="chip-device" data-feature="chip.device" title="${t("dev.tip")}">${icon("phone")}${t("dev.add")}</button>
       <button class="iconbtn" title="${t('tool.addtrack')}" data-ref="act-add-track" data-feature="act.addTrack" data-label="${t('tool.addtrack')}">${icon("addTrack")}</button>
+      <span class="divider"></span>
+      <button class="tool-chip" data-ref="range-extract" data-feature="range.extract" title="${t("range.extract.tip")}" disabled>${icon("range")}${t("pro.extract")}</button>
+      <button class="tool-chip" data-ref="range-lift" data-feature="range.lift" title="${t("range.lift.tip")}" disabled>${t("pro.lift")}</button>
+      <button class="iconbtn" data-ref="range-clear" data-feature="range.clear" title="${t("range.clear")}" aria-label="${t("range.clear")}" disabled>${icon("close")}</button>
       <span class="spacer"></span>
       <span class="tl-tc" data-ref="tc">${formatTimecode(s.playhead, s.fps)}</span>
       <button class="iconbtn" title="${t('tool.fit')}" data-ref="zoom-fit" data-feature="zoom.fit" data-label="${t('tool.fit')}">${icon("fit")}</button>
@@ -100,6 +105,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
           <div class="lane" style="width:${laneW}px">${t.clips.map((c) => clipHtml(c, s.selectedClipId)).join("")}</div>`,
           )
           .join("")}
+        <div class="tl-range" data-ref="range" hidden></div>
         <div class="playhead" data-ref="playhead" style="left:${HEAD_W + s.playhead * PX_PER_SEC}px"><button class="playhead-grab" data-ref="playhead-grab" aria-label="Scrub playhead"></button></div>
       </div>
     </div>`;
@@ -108,6 +114,29 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   const tc = el.querySelector<HTMLElement>('[data-ref="tc"]')!;
   const scroller = el.querySelector<HTMLElement>('[data-ref="scroller"]')!;
   const rulerEl = el.querySelector<HTMLElement>('[data-ref="ruler"]')!;
+  const rangeBand = el.querySelector<HTMLElement>('[data-ref="range"]')!;
+  const rangeButtons = ["range-extract", "range-lift", "range-clear"].map((ref) => el.querySelector<HTMLButtonElement>(`[data-ref="${ref}"]`)!);
+  const paintRange = () => {
+    const mark = engine.range && engine.range.timeline === engine.snapshot.activeTimeline ? engine.range : null;
+    if (rangeBand.hidden !== !mark) rangeBand.hidden = !mark;
+    for (const button of rangeButtons) if (button.disabled !== !mark) button.disabled = !mark;
+    if (!mark) return;
+    const left = `${HEAD_W + mark.start * PX_PER_SEC}px`;
+    const width = `${(mark.end - mark.start) * PX_PER_SEC}px`;
+    if (rangeBand.style.left !== left) rangeBand.style.left = left;
+    if (rangeBand.style.width !== width) rangeBand.style.width = width;
+    const title = `${formatTimecode(mark.start, engine.snapshot.fps)} - ${formatTimecode(mark.end, engine.snapshot.fps)}`;
+    if (rangeBand.title !== title) rangeBand.title = title;
+  };
+  rangeButtons[0].addEventListener("click", () => {
+    const mark = engine.range;
+    if (mark) engine.dispatch("timeline.cut-range", { start: mark.start, end: mark.end });
+  });
+  rangeButtons[1].addEventListener("click", () => {
+    const mark = engine.range;
+    if (mark) engine.dispatch("edit.lift", { start: mark.start, end: mark.end });
+  });
+  rangeButtons[2].addEventListener("click", () => engine.dispatch("range.clear"));
 
   const scrubTo = (clientX: number) => {
     const rect = rulerEl.getBoundingClientRect();
@@ -324,7 +353,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   });
 
   engine.subscribe((state, changed) => {
-    if (changed === "clips" || changed === "timeline" || changed === "project") reconcile();
+    if (changed === "clips" || changed === "timeline" || changed === "project") { reconcile(); paintRange(); }
     if (changed === "clip-selection") syncSelection();
     if (changed !== "playhead") return;
     playhead.style.left = `${HEAD_W + state.playhead * PX_PER_SEC}px`;
@@ -762,6 +791,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
   control("act-add-track")?.addEventListener("click", () => engine.dispatch("track.add", {}));
   scroller.addEventListener("pointercancel", () => { drag = null; reconcile(); });
   reconcile();
+  paintRange();
   installTrackKeyframes(el, engine, lanes);
   installWorkArea(el, engine, rulerEl);
   return el;

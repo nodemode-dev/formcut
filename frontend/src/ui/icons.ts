@@ -49,6 +49,7 @@ export const icons: Record<string, string> = {
   terminal: wrap('<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M4.8 6.3 7 8.2l-2.2 1.9M8.2 10.4h3"/>'),
   tone: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2"/></svg>`,
   close: wrap('<path d="M4 4l8 8M12 4l-8 8"/>'),
+  range: wrap('<path d="M5.5 3H3v10h2.5M10.5 3H13v10h-2.5"/><path d="M6.5 8h3"/>'),
 };
 
 export function icon(name: string): string {

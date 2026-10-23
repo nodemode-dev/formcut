@@ -6,6 +6,7 @@ import { reconcilePresets } from "./preset-grid";
 import { thumbUrl, type MediaBin, type MediaItem } from "../engine/media";
 import { mediaView as viewOf, openViewer, type ViewItem } from "./viewer";
 import { formatTimecode, type ProjectEngine } from "../engine/project";
+import { sourceTime } from "../engine/timing";
 import type { MediaKind } from "../engine/types";
 import { MASK_SHAPES, defaultTextStyle, defaultTransform, type Clip, type TextStyle } from "../engine/types";
 import { captionLook, transcribeClip, typedCaptions, wordTimes } from "../engine/captions";
@@ -948,6 +949,43 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
   // clip.text, which refits the caption's word times to the new text.
   const transcript = el.querySelector<HTMLElement>('[data-ref="cap-transcript"]')!;
   const transcriptRows = new Map<string, HTMLElement>();
+  const markSpeech = async (captionId: string, button: HTMLButtonElement) => {
+    const caption = engine.findClip(captionId)?.clip;
+    if (!caption || button.dataset.busy) return;
+    const snapshot = engine.snapshot;
+    const middle = caption.start + caption.duration / 2;
+    const voiced = snapshot.timelines[snapshot.activeTimeline].tracks
+      .filter((track) => !track.muted)
+      .flatMap((track) => track.clips)
+      .find((each) => (each.kind === "audio" || each.kind === "video") && each.mediaId && !each.muted && each.start <= middle && each.start + each.duration >= middle);
+    if (!voiced?.mediaId) { capSay(t("cap.noRange")); return; }
+    const local = (time: number) => Math.min(voiced.duration, Math.max(0, time - voiced.start));
+    const from = local(caption.start);
+    const to = local(caption.start + caption.duration);
+    const rate = (at: number) => Math.max(0.01, (sourceTime(voiced, Math.min(voiced.duration, at + 0.04)) - sourceTime(voiced, at)) / 0.04);
+    button.dataset.busy = "1";
+    const busy = window.setTimeout(() => { button.classList.add("is-busy"); button.title = t("cap.listening"); }, 300);
+    try {
+      const res = await fetch("/api/speech/range", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-formcut-local": "1" },
+        body: JSON.stringify({ mediaId: voiced.mediaId, start: sourceTime(voiced, from), end: sourceTime(voiced, to) }),
+      });
+      if (!res.ok) { capSay(t("cap.noRange")); return; }
+      const found = (await res.json()) as { start: number; end: number };
+      const start = voiced.start + from + (found.start - sourceTime(voiced, from)) / rate(from);
+      const end = voiced.start + to + (found.end - sourceTime(voiced, to)) / rate(Math.max(0, to - 0.04));
+      engine.dispatch("range.set", { start, end });
+      if (engine.range) engine.dispatch("transport.seek", engine.range.start);
+    } catch {
+      capSay(t("cap.noRange"));
+    } finally {
+      window.clearTimeout(busy);
+      button.classList.remove("is-busy");
+      button.title = t("cap.markRange");
+      delete button.dataset.busy;
+    }
+  };
   const paintTranscript = () => {
     const snapshot = engine.snapshot;
     const track = snapshot.timelines[snapshot.activeTimeline]?.tracks[Number(capPick("cap-track")) || 0];
@@ -964,21 +1002,14 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         row = document.createElement("div");
         row.className = "cap-line";
         row.dataset.clip = clip.id;
-        row.innerHTML = `<button type="button" class="cap-tc"></button><input class="cap-text" type="text" /><button type="button" class="iconbtn cap-cut" title="${t("cap.cutFootage")}" aria-label="${t("cap.cutFootage")}">${icon("blade")}</button>`;
+        row.innerHTML = `<button type="button" class="cap-tc"></button><input class="cap-text" type="text" /><button type="button" class="iconbtn cap-mark" title="${t("cap.markRange")}" aria-label="${t("cap.markRange")}">${icon("range")}</button>`;
         const id = clip.id;
         row.querySelector("button")!.addEventListener("click", () => {
           const found = engine.findClip(id);
-          if (!found) return;
-          engine.dispatch("transport.seek", found.clip.start);
-          engine.dispatch("clip.select", id);
+          if (found) engine.dispatch("transport.seek", found.clip.start);
         });
-        // Text-based editing: the sentence goes and so does the footage under
-        // it, on every track, with everything after moved back.
-        row.querySelector<HTMLButtonElement>(".cap-cut")!.addEventListener("click", () => {
-          const found = engine.findClip(id);
-          if (!found) return;
-          engine.dispatch("timeline.cut-range", { start: found.clip.start, end: found.clip.start + found.clip.duration });
-        });
+        const mark = row.querySelector<HTMLButtonElement>(".cap-mark")!;
+        mark.addEventListener("click", () => void markSpeech(id, mark));
         const field = row.querySelector<HTMLInputElement>("input")!;
         field.addEventListener("change", () => {
           const found = engine.findClip(id);

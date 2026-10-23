@@ -73,6 +73,8 @@ export class ProjectEngine {
   private pendingBefore: DocumentSlice | null = null;
   private foldKey: string | null = null;
   private foldAt = 0;
+  /** The marked span on a timeline that Extract and Lift act on; not part of the document, so not saved or undone. */
+  range: { start: number; end: number; timeline: number } | null = null;
 
   private snapshotObj(): DocumentSlice {
     return structuredClone({
@@ -490,6 +492,7 @@ export class ProjectEngine {
             track.clips = kept;
             forget(removed);
           });
+          this.range = null;
           s.saved = false;
           this.emit("clips");
           break;
@@ -536,11 +539,24 @@ export class ProjectEngine {
         this.emit("clips");
         break;
       }
+      case "range.set": {
+        const p = payload as { start: number; end: number };
+        const start = Math.max(0, Math.min(p.start, p.end));
+        const end = Math.min(s.duration, Math.max(p.start, p.end));
+        if (!(end - start > 0.01)) break;
+        this.range = { start: Math.round(start * 1000) / 1000, end: Math.round(end * 1000) / 1000, timeline: s.activeTimeline };
+        this.emit("timeline");
+        break;
+      }
+      case "range.clear":
+        if (!this.range) break;
+        this.range = null;
+        this.emit("timeline");
+        break;
       case "timeline.cut-range": {
-        // Text-based editing: a span of the timeline goes, on every track.
+        // Extract: a span of the timeline goes, on every track.
         // A clip inside the span is removed, one straddling it is cut into a
-        // head and a tail, and everything after it moves back by the length,
-        // so the footage under a deleted sentence leaves with the sentence.
+        // head and a tail, and everything after it moves back by the length.
         const p = payload as { start: number; end: number };
         const start = Math.max(0, Math.min(p.start, p.end));
         const length = Math.max(0, Math.max(p.start, p.end) - start);
@@ -584,6 +600,7 @@ export class ProjectEngine {
           track.clips = kept;
         }
         if (s.playhead > start) s.playhead = Math.max(start, s.playhead - length);
+        this.range = null;
         s.saved = false;
         this.emit("clips");
         break;

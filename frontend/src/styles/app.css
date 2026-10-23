@@ -607,6 +607,15 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   border: 5px solid transparent;
   border-top: 7px solid var(--now-line);
 }
+.tl-range {
+  position: absolute; top: 0; bottom: 0;
+  background: var(--cue-veil);
+  border-left: 1px solid var(--cue-line);
+  border-right: 1px solid var(--cue-line);
+  box-sizing: border-box;
+  z-index: var(--z-range);
+  pointer-events: none;
+}
 .playhead-grab {
   position: absolute; top: 0; left: 50%;
   transform: translateX(-50%);
@@ -1013,6 +1022,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .cap-line { display: flex; align-items: center; gap: var(--sp-1); }
 .cap-tc { flex: none; border: 0; border-radius: var(--radius-s); background: var(--inset); color: var(--ink-soft); font: inherit; font-size: 11px; font-variant-numeric: tabular-nums; padding: 4px 6px; cursor: pointer; }
 .cap-tc:hover { color: var(--ink); }
+.cap-mark.is-busy { opacity: 0.5; cursor: progress; }
 .cap-line .cap-text { flex: 1; min-width: 0; padding: 4px 6px; border: 1px solid var(--edge); border-radius: var(--radius-s); background: var(--inset); color: var(--ink); font: inherit; font-size: 12px; }
 .title-card.is-active .effect-thumb { outline: 2px solid var(--cue); outline-offset: -2px; }
 .title-card.is-active .effect-name { color: var(--ink); }

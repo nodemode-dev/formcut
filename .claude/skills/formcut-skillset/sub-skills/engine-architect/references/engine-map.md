@@ -47,12 +47,12 @@ The rest is written by hand.
 | krea2.py | 797 | /api/models/krea-2 | 6 |
 | library.py | 2506 | /api/library | 5 |
 | linking.py | 352 | /api/media/link | 6 |
-| local_speech.py | 425 | /api/speech | 4 |
+| local_speech.py | 445 | /api/speech | 5 |
 | loras.py | 487 | /api/loras | 5 |
 | main.py | 482 | /api/health | 13 |
 | media.py | 1069 | /api/media | 26 |
 | media_check.py | 130 | /api/media/health | 1 |
-| model_manager.py | 773 | /api/models | 8 |
+| model_manager.py | 877 | /api/models | 8 |
 | orchestration.py | 150 | /api/orchestration | 4 |
 | planar_api.py | 1273 | /api/planar | 19 |
 | presets.py | 620 | /api/presets | 9 |
@@ -139,7 +139,7 @@ the automation transports.
 - `scenes.py` (110L)
 - `security.py` (68L)
 - `segmentation.py` (323L)
-- `speech.py` (105L)
+- `speech.py` (155L)
 - `stabilise.py` (209L)
 - `store.py` (107L)
 - `subject.py` (220L)

@@ -347,7 +347,7 @@ def apply_edit(project: dict, command: dict):
                 raise ValueError("No timeline by that id")
         return {"angles": sync_tracks(target, float(command.get("seconds", 120)))}
     elif operation == "timeline.cut-range":
-        # Text-based editing over RPC: a span leaves every track, clips inside
+        # Extract over RPC: a span leaves every track, clips inside
         # it go, clips straddling it are cut into a head and a tail, and what
         # follows moves back by the length, the interface's own command.
         start = min(float(command["start"]), float(command["end"]))
