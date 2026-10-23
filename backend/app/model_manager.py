@@ -254,19 +254,20 @@ MODELS = {
         # diffusion runner reads (models/diffusion/sd-turbo).
         "name": "SD Turbo (local image generation)",
         "license": "Stability AI Non-Commercial Research Community License (non-commercial)",
+        "optional": True,
+        # onnxruntime/sd-turbo at 80d4d2e238a7c61a83053b931f2354ab43dd3688, 10 files; that revision has no unet or
+        # vae_decoder config.json, which the runner treats as optional
         "files": {
-            "diffusion/sd-turbo/LICENSE": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/LICENSE",
-            "diffusion/sd-turbo/model_index.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/model_index.json",
-            "diffusion/sd-turbo/scheduler/scheduler_config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/scheduler/scheduler_config.json",
-            "diffusion/sd-turbo/tokenizer/merges.txt": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/merges.txt",
-            "diffusion/sd-turbo/tokenizer/special_tokens_map.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/special_tokens_map.json",
-            "diffusion/sd-turbo/tokenizer/tokenizer_config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/tokenizer_config.json",
-            "diffusion/sd-turbo/tokenizer/vocab.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/tokenizer/vocab.json",
-            "diffusion/sd-turbo/unet/config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/unet/config.json",
-            "diffusion/sd-turbo/vae_decoder/config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/vae_decoder/config.json",
-            "diffusion/sd-turbo/text_encoder/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/text_encoder/model.onnx",
-            "diffusion/sd-turbo/unet/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/unet/model.onnx",
-            "diffusion/sd-turbo/vae_decoder/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/main/vae_decoder/model.onnx",
+            "diffusion/sd-turbo/LICENSE": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/LICENSE",
+            "diffusion/sd-turbo/model_index.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/model_index.json",
+            "diffusion/sd-turbo/scheduler/scheduler_config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/scheduler/scheduler_config.json",
+            "diffusion/sd-turbo/tokenizer/merges.txt": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/tokenizer/merges.txt",
+            "diffusion/sd-turbo/tokenizer/special_tokens_map.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/tokenizer/special_tokens_map.json",
+            "diffusion/sd-turbo/tokenizer/tokenizer_config.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/tokenizer/tokenizer_config.json",
+            "diffusion/sd-turbo/tokenizer/vocab.json": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/tokenizer/vocab.json",
+            "diffusion/sd-turbo/text_encoder/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/text_encoder/model.onnx",
+            "diffusion/sd-turbo/unet/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/unet/model.onnx",
+            "diffusion/sd-turbo/vae_decoder/model.onnx": "https://huggingface.co/onnxruntime/sd-turbo/resolve/80d4d2e238a7c61a83053b931f2354ab43dd3688/vae_decoder/model.onnx",
         },
     },
     "ai-upscale": {
@@ -289,7 +290,7 @@ MODELS = {
         "license": "MIT",
         # whether someone is speaking, under music too: the cut check refuses an edit with speech on both sides
         "files": {
-            "silero_vad.onnx": "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx",
+            "silero_vad.onnx": "https://github.com/snakers4/silero-vad/raw/5cd7945676eb32225748052e2e6a0580e4686a08/src/silero_vad/data/silero_vad.onnx",
         },
     },
 }
@@ -352,7 +353,9 @@ def download(model: str, report, cancelled):
             # A per-model source may override the declared one; keeping it in a
             # separate name makes clear the loop's value is not being rewritten.
             download_url = source_for(model, name, url)
-            limit = int(MODELS[model].get("maxFileBytes", 2_000_000_000))
+            if not PINNED.get(name) and not MODELS[model].get("added"):
+                raise ValueError(f"{name} has no pinned checksum, so it is not downloaded")
+            limit =int(MODELS[model].get("maxFileBytes", 2_000_000_000))
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_suffix(path.suffix + ".download")
             digest = hashlib.sha256()
@@ -501,11 +504,93 @@ HUB_PREFETCH = {
     for model in WHISPER_MODELS
 }
 _hub_lock = threading.Lock()
+# Each Whisper repository is fetched at one revision, and only the files the window's and the engine's transcribers
+# read, each pinned to its SHA-256 (Hugging Face's LFS hash for the ONNX files, the fetched file's hash for the rest,
+# 23 October 2026). A path not listed is answered as missing.
+HUB_REVISIONS = {
+    "Xenova/whisper-tiny.en": "79fb389fc764e7c395bd330e9531d9d32ada7049",
+    "Xenova/whisper-base.en": "95bf40a508535962c6483ead40270b2e32267508",
+    "Xenova/whisper-small.en": "fa16a75f5d91e83ecb6a2ccb690f14d91ef00ca4",
+    "onnx-community/whisper-tiny": "ff4177021cc41f7db950912b73ea4fdf7d01d8e7",
+    "onnx-community/whisper-base": "1846881b6b3a3024392c1eea3ad983695bc23925",
+    "onnx-community/whisper-small": "36050c46d777d46dc4b5f43f6d90574fc38f8732",
+    "Xenova/whisper-medium.en": "4fbcf6e6deb6b1af698e6925bfe00730bd4be715",
+    "Xenova/whisper-medium": "8c5b90880ab9f79487ab33613413431bf661d595",
+    "onnx-community/whisper-large-v3-turbo": "360ebcde2559d60bb474678be3c1de9ef347d01a",
+}
+HUB_PINNED = {
+    "Xenova/whisper-tiny.en/config.json": "37a1073be00d19118c06557896c7c148598f4d8277edc0f5bc07c9f5554839f1",
+    "Xenova/whisper-tiny.en/generation_config.json": "132c95ba9db45f4498f2eab3fea7c1d6a174005010f8f6b7d20cfd5e9795996b",
+    "Xenova/whisper-tiny.en/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "Xenova/whisper-tiny.en/tokenizer.json": "c6ee8f089220a5b1188f6426456772572671c6141ae007eecb83c6a8349f5deb",
+    "Xenova/whisper-tiny.en/tokenizer_config.json": "e082c1ad251541bf277967a703252cddd4bb37a71a43737e03d050c22ec08238",
+    "Xenova/whisper-tiny.en/onnx/encoder_model_quantized.onnx": "8cc3c6f8563d1b3fbd2c5af9f64c2bed8b020bc593c402d1ef53b9f08fbf1b90",
+    "Xenova/whisper-tiny.en/onnx/decoder_model_merged_quantized.onnx": "dbb2e063b7fbc41d9803b9698f93ecb035c50cbb3fb87b56cb131e4a5eb99059",
+    "Xenova/whisper-base.en/config.json": "5c390f2c6ba84ddeb7e362cd8b2123832911407850174e64d7081ccc36df2d64",
+    "Xenova/whisper-base.en/generation_config.json": "1e57ed56ad1bd7f08a49ece7fe7daada674573805a35f8bdbbe68380aab5b1ee",
+    "Xenova/whisper-base.en/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "Xenova/whisper-base.en/tokenizer.json": "c6ee8f089220a5b1188f6426456772572671c6141ae007eecb83c6a8349f5deb",
+    "Xenova/whisper-base.en/tokenizer_config.json": "e082c1ad251541bf277967a703252cddd4bb37a71a43737e03d050c22ec08238",
+    "Xenova/whisper-base.en/onnx/encoder_model_quantized.onnx": "d0d4e59e2842617b39787cece73d7e8f76f99b1697d3386c0e682eca2269f4a1",
+    "Xenova/whisper-base.en/onnx/decoder_model_merged_quantized.onnx": "a25afc5858a20aabb7652cb2d555996ebe10691a69bbdb423d5073d52f060325",
+    "Xenova/whisper-small.en/config.json": "afddc76e1d6b2e13e5a85a385d55d272ed61f6797d7d32895492620387336cf6",
+    "Xenova/whisper-small.en/generation_config.json": "dde54f4ed982cf4f57450f2d23eb5f97dd64dbc390c66a635a34a57e965b16a7",
+    "Xenova/whisper-small.en/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "Xenova/whisper-small.en/tokenizer.json": "c6ee8f089220a5b1188f6426456772572671c6141ae007eecb83c6a8349f5deb",
+    "Xenova/whisper-small.en/tokenizer_config.json": "e082c1ad251541bf277967a703252cddd4bb37a71a43737e03d050c22ec08238",
+    "Xenova/whisper-small.en/onnx/encoder_model_quantized.onnx": "dd37efa07dad7619592ef849a40317dcfd182a2e632275a53a023f02f685cfa7",
+    "Xenova/whisper-small.en/onnx/decoder_model_merged_quantized.onnx": "7cff5df61a1809654a5e62d89cbb99e8231b229f41412ab626a1d8fff77397ab",
+    "onnx-community/whisper-tiny/config.json": "46aeea0a406afbeb563fc8e59ca10609203df4299af6a83f73752fef369efd2d",
+    "onnx-community/whisper-tiny/generation_config.json": "f5c67e5a4f7102f8cb4d058bc95da276bbc19eeec997267c3bb0f25ef68facd1",
+    "onnx-community/whisper-tiny/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "onnx-community/whisper-tiny/tokenizer.json": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+    "onnx-community/whisper-tiny/tokenizer_config.json": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+    "onnx-community/whisper-tiny/onnx/encoder_model_quantized.onnx": "2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19",
+    "onnx-community/whisper-tiny/onnx/decoder_model_merged_quantized.onnx": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3",
+    "onnx-community/whisper-base/config.json": "f4d0608f7d918166da7edb3e188de5ef1bfe70d9802e785d271fd88111e9cf4b",
+    "onnx-community/whisper-base/generation_config.json": "61070cf8de25b1e9256e8e102ded49d8d24a8369ed36ef84fdf21549e68125a0",
+    "onnx-community/whisper-base/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "onnx-community/whisper-base/tokenizer.json": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+    "onnx-community/whisper-base/tokenizer_config.json": "2e036e4dbacfdeb7242c7d4ec4149f4a16e86026048f94d1637e3a8ee9c6a573",
+    "onnx-community/whisper-base/onnx/encoder_model_quantized.onnx": "5862993336bf33acd23736071aae2b32261d3b1b2f37780194460d4ef974dd46",
+    "onnx-community/whisper-base/onnx/decoder_model_merged_quantized.onnx": "fa3ef9902734ce5ae6f9ef2bdb2ba9a6c4b5785b09f4f420ce036573dc9d090b",
+    "onnx-community/whisper-small/config.json": "457854d452f17661e197d74aee12b8e74fb75ba30ebfaa7426d0d61ea1e08a18",
+    "onnx-community/whisper-small/generation_config.json": "f538b28220c6a6d6f1af1458d4141cacb4ef4963df3de98a19490440c412ddf0",
+    "onnx-community/whisper-small/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "onnx-community/whisper-small/tokenizer.json": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+    "onnx-community/whisper-small/tokenizer_config.json": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+    "onnx-community/whisper-small/onnx/encoder_model_quantized.onnx": "a43a83f3c5361cd591cfa7c36f14b43cf7cb22f47a415cc14a8d557be800fa92",
+    "onnx-community/whisper-small/onnx/decoder_model_merged_quantized.onnx": "ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9",
+    "Xenova/whisper-medium.en/config.json": "dcf21f63715cddd621a286a9fa7f49a273e5aeb49dc3fd255ba96f7c0df2367b",
+    "Xenova/whisper-medium.en/generation_config.json": "c018584392aba8786e9c944475fa17656b65801809ff1082d644989d90b17eec",
+    "Xenova/whisper-medium.en/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "Xenova/whisper-medium.en/tokenizer.json": "c6ee8f089220a5b1188f6426456772572671c6141ae007eecb83c6a8349f5deb",
+    "Xenova/whisper-medium.en/tokenizer_config.json": "e082c1ad251541bf277967a703252cddd4bb37a71a43737e03d050c22ec08238",
+    "Xenova/whisper-medium.en/onnx/encoder_model_quantized.onnx": "c6fdaff8017b837b7b205ccd1d5f283008f4ee9677a29e503b3cf8e68efa9bb3",
+    "Xenova/whisper-medium.en/onnx/decoder_model_merged_quantized.onnx": "0b009dc2d71add45954b927ff01815d25d9d397bbb8b2ad72c6b9bd3279d7607",
+    "Xenova/whisper-medium/config.json": "a9c2ef0290a8fa3d203231dd01a074891b7f595d5d305ead2aac8ac5e6e47105",
+    "Xenova/whisper-medium/generation_config.json": "c57f39da43ff86f60451a1c978743ca48fd995ac5d7e3c3534f856d0bed57770",
+    "Xenova/whisper-medium/preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+    "Xenova/whisper-medium/tokenizer.json": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+    "Xenova/whisper-medium/tokenizer_config.json": "2a4c4281cf9f51ac6ccc406fdc711a087afe6530f671fa7b80953edc498275ce",
+    "Xenova/whisper-medium/onnx/encoder_model_quantized.onnx": "7d6b4a00e441271646327f8a71b6e1bd1a305013cd914b51ddd76919c59ee3af",
+    "Xenova/whisper-medium/onnx/decoder_model_merged_quantized.onnx": "2cdd6d06ebdf9d993d21117bfeeb7e9b399521b7766d3df77c54a85d6dcf3c08",
+    "onnx-community/whisper-large-v3-turbo/config.json": "35cd83669f75bc2867f3b3a4461850392d5e308cd6ea951c3700539883c28df1",
+    "onnx-community/whisper-large-v3-turbo/generation_config.json": "16f95291d2f47c944d3c2b19390bba7965666555c1ea2a0bdc850d1fab45612f",
+    "onnx-community/whisper-large-v3-turbo/preprocessor_config.json": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711",
+    "onnx-community/whisper-large-v3-turbo/tokenizer.json": "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca",
+    "onnx-community/whisper-large-v3-turbo/tokenizer_config.json": "844b642c73a91359722f47b35705f7174686df33d252695d8572cf9ac03a6389",
+    "onnx-community/whisper-large-v3-turbo/onnx/encoder_model_quantized.onnx": "d2f853dc3254fdc0079f55dd4433ea716ac98ec5574d3b475f288f2a77cebba9",
+    "onnx-community/whisper-large-v3-turbo/onnx/decoder_model_merged_quantized.onnx": "61481bd3be3a445d5a4b9070e8f8b2c6cc4fbbbbdc9f0e7ed048a132b8b84e0d",
+}
 
 
 def hub_fetch(model: str, path: str):
     parts = path.split("/")
     if model not in HUB_MODELS or any(part in ("", ".", "..") or "\\" in part for part in parts):
+        return None
+    expected = HUB_PINNED.get(f"{model}/{path}")
+    if expected is None or model not in HUB_REVISIONS:
         return None
     target = HUB.joinpath(*model.split("/"), *parts)
     with _hub_lock:
@@ -513,8 +598,10 @@ def hub_fetch(model: str, path: str):
             return target
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_name(target.name + ".download")
+        digest = hashlib.sha256()
         try:
-            with httpx.stream("GET", f"https://huggingface.co/{model}/resolve/main/{path}", follow_redirects=True, timeout=120) as response:
+            url = f"https://huggingface.co/{model}/resolve/{HUB_REVISIONS[model]}/{path}"
+            with httpx.stream("GET", url, follow_redirects=True, timeout=120) as response:
                 if response.status_code == 404:
                     return None
                 response.raise_for_status()
@@ -525,6 +612,9 @@ def hub_fetch(model: str, path: str):
                         if written > 1_000_000_000:
                             raise ValueError("Model file exceeds the download limit")
                         out.write(chunk)
+                        digest.update(chunk)
+            if digest.hexdigest() != expected:
+                raise ValueError(f"Checksum mismatch for {model}/{path}")
             temporary.replace(target)
         finally:
             temporary.unlink(missing_ok=True)
@@ -562,9 +652,23 @@ def import_model(model: str, file: UploadFile):
     return {"model": model, "ready": ready(model)}
 
 
-# P8: pinned SHA-256 per file. A name absent here is unpinned and recorded on
-# first download instead, so a pin can be added from a verified machine later.
+# P8: pinned SHA-256 per file. A built-in file absent here is refused by download(); only a speech model the person
+# added themselves (its own URL, "added") downloads unpinned, with its hash recorded beside it.
 PINNED: dict[str, str] = {
+    # SD Turbo at the revision in its URLs: Hugging Face's LFS SHA-256 for the ONNX files, the fetched file's hash for
+    # the small ones (23 October 2026)
+    "diffusion/sd-turbo/LICENSE": "60be11ed67b0840980a84926b826e08cd41cfddac28f78a93ed2f8021af42623",
+    "diffusion/sd-turbo/model_index.json": "6957dc0b3fd7908e41aad5d1226fb8e57c986a2de3467948e7bd5c67bb737fe2",
+    "diffusion/sd-turbo/scheduler/scheduler_config.json": "979f1cf4f8e8e3dc9566ab4b1ed14fb9be0b2b44ee9b5b7d073744e2a578d1cf",
+    "diffusion/sd-turbo/tokenizer/merges.txt": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+    "diffusion/sd-turbo/tokenizer/special_tokens_map.json": "c2d0fb8b86ad86b1f46134d4a5f93fd1e688c932a78efc8d149087c33a53ad06",
+    "diffusion/sd-turbo/tokenizer/tokenizer_config.json": "516314ccab66918d7cb647480ac27abd3520d14e1e5825aac99f50c851c16071",
+    "diffusion/sd-turbo/tokenizer/vocab.json": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+    "diffusion/sd-turbo/text_encoder/model.onnx": "a0d07fcce1858783b635c4027a562c89690d7c9f3f36c6129f1aa35af380f3d8",
+    "diffusion/sd-turbo/unet/model.onnx": "3b1170b54ca0ceafe1c709cd0268bd98892928e5589a7d72aec817669472beda",
+    "diffusion/sd-turbo/vae_decoder/model.onnx": "8b5a9263fbd3ebd2647bae8e99cc99fdcff70a0b1b6a77ca7544c5f3e9e91649",
+    # Silero VAD v6.2.3 (commit 5cd79456), the same bytes as silero_vad/data/silero_vad.onnx in the 6.2.3 wheel
+    "silero_vad.onnx": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
     # Krea 2's builds and its content filter: the SHA-256 Hugging Face records for each large file at the pinned
     # revision, and for each small one the hash of the file fetched on 27 September 2026
     "krea-2-mlx-q8/.DS_Store": "bb49144c3319391c31ee22524247e886d795c3841d431559557dd3353cf13c29",
