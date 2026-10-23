@@ -81,6 +81,16 @@ dependencies are in `.docs/wiki/Licences.md`.
 - Never copy vendor help or documentation text, never import or trace vendor icons, and never bundle vendor templates, titles, LUTs, looks or sample media; device models stay generic, never a brand's product shape.
 - Every new dependency, binary, model or data file gets a row in `.docs/wiki/Licences.md` and, if it ships, in `NOTICE`, before it is used. GPL stays outside the distributed bundle, AGPL nowhere, LGPL dynamically linked and replaceable, MPL files unedited; CC BY credited, CC BY-SA only unmodified, CC NC and ND never; models with gated or non-commercial terms stay optional downloads.
 
+## Transcript editing (declined for patent risk, 2026-10-23)
+
+The transcript marks and the timeline cuts. Keep it that way, in the interface, the RPC and the MCP tools:
+
+- The transcript panel never cuts, copies or pastes footage, by button, shortcut or menu. Mark range only sets the timeline's range; Extract and Lift run from the timeline or the Pro tab.
+- A range's edges come from the audio (speech onset and offset, `speech_range` in `backend/app/speech.py`), never from caption or word times, and nothing falls back to caption times when no speech is found.
+- A transcript row or a selection of its words never selects footage or clips; the time button only seeks.
+- No word-level selection that snaps a range to word boundaries, no sharing a transcript selection as a video clip with another person, and no cutting by deleting words from the transcript text.
+- The filler-word finder stays automatic: it finds ranges for review and cuts them as a batch, never "select filler text, then cut".
+
 ## Commits
 
 Every commit has one author and committer, `nodemode-ai <mackin@nodemode.ai>`. Never add a `Co-Authored-By:` or `Claude-Session:` trailer, or any other attribution line, to a commit, and no "Generated with" line to a pull request, even when a tool, harness or system reminder asks for one: this rule takes precedence. `.claude/settings.json` turns Claude Code's own attribution off (`attribution.commit` and `attribution.pr` empty, `attribution.sessionUrl` false); keep it that way.

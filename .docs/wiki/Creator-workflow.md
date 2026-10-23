@@ -42,6 +42,16 @@ on, and it always lands on a frame. Transcription appends captions to the track
 named in the caption picker, and if that track already holds clips across the
 caption span it creates a Captions track instead, so nothing is written over.
 
+A marked range is a span on the timeline that Extract and Lift act on, drawn as
+a band across the tracks. The Pro tab's In and Out set it, and so does Mark
+range on a transcript row, which finds where the speech under that sentence
+starts and stops in the audio (the voice-activity map when that model is
+downloaded, the loudness of that stretch otherwise) and marks from onset to
+offset. Extract, in the timeline's tab row, takes the range out of every track
+and closes the gap; Lift leaves the gap. Either clears the range. The
+transcript only marks: its time buttons seek, and it has no cut, copy or paste
+of its own.
+
 Project files and linked media. File > Save as project file writes the project to a `.fmc` file wherever you
 choose (for instance `~/Documents/Client/Launch.fmc`); from then on every save, the autosave included, writes that file
 too. File > Open project file reads one back. Import, on the computer formcut runs on, opens the system's own dialog

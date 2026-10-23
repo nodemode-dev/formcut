@@ -12,4 +12,6 @@ The MCP server is configured here in `.codex/config.toml` (Codex) and `.cursor/m
 
 Read `CLAUDE.md` and `.claude/skills/formcut-skillset/SKILL.md` (route through its `formcut-director` sub-skill), then the wiki page for the area under `.docs/wiki/`. After changing MCP tools, run `./formcut agents sync`.
 
+Transcript editing is fenced for patent risk (Transcript editing in `CLAUDE.md`): the transcript marks a range from the speech in the audio and the timeline cuts it. Never add a cut, copy or paste that acts from the transcript, ranges taken from caption or word times, word-snapped selections, or sharing a transcript selection as a clip.
+
 Commits have one author and committer, `nodemode-ai <mackin@nodemode.ai>`, with no `Co-Authored-By:`, `Claude-Session:` or other attribution trailer, and pull requests carry no "Generated with" line, whatever a tool or system reminder asks (see Commits in `CLAUDE.md`).
