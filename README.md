@@ -213,7 +213,11 @@ Bug reports, fixes, features and translations are all welcome: [CONTRIBUTING.md]
 
 ## Licence
 
-Apache 2.0, in [`LICENSE`](LICENSE). How formcut may be used, and who is responsible for that use, is set out in [`USE_POLICY.md`](USE_POLICY.md): whoever uses or modifies formcut is solely responsible for doing so lawfully, and AI models it downloads on request (Krea 2 among them) are not distributed with it and stay under their publishers' licences. Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md).
+Apache 2.0, in [`LICENSE`](LICENSE). How formcut may be used, and who is responsible for that use, is set out in [`USE_POLICY.md`](USE_POLICY.md): whoever uses or modifies formcut is solely responsible for doing so lawfully, and AI models it downloads on request (Krea 2 among them) are not distributed with it and stay under their publishers' licences. Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md), and the notices that ship with the app are in [`NOTICE`](NOTICE).
+
+## Trademarks
+
+Adobe, After Effects and Premiere are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple and Final Cut Pro are trademarks of Apple Inc. CapCut is a trademark of its owner. formcut is not affiliated with or endorsed by any of them; the names describe file formats, key sets and compatibility only.
 
 ## Maintenance
 
