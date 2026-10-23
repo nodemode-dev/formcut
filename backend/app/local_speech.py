@@ -423,3 +423,23 @@ def speak(body: SpeechInput):
             output.unlink(missing_ok=True)
 
     return jobs.submit("speech", operation)
+
+
+class RangeInput(BaseModel):
+    mediaId: str = Field(min_length=1, max_length=128)
+    start: float = Field(ge=0)
+    end: float = Field(ge=0)
+
+
+@router.post("/range")
+def speech_range_route(body: RangeInput):
+    from .media import media_path
+    from .speech import speech_range
+
+    path = media_path(body.mediaId)
+    if path is None:
+        raise HTTPException(404, "Media file is missing")
+    found = speech_range(body.mediaId, path, min(body.start, body.end), max(body.start, body.end))
+    if found is None:
+        raise HTTPException(422, "No speech found here")
+    return found

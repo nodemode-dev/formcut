@@ -103,3 +103,53 @@ def check_cuts(probabilities: np.ndarray, times: list[float]) -> list[dict]:
             row["nearest_pause"] = [start, end]
         out.append(row)
     return out
+
+
+REACH = 0.6
+PAD = 0.06
+
+
+def loudness_activity(path: Path, start: float, end: float) -> np.ndarray:
+    """Speech-like activity from loudness alone, 32 ms per value from start, for when the voice-activity model is not downloaded."""
+    command = ["ffmpeg", "-v", "error", "-ss", f"{max(0.0, start):.3f}", "-t", f"{max(0.1, end - start):.3f}", "-i", str(path)]
+    command += ["-map", "0:a:0", "-ac", "1", "-ar", str(RATE), "-f", "f32le", "-"]
+    samples = np.frombuffer(subprocess.run(command, capture_output=True, check=False).stdout, np.float32)
+    frames = len(samples) // CHUNK
+    if frames == 0:
+        return np.zeros(0, np.float32)
+    rms = np.sqrt(np.mean(samples[: frames * CHUNK].reshape(frames, CHUNK) ** 2, axis=1)) + 1e-9
+    level = 20 * np.log10(rms)
+    floor = float(np.percentile(level, 20))
+    return np.clip((level - floor - 5) / 10, 0, 1).astype(np.float32)
+
+
+def _edge(activity: np.ndarray, offset: float, near: float, onset: bool) -> float | None:
+    speaking = activity >= 0.5
+    first = max(1, int((near - REACH - offset) / STEP))
+    last = min(len(activity) - 1, int((near + REACH - offset) / STEP))
+    if last < first:
+        return None
+    turns = [i for i in range(first, last + 1) if speaking[i] != speaking[i - 1] and bool(speaking[i]) == onset]
+    if turns:
+        best = min(turns, key=lambda i: abs(offset + i * STEP - near))
+    else:
+        best = first + int(np.argmin(activity[first : last + 1]))
+    return offset + best * STEP
+
+
+def speech_range(media_id: str, path: Path, start: float, end: float) -> dict | None:
+    """The span someone speaks in near start and end, in source seconds: from the speech onset to the speech offset, each found in the audio."""
+    from .model_manager import ready
+
+    if ready("voice-activity"):
+        activity, offset, source = voice_map(media_id, path), 0.0, "voice"
+    else:
+        offset = max(0.0, start - REACH - 0.2)
+        activity, source = loudness_activity(path, offset, end + REACH + 0.2), "loudness"
+    begin, finish = _edge(activity, offset, start, True), _edge(activity, offset, end, False)
+    if begin is None or finish is None:
+        return None
+    begin, finish = max(0.0, begin - PAD), finish + PAD
+    if finish - begin <= 0.05:
+        return None
+    return {"start": round(begin, 3), "end": round(finish, 3), "source": source}
