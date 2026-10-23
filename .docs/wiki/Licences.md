@@ -16,11 +16,20 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 | httpx | BSD-3-Clause | Pexels API and media fetch | ship |
 | yt-dlp | Unlicense (public domain) | URL media import, invoked as a module subprocess | ship |
 | @huggingface/transformers | Apache-2.0 | in-browser Whisper transcription | ship |
+| onnxruntime-web 1.31.0-dev.20260914 (with onnxruntime-common 1.30.0 and flatbuffers) | MIT; flatbuffers Apache-2.0 | the runtime transformers.js uses for Whisper in the window, including its WebAssembly files | ship |
+| PyAV 18.1.0 (`av`) | BSD-3-Clause | in-process video decoding (`backend/app/video_source.py`); the release builds it from source with `setup/build_lgpl_av`, never the PyPI wheel, which links GPL x264 and x265; `backend/freeze.py` refuses to freeze a PyAV linked to anything else | ship |
+| FFmpeg 8.0.3 libraries for PyAV (libavcodec, libavformat, libavutil, libavfilter, libavdevice, libswscale, libswresample) | LGPL-2.1-or-later | the unmodified `https://ffmpeg.org/releases/ffmpeg-8.0.3.tar.xz` (SHA-256 `6136812ea6d4e68bdba27e33c2a94382711cdf4f8602ffef056ff792bd6f9818`), configured with `--disable-gpl --disable-nonfree --disable-version3 --disable-autodetect` and only zlib and, on macOS, VideoToolbox and AudioToolbox, or on Windows D3D11VA and DXVA2; separate shared libraries. `setup/release_assets` attaches this tarball, and the sidecar's FFmpeg 7.1.5 tarball, to every release | ship |
+| Android app (`setup/build_phone android`): the Gradle project `tauri android init` generates, with AndroidX (appcompat, activity, webkit), Material Components and the Kotlin standard library | Apache-2.0 | the phone build; the iOS app uses the system WebKit | ship (phone builds) |
 | @xterm/xterm, @xterm/addon-fit | MIT | the agent terminal pane in Studio | ship |
 | tauri, tauri-build | MIT OR Apache-2.0 | shell | ship |
 | tauri-plugin-shell | MIT OR Apache-2.0 | sidecar spawn | ship |
 | tauri-plugin-dialog | MIT OR Apache-2.0 | failure dialog | ship |
 | regex (crate) | MIT OR Apache-2.0 | port line matching | ship |
+| cssparser, selectors, dtoa-short, option-ext (crates) | MPL-2.0 | Tauri's HTML handling (tauri-utils), linked unedited, source at crates.io | ship |
+| r-efi (crate) | MIT OR Apache-2.0 OR LGPL-2.1-or-later | used under MIT | ship |
+| WebKitGTK, GTK, GLib (Linux AppImage) | LGPL-2.1-or-later | the build machine's shared libraries the AppImage carries | ship |
+
+The installers carry `LICENSE`, `NOTICE` and this page (`bundle.resources`).
 
 ## Build tools (never ship)
 
@@ -205,6 +214,11 @@ hash below; a download that does not match its pin is deleted and named.
 | krea-2-sdnq-int8 | Krea 2 Turbo, 8-bit SDNQ (OzzyGT/Krea_2_Turbo_sdnq_dynamic_8bit) | Krea 2 Community License Agreement v.1 | as above | each of 14 files pinned |
 | nsfw-filter | Falconsai/nsfw_image_detection (onnx-community ONNX export) | Apache-2.0 | installed with every Krea 2 build as the content filter its licence requires (section 4.2) | each of 4 files pinned |
 | local-speech | Kokoro v1.0 model / voices | Apache-2.0 | download on demand | beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a / bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d |
+| local-image | SD Turbo ONNX export (onnxruntime/sd-turbo at 80d4d2e238a7c61a83053b931f2354ab43dd3688) | Stability AI Non-Commercial Research Community License | optional: downloaded only from its own button after the licence is shown, never by `FORMCUT_MODELS_AUTO=all`, never bundled | each of 10 files pinned |
+| voice-activity | Silero VAD v6.2.3 (commit 5cd7945676eb32225748052e2e6a0580e4686a08) | MIT | download on demand | 1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3 |
+| Whisper (hub) | Whisper tiny, base, small, medium (English and multilingual) and large-v3-turbo, ONNX exports by Xenova and onnx-community, each at one pinned revision | MIT (OpenAI's weights); Apache-2.0 on the Xenova cards | fetched through `/api/models/hub` when the transcriber first asks; only the 7 files each uses, each pinned (`HUB_PINNED`) | 63 files pinned |
+
+Since 2.9.4 `download()` refuses a built-in file that has no pin, and the hub answers an unpinned path as missing; only a speech model a person adds with their own URL downloads unpinned.
 
 On Robust Video Matting: its GPL-3.0 licence is incompatible with shipping the
 weights inside formcut's builds, and they are never bundled or redistributed.

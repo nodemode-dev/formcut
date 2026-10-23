@@ -19,6 +19,17 @@ is provided "as is", without warranties or conditions of any kind, and its contr
 or misuse. AI models formcut can download at a person's request, such as Krea 2, are not part of formcut, are not
 distributed with it, and remain under their publishers' own licences.
 
+PyAV and its FFmpeg libraries. The engine includes PyAV 18.1.0 (BSD-3-Clause), built from source against
+FFmpeg 8.0.3's libraries (LGPL-2.1-or-later), the unmodified release https://ffmpeg.org/releases/ffmpeg-8.0.3.tar.xz
+(SHA-256 6136812ea6d4e68bdba27e33c2a94382711cdf4f8602ffef056ff792bd6f9818), configured with --disable-gpl
+--disable-nonfree --disable-version3 by setup/build_lgpl_av. They are separate shared libraries. Every release
+attaches that source tarball, and the 7.1.5 source of the ffmpeg program, beside the bundles; formcut's source and
+build scripts are public, so the engine can be rebuilt against another FFmpeg (LGPL_FFMPEG_PREFIX).
+
+The window includes onnxruntime-web (MIT) for in-window Whisper transcription. Whisper and the other models listed in
+.docs/wiki/Licences.md are downloaded at a person's request, each file pinned to its SHA-256; SD Turbo (Stability AI
+Non-Commercial Research Community License) is optional and never downloaded on its own.
+
 Bundled model: backend/app/bundled_models/u2netp.onnx is U2Net small (Qin et al.), from the rembg release
 v0.0.0 (MIT redistribution of the Apache-2.0 weights), under the Apache License, Version 2.0. It is used for
 background removal.
