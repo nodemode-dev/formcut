@@ -642,6 +642,20 @@ def dispatch(method: str, params: dict):
         language = str(params.get("language") or "en")
         body = TranscribeInput(mediaId=record["id"], duration=float(record.get("duration") or 1), size=size, language=language)
         return start_transcription(body)
+    if method == "speech.range":
+        from .media import MEDIA_DIR, _find
+        from .speech import speech_range
+
+        media_id = str(params.get("mediaId") or "")
+        _find(media_id)
+        source = next(iter(MEDIA_DIR.glob(f"{media_id}.*")), None)
+        if source is None:
+            raise ValueError("Media file is missing")
+        start, end = float(params.get("start") or 0), float(params.get("end") or 0)
+        found = speech_range(media_id, source, max(0.0, min(start, end)), max(0.0, max(start, end)))
+        if found is None:
+            raise ValueError("No speech found here")
+        return found
     if method == "media.qc":
         from .media import MEDIA_DIR, _find
         from .qc import quality_report
@@ -769,6 +783,7 @@ def dispatch(method: str, params: dict):
                 "devices.list",
                 "media.cutdowns",
                 "media.transcribe",
+                "speech.range",
                 "timeline.frames",
                 "timeline.cuts",
                 "media.ducking",

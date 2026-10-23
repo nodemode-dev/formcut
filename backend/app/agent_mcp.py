@@ -285,6 +285,7 @@ def formcut_get_project(
         clips = (
             ", ".join(
                 f"{clip.get('label', clip.get('id'))} at {clip.get('start')}s for {clip.get('duration')}s"
+                + (f" (media {clip['mediaId']}, source in {clip.get('sourceIn') or 0}s, speed {clip.get('speed') or 1})" if clip.get("mediaId") else "")
                 for clip in track.get("clips", [])
             )
             or "empty"
@@ -601,6 +602,28 @@ def formcut_transcribe(
     if not ok:
         return job
     return f"transcription started as job {job.get('job_id')}\ncall formcut_transcribe again with this job_id to collect it"
+
+
+@mcp.tool(
+    name="formcut_speech_range",
+    description=(
+        "The span someone speaks in near two times of a library item, found in the audio (voice-activity model when "
+        "installed, else loudness): from the speech onset to the speech offset, in source seconds, with the method "
+        "used as source. Give start and end in the media's own seconds (a sentence's times from formcut_transcribe, "
+        "mapped through the clip's source in-point). Never cut on caption or word times directly: use this range, "
+        "then cut it on the timeline with formcut_edit timeline.cut-range. Refused when no speech is found there."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_speech_range(
+    media_id: Annotated[str, Field(description="Library item whose audio is read")],
+    start: Annotated[float, Field(description="Near the sentence start, in seconds of this media", ge=0)],
+    end: Annotated[float, Field(description="Near the sentence end, in seconds of this media", ge=0)],
+) -> str:
+    ok, result = _rpc("speech.range", {"mediaId": media_id, "start": start, "end": end})
+    if not ok:
+        return result
+    return json.dumps(result, indent=1)
 
 
 @mcp.tool(
