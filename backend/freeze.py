@@ -1,5 +1,7 @@
 import argparse
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import PyInstaller.__main__
@@ -12,6 +14,10 @@ for line in cv2.getBuildInformation().splitlines():
     if (line.strip().startswith("FFMPEG:") or line.strip().startswith("GStreamer:")) and "YES" in line:
         raise SystemExit("Refusing to freeze bundled codec libraries. Run python prepare_cv.py first.")
 root = Path(__file__).resolve().parent
+lgpl = Path(os.environ.get("LGPL_FFMPEG_PREFIX") or root / ".lgpl-ffmpeg")
+os.environ["PATH"] = str(lgpl / "bin") + os.pathsep + os.environ.get("PATH", "")
+if subprocess.run([sys.executable, str(root.parent / "setup" / "check_lgpl_av.py"), str(lgpl)]).returncode:
+    raise SystemExit("Refusing to freeze PyAV linked to a GPL FFmpeg. Run setup/build_lgpl_av first.")
 os.chdir(root)
 arguments = [
     '--clean', '--noconfirm', '--name', 'formcut-engine',

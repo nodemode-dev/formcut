@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+here="$(cd "$(dirname "$0")" && pwd)"
+dest="${1:?usage: setup/ffmpeg_source <folder>}"
+version="$(sed -n 's/^FFMPEG_VERSION=//p' "$here/build_lgpl_av")"
+sha="$(sed -n 's/^FFMPEG_SHA256=//p' "$here/build_lgpl_av")"
+mkdir -p "$dest"
+out="$dest/ffmpeg-$version.tar.xz"
+curl -fL --retry 3 -o "$out" "https://ffmpeg.org/releases/ffmpeg-$version.tar.xz"
+got="$( (sha256sum "$out" 2>/dev/null || shasum -a 256 "$out") | cut -d' ' -f1)"
+[ "$got" = "$sha" ] || { echo "ffmpeg_source: checksum mismatch for $out" >&2; exit 1; }
+echo "attached $out $got"

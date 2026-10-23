@@ -33,3 +33,18 @@ python setup/release_manifest.py --version "$VERSION" --dir "$DIR" > manifest.js
 (cd "$DIR" && sha256sum -- *.zip *.apk *.ipa > SHA256SUMS)
 mv manifest.json "$DIR/manifest.json"
 python setup/release_notes.py --version "$VERSION" > notes.md
+
+# The LGPL source offer: the exact FFmpeg source of the sidecar (ffmpeg-licence.json) and of the libraries PyAV
+# links (setup/build_lgpl_av), each checked against its pinned SHA-256, with the licence texts beside them.
+python - "$DIR" <<'PY'
+import hashlib, json, sys, urllib.request
+dist = sys.argv[1]
+src = json.load(open("src-tauri/binaries/ffmpeg-licence.json"))["source"]["ffmpeg"]
+name = dist + "/" + src["url"].rsplit("/", 1)[1]
+urllib.request.urlretrieve(src["url"], name)
+digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
+assert digest == src["sha256"], (digest, src["sha256"])
+print("attached", name, digest)
+PY
+setup/ffmpeg_source "$DIR"
+cp src-tauri/binaries/LGPL-2.1.txt src-tauri/binaries/THIRD-PARTY-NOTICES.txt src-tauri/binaries/ffmpeg-licence.json "$DIR/"

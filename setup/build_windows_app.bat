@@ -17,6 +17,7 @@ python -m venv .venv-package
 call .venv-package\Scripts\activate.bat
 python -m pip install --upgrade pip >nul
 pip install -r requirements.txt pyinstaller "maturin==1.15.0"
+call ..\setup\build_lgpl_av.bat "%cd%\.venv-package\Scripts\python.exe" || exit /b 1
 rem The Rust kernels with the GPU executor (DX12) every speed reading used, as the macOS and Linux builds have them.
 if exist native-dist rmdir /s /q native-dist
 python -m maturin build --release --manifest-path native\Cargo.toml --features gpu --out native-dist

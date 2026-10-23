@@ -71,6 +71,12 @@ say "freeze the engine"
 (
   cd backend
   python -m pip install -r requirements.txt pyinstaller "maturin==1.15.0"
+  # PyAV rebuilt against an LGPL FFmpeg; freeze.py refuses the binary wheel's GPL x264 and x265
+  if [ "$RUNNER_OS" = Windows ]; then
+    cmd //c "..\\setup\\build_lgpl_av.bat $(cygpath -w "$(command -v python)")"
+  else
+    ../setup/build_lgpl_av "$(command -v python)"
+  fi
   python -m maturin build --release --manifest-path native/Cargo.toml --target "$TARGET" --features gpu --out native-dist
   python -m pip install --force-reinstall --no-deps native-dist/*.whl
   python -c "import formcut_native; print('kernels load:', formcut_native.__file__)"
