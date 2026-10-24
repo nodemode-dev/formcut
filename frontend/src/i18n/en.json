@@ -555,6 +555,8 @@
   "set.playback": "Playback",
   "set.appearance": "Appearance",
   "set.advanced": "Advanced",
+  "set.about": "About",
+  "set.about.licence": "Apache License 2.0. Third-party notices are in NOTICE.",
   "mode.title": "Interface mode",
   "mode.easy": "Easy",
   "mode.advanced": "Advanced",

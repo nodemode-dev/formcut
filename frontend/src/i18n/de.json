@@ -555,6 +555,8 @@
   "set.playback": "Wiedergabe",
   "set.appearance": "Erscheinungsbild",
   "set.advanced": "Erweitert",
+  "set.about": "Über",
+  "set.about.licence": "Apache License 2.0. Hinweise zu Drittanbietern stehen in NOTICE.",
   "mode.title": "Oberflächenmodus",
   "mode.easy": "Einfach",
   "mode.advanced": "Erweitert",

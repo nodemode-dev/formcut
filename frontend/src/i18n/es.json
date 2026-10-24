@@ -555,6 +555,8 @@
   "set.playback": "Reproducción",
   "set.appearance": "Apariencia",
   "set.advanced": "Avanzado",
+  "set.about": "Acerca de",
+  "set.about.licence": "Licencia Apache 2.0. Los avisos de terceros están en NOTICE.",
   "mode.title": "Modo de interfaz",
   "mode.easy": "Fácil",
   "mode.advanced": "Avanzado",
