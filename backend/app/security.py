@@ -41,6 +41,8 @@ class LocalOnly:
                 origin = headers.get("origin")
                 origin_host = urlsplit(origin).hostname if origin else None
                 allowed = loopback(client) and loopback(host) and (origin_host is None or loopback(origin_host))
+                if origin is None and headers.get("sec-fetch-site", "").strip().lower() == "cross-site":
+                    allowed = False
                 if not allowed and remote_token():
                     # P11: remote access is off unless a token is set in the engine,
                     # and then every request must present it. Loopback is untouched.
