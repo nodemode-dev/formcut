@@ -1,4 +1,4 @@
-"""Release profiles: build-time crates are never stripped, and the app still is.
+"""Release profiles: nothing is stripped, the app included (FAMILY_TEST_PLAN section 9).
 
 cargo strips procedural macros with everything else in a release build:
 -C strip=symbols under strip = true, and -C strip=debuginfo even with no strip
@@ -29,9 +29,9 @@ def test_build_time_crates_are_left_unstripped(manifest):
     assert profile["build-override"]["strip"] is False
 
 
-def test_the_app_is_still_stripped():
+def test_the_app_is_not_stripped():
     release = tomllib.loads((ROOT / "src-tauri" / "Cargo.toml").read_text(encoding="utf-8"))["profile"]["release"]
-    assert release["strip"] is True
+    assert release["strip"] is False
 
 
 def test_the_kernel_library_is_not_stripped():
