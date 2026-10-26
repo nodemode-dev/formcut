@@ -1055,6 +1055,7 @@ def test_every_wrap_entry_passes_the_prompt_guard(tmp_path, monkeypatch, library
 
 FAKE_WORKER = """#!{python}
 import json, os, sys, time
+sys.path[:0] = {paths!r}
 from PIL import Image
 plan = json.load(open(sys.argv[1]))
 with open({calls!r}, "a") as log:
@@ -1076,7 +1077,7 @@ def _worker_standin(tmp_path, monkeypatch):
 
     calls = tmp_path / "worker.calls"
     script = tmp_path / "fake_worker.py"
-    script.write_text(FAKE_WORKER.format(python=sys.executable, calls=str(calls)))
+    script.write_text(FAKE_WORKER.format(python=sys.executable, calls=str(calls), paths=[p for p in sys.path if p]))
     (krea2.RUNTIME / "bin" / "python").symlink_to(sys.executable)
     monkeypatch.setattr(krea2, "WORKER", script)
     return calls
