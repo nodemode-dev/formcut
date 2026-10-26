@@ -16,6 +16,37 @@ def loopback(value: str) -> bool:
         return False
 
 
+DEV_ORIGINS = (
+    "http://localhost:3040",
+    "http://127.0.0.1:3040",
+    "http://localhost:3041",
+    "http://127.0.0.1:3041",
+)
+
+
+def _origin_key(value: str) -> tuple[str, str, int | None] | None:
+    try:
+        parts = urlsplit(value.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    if not parts.scheme or not parts.hostname:
+        return None
+    if port is None:
+        port = {"http": 80, "https": 443}.get(parts.scheme)
+    return parts.scheme.lower(), parts.hostname.lower(), port
+
+
+def window_origin(origin: str, host: str) -> bool:
+    key = _origin_key(origin)
+    if key is None:
+        return False
+    if key in {k for k in (_origin_key(o) for o in [*DEV_ORIGINS, "tauri://localhost", "http://tauri.localhost"]) if k is not None}:
+        return True
+    own = _origin_key(f"{key[0]}://{host}")
+    return key[0] == "http" and own is not None and own == key
+
+
 def remote_token() -> str:
     """The token that allows non-loopback access; empty means remote is off."""
     return os.environ.get("FORMCUT_REMOTE_TOKEN", "").strip()
@@ -39,8 +70,7 @@ class LocalOnly:
             else:
                 host = urlsplit("http://" + headers.get("host", "")).hostname or ""
                 origin = headers.get("origin")
-                origin_host = urlsplit(origin).hostname if origin else None
-                allowed = loopback(client) and loopback(host) and (origin_host is None or loopback(origin_host))
+                allowed = loopback(client) and loopback(host) and (origin is None or window_origin(origin, headers.get("host", "")))
                 if origin is None and headers.get("sec-fetch-site", "").strip().lower() == "cross-site":
                     allowed = False
                 if not allowed and remote_token():
