@@ -15,7 +15,7 @@ export function installWorkspaceLayout(): void {
   type Slot = "left" | "right" | "bottom";
   const DEFAULTS = {
     media: true, inspector: true, timeline: true, focus: false, height: 42,
-    left: 340, right: 320, swap: false, timelineTop: false,
+    left: 340, right: 344, swap: false, timelineTop: false,
     // P7: where each pane lives, and which pane is in front when two share a
     // slot. Stored per interface profile, so Easy and Advanced keep their own
     // arrangement rather than fighting over one.
