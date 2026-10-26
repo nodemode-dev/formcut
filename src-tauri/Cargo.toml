@@ -14,14 +14,14 @@ regex = "1"
 tokio = { version = "1", features = ["time"] }
 
 [profile.release]
-strip = true
+strip = false
 lto = true
 
 # Build scripts and procedural macros run during the build and never ship, and
 # cargo strips them with the rest: -C strip=symbols with strip = true, and
 # -C strip=debuginfo even with no strip setting. On macOS 27 with rustc 1.97.1 a
 # stripped procedural macro cannot be loaded ("can't find crate"), here and in
-# backend/native alike; left unstripped the builds succeed, and the app binary is
-# stripped as before.
+# backend/native alike; left unstripped the builds succeed. The app binary is
+# left unstripped too, since macOS builds fail on a stripped one.
 [profile.release.build-override]
 strip = false
