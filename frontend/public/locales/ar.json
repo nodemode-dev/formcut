@@ -556,6 +556,8 @@
   "set.playback": "التشغيل",
   "set.appearance": "المظهر",
   "set.advanced": "متقدم",
+  "set.about": "حول",
+  "set.about.licence": "رخصة Apache 2.0. إشعارات الجهات الخارجية موجودة في NOTICE.",
   "mode.title": "وضع الواجهة",
   "mode.easy": "سهل",
   "mode.advanced": "متقدم",

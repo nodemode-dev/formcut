@@ -556,6 +556,8 @@
   "set.playback": "پخش",
   "set.appearance": "ظاهر",
   "set.advanced": "پیشرفته",
+  "set.about": "درباره",
+  "set.about.licence": "مجوز Apache 2.0. اطلاعیه‌های شخص ثالث در NOTICE آمده است.",
   "mode.title": "حالت رابط کاربری",
   "mode.easy": "آسان",
   "mode.advanced": "پیشرفته",

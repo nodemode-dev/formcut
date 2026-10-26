@@ -556,6 +556,8 @@
   "set.playback": "Reprodukcija",
   "set.appearance": "Izgled",
   "set.advanced": "Napredno",
+  "set.about": "O programu",
+  "set.about.licence": "Licenca Apache 2.0. Obavijesti trećih strana nalaze se u NOTICE.",
   "mode.title": "Način sučelja",
   "mode.easy": "Jednostavno",
   "mode.advanced": "Napredno",

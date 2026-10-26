@@ -556,6 +556,8 @@
   "set.playback": "ניגון",
   "set.appearance": "מראה",
   "set.advanced": "מתקדם",
+  "set.about": "אודות",
+  "set.about.licence": "רישיון Apache 2.0. הודעות צד שלישי מופיעות ב-NOTICE.",
   "mode.title": "מצב ממשק",
   "mode.easy": "קל",
   "mode.advanced": "מתקדם",
