@@ -189,6 +189,35 @@ jobs:
           print(len(paths), "routes, none repeated")
           PY
 
+  # The built window, opened in Chromium at 4x CPU slowdown on a slow network
+  # against an engine with an empty data folder: no layout shift, no console
+  # error, no failed request and none refused by the guard (family test F7).
+  # Linux only; the engine job above already covers the three platforms.
+  window:
+    name: window smoke (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: build the window
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: engine, pytest and Playwright
+        run: |
+          pip install -r backend/requirements.txt playwright==1.63.0
+          python -m playwright install --with-deps chromium
+      - name: window smoke (F7)
+        run: python -m pytest frontend/tests/window -q -p no:cacheprovider
+
   shell:
     name: desktop shell
     runs-on: ubuntu-24.04
