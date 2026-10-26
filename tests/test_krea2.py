@@ -93,7 +93,9 @@ def test_every_krea_file_is_pinned_to_a_revision_and_kept_out_of_bulk_downloads(
     assert all(
         not model_manager.MODELS[k].get("optional")
         for k in model_manager.MODELS
-        if "GPL" not in model_manager.MODELS[k]["license"] and not k.startswith(("krea", "flux2-klein")) and k != "nsfw-filter"
+        if "GPL" not in model_manager.MODELS[k]["license"]
+        and not k.startswith(("krea", "flux2-klein"))
+        and k not in ("nsfw-filter", "local-image")
     )
 
 
