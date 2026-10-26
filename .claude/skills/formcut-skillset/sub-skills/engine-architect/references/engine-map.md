@@ -137,7 +137,7 @@ the automation transports.
 - `rhythm.py` (148L)
 - `sam_video.py` (163L)
 - `scenes.py` (110L)
-- `security.py` (68L)
+- `security.py` (100L)
 - `segmentation.py` (323L)
 - `speech.py` (155L)
 - `stabilise.py` (209L)
