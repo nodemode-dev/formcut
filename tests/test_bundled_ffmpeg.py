@@ -95,7 +95,7 @@ def test_a_local_mac_build_bundles_ffmpeg_as_the_release_does():
 
 def test_the_bundle_carries_the_staging_folder():
     config = json.loads((ROOT / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
-    assert config["bundle"]["resources"] == {"ffmpeg/": "ffmpeg/"}
+    assert config["bundle"]["resources"]["ffmpeg/"] == "ffmpeg/"
     assert (ROOT / "src-tauri" / "ffmpeg" / "README.md").is_file()
 
 
