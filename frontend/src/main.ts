@@ -89,6 +89,7 @@ if (settingsButton) installSettingsPopout(engine, bin, settingsButton);
 installEditorActions(engine, bin);
 installWorkspaceLayout();
 installAccordions(workspace);
+workspace.querySelector(".pane-inspector")?.dispatchEvent(new Event("formcut:fit-tabs"));
 app.append(buildStartScreen(engine, bin));
 localizeElement(document.body);
 // Arabic, Persian, Hebrew and Croatian ship as locale files, loaded here: until

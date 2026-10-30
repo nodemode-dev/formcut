@@ -1709,6 +1709,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
     }
   };
   new ResizeObserver(() => fitTabs()).observe(el);
+  el.addEventListener("formcut:fit-tabs", () => fitTabs());
   engine.subscribe((_state, event) => { if (event === "clip-selection") fitTabs(); });
   window.setTimeout(fitTabs, 0);
 
