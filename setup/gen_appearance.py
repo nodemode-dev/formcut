@@ -72,10 +72,26 @@ TEXT = {"dark": [96, 73, 61], "deep": [95, 72, 60], "hard": [100, 78, 58], "ligh
 # keep this file's rule: at least 4.5:1 on every surface text sits on, and 12 steps apart.
 FIXED = {
     "studio": dict(
-        light=False, page="#0a0a0a", well="#0e0e0e", panel="#111111", raised="#17151b", field="#222127",
-        hover="#2a2930", active="#34333a", fg="#f7f7f7", muted="#adadb0", dim="#8e8d91", accent_hover="#fb8f4e",
-        line="rgb(255 255 255 / 0.1)", strong="rgb(255 255 255 / 0.2)", lane="#141414", lane_alt="#161616",
-        ruler="#0d0d0d", stage="#000000", scrim="rgb(0 0 0 / 0.6)", on_accent="#271407",
+        light=False,
+        page="#0a0a0a",
+        well="#0e0e0e",
+        panel="#111111",
+        raised="#17151b",
+        field="#222127",
+        hover="#2a2930",
+        active="#34333a",
+        fg="#f7f7f7",
+        muted="#adadb0",
+        dim="#8e8d91",
+        accent_hover="#fb8f4e",
+        line="rgb(255 255 255 / 0.1)",
+        strong="rgb(255 255 255 / 0.2)",
+        lane="#141414",
+        lane_alt="#161616",
+        ruler="#0d0d0d",
+        stage="#000000",
+        scrim="rgb(0 0 0 / 0.6)",
+        on_accent="#271407",
     ),
 }
 

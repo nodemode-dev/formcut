@@ -197,7 +197,9 @@ def check_generated() -> None:
         run = subprocess.run([sys.executable, str(ROOT / "setup" / script), "--check"], capture_output=True, text=True, check=False)
         if run.returncode:
             problems.append(f"{script}: {(run.stdout or run.stderr).strip().splitlines()[0][:160]}")
-    run = subprocess.run([sys.executable, str(ROOT / "setup" / "agents.py"), "sync", "--check"], capture_output=True, text=True, check=False)
+    run = subprocess.run(
+        [sys.executable, str(ROOT / "setup" / "agents.py"), "sync", "--check"], capture_output=True, text=True, check=False
+    )
     if run.returncode:
         problems.append(f"agents.py: {run.stdout.strip()[:160]}")
     notes.append("the skill maps, the MCP tool reference, the .agents skill mirror and the looks library are current")

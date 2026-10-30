@@ -29,7 +29,7 @@ def _drifting(frames: int = 41) -> dict:
 
 
 def _truth(i: int) -> np.ndarray:
-    return CORNERS + [1.0 * i, 0]
+    return CORNERS + np.array([1.0 * i, 0])
 
 
 def _points(keyed: list[int]) -> list[dict]:

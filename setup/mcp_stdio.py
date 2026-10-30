@@ -47,6 +47,7 @@ def ensure_sdk() -> None:
                 break
     try:
         import httpx  # noqa: F401
+
         import mcp  # noqa: F401
     except ImportError:
         sys.exit("[formcut mcp] no interpreter with the MCP SDK: run ./formcut once (it installs backend/venv), or mcp/oc_install")
@@ -76,7 +77,12 @@ def start_engine() -> None:
     with open(LOG, "ab") as log:
         subprocess.Popen(
             [str(python), "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8040"],
-            cwd=BACKEND, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
+            cwd=BACKEND,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=log,
+            stderr=log,
+            start_new_session=True,
         )
     for _ in range(240):
         if answers(SOURCE_RUN):
@@ -89,7 +95,8 @@ def start_engine() -> None:
 def main() -> None:
     ensure_sdk()
     sys.path.insert(0, str(BACKEND))
-    from app.agent_mcp import _engine, main as serve
+    from app.agent_mcp import _engine
+    from app.agent_mcp import main as serve
 
     base = _engine()
     if not answers(base) and base == SOURCE_RUN and os.environ.get("FORMCUT_MCP_NO_START") != "1":

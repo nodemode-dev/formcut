@@ -83,7 +83,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (1118L)
+- `agent_mcp.py` (1122L)
 - `ai_upscale.py` (141L)
 - `alpha_export.py` (126L)
 - `audio_render.py` (231L)
@@ -139,7 +139,7 @@ the automation transports.
 - `scenes.py` (110L)
 - `security.py` (100L)
 - `segmentation.py` (323L)
-- `speech.py` (155L)
+- `speech.py` (152L)
 - `stabilise.py` (209L)
 - `store.py` (107L)
 - `subject.py` (220L)

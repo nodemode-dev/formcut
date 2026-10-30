@@ -130,10 +130,7 @@ def _edge(activity: np.ndarray, offset: float, near: float, onset: bool) -> floa
     if last < first:
         return None
     turns = [i for i in range(first, last + 1) if speaking[i] != speaking[i - 1] and bool(speaking[i]) == onset]
-    if turns:
-        best = min(turns, key=lambda i: abs(offset + i * STEP - near))
-    else:
-        best = first + int(np.argmin(activity[first : last + 1]))
+    best = min(turns, key=lambda i: abs(offset + i * STEP - near)) if turns else first + int(np.argmin(activity[first : last + 1]))
     return offset + best * STEP
 
 

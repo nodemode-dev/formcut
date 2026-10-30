@@ -652,7 +652,7 @@ def dispatch(method: str, params: dict):
         if source is None:
             raise ValueError("Media file is missing")
         start, end = float(params.get("start") or 0), float(params.get("end") or 0)
-        found = speech_range(media_id, source, max(0.0, min(start, end)), max(0.0, max(start, end)))
+        found = speech_range(media_id, source, max(0.0, min(start, end)), max(0.0, start, end))
         if found is None:
             raise ValueError("No speech found here")
         return found

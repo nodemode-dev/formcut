@@ -285,7 +285,11 @@ def formcut_get_project(
         clips = (
             ", ".join(
                 f"{clip.get('label', clip.get('id'))} at {clip.get('start')}s for {clip.get('duration')}s"
-                + (f" (media {clip['mediaId']}, source in {clip.get('sourceIn') or 0}s, speed {clip.get('speed') or 1})" if clip.get("mediaId") else "")
+                + (
+                    f" (media {clip['mediaId']}, source in {clip.get('sourceIn') or 0}s, speed {clip.get('speed') or 1})"
+                    if clip.get("mediaId")
+                    else ""
+                )
                 for clip in track.get("clips", [])
             )
             or "empty"

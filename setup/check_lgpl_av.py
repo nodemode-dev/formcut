@@ -32,7 +32,7 @@ def main() -> int:
         marker = data.find(b" license: ")
         if marker < 0:
             continue
-        text = data[marker + 10:marker + 40]
+        text = data[marker + 10 : marker + 40]
         if not text.startswith(b"LGPL"):
             wrong.append(f"{path.name} ({text.split(b'\0')[0].decode('ascii', 'replace')})")
     if gpl or wrong:

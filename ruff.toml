@@ -64,6 +64,11 @@ ignore = [
 "backend/app/proxies.py" = ["BLE001"]
 "backend/app/stabilise.py" = ["BLE001"]
 "backend/app/model_manager.py" = ["BLE001"]
+# The agents' stdio launcher re-executes itself inside the engine's own venv
+# (os.execv with a fixed argument list), probes the local engine at its fixed
+# http://127.0.0.1 health address, and treats any failure of that probe as
+# "the engine is not answering", which is the only answer it needs.
+"setup/mcp_stdio.py" = ["S606", "S310", "BLE001"]
 "backend/app/templates.py" = ["BLE001"]
 "backend/app/encoders.py" = ["BLE001"]
 "backend/app/gpu.py" = ["BLE001"]

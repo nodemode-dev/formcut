@@ -355,7 +355,7 @@ def download(model: str, report, cancelled):
             download_url = source_for(model, name, url)
             if not PINNED.get(name) and not MODELS[model].get("added"):
                 raise ValueError(f"{name} has no pinned checksum, so it is not downloaded")
-            limit =int(MODELS[model].get("maxFileBytes", 2_000_000_000))
+            limit = int(MODELS[model].get("maxFileBytes", 2_000_000_000))
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary = path.with_suffix(path.suffix + ".download")
             digest = hashlib.sha256()
