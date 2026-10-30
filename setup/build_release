@@ -14,13 +14,18 @@
 #
 # Why Ubuntu 22.04: the AppImage then runs on glibc 2.35 and newer.
 # Intel Macs are not built here: setup/build_macos_app --intel builds one on any Mac.
-# The macOS app is signed ad hoc (tauri.conf.json: signingIdentity "-"), which
-# needs no Apple account: without it Tauri leaves the bundle unsealed and macOS
-# calls a downloaded copy damaged, with no way to open it. It is not notarized,
-# so the release notes say how to open it the first time. Hardened runtime is
-# off: it matters only for notarization, and its library validation would stop
-# the one-file engine loading its own libraries and OpenH264 loading Cisco's.
-# The Windows app is unsigned.
+# macOS: when formcompiler has the Apple identity (APPLE_SIGNING_IDENTITY, with
+# APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID), the app is Developer ID signed with
+# hardened runtime and src-tauri/entitlements.plist, and notarized and stapled by
+# Tauri; the entitlements turn library validation off, so the one-file engine
+# still loads its own libraries and OpenH264 still loads Cisco's. Without it the
+# app is signed ad hoc (tauri.conf.json: signingIdentity "-", hardened runtime
+# off), which needs no Apple account: without a seal macOS calls a downloaded copy
+# damaged, with no way to open it, and the release notes say how to open it the
+# first time.
+# Windows: formcompiler signs the app, the engine sidecar and the installer
+# through the tauri.windows.conf.json it writes before the build; nothing here
+# signs Windows files.
 #
 # The caller provides (formerly actions): Python 3.12 (python on PATH), Node 20
 # with npm, a Rust toolchain with the target installed, and on Linux the apt
@@ -98,9 +103,36 @@ say "freeze the engine"
 say "bundle ffmpeg"
 python setup/bundle_ffmpeg.py --target "$TARGET"
 
+# With formcompiler's Developer ID (APPLE_SIGNING_IDENTITY, in a keychain on the
+# search list), Tauri signs formcut and the engine sidecar with hardened runtime
+# and src-tauri/entitlements.plist, and notarizes when APPLE_ID, APPLE_PASSWORD
+# and APPLE_TEAM_ID are set. It does not sign resources, so the ffmpeg programs
+# and libraries are signed here first, libraries before the programs that load
+# them. Without the identity nothing changes: ad hoc, no hardened runtime.
+HARDENED=
+if [ "$RUNNER_OS" = macOS ] && [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
+  say "sign the bundled ffmpeg with the Developer ID"
+  entitlements="$PWD/src-tauri/entitlements.plist"
+  find src-tauri/ffmpeg -type f -name '*.dylib' -print0 | while IFS= read -r -d '' lib; do
+    codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$lib"
+  done
+  find src-tauri/ffmpeg -type f ! -name '*.dylib' -print0 | while IFS= read -r -d '' program; do
+    if file -b "$program" | grep -q Mach-O; then
+      codesign --force --timestamp --options runtime --entitlements "$entitlements" --sign "$APPLE_SIGNING_IDENTITY" "$program"
+    fi
+  done
+  find src-tauri/ffmpeg -type f -print0 | while IFS= read -r -d '' part; do
+    if file -b "$part" | grep -q Mach-O; then codesign --verify --strict "$part"; fi
+  done
+  HARDENED='{"bundle":{"macOS":{"hardenedRuntime":true}}}'
+fi
+
 say "build the app"
 # linuxdeploy is an AppImage; extracting it lets it run without FUSE.
-APPIMAGE_EXTRACT_AND_RUN=1 npx --yes @tauri-apps/cli@2 build --target "$TARGET" $BUNDLES
+# FORMCOMPILER_CONFIG_ARG is formcompiler's --config file (updater settings, or
+# the ad hoc identity on macOS when it has no Apple identity), empty otherwise.
+# shellcheck disable=SC2086
+APPIMAGE_EXTRACT_AND_RUN=1 npx --yes @tauri-apps/cli@2 build --target "$TARGET" $BUNDLES ${FORMCOMPILER_CONFIG_ARG:-} ${HARDENED:+--config "$HARDENED"}
 
 say "package the zip"
 python setup/package_release.py --target "$TARGET"
@@ -118,6 +150,21 @@ if [ "$RUNNER_OS" = macOS ]; then
   unpacked=$(mktemp -d)
   ditto -x -k release-dist/*.zip "$unpacked"
   codesign --verify --deep --strict --verbose=2 "$unpacked/formcut.app"
-  codesign -dv "$unpacked/formcut.app" 2>&1 | tee /dev/stderr | grep -q "Signature=adhoc"
+  if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
+    # Developer ID: the app and the engine carry the identity's team and hardened runtime.
+    for code in "$unpacked/formcut.app" "$unpacked/formcut.app/Contents/MacOS/formcut-engine"; do
+      details=$(codesign -dv --verbose=4 "$code" 2>&1)
+      echo "$details" >&2
+      case "$details" in *"Authority=Developer ID Application:"*) ;; *) echo "$code is not signed with a Developer ID"; exit 1 ;; esac
+      case "$details" in *"TeamIdentifier=not set"*) echo "$code has no team identifier"; exit 1 ;; esac
+      case "$details" in *"(runtime)"*) ;; *) echo "$code was signed without hardened runtime"; exit 1 ;; esac
+    done
+    if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+      xcrun stapler validate "$unpacked/formcut.app"
+      spctl --assess --type execute --verbose=2 "$unpacked/formcut.app"
+    fi
+  else
+    codesign -dv "$unpacked/formcut.app" 2>&1 | tee /dev/stderr | grep -q "Signature=adhoc"
+  fi
   codesign --verify --strict "$unpacked/formcut.app/Contents/MacOS/formcut-engine"
 fi

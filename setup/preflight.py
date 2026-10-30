@@ -60,6 +60,7 @@ def check_files() -> None:
         "backend/freeze.py",
         "backend/requirements.txt",
         "src-tauri/tauri.conf.json",
+        "src-tauri/entitlements.plist",
         "src-tauri/Cargo.toml",
         "src-tauri/binaries/ffmpeg-licence.json",
         "src-tauri/ffmpeg/README.md",

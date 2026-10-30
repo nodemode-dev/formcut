@@ -43,4 +43,7 @@ for package in ("mcp", "mcp-types", "numpy", "Pillow", "opencv-python-headless",
     arguments.extend(["--copy-metadata", package])
 for notice in Path(cv2.__file__).parent.glob("LICENSE*"):
     arguments.extend(["--add-data", str(notice) + os.pathsep + "third_party/opencv"])
+identity = os.environ.get("APPLE_SIGNING_IDENTITY", "") if sys.platform == "darwin" else ""
+if identity:
+    arguments.extend(["--codesign-identity", identity, "--osx-entitlements-file", str(root.parent / "src-tauri" / "entitlements.plist")])
 PyInstaller.__main__.run(arguments)
