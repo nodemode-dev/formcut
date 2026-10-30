@@ -8,9 +8,9 @@
 # notes.md is written to the repository root, as the release workflow's publish
 # job did. Nothing is published here: nodemode-ai/formcompiler does that.
 #
-# The caller provides: Python 3.12 with python on PATH, sha256sum, and a checkout
-# with its tags (git fetch --tags), because the notes list the commits since the
-# previous v* tag.
+# The caller provides: Python 3.12 with python on PATH, sha256sum, and a git
+# checkout. The notes list the commits since the previous v* tag, so a shallow
+# checkout or one without tags is fetched in full here first.
 set -euo pipefail
 
 VERSION=
@@ -32,6 +32,12 @@ cd "$(dirname "$0")/.."
 python setup/release_manifest.py --version "$VERSION" --dir "$DIR" > manifest.json
 (cd "$DIR" && sha256sum -- *.zip *-setup.exe *.apk *.ipa > SHA256SUMS)
 mv manifest.json "$DIR/manifest.json"
+# formcompiler's release job checks out shallow and without tags, and the notes
+# need both; fetched here, and a fetch that fails leaves the notes listing the
+# latest commits instead of stopping the release.
+if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = true ] || [ -z "$(git tag --list 'v*' 2>/dev/null)" ]; then
+  git fetch --tags --force --unshallow 2>/dev/null || git fetch --tags --force || echo "note: the tags could not be fetched; the notes list the latest commits"
+fi
 python setup/release_notes.py --version "$VERSION" > notes.md
 
 # The LGPL source offer: the exact FFmpeg source of the sidecar (ffmpeg-licence.json) and of the libraries PyAV
