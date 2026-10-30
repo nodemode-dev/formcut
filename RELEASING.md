@@ -68,10 +68,22 @@ through `setup/package_release.py`. Intel Macs are not built by the release.
 
 ## Signing
 
-The macOS app is signed ad hoc (`signingIdentity: "-"` in `tauri.conf.json`),
-which needs no Apple account and seals the bundle: without a seal, macOS calls a
-downloaded app damaged and offers no way to open it. The release checks the seal
-on the app unzipped from its own zip, and stops if it is broken. It is not
-notarized, so the first launch goes through System Settings, Privacy & Security,
-Open Anyway, as the release notes say. Notarization would need an Apple
-Developer identity in the "build the app" step; the Windows app is unsigned.
+formcut signs nothing with its own keys; formcompiler holds them.
+
+- **macOS.** When formcompiler has the Apple identity, `setup/build_release`
+  gets `APPLE_SIGNING_IDENTITY` (and `APPLE_ID`, `APPLE_PASSWORD`,
+  `APPLE_TEAM_ID`). It signs the bundled ffmpeg programs and libraries with that
+  Developer ID, hardened runtime and a timestamp, and Tauri signs formcut and the
+  engine sidecar the same way with `src-tauri/entitlements.plist`, then
+  notarizes and staples the app. The release checks the app unzipped from its
+  own zip for the Developer ID, its team and hardened runtime, and runs
+  `stapler validate` and `spctl` when it was notarized. Without the identity the
+  app is signed ad hoc (`signingIdentity: "-"` in `tauri.conf.json`), which
+  needs no Apple account and seals the bundle (without a seal macOS calls a
+  downloaded app damaged and offers no way to open it); the release checks that
+  seal instead, and the first launch goes through System Settings, Privacy &
+  Security, Open Anyway, as the release notes say.
+- **Windows.** formcompiler writes `tauri.windows.conf.json` beside
+  `tauri.conf.json` before the build, so Tauri signs formcut.exe, the engine
+  sidecar and the NSIS installer, and it signs whatever is still unsigned in
+  the zip afterwards. Nothing in this repository signs Windows files.
