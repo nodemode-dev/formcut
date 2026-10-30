@@ -11,7 +11,10 @@ Each zip runs with nothing else installed:
   permissions and metadata survive; unzip and open it.
 - Windows: a formcut folder holding formcut.exe with formcut-engine.exe and the
   bundled ffmpeg beside it, which is where the app and the engine look for them;
-  unzip and run formcut.exe.
+  unzip and run formcut.exe. Beside the zip, the NSIS installer Tauri built
+  (formcut-<version>-windows-<arch>-setup.exe), which installs the same three
+  parts in the same layout: the engine as the externalBin sidecar beside
+  formcut.exe and ffmpeg as the "ffmpeg/" resource beside both.
 - Linux: the AppImage, one self-contained file; unzip and run it.
 
 Every part the zip needs is checked first, so a build that lost one fails here
@@ -97,6 +100,13 @@ def package(triple: str, out: Path) -> Path:
             print("note: no bundled ffmpeg; this zip fetches formcut's on first run")
         write_zip(archive, stage, stage.parent)
         shutil.rmtree(stage.parent)
+        installers = sorted((release / "bundle" / "nsis").glob("*-setup.exe"))
+        if installers:
+            installer = out / f"{name}-setup.exe"
+            shutil.copy2(installers[0], installer)
+            print(f"packaged {installer.relative_to(ROOT)} ({installer.stat().st_size / 1048576:.1f} MB)")
+        else:
+            print("note: no NSIS installer was built; only the portable zip is packaged")
     else:
         images = sorted((release / "bundle" / "appimage").glob("*.AppImage"))
         image = require(images[0] if images else release / "bundle" / "appimage" / "formcut.AppImage", "the AppImage")

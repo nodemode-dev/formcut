@@ -3,7 +3,8 @@
 
     python setup/release_manifest.py --version 1.33.0 --dir release-dist > manifest.json
 
-For each zip: its platform, architecture, size, SHA-256 and minimum OS; with the
+For each zip, installer and phone app: its platform, architecture, kind (zip,
+installer, apk or ipa), size, SHA-256 and minimum OS; with the
 version, the commit it was built from, when, and the ffmpeg release bundled in it.
 The formcut.studio site and anything else can read this rather than parse file names.
 """
@@ -34,11 +35,14 @@ def _platforms() -> dict[str, tuple[str, str]]:
 
 def manifest(version: str, folder: Path) -> dict:
     known = {f"formcut-{version}-{platform}-{arch}.zip": (platform, arch) for platform, arch in _platforms().values()}
+    for platform, arch in _platforms().values():
+        if platform == "windows":
+            known[f"formcut-{version}-{platform}-{arch}-setup.exe"] = (platform, arch)
     for suffix, (platform, arch, _) in MOBILE.items():
         known[f"formcut-{version}-{platform}-{arch}{suffix}"] = (platform, arch)
     minimum = {**MINIMUM_OS, **{platform: floor for platform, _, floor in MOBILE.values()}}
     assets = []
-    for path in sorted(p for p in folder.glob("formcut-*") if p.suffix in (".zip", *MOBILE)):
+    for path in sorted(p for p in folder.glob("formcut-*") if p.suffix in (".zip", ".exe", *MOBILE)):
         if path.name not in known:
             raise SystemExit(f"{path.name} is not a file this release makes")
         platform, arch = known[path.name]
@@ -46,6 +50,7 @@ def manifest(version: str, folder: Path) -> dict:
             {
                 "platform": platform,
                 "arch": arch,
+                "kind": "installer" if path.name.endswith("-setup.exe") else path.suffix.lstrip("."),
                 "file": path.name,
                 "bytes": path.stat().st_size,
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),

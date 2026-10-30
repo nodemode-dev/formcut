@@ -37,7 +37,8 @@ git push origin main:refs/heads/compile_vX.Y.Z
    Each desktop build makes the interface, then the engine with formcut's Rust
    kernels (an engine without them is refused), OpenCV rebuilt without its own
    FFmpeg, formcut's verified LGPL ffmpeg from nodemode-ai/formcut-binaries, the
-   app, and one zip (`setup/package_release.py`).
+   app, and one zip (`setup/package_release.py`); on Windows the app is built
+   with `--bundles nsis` and its installer is released beside the zip.
 3. **One draft.** `setup/release_assets` writes `SHA256SUMS`, `manifest.json` and
    notes from `setup/release_notes.py`: a download table, how to open each app,
    and the commits since the last release. formcompiler opens a draft release
@@ -47,6 +48,7 @@ git push origin main:refs/heads/compile_vX.Y.Z
 | Zip | Holds |
 | --- | --- |
 | `formcut-<version>-macos-arm64.zip` | formcut.app |
+| `formcut-<version>-windows-x86_64-setup.exe` | the NSIS installer: formcut.exe, formcut-engine.exe and ffmpeg, installed in that layout |
 | `formcut-<version>-windows-x86_64.zip` | a formcut folder: formcut.exe, formcut-engine.exe and ffmpeg beside them |
 | `formcut-<version>-linux-x86_64.zip` | the AppImage |
 | `formcut-<version>-android-arm64.apk` | the Android companion, signed with the debug key |

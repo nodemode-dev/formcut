@@ -37,7 +37,7 @@ case "${1:-}" in
 esac
 case "$TARGET" in
   aarch64-apple-darwin) BUNDLES="--bundles app" ;;
-  x86_64-pc-windows-msvc) BUNDLES="--no-bundle" ;;
+  x86_64-pc-windows-msvc) BUNDLES="--bundles nsis" ;;
   x86_64-unknown-linux-gnu) BUNDLES="--bundles appimage" ;;
   *) echo "usage: setup/build_release --target aarch64-apple-darwin|x86_64-pc-windows-msvc|x86_64-unknown-linux-gnu"; exit 1 ;;
 esac
@@ -104,6 +104,11 @@ APPIMAGE_EXTRACT_AND_RUN=1 npx --yes @tauri-apps/cli@2 build --target "$TARGET" 
 
 say "package the zip"
 python setup/package_release.py --target "$TARGET"
+# Windows ships the NSIS installer beside the portable zip; a build without it stops here.
+if [ "$RUNNER_OS" = Windows ] && ! ls release-dist/formcut-*-windows-*-setup.exe >/dev/null 2>&1; then
+  echo "the NSIS installer was not built"
+  exit 1
+fi
 
 # The app as a person gets it: unzipped from the release zip, then checked
 # as Gatekeeper checks it. A signature that does not seal the bundle is what

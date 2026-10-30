@@ -3,7 +3,7 @@
 #
 #   setup/release_assets --version 2.9.2 --dir release-dist
 #
-# Run after every zip, apk and ipa is in the folder (setup/build_release, then
+# Run after every zip, the Windows -setup.exe, apk and ipa are in the folder (setup/build_release, then
 # setup/build_phone). manifest.json and SHA256SUMS are written into the folder;
 # notes.md is written to the repository root, as the release workflow's publish
 # job did. Nothing is published here: nodemode-ai/formcompiler does that.
@@ -30,7 +30,7 @@ fi
 cd "$(dirname "$0")/.."
 
 python setup/release_manifest.py --version "$VERSION" --dir "$DIR" > manifest.json
-(cd "$DIR" && sha256sum -- *.zip *.apk *.ipa > SHA256SUMS)
+(cd "$DIR" && sha256sum -- *.zip *-setup.exe *.apk *.ipa > SHA256SUMS)
 mv manifest.json "$DIR/manifest.json"
 python setup/release_notes.py --version "$VERSION" > notes.md
 
