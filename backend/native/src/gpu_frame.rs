@@ -52,7 +52,12 @@ impl Pool {
         if let Some(buffer) = self.free.get_mut(&class).and_then(|list| list.pop()) {
             return buffer;
         }
-        device.create_buffer(&wgpu::BufferDescriptor { label: Some("pooled"), size: class, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false })
+        device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("pooled"),
+            size: class,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        })
     }
 
     fn give(&mut self, buffer: wgpu::Buffer) {
@@ -67,11 +72,45 @@ fn bytes_of<'a>(array: &'a PyReadonlyArray1<'_, u8>) -> PyResult<&'a [u8]> {
 }
 
 enum Step {
-    Upload { picture: usize, width: u32, height: u32, deep: bool, staging: wgpu::Buffer, from: wgpu::Buffer, bytes: u64 },
-    Pass { code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<wgpu::Buffer>, from: Option<(wgpu::Buffer, u64)> },
-    Copy { from: usize, to: usize, width: u32, height: u32 },
-    Clear { picture: usize, bytes: u64 },
-    Download { picture: usize, code: usize, width: u32, height: u32, out_bytes: u64, held: usize, params: Vec<f32> },
+    Upload {
+        picture: usize,
+        width: u32,
+        height: u32,
+        deep: bool,
+        staging: wgpu::Buffer,
+        from: wgpu::Buffer,
+        bytes: u64,
+    },
+    Pass {
+        code: usize,
+        src: usize,
+        dst: usize,
+        held: usize,
+        width: u32,
+        height: u32,
+        params: Vec<f32>,
+        aux: Option<wgpu::Buffer>,
+        from: Option<(wgpu::Buffer, u64)>,
+    },
+    Copy {
+        from: usize,
+        to: usize,
+        width: u32,
+        height: u32,
+    },
+    Clear {
+        picture: usize,
+        bytes: u64,
+    },
+    Download {
+        picture: usize,
+        code: usize,
+        width: u32,
+        height: u32,
+        out_bytes: u64,
+        held: usize,
+        params: Vec<f32>,
+    },
 }
 
 /// A frame recorded step by step and run as one command buffer.
@@ -112,10 +151,18 @@ impl GpuFrame {
     #[new]
     fn new(picture_bytes: u64, pictures: usize) -> PyResult<Self> {
         // Metal, Vulkan or DX12 first; a machine with none of them (a Linux box with only OpenGL) takes GL
-        let options = wgpu::RequestAdapterOptions { power_preference: wgpu::PowerPreference::HighPerformance, compatible_surface: None, force_fallback_adapter: false };
+        let options = wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: None,
+            force_fallback_adapter: false,
+        };
         let adapter = [wgpu::Backends::PRIMARY, wgpu::Backends::all()]
             .into_iter()
-            .find_map(|backends| pollster::block_on(wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..Default::default() }).request_adapter(&options)))
+            .find_map(|backends| {
+                pollster::block_on(
+                    wgpu::Instance::new(wgpu::InstanceDescriptor { backends, ..Default::default() }).request_adapter(&options),
+                )
+            })
             .ok_or_else(|| PyRuntimeError::new_err("no WebGPU adapter"))?;
         let info = adapter.get_info();
         // the backend in the name, so the engine can tell Metal, Vulkan or DX12 from OpenGL
@@ -123,7 +170,10 @@ impl GpuFrame {
         // ask for what the adapter has: a fixed request (256 MB bindings) refused the 128 MB of an OpenGL adapter
         let limits = adapter.limits();
         if picture_bytes > limits.max_storage_buffer_binding_size as u64 {
-            return Err(PyRuntimeError::new_err(format!("a {picture_bytes}-byte picture is over this adapter's {} bytes", limits.max_storage_buffer_binding_size)));
+            return Err(PyRuntimeError::new_err(format!(
+                "a {picture_bytes}-byte picture is over this adapter's {} bytes",
+                limits.max_storage_buffer_binding_size
+            )));
         }
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
@@ -138,7 +188,11 @@ impl GpuFrame {
         let entry = |binding: u32, read_only: bool| wgpu::BindGroupLayoutEntry {
             binding,
             visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Storage { read_only }, has_dynamic_offset: false, min_binding_size: None },
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
             count: None,
         };
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -147,7 +201,14 @@ impl GpuFrame {
         });
         let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST;
         let pictures = (0..pictures)
-            .map(|i| device.create_buffer(&wgpu::BufferDescriptor { label: Some(&format!("picture {i}")), size: picture_bytes, usage, mapped_at_creation: false }))
+            .map(|i| {
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("picture {i}")),
+                    size: picture_bytes,
+                    usage,
+                    mapped_at_creation: false,
+                })
+            })
             .collect();
         Ok(Self {
             device,
@@ -181,9 +242,23 @@ impl GpuFrame {
             let wanted = std::env::var("FORMCUT_GPU_TIMINGS").map(|v| v == "1").unwrap_or(false);
             if wanted && frame.device.features().contains(wgpu::Features::TIMESTAMP_QUERY) {
                 let count = TIMED_PASSES * 2;
-                let set = frame.device.create_query_set(&wgpu::QuerySetDescriptor { label: Some("pass times"), ty: wgpu::QueryType::Timestamp, count });
-                let resolve = frame.device.create_buffer(&wgpu::BufferDescriptor { label: Some("pass times"), size: count as u64 * 8, usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
-                let read = frame.device.create_buffer(&wgpu::BufferDescriptor { label: Some("pass times read"), size: count as u64 * 8, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+                let set = frame.device.create_query_set(&wgpu::QuerySetDescriptor {
+                    label: Some("pass times"),
+                    ty: wgpu::QueryType::Timestamp,
+                    count,
+                });
+                let resolve = frame.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("pass times"),
+                    size: count as u64 * 8,
+                    usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
+                    mapped_at_creation: false,
+                });
+                let read = frame.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("pass times read"),
+                    size: count as u64 * 8,
+                    usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
                 let period = frame.queue.get_timestamp_period();
                 frame.timing = Some((set, resolve, read, period));
             }
@@ -205,8 +280,14 @@ impl GpuFrame {
             return Ok(i);
         }
         self.device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.clone().into()) });
-        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { label: None, bind_group_layouts: &[&self.layout], push_constant_ranges: &[] });
+        let module = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.clone().into()) });
+        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &[&self.layout],
+            push_constant_ranges: &[],
+        });
         let pipeline = self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
             layout: Some(&layout),
@@ -258,7 +339,17 @@ impl GpuFrame {
     /// One pass: `pass` is a Python keyword, so the method is `step` on the Python side.
     #[pyo3(name = "step", signature = (code, src, dst, held, width, height, params, aux=None))]
     #[allow(clippy::too_many_arguments)]
-    fn pass(&mut self, code: usize, src: usize, dst: usize, held: usize, width: u32, height: u32, params: Vec<f32>, aux: Option<PyReadonlyArray1<'_, u8>>) -> PyResult<()> {
+    fn pass(
+        &mut self,
+        code: usize,
+        src: usize,
+        dst: usize,
+        held: usize,
+        width: u32,
+        height: u32,
+        params: Vec<f32>,
+        aux: Option<PyReadonlyArray1<'_, u8>>,
+    ) -> PyResult<()> {
         let (aux, from) = match aux {
             Some(data) => {
                 let bytes = bytes_of(&data)?;
@@ -277,8 +368,25 @@ impl GpuFrame {
 
     #[pyo3(signature = (picture, code, width, height, out_bytes, held=None, params=None))]
     #[allow(clippy::too_many_arguments)]
-    fn download(&mut self, picture: usize, code: usize, width: u32, height: u32, out_bytes: u64, held: Option<usize>, params: Option<Vec<f32>>) {
-        self.steps.push(Step::Download { picture, code, width, height, out_bytes, held: held.unwrap_or(picture), params: params.unwrap_or_default() });
+    fn download(
+        &mut self,
+        picture: usize,
+        code: usize,
+        width: u32,
+        height: u32,
+        out_bytes: u64,
+        held: Option<usize>,
+        params: Option<Vec<f32>>,
+    ) {
+        self.steps.push(Step::Download {
+            picture,
+            code,
+            width,
+            height,
+            out_bytes,
+            held: held.unwrap_or(picture),
+            params: params.unwrap_or_default(),
+        });
     }
 
     /// Record every step into one command buffer, submit once, read the frame back once.
@@ -333,8 +441,18 @@ impl GpuFrame {
                     let size = out_bytes.max(16).div_ceil(4) * 4;
                     if self.packed.as_ref().map_or(true, |b| b.size() < size) {
                         let grown = size.next_power_of_two();
-                        self.packed = Some(self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("packed"), size: grown, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false }));
-                        self.read = Some(self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("read"), size: grown, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false }));
+                        self.packed = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("packed"),
+                            size: grown,
+                            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                            mapped_at_creation: false,
+                        }));
+                        self.read = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("read"),
+                            size: grown,
+                            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                            mapped_at_creation: false,
+                        }));
                     }
                     let mut p = vec![width as f32, height as f32];
                     p.extend(params);
@@ -387,7 +505,9 @@ impl GpuFrame {
                 py.allow_threads(|| {
                     device.poll(wgpu::Maintain::Wait);
                 });
-                rx.recv().map_err(|_| PyRuntimeError::new_err("readback lost"))?.map_err(|e| PyRuntimeError::new_err(format!("readback: {e:?}")))?;
+                rx.recv()
+                    .map_err(|_| PyRuntimeError::new_err("readback lost"))?
+                    .map_err(|e| PyRuntimeError::new_err(format!("readback: {e:?}")))?;
                 let bytes = {
                     let mapped = slice.get_mapped_range();
                     PyBytes::new_bound(py, &mapped[..out_bytes as usize]).unbind()
@@ -457,7 +577,12 @@ impl GpuFrame {
         let class = size.max(256).next_power_of_two();
         let buffer = match self.belt_free.iter().position(|b| b.size() == class) {
             Some(at) => self.belt_free.swap_remove(at),
-            None => self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("upload belt"), size: class, usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: true }),
+            None => self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("upload belt"),
+                size: class,
+                usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: true,
+            }),
         };
         if size > 0 {
             buffer.slice(..size).get_mapped_range_mut().copy_from_slice(&bytes[..size as usize]);
@@ -482,8 +607,13 @@ impl GpuFrame {
             return Ok(Arc::clone(p));
         }
         let source = self.sources.get(code).ok_or_else(|| PyRuntimeError::new_err("unknown kernel"))?.clone();
-        let module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.into()) });
-        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor { label: None, bind_group_layouts: &[&self.layout], push_constant_ranges: &[] });
+        let module =
+            self.device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(source.into()) });
+        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &[&self.layout],
+            push_constant_ranges: &[],
+        });
         let pipeline = self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
             layout: Some(&layout),
@@ -511,10 +641,21 @@ impl GpuFrame {
         })
     }
 
-    fn dispatch(&mut self, encoder: &mut wgpu::CommandEncoder, pipeline: &wgpu::ComputePipeline, group: &wgpu::BindGroup, width: u32, height: u32) {
+    fn dispatch(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        pipeline: &wgpu::ComputePipeline,
+        group: &wgpu::BindGroup,
+        width: u32,
+        height: u32,
+    ) {
         let slot = self.timed.len() as u32;
         let writes = match &self.timing {
-            Some((set, _, _, _)) if slot < TIMED_PASSES => Some(wgpu::ComputePassTimestampWrites { query_set: set, beginning_of_pass_write_index: Some(slot * 2), end_of_pass_write_index: Some(slot * 2 + 1) }),
+            Some((set, _, _, _)) if slot < TIMED_PASSES => Some(wgpu::ComputePassTimestampWrites {
+                query_set: set,
+                beginning_of_pass_write_index: Some(slot * 2),
+                end_of_pass_write_index: Some(slot * 2 + 1),
+            }),
             _ => None,
         };
         if writes.is_some() {
