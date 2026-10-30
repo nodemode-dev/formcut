@@ -103,6 +103,7 @@ say "freeze the engine"
 say "bundle ffmpeg"
 python setup/bundle_ffmpeg.py --target "$TARGET"
 
+say "build the app"
 # With formcompiler's Developer ID (APPLE_SIGNING_IDENTITY, in a keychain on the
 # search list), Tauri signs formcut and the engine sidecar with hardened runtime
 # and src-tauri/entitlements.plist, and notarizes when APPLE_ID, APPLE_PASSWORD
@@ -126,8 +127,6 @@ if [ "$RUNNER_OS" = macOS ] && [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
   done
   HARDENED='{"bundle":{"macOS":{"hardenedRuntime":true}}}'
 fi
-
-say "build the app"
 # linuxdeploy is an AppImage; extracting it lets it run without FUSE.
 # FORMCOMPILER_CONFIG_ARG is formcompiler's --config file (updater settings, or
 # the ad hoc identity on macOS when it has no Apple identity), empty otherwise.
