@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import os
 from pathlib import Path
 
@@ -29,6 +30,10 @@ from .track import router as track_router
 from .tts import router as tts_router
 from .upscale import router as upscale_router
 from .webhooks import router as webhooks_router
+
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("text/css", ".css")
 
 prefer_bundled()
 
