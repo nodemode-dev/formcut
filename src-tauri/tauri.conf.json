@@ -18,6 +18,17 @@
     "icon": ["icons/icon.icns", "icons/icon.ico", "icons/icon.png"],
     "externalBin": ["binaries/formcut-engine"],
     "resources": { "ffmpeg/": "ffmpeg/", "../LICENSE": "LICENSE", "../NOTICE": "NOTICE", "../.docs/wiki/Licences.md": "Licences.md" },
+    "linux": {
+      "deb": {
+        "recommends": ["gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good", "gstreamer1.0-libav"]
+      },
+      "rpm": {
+        "recommends": ["gstreamer1-plugins-base", "gstreamer1-plugins-good"]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "14.0",
       "signingIdentity": "-",
