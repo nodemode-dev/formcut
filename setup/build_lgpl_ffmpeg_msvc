@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+msvc_bin="${1:?usage: setup/build_lgpl_ffmpeg_msvc <msvc bin> <work> <prefix> <ffmpeg version> <sha256>}"
+work="${2:?}"
+prefix="${3:?}"
+version="${4:?}"
+sha="${5:?}"
+pacman -Sy --needed --noconfirm make diffutils nasm pkgconf >/dev/null
+export PATH="$(cygpath -u "$msvc_bin"):$PATH"
+command -v link | grep -qv '^/usr/bin/'
+cd "$(cygpath -u "$work")"
+tarball="ffmpeg-$version.tar.xz"
+[ -f "$tarball" ] || curl -fL --retry 3 -o "$tarball" "https://ffmpeg.org/releases/$tarball"
+[ "$(sha256sum "$tarball" | cut -d' ' -f1)" = "$sha" ] || { echo "[lgpl-av] checksum mismatch for $tarball"; exit 1; }
+rm -rf src && mkdir src && tar -xJf "$tarball" -C src --strip-components 1
+cd src
+./configure --toolchain=msvc --prefix="$(cygpath -m "$prefix")" --enable-shared --disable-static \
+  --disable-gpl --disable-nonfree --disable-version3 --disable-programs --disable-doc --disable-debug \
+  --disable-autodetect --disable-network --enable-d3d11va --enable-dxva2 >/dev/null
+make -j"$(nproc)" >/dev/null
+make install >/dev/null
