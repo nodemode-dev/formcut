@@ -22,7 +22,7 @@ if not exist "%LGPL_FFMPEG_PREFIX%\include\libavcodec\avcodec.h" (
   if not exist "%MSYS%" ( echo [lgpl-av] MSYS2 was not found at C:\msys64; install it from https://www.msys2.org & exit /b 1 )
   if not exist "%WORK%" mkdir "%WORK%" || ( echo [lgpl-av] could not create %WORK% & exit /b 1 )
   set "MSYS2_PATH_TYPE=inherit"
-  "%MSYS%" -lc "pacman -Sy --needed --noconfirm make diffutils nasm pkgconf >/dev/null && export PATH=\"$(cygpath -u '%MSVC_BIN%'):$PATH\" && command -v link | grep -qv '^/usr/bin/' && cd \"$(cygpath '%WORK%')\" && f=ffmpeg-%FFMPEG_VERSION%.tar.xz && { [ -f $f ] || curl -fL --retry 3 -o $f https://ffmpeg.org/releases/$f; } && [ \"$(sha256sum $f | cut -d' ' -f1)\" = %FFMPEG_SHA256% ] && rm -rf src && mkdir src && tar -xJf $f -C src --strip-components 1 && cd src && ./configure --toolchain=msvc --prefix=\"$(cygpath -m '%LGPL_FFMPEG_PREFIX%')\" --enable-shared --disable-static --disable-gpl --disable-nonfree --disable-version3 --disable-programs --disable-doc --disable-debug --disable-autodetect --disable-network --enable-d3d11va --enable-dxva2 >/dev/null && make -j$(nproc) >/dev/null && make install >/dev/null" || ( echo [lgpl-av] the FFmpeg build failed & exit /b 1 )
+  "%MSYS%" -l "%HERE:\=/%build_lgpl_ffmpeg_msvc" "%MSVC_BIN%.""%WORK%" "%LGPL_FFMPEG_PREFIX%" "%FFMPEG_VERSION%" "%FFMPEG_SHA256%" || ( echo [lgpl-av] the FFmpeg build failed & exit /b 1 )
 )
 findstr /m /c:"libavcodec license: LGPL" "%LGPL_FFMPEG_PREFIX%\bin\avcodec-*.dll" >nul || ( echo [lgpl-av] the FFmpeg in %LGPL_FFMPEG_PREFIX% is not LGPL & exit /b 1 )
 set "INCLUDE=%LGPL_FFMPEG_PREFIX%\include;%INCLUDE%"

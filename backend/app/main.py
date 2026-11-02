@@ -37,7 +37,7 @@ mimetypes.add_type("text/css", ".css")
 
 prefer_bundled()
 
-APP_VERSION = "2.11.2"
+APP_VERSION = "2.11.3"
 
 app = FastAPI(title="formcut engine", version=APP_VERSION)
 
