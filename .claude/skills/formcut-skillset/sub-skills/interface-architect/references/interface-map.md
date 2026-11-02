@@ -15,87 +15,87 @@ The module list and the engine commands are generated from `frontend/src` by
 
 ## Modules
 
-- `engine/api.ts` (29L)
-- `engine/audio-playback.ts` (164L)
-- `engine/captions.ts` (282L)
-- `engine/coordinates.ts` (11L)
-- `engine/creator-commands.ts` (250L)
-- `engine/demo.ts` (58L)
-- `engine/json-delta.ts` (49L)
-- `engine/keyframes.ts` (115L)
-- `engine/live-mix.ts` (156L)
-- `engine/local-transport.ts` (11L)
-- `engine/media.ts` (82L)
-- `engine/motion.ts` (25L)
-- `engine/persistence.ts` (237L)
-- `engine/project.ts` (1404L)
-- `engine/seed.ts` (52L)
-- `engine/timing.ts` (96L)
-- `engine/types.ts` (372L)
-- `i18n/index.ts` (211L)
-- `i18n/language-pack.ts` (1581L)
-- `i18n/text.ts` (29L)
-- `main.ts` (100L)
-- `types/assets.d.ts` (6L)
-- `ui/accordion.ts` (55L)
-- `ui/appearance.ts` (225L)
-- `ui/browser-view.ts` (51L)
-- `ui/category-icons.ts` (37L)
-- `ui/clip-visuals.ts` (158L)
-- `ui/cloud.ts` (313L)
-- `ui/color-section.ts` (509L)
-- `ui/compact.ts` (10L)
-- `ui/creator-panel.ts` (402L)
-- `ui/device-inspector.ts` (291L)
-- `ui/device-stage.ts` (120L)
-- `ui/devices-view.ts` (41L)
-- `ui/editor-actions.ts` (175L)
-- `ui/effect-parameters.ts` (109L)
-- `ui/export-job.ts` (29L)
-- `ui/file-menu.ts` (17L)
-- `ui/focus-moves.ts` (259L)
-- `ui/font-tools.ts` (25L)
-- `ui/icons-lucide.ts` (48L)
-- `ui/icons.ts` (59L)
-- `ui/inspector-pane.ts` (1747L)
-- `ui/instagram.ts` (185L)
-- `ui/interface-mode.ts` (246L)
-- `ui/keyed-list.ts` (12L)
-- `ui/keymap.ts` (152L)
-- `ui/library-view.ts` (145L)
-- `ui/media-pane.ts` (1478L)
-- `ui/missing-media.ts` (103L)
-- `ui/mode-popout.ts` (157L)
-- `ui/planar-workspace.ts` (1406L)
-- `ui/preset-grid.ts` (20L)
-- `ui/preview-manipulation.ts` (559L)
-- `ui/pro-view.ts` (427L)
-- `ui/recorder.ts` (344L)
-- `ui/remote-settings.ts` (93L)
-- `ui/render-preview.ts` (244L)
-- `ui/safe-text.ts` (3L)
-- `ui/settings-link.ts` (8L)
-- `ui/settings-popout.ts` (623L)
-- `ui/start-screen.ts` (778L)
-- `ui/studio-tools.ts` (1464L)
-- `ui/tiktok-dialog.ts` (258L)
-- `ui/tiktok-settings.ts` (89L)
-- `ui/timeline-pane.ts` (798L)
-- `ui/timeline-structure.ts` (50L)
-- `ui/title-speech.ts` (53L)
-- `ui/titlebar.ts` (550L)
-- `ui/tool-tray.ts` (149L)
-- `ui/tour.ts` (109L)
-- `ui/track-controls.ts` (39L)
-- `ui/track-height.ts` (80L)
-- `ui/track-keyframes.ts` (715L)
-- `ui/tracking.ts` (99L)
-- `ui/upscale-dialog.ts` (254L)
-- `ui/viewer.ts` (96L)
-- `ui/webhooks-settings.ts` (124L)
-- `ui/work-area.ts` (139L)
-- `ui/workspace-layout.ts` (305L)
-- `workers/transcription.ts` (138L)
+- `engine/api.ts`
+- `engine/audio-playback.ts`
+- `engine/captions.ts`
+- `engine/coordinates.ts`
+- `engine/creator-commands.ts`
+- `engine/demo.ts`
+- `engine/json-delta.ts`
+- `engine/keyframes.ts`
+- `engine/live-mix.ts`
+- `engine/local-transport.ts`
+- `engine/media.ts`
+- `engine/motion.ts`
+- `engine/persistence.ts`
+- `engine/project.ts`
+- `engine/seed.ts`
+- `engine/timing.ts`
+- `engine/types.ts`
+- `i18n/index.ts`
+- `i18n/language-pack.ts`
+- `i18n/text.ts`
+- `main.ts`
+- `types/assets.d.ts`
+- `ui/accordion.ts`
+- `ui/appearance.ts`
+- `ui/browser-view.ts`
+- `ui/category-icons.ts`
+- `ui/clip-visuals.ts`
+- `ui/cloud.ts`
+- `ui/color-section.ts`
+- `ui/compact.ts`
+- `ui/creator-panel.ts`
+- `ui/device-inspector.ts`
+- `ui/device-stage.ts`
+- `ui/devices-view.ts`
+- `ui/editor-actions.ts`
+- `ui/effect-parameters.ts`
+- `ui/export-job.ts`
+- `ui/file-menu.ts`
+- `ui/focus-moves.ts`
+- `ui/font-tools.ts`
+- `ui/icons-lucide.ts`
+- `ui/icons.ts`
+- `ui/inspector-pane.ts`
+- `ui/instagram.ts`
+- `ui/interface-mode.ts`
+- `ui/keyed-list.ts`
+- `ui/keymap.ts`
+- `ui/library-view.ts`
+- `ui/media-pane.ts`
+- `ui/missing-media.ts`
+- `ui/mode-popout.ts`
+- `ui/planar-workspace.ts`
+- `ui/preset-grid.ts`
+- `ui/preview-manipulation.ts`
+- `ui/pro-view.ts`
+- `ui/recorder.ts`
+- `ui/remote-settings.ts`
+- `ui/render-preview.ts`
+- `ui/safe-text.ts`
+- `ui/settings-link.ts`
+- `ui/settings-popout.ts`
+- `ui/start-screen.ts`
+- `ui/studio-tools.ts`
+- `ui/tiktok-dialog.ts`
+- `ui/tiktok-settings.ts`
+- `ui/timeline-pane.ts`
+- `ui/timeline-structure.ts`
+- `ui/title-speech.ts`
+- `ui/titlebar.ts`
+- `ui/tool-tray.ts`
+- `ui/tour.ts`
+- `ui/track-controls.ts`
+- `ui/track-height.ts`
+- `ui/track-keyframes.ts`
+- `ui/tracking.ts`
+- `ui/upscale-dialog.ts`
+- `ui/viewer.ts`
+- `ui/webhooks-settings.ts`
+- `ui/work-area.ts`
+- `ui/workspace-layout.ts`
+- `workers/transcription.ts`
 
 ## Engine commands
 

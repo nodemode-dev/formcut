@@ -157,7 +157,7 @@ def test_the_library_gives_mflux_the_renamed_copy_and_refuses_what_cannot_apply(
     assert style["usable"] and style["audit"]["converted"] == "OneTrainer Style.safetensors"
     assert not old["usable"] and "made for another model" in old["problem"]
     [(path, scale)] = loras.resolve([{"id": style["id"], "scale": 0.8}], "krea-2")
-    assert path.endswith(".converted/OneTrainer Style.safetensors") and scale == 0.8
+    assert Path(path).parts[-2:] == (".converted", "OneTrainer Style.safetensors") and scale == 0.8
     with pytest.raises(ValueError, match="cannot be used"):
         loras.resolve([{"id": old["id"], "scale": 1}], "krea-2")
     # checked once: the record remembers it while the file and mflux are unchanged

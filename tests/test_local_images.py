@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import struct
 import sys
 import threading
@@ -16,6 +17,10 @@ import pytest
 from app import generative, klein, local_runner, loras
 from app.main import app
 from fastapi.testclient import TestClient
+
+MFLUX_STANDIN = pytest.mark.skipif(
+    os.name == "nt", reason="mflux runs on Apple silicon only; its stand-in is a #! script, which Windows cannot start"
+)
 
 STEPS_SCRIPT = r"""
 import sys, time
@@ -108,7 +113,7 @@ def test_a_stack_resolves_to_paths_and_strengths_for_its_own_model(library):
     pairs = loras.resolve(
         [{"id": one["id"], "scale": 0.7}, {"id": two["id"], "scale": 5}, {"id": one["id"], "scale": 1, "enabled": False}], "flux2-klein-4b"
     )
-    assert [s for _, s in pairs] == [0.7, 2.0] and pairs[0][0].endswith("flux2-klein-4b/One.safetensors")
+    assert [s for _, s in pairs] == [0.7, 2.0] and Path(pairs[0][0]).parts[-2:] == ("flux2-klein-4b", "One.safetensors")
     assert loras.mflux_flags(pairs)[0] == "--lora-paths" and loras.mflux_flags(pairs)[-2:] == ["0.7", "2"]
     with pytest.raises(ValueError, match=r"made for FLUX\.2 \[klein\] 4B, not Krea 2"):
         loras.resolve([{"id": one["id"], "scale": 1}], "krea-2")
@@ -145,6 +150,7 @@ def test_every_klein_file_is_pinned_and_gated_on_its_licence(tmp_path, monkeypat
     assert list(terms) == ["flux2-klein-4b"] and terms["flux2-klein-4b"]["licence"]["commercial"]
 
 
+@MFLUX_STANDIN
 def test_klein_runs_with_its_stack_memory_and_progress_through_the_generator(tmp_path, monkeypatch, library):
     monkeypatch.setattr(klein, "CONSENT_FILE", tmp_path / "klein-consent.json")
     klein.record_consent("flux2-klein-4b", True)
@@ -351,6 +357,7 @@ def test_a_checkpoint_in_mflux_format_is_found_and_a_wrong_one_says_why(tmp_path
     assert checkpoints.find("krea-2", "Silly-Krea2")["name"] == "silly_krea2"
 
 
+@MFLUX_STANDIN
 def test_the_owners_civitai_prompt_runs_with_its_loras_checkpoint_steps_seed_and_size(tmp_path, monkeypatch, library):
     from app import checkpoints, krea2
 
@@ -471,6 +478,7 @@ def test_the_decode_is_tiled_when_memory_is_short(monkeypatch):
     assert local_runner.plan(10e9)["lowRam"] and not local_runner.plan(10e9)["vaeTiling"]
 
 
+@MFLUX_STANDIN
 def test_several_krea_pictures_come_from_one_run_of_mflux(tmp_path, monkeypatch, library):
     from app import krea2
 
@@ -550,6 +558,7 @@ def _finished(client, body):
     return status
 
 
+@MFLUX_STANDIN
 def test_image_to_image_starts_from_a_library_picture_or_the_playheads_frame(tmp_path, monkeypatch, library):
     from app import media
     from PIL import Image
@@ -614,6 +623,7 @@ def test_image_to_image_starts_from_a_library_picture_or_the_playheads_frame(tmp
     assert refused.status_code == 400
 
 
+@MFLUX_STANDIN
 def test_seed_minus_one_is_random_and_the_seed_used_is_in_the_file_and_the_library(tmp_path, monkeypatch, library):
     from app import krea2, prompt_data
     from PIL import Image
@@ -646,6 +656,7 @@ def test_seed_minus_one_is_random_and_the_seed_used_is_in_the_file_and_the_libra
     assert done["result"]["warning"] == krea2.REMOVED_WARNING  # the filter removed and not yet acknowledged
 
 
+@MFLUX_STANDIN
 def test_the_filter_warning_stops_once_acknowledged(tmp_path, monkeypatch, library):
     from app import krea2
 
@@ -693,6 +704,7 @@ sys.stderr.write("\n")
     assert {"step": 2, "steps": 8, "elapsed": "00:05", "remaining": "00:10", "rate": "1.95it/s"} in steps
 
 
+@MFLUX_STANDIN
 def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_path, monkeypatch, library):
     from PIL import Image
 
@@ -741,6 +753,7 @@ def test_a_continuous_session_keeps_the_model_loaded_and_takes_a_new_prompt(tmp_
     assert client.post(f"/api/generate/sessions/{job}/prompt", json={"prompt": "x"}).status_code == 404
 
 
+@MFLUX_STANDIN
 def test_a_session_takes_each_picture_before_the_next_is_made(tmp_path, monkeypatch, library):
     from app import krea2
 
@@ -791,6 +804,7 @@ def test_the_previews_frames_are_let_go_before_a_model_runs():
             render_api._sessions.pop("test-free", None)
 
 
+@MFLUX_STANDIN
 def test_unticking_continuous_finishes_the_picture_in_hand_then_stops(tmp_path, monkeypatch, library):
     _krea_standin(tmp_path, monkeypatch)
     monkeypatch.setenv("FAKE_DELAY", "0.3")
@@ -868,6 +882,7 @@ def _until(client, job, test, tries=600):
     return status
 
 
+@MFLUX_STANDIN
 def test_a_picture_named_otherwise_is_shown_before_the_next_begins(tmp_path, monkeypatch, library):
     """mflux writing the same name each time (not the seed's): each picture still taken as soon as it is whole."""
     _krea_standin(tmp_path, monkeypatch)
@@ -885,6 +900,7 @@ def test_a_picture_named_otherwise_is_shown_before_the_next_begins(tmp_path, mon
     assert first["made"][0]["seed"] == second["seeds"][0] and second["seeds"][0] != second["seeds"][1]
 
 
+@MFLUX_STANDIN
 def test_unticking_mid_picture_finishes_that_picture_not_the_one_before(tmp_path, monkeypatch, library):
     """The owner's case: Continuous unticked while picture 2 was being made. Picture 2 is finished and saved, then the
     session stops; until 2.1.10 saving picture 1 late ended the session and picture 2 was lost."""
@@ -925,6 +941,7 @@ def _wrap_finished(client, job, tries=800):
     return status
 
 
+@MFLUX_STANDIN
 def test_a_prompt_wrap_runs_each_entry_in_turn_sharing_the_model_where_the_setup_is_the_same(tmp_path, monkeypatch, library):
     """2.3.0: a prompt-wrap.json, three prompts or more, each with its own size, steps and LoRAs, taken in turn;
     entries in a row that share a setup share one mflux process (the model loaded once)."""
@@ -955,6 +972,7 @@ def test_a_prompt_wrap_runs_each_entry_in_turn_sharing_the_model_where_the_setup
     assert "--prompt-file" in first and first.count("--seed") == 1
 
 
+@MFLUX_STANDIN
 def test_a_prompt_wrap_with_continuous_goes_round_again(tmp_path, monkeypatch, library):
     _krea_standin(tmp_path, monkeypatch)
     monkeypatch.setenv("FAKE_DELAY", "0.05")
@@ -1008,6 +1026,7 @@ def test_the_generative_library_keeps_generations_out_of_media(tmp_path, library
     assert not (generative.FOLDER / item["file"]).exists() and media.media_path(copy["id"]) is not None  # the media copy stays
 
 
+@MFLUX_STANDIN
 def test_a_wrap_runs_on_its_own_with_nothing_from_the_panel(tmp_path, monkeypatch, library):
     """2.3.2: a prompt wrap is its own run: the model and the wrap. Until then it went through Generate, which needed a
     prompt typed (2.3.1 slipped the first entry's in) and filled what an entry left out from the panel."""
@@ -1083,6 +1102,7 @@ def _worker_standin(tmp_path, monkeypatch):
     return calls
 
 
+@MFLUX_STANDIN
 def test_a_wrap_whose_entries_all_differ_loads_the_model_once(tmp_path, monkeypatch, library):
     """2.3.3: the owner's wrap stalled at loading and took the browser down: each entry whose LoRAs, size or steps
     differed started mflux again. Now the worker loads the model and every LoRA of the wrap once."""
@@ -1118,6 +1138,7 @@ def test_a_wrap_whose_entries_all_differ_loads_the_model_once(tmp_path, monkeypa
     assert [(j["width"], j["height"]) for j in run["jobs"]] == [(512, 512), (768, 512), (512, 768), (512, 512)]
 
 
+@MFLUX_STANDIN
 def test_a_wrap_goes_on_a_setup_at_a_time_when_the_worker_cannot_run(tmp_path, monkeypatch, library):
     _krea_standin(tmp_path, monkeypatch)
     _worker_standin(tmp_path, monkeypatch)
@@ -1130,6 +1151,7 @@ def test_a_wrap_goes_on_a_setup_at_a_time_when_the_worker_cannot_run(tmp_path, m
     assert any("could not be kept loaded across the wrap" in note for note in done["result"]["notes"])
 
 
+@MFLUX_STANDIN
 def test_a_wrap_naming_more_loras_than_memory_holds_is_split_into_few_loads(tmp_path, monkeypatch, library):
     from app import generate
 
@@ -1149,6 +1171,7 @@ def test_a_wrap_naming_more_loras_than_memory_holds_is_split_into_few_loads(tmp_
     assert [len(r["jobs"]) for r in runs] == [3, 2] and all(len(r["loras"]) <= 2 for r in runs)  # two loads, not five
 
 
+@MFLUX_STANDIN
 def test_a_wrap_round_and_round_in_one_load(tmp_path, monkeypatch, library):
     _krea_standin(tmp_path, monkeypatch)
     calls = _worker_standin(tmp_path, monkeypatch)
