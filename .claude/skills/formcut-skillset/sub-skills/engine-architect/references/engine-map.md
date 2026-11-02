@@ -19,63 +19,63 @@ The rest is written by hand.
 
 ## Modules that serve routes
 
-| Module | Lines | Prefix | Routes |
-| --- | --- | --- | --- |
-| addons.py | 194 | /api/addons | 3 |
-| agent_connect.py | 145 | /api/agents | 2 |
-| assets.py | 135 | /api/assets | 3 |
-| automation.py | 983 | /api/rpc | 2 |
-| brush.py | 106 | /api/render | 2 |
-| catalogue.py | 870 | /api/catalogue | 1 |
-| checkpoints.py | 93 | /api/checkpoints | 1 |
-| clip_visuals.py | 165 | /api/media | 2 |
-| cloud.py | 441 | /api/cloud | 9 |
-| codecs_api.py | 45 | /api/codecs | 4 |
-| demo.py | 68 | /api/demo | 2 |
-| device_templates.py | 257 | /api/devices | 2 |
-| devices.py | 256 | /api/devices | 3 |
-| effect_previews.py | 271 | /api/catalogue/preview | 1 |
-| engine_report.py | 94 | /api/engine | 1 |
-| focus_motion.py | 247 | /api/focus-motion | 1 |
-| fonts.py | 93 | /api/assets | 1 |
-| generate.py | 1113 | /api/generate | 6 |
-| generative.py | 152 | /api/generative | 5 |
-| instagram.py | 206 | /api/connect/instagram | 4 |
-| interchange.py | 755 | /api/interchange | 2 |
-| jobs.py | 216 | /api/jobs | 3 |
-| klein.py | 267 | /api/models/klein | 3 |
-| krea2.py | 797 | /api/models/krea-2 | 6 |
-| library.py | 2506 | /api/library | 5 |
-| linking.py | 352 | /api/media/link | 6 |
-| local_speech.py | 445 | /api/speech | 5 |
-| loras.py | 487 | /api/loras | 5 |
-| main.py | 487 | /api/health | 13 |
-| media.py | 1069 | /api/media | 26 |
-| media_check.py | 130 | /api/media/health | 1 |
-| model_manager.py | 877 | /api/models | 8 |
-| orchestration.py | 150 | /api/orchestration | 4 |
-| planar_api.py | 1273 | /api/planar | 19 |
-| presets.py | 620 | /api/presets | 9 |
-| project_files.py | 321 | /api/project-files | 6 |
-| project_packages.py | 327 | /api/projects | 4 |
-| project_tracking.py | 89 | /api/track | 1 |
-| projects.py | 184 | /api/projects | 9 |
-| providers.py | 166 | /api/providers | 4 |
-| recovery.py | 89 | /api/recovery | 4 |
-| remote.py | 257 | /api/remote | 6 |
-| render_api.py | 1373 | /api/render | 13 |
-| render_stream.py | 87 | /api/render | 1 |
-| stock.py | 422 | /api/stock | 7 |
-| storage.py | 66 | /api/storage | 1 |
-| subtitles.py | 274 | /api/subtitles | 2 |
-| templates.py | 214 | /api/templates | 7 |
-| terminal.py | 181 | /api/terminal | 2 |
-| tiktok.py | 333 | /api/connect/tiktok/app | 7 |
-| track.py | 178 | /api/track | 1 |
-| transcribe.py | 525 | /api/transcribe | 2 |
-| tts.py | 91 | /api/tts | 3 |
-| upscale.py | 328 | /api/media | 2 |
-| webhooks.py | 247 | /api/webhooks | 5 |
+| Module | Prefix | Routes |
+| --- | --- | --- |
+| addons.py | /api/addons | 3 |
+| agent_connect.py | /api/agents | 2 |
+| assets.py | /api/assets | 3 |
+| automation.py | /api/rpc | 2 |
+| brush.py | /api/render | 2 |
+| catalogue.py | /api/catalogue | 1 |
+| checkpoints.py | /api/checkpoints | 1 |
+| clip_visuals.py | /api/media | 2 |
+| cloud.py | /api/cloud | 9 |
+| codecs_api.py | /api/codecs | 4 |
+| demo.py | /api/demo | 2 |
+| device_templates.py | /api/devices | 2 |
+| devices.py | /api/devices | 3 |
+| effect_previews.py | /api/catalogue/preview | 1 |
+| engine_report.py | /api/engine | 1 |
+| focus_motion.py | /api/focus-motion | 1 |
+| fonts.py | /api/assets | 1 |
+| generate.py | /api/generate | 6 |
+| generative.py | /api/generative | 5 |
+| instagram.py | /api/connect/instagram | 4 |
+| interchange.py | /api/interchange | 2 |
+| jobs.py | /api/jobs | 3 |
+| klein.py | /api/models/klein | 3 |
+| krea2.py | /api/models/krea-2 | 6 |
+| library.py | /api/library | 5 |
+| linking.py | /api/media/link | 6 |
+| local_speech.py | /api/speech | 5 |
+| loras.py | /api/loras | 5 |
+| main.py | /api/health | 13 |
+| media.py | /api/media | 26 |
+| media_check.py | /api/media/health | 1 |
+| model_manager.py | /api/models | 8 |
+| orchestration.py | /api/orchestration | 4 |
+| planar_api.py | /api/planar | 19 |
+| presets.py | /api/presets | 9 |
+| project_files.py | /api/project-files | 6 |
+| project_packages.py | /api/projects | 4 |
+| project_tracking.py | /api/track | 1 |
+| projects.py | /api/projects | 9 |
+| providers.py | /api/providers | 4 |
+| recovery.py | /api/recovery | 4 |
+| remote.py | /api/remote | 6 |
+| render_api.py | /api/render | 13 |
+| render_stream.py | /api/render | 1 |
+| stock.py | /api/stock | 7 |
+| storage.py | /api/storage | 1 |
+| subtitles.py | /api/subtitles | 2 |
+| templates.py | /api/templates | 7 |
+| terminal.py | /api/terminal | 2 |
+| tiktok.py | /api/connect/tiktok/app | 7 |
+| track.py | /api/track | 1 |
+| transcribe.py | /api/transcribe | 2 |
+| tts.py | /api/tts | 3 |
+| upscale.py | /api/media | 2 |
+| webhooks.py | /api/webhooks | 5 |
 
 ## Modules with no routes of their own
 
@@ -83,75 +83,75 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
-- `agent_mcp.py` (1122L)
-- `ai_upscale.py` (141L)
-- `alpha_export.py` (126L)
-- `audio_render.py` (231L)
-- `bench.py` (713L)
-- `cadence.py` (151L)
-- `cli.py` (61L)
-- `color_grade.py` (239L)
-- `content_filter.py` (64L)
-- `cutdown.py` (128L)
-- `device_assets.py` (360L)
-- `device_layer.py` (201L)
-- `device_render.py` (885L)
-- `device_scene.py` (335L)
-- `discovery.py` (65L)
-- `durable.py` (84L)
-- `effect_packages.py` (435L)
-- `encoders.py` (377L)
-- `expressions.py` (51L)
-- `fast_export.py` (310L)
-- `fast_layers.py` (408L)
-- `features.py` (43L)
-- `ffmpeg_fetch.py` (165L)
-- `frame_cache.py` (146L)
-- `gif_export.py` (78L)
-- `gpu.py` (707L)
-- `gpu_effects.py` (3112L)
-- `gpu_frame.py` (674L)
-- `local_diffusion.py` (243L)
-- `local_models.py` (361L)
-- `local_runner.py` (314L)
-- `lora_audit.py` (263L)
-- `matte_cache.py` (126L)
-- `mflux_worker.py` (147L)
-- `multicam_sync.py` (158L)
-- `music.py` (136L)
-- `openh264.py` (410L)
-- `package_registry.py` (80L)
-- `paths.py` (32L)
-- `pixel_effects.py` (1056L)
-- `planar.py` (509L)
-- `planar_bench.py` (244L)
-- `planar_green.py` (337L)
-- `planar_shapes.py` (175L)
-- `processes.py` (22L)
-- `prompt_data.py` (119L)
-- `prompt_space.py` (74L)
-- `proxies.py` (265L)
-- `qc.py` (166L)
-- `render_document.py` (130L)
-- `renderer.py` (2425L)
-- `rhythm.py` (148L)
-- `sam_video.py` (163L)
-- `scenes.py` (110L)
-- `security.py` (100L)
-- `segmentation.py` (323L)
-- `speech.py` (152L)
-- `stabilise.py` (209L)
-- `store.py` (107L)
-- `subject.py` (220L)
-- `template_assets.py` (92L)
-- `template_library.py` (452L)
-- `text_templates.py` (393L)
-- `timing.py` (269L)
-- `tools.py` (299L)
-- `validation.py` (227L)
-- `video_source.py` (649L)
-- `windows_console.py` (43L)
-- `yuv.py` (225L)
+- `agent_mcp.py`
+- `ai_upscale.py`
+- `alpha_export.py`
+- `audio_render.py`
+- `bench.py`
+- `cadence.py`
+- `cli.py`
+- `color_grade.py`
+- `content_filter.py`
+- `cutdown.py`
+- `device_assets.py`
+- `device_layer.py`
+- `device_render.py`
+- `device_scene.py`
+- `discovery.py`
+- `durable.py`
+- `effect_packages.py`
+- `encoders.py`
+- `expressions.py`
+- `fast_export.py`
+- `fast_layers.py`
+- `features.py`
+- `ffmpeg_fetch.py`
+- `frame_cache.py`
+- `gif_export.py`
+- `gpu.py`
+- `gpu_effects.py`
+- `gpu_frame.py`
+- `local_diffusion.py`
+- `local_models.py`
+- `local_runner.py`
+- `lora_audit.py`
+- `matte_cache.py`
+- `mflux_worker.py`
+- `multicam_sync.py`
+- `music.py`
+- `openh264.py`
+- `package_registry.py`
+- `paths.py`
+- `pixel_effects.py`
+- `planar.py`
+- `planar_bench.py`
+- `planar_green.py`
+- `planar_shapes.py`
+- `processes.py`
+- `prompt_data.py`
+- `prompt_space.py`
+- `proxies.py`
+- `qc.py`
+- `render_document.py`
+- `renderer.py`
+- `rhythm.py`
+- `sam_video.py`
+- `scenes.py`
+- `security.py`
+- `segmentation.py`
+- `speech.py`
+- `stabilise.py`
+- `store.py`
+- `subject.py`
+- `template_assets.py`
+- `template_library.py`
+- `text_templates.py`
+- `timing.py`
+- `tools.py`
+- `validation.py`
+- `video_source.py`
+- `windows_console.py`
+- `yuv.py`
 
 ## Reading order for a change
 
