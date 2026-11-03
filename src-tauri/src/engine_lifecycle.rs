@@ -85,7 +85,7 @@ pub async fn supervise(
                                 "main",
                                 WebviewUrl::External(url),
                             )
-                            .title("formcut")
+                            .title("FormCut")
                             .inner_size(width, height)
                             .min_inner_size(
                                 crate::MIN_LOGICAL.0.min(width),
