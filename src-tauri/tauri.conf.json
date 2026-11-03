@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "formcut",
+  "productName": "FormCut",
   "version": "2.11.4",
   "identifier": "app.formcut.desktop",
   "build": {

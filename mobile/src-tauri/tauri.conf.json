@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "formcut",
+  "productName": "FormCut",
   "version": "1.0.0",
   "identifier": "app.formcut.mobile",
   "build": {
@@ -9,7 +9,7 @@
   "app": {
     "windows": [
       {
-        "title": "formcut"
+        "title": "FormCut"
       }
     ]
   },

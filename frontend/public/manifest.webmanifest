@@ -1,6 +1,6 @@
 {
-  "name": "formcut",
-  "short_name": "formcut",
+  "name": "FormCut",
+  "short_name": "FormCut",
   "description": "A fast, friendly video editor.",
   "start_url": "/",
   "display": "standalone",

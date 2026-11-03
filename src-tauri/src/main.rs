@@ -36,7 +36,7 @@ fn main() {
                 .id("file-save")
                 .accelerator("CmdOrCtrl+S")
                 .build(app)?;
-            let app_menu = SubmenuBuilder::new(app, "formcut")
+            let app_menu = SubmenuBuilder::new(app, "FormCut")
                 .about(Some(AboutMetadata::default()))
                 .separator()
                 .services()
