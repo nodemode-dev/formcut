@@ -1,234 +1,217 @@
 <p align="center">
-  <img src="frontend/public/favicon.svg" alt="formcut logo" width="160" />
+  <img src="assets/app-icon/formcut-256.png" width="128" height="128" alt="FormCut icon: rounded tiles in orange, pink and violet on a dark square">
 </p>
 
-<h1 align="center">formcut</h1>
-
-<p align="center"><b>Truly open source video editing. Local first, no account, no upload. Cut, grade, caption and export on your own machine.</b></p>
+<h1 align="center">FormCut</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v2.11.3-f97316" alt="version v2.11.3" />
-  <img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
-  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+" />
-  <img src="https://img.shields.io/badge/license-Apache--2.0-555555" alt="license Apache 2.0" />
+  <b>Video editing; a local-first multi-track editor with no account and no upload.</b><br>
+  Timeline, colour grading, captions, effects and export,<br>
+  on your own machine. One renderer for preview and file, and open to agents.
 </p>
 
-A complete video editor that runs entirely on your machine: multi-track timeline, one renderer shared by preview and export so what you see is what you get, a real effect catalogue, captions and speech and subject cutout from local models, a scripting API, and a desktop shell. In addition to ANA connected orchestration for video editing, which makes an edit something another system can drive.
+<p align="center">
+  <img alt="version v2.11.5" src="https://img.shields.io/badge/version-v2.11.5-eef0f4?style=flat-square">
+  <img alt="TypeScript and Vite" src="https://img.shields.io/badge/TypeScript-Vite-3178c6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Python FastAPI" src="https://img.shields.io/badge/Python-FastAPI-3776ab?style=flat-square">
+  <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
+  <img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
+  <img alt="Status: active" src="https://img.shields.io/badge/status-active-d69e2e?style=flat-square">
+</p>
 
-**Stack:** vanilla TypeScript + Vite interface, Python/FastAPI engine, Tauri 2 desktop shell · one CSS token system · no interface framework, no icon dependency, no telemetry
+<p align="center">
+  <a href="https://formcut.formai.studio/"><b>Download FormCut on formai.studio</b></a> ·
+  <a href="#run-it-from-source">Run it from source</a> ·
+  <a href="#the-form-family">All Form apps</a>
+</p>
 
-## Highlights
+<br>
 
-- **One renderer for preview and export.** The same decode, crop, colour, effect, mask, grade, transform and composite path serves the canvas and the file, so a frame you approve is the frame you ship. Pixel-measured parameters follow the resolution actually decoded, so a blur looks the same in a small preview and a full-resolution export. Two exceptions, named here so they are not a surprise: a plain cut and a stack of untouched layers export through ffmpeg filtergraphs with the grade baked into a 33-point cube, and GIF takes a third route through a lossless intermediate; every frame with an effect, mask or transform goes through the renderer. The decoder is in the engine (FFmpeg's libraries through PyAV, each stream on the CPU or the chip by measurement, the pipe as the fallback), every blend happens in linear light on both paths, and a fast-path export is held to the frame path by a frame compared per export. An HLG or PQ project works in that transfer at sixteen bits: HDR sources arrive deep with no tone-map, SDR sources, stills and titles are lifted in at SDR white, the monitor rolls the picture off for an SDR screen, and the export keeps the light the camera recorded with MaxCLL and MaxFALL measured from the frames and written into the HEVC or AV1 stream; SDR pictures entering a deep timeline are moved to BT.2020 primaries in light. On a machine with a real GPU a layer goes up once as bytes and never comes back: its effects (all 76 in the catalogue have a device pass; deflicker, colour-match and paint-wash read the frame back once for a statistic or a filter and the layer stays on the device), grade, LUT, shader, key, mask, cutout and transform run as WGSL passes, the layers are blended on the device, and the frame is read back once as bytes; the CPU path is kept as the reference, every pass measured within 1/255 of it, and `FORMCUT_COMPOSITE` and `FORMCUT_EFFECTS` force either side. Measured on an Apple M5 (formcut 2.0.4, a checkout with the Rust frame executor built, `python -m app.bench --hdr --export --width 1920 --frames 300`: a ten-bit PQ HEVC clip under a teal-amber grade and a title, 300 consecutive 1080p frames in a PQ project): 174.2 fps on the device path against 1.92 on the CPU path, a mean of 0.20 sixteen-bit counts apart, the decoder's planes converted on the device in the layer's fused chain; the export through VideoToolbox, ten-bit PQ with its light written into the file, at 126.5 fps (136.0 sustained), the encoder alone at 235.7; `formcut-engine --bench` prints the reading on any machine, the decode floor beside it.
-- **Effect catalogue, browsable and real**: 74 colour grades, 76 visual effects, 48 audio chains, 23 transitions, a library of 180 looks (twenty colour grades, each with nine finishes, named in all sixteen languages), and effect packages you import from the effects browser: a manifest with a stack of formcut's own effects and grades for video, a WGSL kernel of your own with declared parameters (compiled and run on a test frame before it is enabled, and listed with the reason if it is not), or a filter-chain template for audio, each checked before it loads, and a community registry (one JSON index, formcut's own in the repository by default, any fork's by URL) whose packages install from the effects browser after the same checks. Every card's thumbnail is rendered by the engine through that effect. An adjustment layer (Effects tab) is a clip with no footage of its own whose effects and colour apply to everything beneath it for its duration.
-- **Voiceover, camera and screen recording** straight onto the timeline, three sections under Studio's Recording tab: the microphone with a device picker and a peak-holding level meter so a muted or wrong input shows before a take is wasted; the camera with its own picker, previewed live before and during a take; the screen or a window with the system sound the browser offers and your microphone mixed in if you want it. Video takes are remuxed on the way in so they seek like any footage, and each section keeps its own take.
-- **Background removal that works out of the box**: the default cutout model ships inside the engine, Subject (Auto) picks person or object for you once the person model is fetched, Point to select (SAM 2) clicks what you mean and tracks it through video, and the smart brush turns one stroke into the whole region under it rather than a paint mark. Every model download is pinned to its checksum, and Local models names the processor the sessions run on.
-- **Scene detection** from the inspector, which finds a long clip's cuts and splits there, so it can become short ones, **smooth slow motion** that makes the frames between rather than repeating them, and **canvas backgrounds**: a colour, a gradient, an image, or a blurred copy of the clip.
-- **Picture repair**: stabilisation from a measured camera path, flicker removal, noise removal that keeps edges, and colour matching between clips.
-- **Transitions** that move both clips, not only the one arriving, across wipes, slides, pushes, zoom, iris and dissolve.
-- **Projects as one file**: any project exports from the home screen as a `.fc` package (the document, every media file it references, its fonts, LUTs and shaders) that you can keep or send anywhere; a `.fc` dropped on the home screen imports as a new project with its media added to the library, never overwriting anything; projects rename and delete from their cards.
-- **Editing surface**: multi-timeline with reorderable, renameable tabs, any timeline placed on another as a single compound clip (the Media tab's Timelines row; it renders and sounds as that timeline, and cannot contain itself), which is also the multicam: a timeline whose tracks are the angles, the compound showing one and sounding one, a chip or a digit key cutting at the playhead and switching the tail, multi-track, multi-select with marquee, drag and drop, trim, blade, split and group split, rejoin, ripple delete, freeze frame, all reachable from the keyboard (clips are focusable with the arrows moving along and across tracks and Enter selecting; every effect, look, template and media card takes Enter), reverse, crop with canvas grips, vertical flip, detach and reattach audio, a magnetic main track, canvas alignment guides, markers on the ruler (M at the playhead, with a colour and a note, snapped to, and left by agents over the automation surface), and per-timeline width, height and frame rate.
-- **Color grading**: a Color tab in the inspector with scopes (waveform, RGB parade, vectorscope with the skin tone line, histogram), lift, gamma, gain and offset wheels, primaries (contrast about a pivot, colour boost, hue), custom luma and RGB curves, hue against hue, hue against saturation and luminance against saturation curves, and a thirteen-control basic panel, with copy and paste between clips. The pipeline is colour-managed to a BT.709 working space: PQ and HLG sources are tone-mapped and wide-gamut or SD-tagged sources converted at decode, the media record and its card say what was done, and every export is tagged BT.709 so players read it as rendered. The engine renders the grade, and the layered export bakes it into the same 33-point LUT, so preview and export match.
-- **Colour and shape**: imported LUTs as library looks with an intensity mix, fourteen mask shapes plus a pen tool with editable anchors and bezier handles, and In, Out and Combo animation slots that rescale when a clip is trimmed.
-- **Keyframes that actually curve**: cubic-bezier easing solved the way CSS solves it, with named presets (ease, easeIn, easeOut, easeInOut, smooth, snap, overshoot, anticipate) as handle positions and a bezier mode with handles of your own, on transform properties and on any effect's parameters and amount (a diamond beside each parameter, the slider writing the key at the playhead, a lane and a graph row per keyed parameter), effect parameters and volume alike.
-- **Motion tracking**: pin a title, sticker or overlay to a moving subject by clicking it on the stage; the clip gets keyframes that follow its position and, when asked, its size and angle, relative to the clip's own. Size and angle come from feature points followed by optical flow, each checked forward and back, fitted with RANSAC.
-- **Planar tracking and roto (the Track workspace)**, covering Mocha Pro's feature set as the developer's 33-row parity list counts it, measured on synthetic shots and real footage (MegaPlates, Mocha's stitched clean plates, is not built): surfaces tracked with translation, scale, rotation, shear and perspective, AdjustTrack and the surface and grid; X-Spline and Bezier shapes drawn by exact area coverage (no stepped edges) with per-point edges, point activation, layers that add or subtract, a Dope Sheet and a Curve Editor; Matte Assist, freehand and magnetic drawing, edge snapping, an area brush, face detection and Object Brush (SAM 2); track data to After Effects, Nuke, CSV or JSON, and a tracked shape as a mask that moves in the render. The modules: Stabilize and ReOrient by a track, Remove (an object filled from the frames around it), Insert (a picture matched to the plate's light, grain and softness), Lens (distortion solved from lines that should be straight), PowerMesh (a mesh tracked across a surface that bends) and a 3D camera solve exported to Nuke.
-- **Screen replacement**: a phone or monitor screen tracked by its own edges, held steady when a hand crosses it (occluded frames are bridged from the clean ones); the cut a vector path fitted to every frame; a hand in front kept by its key; a reflection taken off the whole glass by a clean plate; the new picture pinned with supersampling, so a wallpaper shrunk fifteen times keeps its lines.
-- **Focus moves**: draw numbered areas on a clip and formcut composes a camera move that frames each in turn (the Focus moves chip in the timeline toolbar): each area centred and filling all but a margin, no empty edge the wide shot did not show, fast, medium or slow, a loop back to the wide shot, shuffle for another route, and presets (scan left to right, top to bottom, push in, out and back). Written as ordinary keyframes in one undoable edit, so it stays editable; also `formcut_focus_motion` on MCP. On a device clip the move is 3D: the areas drive the device camera, each centred on the device point under it.
-- **Device mockups**: ten original device models (phones, tablets, a flip and two folds, two laptops and a 2-in-1), modelled from scratch in code and shipped under CC0, rendered in 3D by formcut's own pass (physically based materials, studio light, contact shadow) on any GPU or none. The Device mockup chip adds one; the Device section picks the model and finish, puts a video, image or another timeline on each screen (cover screens included), poses the lid, fold or stand, sets camera, backlight and light, with every value keyframable; drag on the stage to orbit, space-drag to pan, scroll to zoom. Store screenshot sizes for new projects, and transparent export (ProRes 4444, VP9 with alpha, PNG frames) to lay a mockup over anything. Also `formcut_devices` and `formcut_device` on MCP. The models are provided as is and used at each person's own risk ([USE_POLICY.md](USE_POLICY.md)).
-- **Titles**: weight, italic, outline, shadow, background plate, line height, letter spacing, wrap width and opacity, a gallery of ten built-in styles with engine-rendered thumbnails, presets that carry their own font, and double-click typing on the canvas. Sixteen animated titles (pop, rise, drop, spin, stamp, neon, a lower third, kicker and headline, a call to action and more) add a finished, moving design at the playhead on a track above the footage.
-- **Media in, as phones make it**: HEIC, HEIF, AVIF and TIFF stills import beside the usual formats; PQ and HLG (HDR) footage is tone-mapped to SDR in the decode pipe, so it looks the same in preview and export instead of washed out; and a recording that keeps the microphone and the desktop sound as separate streams lets each clip pick which one it plays.
-- **Captions and speech**: Whisper in the engine's own ONNX Runtime (Core ML, DirectML or CUDA where the machine offers one, the CPU otherwise) in tiny, base, small, medium or large, English-only or multilingual, with word timestamps taken from the model's alignment heads; a browser without the engine's transcriber falls back to Whisper in the page in tiny, base or small; with placement, size and words-per-caption controls, caption styles that colour, pop or box the word being spoken (word timestamps from Whisper where it aligns them), eight one-tap caption looks built on them (Karaoke, Pop word, Boxed, Clean plate, Neon, Bold yellow, Quiet, Lower plate) that style a track and the next transcription, a colour of its own on any word you name, typed captions, a transcript panel that edits the caption track as text with word times refitted to each edit and marks the footage under a sentence as a range on the timeline, from where the speech starts to where it stops in the audio, for the timeline's Extract to take out of every track (the same `timeline.cut-range` on the automation surface), SRT and WebVTT files in and out (and the same over the automation surface), and local speech with three engines: Kokoro, Kyutai's Pocket TTS (26 built-in voices, quick on a CPU) and Resemble AI's Chatterbox (expressive and multilingual, its output watermarked), the last two installed into the speech runtime on request, both able to clone a voice from a clip in Media once you confirm the speaker's permission.
-- **A library of its own**: 86 stickers (shapes, arrows, callouts, labels, faces, icons, weather, celebration, nature and food), 52 sound effects (whooshes, interface sounds, impacts, cartoon sounds, everyday sounds and ambiences such as rain, wind and waves) and 18 music tracks (calm, upbeat, hip hop, electronic, dramatic and retro), all drawn and composed by formcut's own code, so they are free to use in any video with no credit needed.
-- **Studio**: project settings, Pexels stock, Openverse (openly licensed sounds, music and images without a key, each imported with its licence, creator and an attribution line on the record), a media downloader for any site yt-dlp supports, generate image and video through fal.ai with your own key (the model id is an option, so any fal model is one line) or through local models declared as slots (any diffusers-layout ONNX folder in the engine's own runtime, or any program you install as a command runner with the prompt and output path substituted, image or video, weights and licence your choice), sound through ElevenLabs, an agent terminal (a real shell inside the app started with formcut's MCP server in its environment, with one-click connection for Claude Code and Codex so an agent drives the editor through the formcut tools while you watch), timeline templates (twelve of formcut's own, from a cinematic intro, lower third and photo slideshow to a vertical short and an end screen, filled with your footage in one step, beside your own saved, exported and imported ones), local video and image browsers, local speech and local models, in a popout with a collapsible rail and a per-section fullscreen view. The Sounds panel carries twenty CC0 real recordings curated from Openverse beside the synthesised set, fetched on Add. A project may name a sync folder its own Drive, Dropbox or iCloud client carries: its package follows every save there and the other machine imports it from the home screen; formcut uploads nothing.
-- **Export**: H.264, HEVC, AV1 and VP9 with hardware encoders preferred and confirmed by encoding, not by listing; 10-bit where the encoder supports it; size and frame-rate presets stored as exact fractions, a rate other than the project's sampled from the timeline at that rate rather than padded with duplicated frames; through the engine's export and MCP, an audio bitrate and a loudness target reached by one measured gain under a true-peak ceiling; looping GIF through a two-pass palette; and a live size estimate fitted to real output. On a computer with no H.264 encoder, formcut downloads Cisco's OpenH264 the first time an export needs it (it can be turned off in Settings, Advanced), and otherwise saves MP4 exports as WebM.
-- **One renderer for preview and export**, held there by a golden-frame check in CI that also compares the two paths on every push. Editors with separate paths drift: a transition previews as a dissolve and exports as a wipe. The frame path: a decoded layer is uploaded once as bytes, its effects, LUT, shader, key, mask, cutout and transform run as device passes (an effect without a pass runs on the CPU first and the layer still goes up once), it is staged into the frame's compositor on the device, the blend runs there, and the frame is read back once as bytes and reaches the preview as the renderer's own pixels, no JPEG between the engine and the screen; a transition or a push brings back only the frames it touches, and the CPU stays the reference for every pass. `formcut-engine --bench` prints the CPU and device frame rates on your adapter.
-- **Proxy editing**: heavy footage gets a small, fast-decoding copy built in the background and used only while editing, so scrubbing 4K stops decoding 4K. Exports always read the originals, proven by identical framemd5 digests with proxies on and off.
-- **Speed**: a content-keyed preview frame cache with read-ahead, per-clip audio cached and mixed live so a volume change is heard at once, probed hardware decode, and a bounded worker pool for export.
-- **Automation**: JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, covering every edit the interface can make, with optimistic concurrency on every edit.
-- **MCP server**: built into the app (`formcut-engine --mcp`), so Claude Code, Codex, Cursor or any MCP client can import media, build a project, render it and collect the file without touching the interface; Settings, Connections gives each client the text to add, and the server finds the running app by itself. For delivery work it renders with the full export (rate, size, codec, audio bitrate, loudness), checks the file before it ships (`formcut_qc`: repeated and near-duplicate frames, freezes, black and flash frames, a soft first or last frame, loudness and true peak), predicts and fixes repeated frames from each source's measured cadence (`formcut_frame_check`), refuses an audio cut through speech (`formcut_speech_check`), transcribes (`formcut_transcribe`), reads a track's tempo, bars and final hit (`formcut_music`) and plans cutdowns of a master as ranked scripts with exact source segments (`formcut_plan_cutdown`). Jobs survive a restart: an interrupted render resumes under its own id.
-- **Interface**: 16 languages covering every string, Arabic, Persian and Hebrew right to left, switched in place without a reload or losing your work, drop-in locale files that may be written right to left, an Easy mode with its own tool tray and clip panel, movable panes that stack as tabs, an appearance that can follow the operating system, and inline `currentColor` icons on a 24-unit grid.
-- **Privacy by construction**: the engine binds loopback, mutating calls carry a local header, remote access needs a token you set, model downloads are pinned by SHA-256, and diagnostics report secrets as set or unset rather than by value.
+<p align="center">
+  <img src="docs/images/formcut-hero.png" alt="FormCut with four panoramic clips and a music track on the multi-track timeline, the media library on the left and the preview showing a Venice sunset frame" width="100%">
+  <br>
+  <sub>Four clips and a music track on the timeline, the library on the left, the transform inspector on the right.</sub>
+</p>
 
-## Quick Start
+<p align="center">
+  <a href="#features">Features</a> · <a href="#everything-in-the-box">In the box</a> · <a href="#built-for-agents">Agents</a> · <a href="#under-the-hood">Under the hood</a> ·
+  <a href="#download">Download</a> · <a href="#run-it-from-source">Run from source</a> · <a href="#the-form-family">Form family</a>
+</p>
 
-### Download
+<br>
 
-Each release carries a zip for macOS (Apple silicon), Windows and Linux that runs with nothing else installed, formcut's ffmpeg included; the release notes say how to open each. On an Intel Mac, build it with `setup/build_macos_app --intel`. The Android and iOS apps in a release are companions, not editors: each is one screen that pairs with the formcut running on your computer and shows its interface over your own network, so the desktop must be running. To run from source instead, read on.
+<table>
+  <tr>
+    <td width="25%" valign="top"><h3>What you see is what you get</h3>One renderer draws the preview and the export, so the frame you approve is the frame you ship.</td>
+    <td width="25%" valign="top"><h3>Local first</h3>No account, no upload and no telemetry. The engine binds loopback and model downloads are pinned by checksum.</td>
+    <td width="25%" valign="top"><h3>A real effect catalogue</h3>Grades, effects, audio chains and transitions, each previewed by the engine, plus packages you can import.</td>
+    <td width="25%" valign="top"><h3>Agent-ready</h3>The same editor from the interface, a JSON-RPC surface and an MCP server, so an agent can cut a video.</td>
+  </tr>
+</table>
 
-**Tested so far:** the macOS (Apple silicon), Linux and Windows builds have been tested on real machines and work; on Windows the maintainer built the desktop app as an .exe from 2.3.3 and ran it (1 October 2026). The Android and iOS companion apps are built and published with every release but have not been tested on real devices yet; reports are welcome in the issues.
+<br>
 
-**Opening the macOS app:** a release built with formcompiler's Apple identity is Developer ID signed and notarized and opens directly. One signed ad hoc makes macOS say the first time that it cannot verify formcut; open System Settings, Privacy & Security, and choose Open Anyway. A download from 1.41.2 or earlier may instead be called damaged, because those builds were not sealed: run `xattr -dr com.apple.quarantine formcut.app` once, then open it.
+## Features
 
-### Requirements
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/formcut-color.webp" alt="The Color tab of the inspector with a waveform scope and lift and gamma wheels beside the preview" width="100%">
+      <br><sub>The Color tab with a waveform scope and grading wheels.</sub>
+      <h3>Colour grading with scopes</h3>
+      Waveform, parade, vectorscope and histogram, lift, gamma and gain wheels, curves and LUTs. The export bakes the same grade.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/formcut-effects.webp" alt="The effects browser with engine-rendered thumbnails for Sharpen and Edge Detect while a clip is selected" width="100%">
+      <br><sub>The effects browser, every thumbnail rendered by the engine.</sub>
+      <h3>Browsable effects</h3>
+      Pick a category and see each effect applied to a real frame before you add it. Adjustment layers apply a stack to everything beneath.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/formcut-export.png" alt="The Export video dialog with format, quality, codec, size and colour options and an estimated file size" width="100%">
+      <br><sub>The export dialog with codec, size and colour choices.</sub>
+      <h3>Export you can trust</h3>
+      H.264, HEVC, AV1, VP9 and GIF, with hardware encoders preferred and a live size estimate. HDR output tags travel with the file.
+    </td>
+    <td width="50%" valign="top">
+      <h3>Captions, tracking and cutout</h3>
+      Whisper captions from a local model, motion and planar tracking, and background removal that works out of the box.
+    </td>
+  </tr>
+</table>
 
-Node 18 or newer, Python 3.11 or newer, and `ffmpeg` and `ffprobe` on PATH. Everything else is installed by the scripts below.
+## Everything in the box
 
-### macOS and Linux
+<table>
+  <tr>
+    <td width="33%" valign="top"><h4>76 video effects</h4>Blur · Stylize · Distort · Texture · Looks · Masks · Cutout · 74 colour grades · 23 transitions</td>
+    <td width="33%" valign="top"><h4>48 audio chains</h4>Voice · Tone · Space · Clean · loudness target and true-peak ceiling on export</td>
+    <td width="33%" valign="top"><h4>Formats</h4>Opens: video, audio, HEIC, HEIF, AVIF, TIFF, SRT, WebVTT · Saves: MP4, WebM, GIF · Native: <code>.fc</code></td>
+  </tr>
+</table>
 
-```shell
+## Built for agents
+
+FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
+
+```sh
+./formcut mcp            # MCP server on stdio, starts the engine if nothing answers
+./formcut claude         # Claude Code here, already connected to the formcut tools
+./formcut agents status  # show how Claude Code, Codex and Cursor are set up
+```
+
+`.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
+
+## Under the hood
+
+- **One renderer:** decode, effects, masks, grade and composite share one path for the canvas and the file, held together by a golden-frame check in CI.
+- **Engine:** Python and FastAPI over FFmpeg's libraries, with WGSL device passes for effects and the CPU path kept as the reference.
+- **Interface:** vanilla TypeScript and Vite on one CSS token system, no UI framework and no icon dependency, in 16 languages.
+- **Automation:** JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, with optimistic concurrency on every edit.
+- **Tested:** 868 Python test functions under `tests/` plus a window test in `frontend/tests/`, run in CI on every push.
+
+## Download
+
+**Get the app:** download FormCut from [formai.studio](https://formcut.formai.studio/). That is the easiest way to install it.
+
+**Latest builds:** see the [FormCompiler releases](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true). **Keep it updated:** [FormPortal](https://github.com/nodemode-dev/formportal) installs, updates and rolls back every Form app from the same signed catalogue.
+
+Builds exist for macOS (Apple silicon), Windows (x64) and Linux (x64). All FormCut builds are compiled and released from [`nodemode-dev/formcompiler`](https://github.com/nodemode-dev/formcompiler/releases), not from this repo. This repo holds the source.
+
+## Run it from source
+
+Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
+
+**Requires:** Node 18+, Python 3.11+, and `ffmpeg` and `ffprobe` on PATH.
+
+```sh
+git clone git@github.com:nodemode-dev/formcut.git
+cd formcut
 chmod +x formcut
-./formcut
+./formcut           # installs the engine and the interface on first run, then boots both
 ```
 
-### Windows
+The interface opens at http://localhost:3040. On first run `.env` is created from `example.env`; every key in it is optional.
 
-```shell
-formcut.bat
-```
+On Windows run `formcut.bat`. The engine listens on http://127.0.0.1:8040; `FORMCUT_DATA_DIR`, `FORMCUT_MODELS_DIR` and `FORMCUT_PORT` in `.env` move its data, models and port.
 
-One command covers everything. `formcut` sequences the three scripts in `setup/`: the banner (`formcut_banner`), an idempotent install (`formcut_oc_install`: the engine's virtual environment and requirements, then the interface dependencies) and the boot (`formcut_boot`: both halves, with `.env` exported and the URLs printed). Running it again reinstalls only what is missing. On first run it creates `.env` from `example.env`; add your keys there.
+> [!IMPORTANT]
+> **Status:** active development. The Android and iOS apps are companions that pair with FormCut running on a computer, and have not been tested on real devices yet.
 
-### Ports
+**Contributing:** branch from `main`, keep changes to source here, and leave packaging and releases to formcompiler. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md).
 
-| Service | URL | Notes |
-|---|---|---|
-| Interface | http://localhost:3040 | Vite dev server, proxies `/api/*` to the engine |
-| Engine | http://127.0.0.1:8040 | FastAPI, REST + streamed frames + JSON-RPC |
-| Preview build | http://localhost:3041 | `npm run preview` of the built interface |
+## Repository
 
-### Local speech runtime
-
-`./formcut` and `formcut.bat` install the Kokoro speech runtime after the main install on every boot (idempotent, never gates the boot). To re-run it alone:
-
-```shell
-setup/setup_local_ai   # macOS and Linux; setup\setup_local_ai.bat on Windows
-```
-
-## Configuration
-
-Everything lives in `.env` beside the launcher, never committed. The template is `example.env`:
-
-| Variable | Purpose |
+| Path | What it is |
 |---|---|
-| `PEXELS_API_KEY` | Stock media search; a key set in Settings, AI providers overrides it and needs no restart |
-| `ELEVENLABS_API_KEY` | Hosted speech; local speech needs no key. Also settable in Settings, AI providers |
-| `FORMCUT_DATA_DIR` | Where media, projects, templates and renders live; defaults to the platform data directory |
-| `FORMCUT_MODELS_DIR` | Where AI models live; defaults to `models/` at the repository root, or the data directory's `models` folder in the packaged app |
-| `FORMCUT_MODELS_AUTO` | `1` (default) fetches only the default cutout model at engine start, a few megabytes; every other model downloads when first used. `all` fetches every permissively licensed model and the Whisper files, for a machine that will be offline. `0` fetches nothing |
-| `FORMCUT_DEMO_DIR` | Demo media folder, if not `examples/demo` |
-| `FORMCUT_FONT_PATH` | Fallback font for rendered text |
-| `FORMCUT_PORT` | Engine port; `0` picks a free one, which the desktop and portable builds use |
-| `FORMCUT_DIST` | Serve a prebuilt interface instead of the dev server |
-| `FORMCUT_NO_BROWSER` | `1` stops the portable launcher opening a window |
-| `FORMCUT_AI_PYTHON` | Interpreter carrying the local speech runtime |
-| `PEXELS_BASE` / `ELEVENLABS_BASE` | Provider endpoints, for a proxy, a mirror or a local stub |
-| `PEXELS_HOSTS` | Hosts the stock importer is allowed to fetch from |
-| `FORMCUT_ENGINE` | Engine address the MCP server talks to; by default it finds the running app, then tries `http://127.0.0.1:8040` |
-| `FORMCUT_MCP_SESSION` | Session name the MCP server registers under, shown in Settings, Connections |
+| `frontend/` | Vanilla TypeScript and Vite interface |
+| `backend/` | Python FastAPI engine, renderer and MCP server |
+| `src-tauri/` | Tauri 2 desktop shell |
+| `setup/` | Install, boot and build scripts |
 
-## Demo media
+Docs: [`.docs/wiki`](.docs/wiki/Home.md) · Agents: [`CLAUDE.md`](CLAUDE.md), [`AGENTS.md`](AGENTS.md) · Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-The demo project loads the four files in `examples/demo/`: two 10-second clips and an image from Pexels, and a spoken line generated with Kokoro. They are in the repository, under their own licences rather than formcut's; [`examples/demo/README.md`](examples/demo/README.md) lists each one's source. They are not bundled into release builds, so in an installed app the demo button says what is missing and the effect thumbnails use a generated image.
+## The Form family
 
-## Architecture
+FormCut is one of the **Form apps**: native creative tools that install, update and roll back through FormPortal and can all be driven by agents.
 
-```
-frontend/  vanilla TypeScript + Vite, no framework
-├── src/main.ts            entry, boot, window.formcut bindings
-├── src/engine/            project engine (state, commands, history), media bin, timing,
-│                          keyframes, captions, api client
-├── src/ui/                panes (media, preview, inspector, timeline), titlebar, studio
-│                          dialog, creator panel, icon modules
-├── src/workers/           transcription worker (Whisper in the browser, the fallback when the engine has no ONNX Runtime)
-├── src/i18n/              en, es, de key tables + the generated pack for nine more locales
-└── src/styles/            tokens.css, app.css, creator.css on one token system
+| | App | What it's for | Download | Code |
+|:-:|---|---|---|---|
+| <img src=".github/assets/family/form.md.png" alt="" width="32" height="32"> | **form.md** | Documents, databases and realtime editing together | [formai.studio](https://formmd.formai.studio/) | [GitHub](https://github.com/nodemode-dev/form.md) |
+| <img src=".github/assets/family/format.png" alt="" width="32" height="32"> | **FormAT** | Chat and agent workspace on your key | [formai.studio](https://format.formai.studio/) | [GitHub](https://github.com/nodemode-dev/format) |
+| <img src=".github/assets/family/formCAD.png" alt="" width="32" height="32"> | **FormCAD** | Drafting, parametric parts and NURBS surfaces | | [GitHub](https://github.com/nodemode-dev/formCAD) |
+| <img src=".github/assets/family/formcel.png" alt="" width="32" height="32"> | **FormCel** | Spreadsheets agents can read and edit | [formai.studio](https://formcel.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formcel) |
+| <img src=".github/assets/family/formcraft.png" alt="" width="32" height="32"> | **FormCraft** | Generate images, video, audio, 3D and worlds | | [GitHub](https://github.com/nodemode-dev/formcraft) |
+| <img src=".github/assets/family/formcut.png" alt="" width="32" height="32"> | **FormCut** | Multi-track video editing with no upload | [formai.studio](https://formcut.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formcut) |
+| <img src=".github/assets/family/formDAM.png" alt="" width="32" height="32"> | **FormDAM** | Photo library and asset manager | [formai.studio](https://formdam.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formDAM) |
+| <img src=".github/assets/family/formdeck.png" alt="" width="32" height="32"> | **FormDeck** | Presentations and pitch decks | [formai.studio](https://formdeck.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formdeck) |
+| <img src=".github/assets/family/formdesign.png" alt="" width="32" height="32"> | **FormDesign** | Page layout for print and the web | [formai.studio](https://formdesign.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formdesign) |
+| <img src=".github/assets/family/formencoder.png" alt="" width="32" height="32"> | **FormEncoder** | Media encoding queue with presets | [formai.studio](https://formencoder.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formencoder) |
+| <img src=".github/assets/family/formfabric.png" alt="" width="32" height="32"> | **FormFabric** | Sewing patterns draped with cloth simulation | | [GitHub](https://github.com/nodemode-dev/formfabric) |
+| <img src=".github/assets/family/formlit.png" alt="" width="32" height="32"> | **FormLit** | Photo library and raw development | [formai.studio](https://formlit.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formlit) |
+| <img src=".github/assets/family/formmorpheus.png" alt="" width="32" height="32"> | **FormMorpheus** | Frame-by-frame and performed animation | | [GitHub](https://github.com/nodemode-dev/formmorpheus) |
+| <img src=".github/assets/family/formNET.png" alt="" width="32" height="32"> | **FormNET** | See what your computer sends online | | [GitHub](https://github.com/nodemode-dev/formNET) |
+| <img src=".github/assets/family/formpath.png" alt="" width="32" height="32"> | **FormPath** | Vector illustration with artboards and type | [formai.studio](https://formpath.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formpath) |
+| <img src=".github/assets/family/formpdf.png" alt="" width="32" height="32"> | **FormPDF** | Edit, redact, sign and fill PDFs | [formai.studio](https://formpdf.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formpdf) |
+| <img src=".github/assets/family/formpromo.png" alt="" width="32" height="32"> | **FormPromo** | Promo films from your own media | [formai.studio](https://formpromo.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formpromo) |
+| <img src=".github/assets/family/formref.png" alt="" width="32" height="32"> | **FormRef** | Reference boards for creative work | [formai.studio](https://formref.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formref) |
+| <img src=".github/assets/family/formrig.png" alt="" width="32" height="32"> | **FormRig** | Rig, skin and retarget any mesh | | [GitHub](https://github.com/nodemode-dev/formrig) |
+| <img src=".github/assets/family/formsculpt.png" alt="" width="32" height="32"> | **FormSculpt** | 3D sculpting, remeshing and painting | [formai.studio](https://formsculpt.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formsculpt) |
+| <img src=".github/assets/family/formsurface.png" alt="" width="32" height="32"> | **FormSurface** | Texture painting with PBR export | [formai.studio](https://formsurface.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formsurface) |
+| <img src=".github/assets/family/formtools.png" alt="" width="32" height="32"> | **FormTools** | Viewers, batch tools and file utilities | | [GitHub](https://github.com/nodemode-dev/formtools) |
+| <img src=".github/assets/family/formtxt.png" alt="" width="32" height="32"> | **FormTxt** | Word processing with .docx round trips | [formai.studio](https://formtxt.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formtxt) |
+| <img src=".github/assets/family/formvfx.png" alt="" width="32" height="32"> | **FormVFX** | Motion graphics and VFX compositing | [formai.studio](https://formvfx.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formvfx) |
+| <img src=".github/assets/family/formvis.png" alt="" width="32" height="32"> | **FormVis** | Layered image editing with local AI | [formai.studio](https://formvis.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formvis) |
+| <img src=".github/assets/family/formwav.png" alt="" width="32" height="32"> | **FormWav** | Multitrack audio editing and mixing | [formai.studio](https://formwav.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formwav) |
+| <img src=".github/assets/family/formweb.png" alt="" width="32" height="32"> | **FormWeb** | Visual website building with a CMS | [formai.studio](https://formweb.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formweb) |
+| <img src=".github/assets/family/formportal.png" alt="" width="32" height="32"> | **FormPortal** | Install, update and roll back Form apps | [formai.studio](https://formportal.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formportal) |
+| <img src=".github/assets/family/formtray.png" alt="" width="32" height="32"> | **FormTray** | One dock icon for every app | [formai.studio](https://formtray.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formtray) |
+| <img src=".github/assets/family/formMCP.png" alt="" width="32" height="32"> | **FormMCP** | One MCP connection to the family | [formai.studio](https://formmcp.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formMCP) |
+| <img src=".github/assets/family/formskills.png" alt="" width="32" height="32"> | **FormSkills** | Every app's agent skills in one place | [formai.studio](https://formskill.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formskills) |
+| <img src=".github/assets/family/formbench.png" alt="" width="32" height="32"> | **FormBench** | Parity, testing and rankings for the family | [formai.studio](https://formranker.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formbench) |
+| <img src=".github/assets/family/formslot.png" alt="" width="32" height="32"> | **FormSlot** | Codebase memory for coding agents | | [GitHub](https://github.com/nodemode-dev/formslot) |
+| <img src=".github/assets/family/subform.png" alt="" width="32" height="32"> | **SubForm** | Workbench for parallel Claude Code agents | | [GitHub](https://github.com/nodemode-dev/subform) |
+| <img src=".github/assets/family/formcompiler.png" alt="" width="32" height="32"> | **FormCompiler** | Builds, signs and releases every app | [formai.studio](https://formcompiler.formai.studio/) | [GitHub](https://github.com/nodemode-dev/formcompiler) |
+| <img src=".github/assets/family/formpipe.png" alt="" width="32" height="32"> | **FormPipe** | Release pipeline and update feeds | | [GitHub](https://github.com/nodemode-dev/formpipe) |
 
-backend/   Python FastAPI engine
-├── app/main.py            composition root, version source, loopback binding
-├── app/features.py        mounts the route modules
-├── app/renderer.py        the shared renderer: decode, effects, masks, grade, composite
-├── app/render_stream.py   paced JPEG playback stream
-├── app/video_source.py    bounded decode and the preview decoder pool
-├── app/export.py          export graph and encoder ladders
-├── app/catalogue.py       effects, grades, transitions, audio chains, masks, cutouts
-├── app/automation.py      JSON-RPC surface (HTTP, websocket, stdin, TCP, gRPC)
-├── app/orchestration.py   sessions, operation log and the server-sent event stream
-├── app/providers.py       provider keys held by the engine, and a real connection test
-├── app/clip_visuals.py    audio peaks and filmstrips for the timeline
-├── app/storage.py         data directory usage, split into rebuildable and precious
-├── app/local_speech.py    local speech: Kokoro, Pocket TTS and Chatterbox workers
-├── app/model_manager.py   model installs: background on first start, cancellable, adopts old installs
-├── app/templates.py       template save, fill, export, import
-├── app/template_library.py formcut's own twelve templates, built in code
-└── app/store.py           atomic project writes with revision checks
+<br>
 
-src-tauri/ Tauri 2 desktop shell (spawns the engine, native menu, window lifecycle)
-setup/     install and build scripts (macOS, Windows, Linux app and portable)
-examples/  LUT and shader examples, plus the ignored demo media folder
-.docs/     licence inventory, mobile notes, and the wiki source
-.claude/   contributor pointer and skills/ for AI-assisted development
-.github/   publish-wiki.yml (mirrors .docs/wiki to the GitHub wiki)
-```
+---
 
-Subsystem docs live on the [project wiki](https://github.com/nodemode-ai/formcut/wiki); the editable source sits in [`.docs/wiki/`](.docs/wiki/Home.md) and is published by a GitHub Action on every push to `main`. Licences for assets and dependencies are in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md); the mobile surface is described in [`.docs/wiki/Mobile-notes.md`](.docs/wiki/Mobile-notes.md), and how every string reaches all 16 languages in [`.docs/wiki/Translation.md`](.docs/wiki/Translation.md).
+## Maintainers
 
-## MCP server
+| Maintainer | Role |
+|---|---|
+| [@nodemode-ai](https://github.com/nodemode-ai) | Owner |
+| [@gbarnai](https://github.com/gbarnai) | Co-owner |
 
-formcut carries an MCP server, so Claude Code, Codex, Cursor, Claude Desktop, VS Code or any MCP client can drive the editor: 32 workflow tools over stdio, built on the official Python SDK, which answers both the 2025-11-25 protocol and the stateless 2026-07-28 revision.
+Code owners are set in [`.github/CODEOWNERS`](.github/CODEOWNERS).
 
-The installed app includes it. Open **Settings, Connections, AI agents**: it shows, for each client, the exact command or config to add, with this copy of formcut's path already filled in, and a Copy button. The client runs the app's own engine as `formcut-engine --mcp`; nothing else is installed. While formcut is running, the server finds it by itself: the engine publishes its address in `engine.json` in formcut's data folder, and every call reads it afresh, so quitting and reopening formcut breaks no connection. If formcut is not running, a call says so and asks for it to be opened.
+## License
 
-From a checkout, the same server runs as `./formcut mcp`, which starts the engine when nothing answers. The checkout is already connected for agents opened in it: `.mcp.json` (Claude Code), `.codex/config.toml` (Codex) and `.cursor/mcp.json` (Cursor) run `./formcut mcp`, `AGENTS.md` briefs agents other than Claude Code, and `.agents/skills/formcut-mcp` mirrors the skill for them. `./formcut claude` starts Claude Code here with the server connected; `./formcut agents install` sets Claude Code, Codex and Cursor up for your account so formcut is reachable from any folder; `./formcut agents sync` keeps the tool reference and the mirror in step after a tool changes. `mcp/formcut_mcp.py` is the bare launcher, with the engine's virtualenv or its own from `cd mcp && ./oc_install`.
+FormCut is licensed under the Apache License 2.0 ([`LICENSE`](LICENSE), SPDX `Apache-2.0`). Copyright 2026 NodeAgentc, Inc. Third-party notices: [`NOTICE`](NOTICE). How FormCut may be used is set out in [`USE_POLICY.md`](USE_POLICY.md).
 
-The tools are workflow shaped rather than one per endpoint: `formcut_status`,
-`formcut_import_media`, `formcut_create_project`, `formcut_add_clip`,
-`formcut_set_frame`, `formcut_render`, `formcut_render_audio`, `formcut_render_status`, `formcut_qc`, `formcut_frame_check`, `formcut_speech_check`, `formcut_transcribe`, `formcut_speech_range`, `formcut_music`, `formcut_plan_cutdown`, `formcut_focus_motion`, `formcut_devices`, `formcut_device`,
-`formcut_cancel_render`, `formcut_list_media`, `formcut_list_projects`,
-`formcut_get_project`, `formcut_media_proxy`, `formcut_find_scenes`,
-`formcut_catalogue`, `formcut_edit`, `formcut_capabilities`, and for effect packages
-`formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`,
-`formcut_list_packages` and `formcut_remove_package`. Every call returns the handles the next one needs, and a
-failure comes back as text naming the recovery action. The server identifies
-itself to the engine, so Settings, Connections shows the agent that is driving.
+<sub>Screenshot content: CC0 panoramic video clips made from Poly Haven photos, and music made for the Form family.</sub>
 
-## Project skills
-
-`.claude/skills/formcut-skillset/` is a skill pack describing this codebase for
-local development with Claude Code: a director, five specialists (engine,
-interface, timeline and render, orchestration and MCP, build discipline) and
-reference maps whose inventories are generated from the tree by
-`setup/skill_maps.py`. It carries the invariants that explain most defects here,
-so a change starts from what is true rather than from a guess.
-
-`.claude/skills/formcut-mcp/` is a skill pack for the MCP server: setting it up
-with a host, driving formcut through its tools (assembling and rendering a cut,
-raw edits, a rough cut from detected scenes, and recovering from stale revisions
-or an interrupted job), and changing the server safely. Its tool reference is
-generated from the server by `setup/mcp_tool_reference.py`.
-
-## Releasing
-
-formcut builds nothing in its own repository. A release is a version, and only the maintainer makes one: bump it, push to `main` (which runs the checks), then push a branch `compile_vX.Y.Z` cut from main's head. nodemode-ai/formcompiler picks the branch up on its 8-hourly watch or a manual run, builds macOS (Apple silicon), Windows, Linux and the phone apps with `setup/build_release`, `setup/build_phone` and `setup/release_assets`, and opens a draft `formcut-vX.Y.Z` on [its release page](https://github.com/nodemode-ai/formcompiler/releases) for the maintainer to review and publish. Run `python setup/preflight.py` before pushing: it refuses a version that disagrees anywhere, a build that refers to a missing file, or an ffmpeg licence that has not been decided. See [RELEASING.md](RELEASING.md).
-
-## Development
-
-- Conventions: surgical edits over rewrites, one state engine that owns the document, stable mounted DOM with no rebuilds, every colour and z value from a token, inline `currentColor` icons with no icon dependency, no emoji anywhere, and no claim in the notes that was not run. Full set: [CLAUDE.md](CLAUDE.md).
-- Skills: project skills for AI-assisted development live in `.claude/skills/`, one folder per skill: `formcut-skillset` and `formcut-mcp`, described under Project skills.
-- Wiki edits: change the files in `.docs/wiki/` and push; the Action publishes them. The wiki must exist first (create any page once in the GitHub UI) for the first publish to land.
-
-## Contributing
-
-Bug reports, fixes, features and translations are all welcome: [CONTRIBUTING.md](CONTRIBUTING.md) says how to set up, which checks to run and how releases happen. Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md), and security problems are reported privately, as [SECURITY.md](SECURITY.md) describes.
-
-## Licence
-
-Apache 2.0, in [`LICENSE`](LICENSE). Copyright 2026 NodeAgentc, Inc. How formcut may be used, and who is responsible for that use, is set out in [`USE_POLICY.md`](USE_POLICY.md): whoever uses or modifies formcut is solely responsible for doing so lawfully, and AI models it downloads on request (Krea 2 among them) are not distributed with it and stay under their publishers' licences. Timeline glyphs derive from the Lucide set (ISC). Every third-party asset and dependency obligation is listed in [`.docs/wiki/Licences.md`](.docs/wiki/Licences.md), and the notices that ship with the app are in [`NOTICE`](NOTICE).
-
-## Trademarks
-
-Adobe, After Effects and Premiere are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple and Final Cut Pro are trademarks of Apple Inc. CapCut is a trademark of its owner. formcut is not affiliated with or endorsed by any of them; the names describe file formats, key sets and compatibility only.
-
-## Maintenance
-
-formcut is maintained for as long as it is really used and contributed to. Its aim is to go past CapCut in what it can do, and that takes both: people editing with it and reporting what they find, and contributions that expand what it can do. While there are both, it will keep being maintained; without them, maintenance will stop.
-
-## Star history
-
-<a href="https://www.star-history.com/#nodemode-ai/formcut&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date" />
-    <img alt="Star history for nodemode-ai/formcut" src="https://api.star-history.com/svg?repos=nodemode-ai/formcut&type=Date&theme=dark" />
-  </picture>
-</a>
