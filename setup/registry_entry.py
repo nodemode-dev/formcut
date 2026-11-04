@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / ".docs" / "registry"
 INDEX = REGISTRY / "effects-registry.json"
-RAW = "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/packages/"
+RAW = "https://raw.githubusercontent.com/nodemode-dev/formcut/main/.docs/registry/packages/"
 
 
 def entry_for(data: bytes, description: str = "") -> dict:

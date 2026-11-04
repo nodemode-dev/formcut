@@ -42,6 +42,16 @@ PLATFORMS = {
     "x86_64-unknown-linux-gnu": ("linux", "x86_64"),
     "aarch64-unknown-linux-gnu": ("linux", "arm64"),
 }
+# The platform names formcompiler gives the files it publishes: it renames each zip and installer to
+# formcut-<version>-<platform>.zip and formcut-<version>-<platform>-setup.exe before setup/release_assets runs.
+RELEASE_PLATFORMS = {
+    "aarch64-apple-darwin": "macos-arm64",
+    "x86_64-apple-darwin": "macos-x64",
+    "x86_64-pc-windows-msvc": "windows-x64",
+    "aarch64-pc-windows-msvc": "windows-arm64",
+    "x86_64-unknown-linux-gnu": "linux-x64",
+    "aarch64-unknown-linux-gnu": "linux-arm64",
+}
 
 
 def version() -> str:
