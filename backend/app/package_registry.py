@@ -18,7 +18,7 @@ import httpx
 
 from .effect_packages import MAX_UPLOAD, install
 
-DEFAULT_INDEX = "https://raw.githubusercontent.com/nodemode-ai/formcut/main/.docs/registry/effects-registry.json"
+DEFAULT_INDEX = "https://raw.githubusercontent.com/nodemode-dev/formcut/main/.docs/registry/effects-registry.json"
 FORMAT = "formcut-effects-registry"
 FIELDS = ("id", "name", "kind", "author", "description", "url", "sha256")
 

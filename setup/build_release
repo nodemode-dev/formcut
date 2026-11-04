@@ -9,7 +9,7 @@
 # macOS, the interface, the frozen engine, formcut's LGPL ffmpeg, the app, the zip
 # in release-dist/, and on macOS a check of the app as a person downloads it.
 #
-# This repository builds nothing itself: nodemode-ai/formcompiler runs this script
+# This repository builds nothing itself: nodemode-dev/formcompiler runs this script
 # for each platform from a compile_vX.Y.Z branch and opens the draft release.
 #
 # Why Ubuntu 22.04: the AppImage then runs on glibc 2.35 and newer.

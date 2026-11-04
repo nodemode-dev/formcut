@@ -1,6 +1,6 @@
 """The release build scripts: what they build, and what they write for the release.
 
-The name is kept from when a workflow here did this. Now nodemode-ai/formcompiler
+The name is kept from when a workflow here did this. Now nodemode-dev/formcompiler
 builds and publishes formcut, and calls setup/build_release, setup/build_phone and
 setup/release_assets; when it runs, who starts it and the publishing live there.
 These scripts cannot run here, so their rules are checked from the files: the
@@ -46,12 +46,15 @@ def test_every_platform_is_checked_bundled_and_packaged_alike():
     assert "SHA256SUMS" in ASSETS and "manifest.json" in ASSETS
 
 
-def test_the_notes_name_exactly_the_zips_that_are_built():
+def test_the_notes_name_exactly_the_files_the_release_publishes():
+    # formcompiler renames each built zip and installer to formcut-<version>-<its platform>.<kind>, and the
+    # notes are the body of that release, so they name the published files.
     packager, notes = _load("package_release"), _load("release_notes")
     text = notes.notes("9.9.9")
     for target in _targets():
-        platform, arch = packager.PLATFORMS[target]
-        assert f"`formcut-9.9.9-{platform}-{arch}.zip`" in text
+        published = packager.RELEASE_PLATFORMS[target]
+        assert f"`formcut-9.9.9-{published}.zip`" in text
+    assert "`formcut-9.9.9-windows-x64-setup.exe`" in text
 
 
 def test_the_phone_apps_are_built_unsigned_with_the_release_version():

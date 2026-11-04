@@ -28,29 +28,31 @@ main's head:
 git push origin main:refs/heads/compile_vX.Y.Z
 ```
 
-1. **Pick-up.** nodemode-ai/formcompiler watches for `compile_v*` branches every
-   eight hours, or on a manual run, and builds the version on the branch.
+1. **Pick-up.** nodemode-dev/formcompiler watches for `compile_v*` branches every
+   hour, or on a manual run, and builds the version on the branch.
 2. **Five builds, side by side:** macOS on Apple silicon, Windows x86_64, and
    Linux x86_64 (on Ubuntu 22.04, so the AppImage runs on glibc 2.35 and newer),
    each by `setup/build_release --target TRIPLE`, and the Android and iOS
    companion apps by `setup/build_phone`.
    Each desktop build makes the interface, then the engine with formcut's Rust
    kernels (an engine without them is refused), OpenCV rebuilt without its own
-   FFmpeg, formcut's verified LGPL ffmpeg from nodemode-ai/formcut-binaries, the
+   FFmpeg, formcut's verified LGPL ffmpeg from nodemode-dev/formcut-binaries, the
    app, and one zip (`setup/package_release.py`); on Windows the app is built
    with `--bundles nsis` and its installer is released beside the zip.
 3. **One draft.** `setup/release_assets` writes `SHA256SUMS`, `manifest.json` and
    notes from `setup/release_notes.py`: a download table, how to open each app,
-   and the commits since the last release. formcompiler opens a draft release
-   `formcut-vX.Y.Z` on its release page with every file. The maintainer reviews
-   the draft and publishes it.
+   and the commits since the last release. formcompiler renames each desktop file
+   to its own platform names first (`linux-x64`, `windows-x64`), so the manifest and
+   the notes name the published files. It opens a draft release `vX.Y.Z` on
+   nodemode-dev/formcut with every file. The maintainer reviews the draft and
+   publishes it.
 
 | Zip | Holds |
 | --- | --- |
 | `formcut-<version>-macos-arm64.zip` | formcut.app |
-| `formcut-<version>-windows-x86_64-setup.exe` | the NSIS installer: formcut.exe, formcut-engine.exe and ffmpeg, installed in that layout |
-| `formcut-<version>-windows-x86_64.zip` | a formcut folder: formcut.exe, formcut-engine.exe and ffmpeg beside them |
-| `formcut-<version>-linux-x86_64.zip` | the AppImage |
+| `formcut-<version>-windows-x64-setup.exe` | the NSIS installer: formcut.exe, formcut-engine.exe and ffmpeg, installed in that layout |
+| `formcut-<version>-windows-x64.zip` | a formcut folder: formcut.exe, formcut-engine.exe and ffmpeg beside them |
+| `formcut-<version>-linux-x64.zip` | the AppImage |
 | `formcut-<version>-android-arm64.apk` | the Android companion, signed with the debug key |
 | `formcut-<version>-ios-arm64.ipa` | the iOS companion, unsigned |
 
