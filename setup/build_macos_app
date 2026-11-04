@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds formcut.app and a dmg.
+# Builds the FormCut app bundle and a dmg.
 #
 #   setup/build_macos_app           for this Mac: Apple Silicon, or Intel on an Intel Mac
 #   setup/build_macos_app --intel   for Intel Macs, on an Apple Silicon Mac: the engine
@@ -98,12 +98,13 @@ say "Building the app bundle for $TRIPLE (this compiles Rust; first run takes a 
 cargo tauri build --target "$TRIPLE" --bundles app dmg
 
 BUNDLE=src-tauri/target/$TRIPLE/release/bundle
+APP_NAME=$(python3 -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["productName"])')
 say "Done"
-echo "App:  $BUNDLE/macos/formcut.app"
+echo "App:  $BUNDLE/macos/$APP_NAME.app"
 echo "DMG:  $BUNDLE/dmg/"
 echo "It runs on macOS $MACOSX_DEPLOYMENT_TARGET and later."
 echo
 echo "The bundle is unsigned. First launch: right-click the app > Open,"
-echo "or clear quarantine: xattr -dr com.apple.quarantine $BUNDLE/macos/formcut.app"
+echo "or clear quarantine: xattr -dr com.apple.quarantine $BUNDLE/macos/$APP_NAME.app"
 echo
 echo "Intel Macs: setup/build_macos_app --intel, on this Mac or any other."

@@ -49,7 +49,7 @@ def notes(version: str) -> str:
         f"| Android, arm64 | `{name}-android-arm64.apk` |",
         f"| iOS, arm64 | `{name}-ios-arm64.ipa` |",
         "",
-        "- **macOS 14 or later:** unzip and open formcut.app. When the release was built with",
+        "- **macOS 14 or later:** unzip and open FormCut.app. When the release was built with",
         "  formcompiler's Apple identity it is Developer ID signed and notarized, and opens directly.",
         "  A build signed ad hoc makes macOS say it cannot verify formcut the first time: open System",
         "  Settings, Privacy & Security, and choose Open Anyway beside formcut.",
