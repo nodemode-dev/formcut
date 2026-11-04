@@ -81,7 +81,7 @@ def check_files() -> None:
         if not (icons / name).is_file():
             problems.append(f"missing app icon: src-tauri/icons/{name}")
     public = ROOT / "frontend/public"
-    for name in ("favicon.svg", "manifest.webmanifest", "icons/icon-512.png"):
+    for name in ("favicon.png", "manifest.webmanifest", "icons/icon-512.png"):
         if not (public / name).is_file():
             problems.append(f"missing web asset: frontend/public/{name}")
 

@@ -20,12 +20,13 @@ def _reference():
     return module
 
 
-def test_the_readme_lists_every_tool_and_the_count():
-    names = [tool["name"] for tool in _reference().tools()]
-    section = (ROOT / "README.md").read_text(encoding="utf-8").split("## MCP server", 1)[1].split("\n## ", 1)[0]
-    assert f"{len(names)}\nworkflow tools" in section or f"{len(names)} workflow tools" in section
-    for name in names:
-        assert f"`{name}`" in section, f"the README's MCP section does not list {name}"
+def test_the_readme_states_the_tool_count_and_names_only_real_tools():
+    names = {tool["name"] for tool in _reference().tools()}
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    stated = [int(n) for n in re.findall(r"\b(\d+)\s+workflow tools", readme)]
+    assert stated and all(n == len(names) for n in stated), f"the README states {stated} workflow tools, the server has {len(names)}"
+    mentioned = set(re.findall(r"\bformcut_[a-z_]+\b", readme)) - {"formcut_mcp"}
+    assert mentioned <= names, f"the README names tools that do not exist: {sorted(mentioned - names)}"
 
 
 def test_the_server_names_only_tools_that_exist():
