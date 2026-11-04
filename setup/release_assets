@@ -6,7 +6,7 @@
 # Run after every zip, the Windows -setup.exe, apk and ipa are in the folder (setup/build_release, then
 # setup/build_phone). manifest.json and SHA256SUMS are written into the folder;
 # notes.md is written to the repository root, as the release workflow's publish
-# job did. Nothing is published here: nodemode-ai/formcompiler does that.
+# job did. Nothing is published here: nodemode-dev/formcompiler does that.
 #
 # The caller provides: Python 3.12 with python on PATH, sha256sum, and a git
 # checkout. The notes list the commits since the previous v* tag, so a shallow

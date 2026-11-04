@@ -26,18 +26,27 @@ MINIMUM_OS = {"macos": "macOS 14", "windows": "Windows 10", "linux": "glibc 2.35
 MOBILE = {".apk": ("android", "arm64", "Android 7.0 (API 24)"), ".ipa": ("ios", "arm64", "iOS 14")}
 
 
-def _platforms() -> dict[str, tuple[str, str]]:
+def _packager():
     spec = importlib.util.spec_from_file_location("package_release", ROOT / "setup" / "package_release.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.PLATFORMS
+    return module
+
+
+def _desktop_names(version: str) -> dict[str, tuple[str, str]]:
+    """Each desktop file under the name the build gives it and the name formcompiler publishes it as."""
+    packager = _packager()
+    known = {}
+    for target, (platform, arch) in packager.PLATFORMS.items():
+        for stem in (f"{platform}-{arch}", packager.RELEASE_PLATFORMS[target]):
+            known[f"formcut-{version}-{stem}.zip"] = (platform, arch)
+            if platform == "windows":
+                known[f"formcut-{version}-{stem}-setup.exe"] = (platform, arch)
+    return known
 
 
 def manifest(version: str, folder: Path) -> dict:
-    known = {f"formcut-{version}-{platform}-{arch}.zip": (platform, arch) for platform, arch in _platforms().values()}
-    for platform, arch in _platforms().values():
-        if platform == "windows":
-            known[f"formcut-{version}-{platform}-{arch}-setup.exe"] = (platform, arch)
+    known = _desktop_names(version)
     for suffix, (platform, arch, _) in MOBILE.items():
         known[f"formcut-{version}-{platform}-{arch}{suffix}"] = (platform, arch)
     minimum = {**MINIMUM_OS, **{platform: floor for platform, _, floor in MOBILE.values()}}
@@ -64,7 +73,7 @@ def manifest(version: str, folder: Path) -> dict:
         "version": version,
         "commit": commit,
         "published": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "repository": "https://github.com/nodemode-ai/formcut",
+        "repository": "https://github.com/nodemode-dev/formcut",
         "ffmpeg": {"release": record.get("release") or record["source"]["ffmpeg"]["version"], "licence": "LGPL-2.1-or-later"},
         "assets": assets,
     }

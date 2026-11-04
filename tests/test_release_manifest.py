@@ -47,3 +47,22 @@ def test_the_phone_apps_are_listed_with_their_minimum_os(tmp_path):
     by_platform = {asset["platform"]: asset for asset in _load().manifest("9.9.9", tmp_path)["assets"]}
     assert by_platform["android"]["minimum_os"] == "Android 7.0 (API 24)" and by_platform["android"]["arch"] == "arm64"
     assert by_platform["ios"]["minimum_os"] == "iOS 14" and by_platform["ios"]["file"] == "formcut-9.9.9-ios-arm64.ipa"
+
+
+def test_the_names_formcompiler_publishes_are_listed(tmp_path):
+    # formcompiler renames each desktop file to formcut-<version>-<platform>.<kind> with its own platform
+    # names (linux-x64, windows-x64) before setup/release_assets runs, so the manifest must accept them.
+    names = {
+        "formcut-9.9.9-macos-arm64.zip": ("macos", "arm64", "zip"),
+        "formcut-9.9.9-linux-x64.zip": ("linux", "x86_64", "zip"),
+        "formcut-9.9.9-windows-x64.zip": ("windows", "x86_64", "zip"),
+        "formcut-9.9.9-windows-x64-setup.exe": ("windows", "x86_64", "installer"),
+    }
+    for name in names:
+        (tmp_path / name).write_bytes(b"x")
+    by_file = {asset["file"]: asset for asset in _load().manifest("9.9.9", tmp_path)["assets"]}
+    assert {name: (a["platform"], a["arch"], a["kind"]) for name, a in by_file.items()} == names
+
+
+def test_the_manifest_names_the_repository_formcut_lives_in(tmp_path):
+    assert _load().manifest("9.9.9", tmp_path)["repository"] == "https://github.com/nodemode-dev/formcut"
