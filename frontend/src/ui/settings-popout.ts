@@ -531,13 +531,23 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   reseter.append(clearAppearance);
 
   const about = group(view("about"), "set.about");
-  for (const [line, translated] of [[`formcut v${__APP_VERSION__}`, false], ["by nodemode.ai", false], [t("set.about.licence"), true]] as const) {
+  for (const [line, translated] of [[`formcut v${__APP_VERSION__}`, false], ["Copyright 2026 NodeAgentc, Inc.", false], [t("set.about.licence"), true]] as const) {
     const note = document.createElement("p");
     note.className = "panel-note";
     note.textContent = line;
     if (!translated) note.translate = false;
     about.append(note);
   }
+  const licence = document.createElement("p");
+  licence.className = "panel-note";
+  licence.translate = false;
+  const licenceLink = document.createElement("a");
+  licenceLink.href = "https://github.com/nodemode-dev/formcut/blob/main/LICENSE";
+  licenceLink.target = "_blank";
+  licenceLink.rel = "noopener";
+  licenceLink.textContent = "LICENSE";
+  licence.append(licenceLink);
+  about.append(licence);
 
   // --- chrome ----------------------------------------------------------------
   for (const [id, labelKey, glyph] of PAGES) {
