@@ -148,10 +148,11 @@ if [ "$RUNNER_OS" = macOS ]; then
   say "the downloaded macOS app is sealed"
   unpacked=$(mktemp -d)
   ditto -x -k release-dist/*.zip "$unpacked"
-  codesign --verify --deep --strict --verbose=2 "$unpacked/formcut.app"
+  app="$unpacked/$(python -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["productName"])').app"
+  codesign --verify --deep --strict --verbose=2 "$app"
   if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
     # Developer ID: the app and the engine carry the identity's team and hardened runtime.
-    for code in "$unpacked/formcut.app" "$unpacked/formcut.app/Contents/MacOS/formcut-engine"; do
+    for code in "$app" "$app/Contents/MacOS/formcut-engine"; do
       details=$(codesign -dv --verbose=4 "$code" 2>&1)
       echo "$details" >&2
       case "$details" in *"Authority=Developer ID Application:"*) ;; *) echo "$code is not signed with a Developer ID"; exit 1 ;; esac
@@ -159,11 +160,11 @@ if [ "$RUNNER_OS" = macOS ]; then
       case "$details" in *"(runtime)"*) ;; *) echo "$code was signed without hardened runtime"; exit 1 ;; esac
     done
     if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
-      xcrun stapler validate "$unpacked/formcut.app"
-      spctl --assess --type execute --verbose=2 "$unpacked/formcut.app"
+      xcrun stapler validate "$app"
+      spctl --assess --type execute --verbose=2 "$app"
     fi
   else
-    codesign -dv "$unpacked/formcut.app" 2>&1 | tee /dev/stderr | grep -q "Signature=adhoc"
+    codesign -dv "$app" 2>&1 | tee /dev/stderr | grep -q "Signature=adhoc"
   fi
-  codesign --verify --strict "$unpacked/formcut.app/Contents/MacOS/formcut-engine"
+  codesign --verify --strict "$app/Contents/MacOS/formcut-engine"
 fi

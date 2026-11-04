@@ -7,7 +7,7 @@
 
 Each zip runs with nothing else installed:
 
-- macOS: formcut.app, zipped with ditto where it exists so the bundle's
+- macOS: the app bundle named after tauri.conf.json's productName (FormCut.app), zipped with ditto where it exists so the bundle's
   permissions and metadata survive; unzip and open it.
 - Windows: a formcut folder holding formcut.exe with formcut-engine.exe and the
   bundled ffmpeg beside it, which is where the app and the engine look for them;
@@ -58,6 +58,10 @@ def version() -> str:
     return json.loads((ROOT / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))["version"]
 
 
+def product_name() -> str:
+    return json.loads((ROOT / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))["productName"]
+
+
 def require(path: Path, what: str) -> Path:
     if not path.exists():
         raise SystemExit(f"{what} is missing: {path}; the build did not produce it, so nothing was packaged")
@@ -91,8 +95,9 @@ def package(triple: str, out: Path) -> Path:
     archive = out / f"{name}.zip"
     archive.unlink(missing_ok=True)
     if platform == "macos":
-        app = require(release / "bundle" / "macos" / "formcut.app", "formcut.app")
-        require(app / "Contents" / "MacOS" / "formcut-engine", "the engine inside formcut.app")
+        bundle = f"{product_name()}.app"
+        app = require(release / "bundle" / "macos" / bundle, bundle)
+        require(app / "Contents" / "MacOS" / "formcut-engine", f"the engine inside {bundle}")
         if shutil.which("ditto"):
             subprocess.run(["ditto", "-c", "-k", "--keepParent", str(app), str(archive)], check=True)
         else:

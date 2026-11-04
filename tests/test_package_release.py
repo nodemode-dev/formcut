@@ -20,6 +20,7 @@ def packager(tmp_path, monkeypatch):
     spec.loader.exec_module(module)
     monkeypatch.setattr(module, "ROOT", tmp_path)
     monkeypatch.setattr(module, "version", lambda: "9.9.9")
+    monkeypatch.setattr(module, "product_name", lambda: "FormCut")
     monkeypatch.setattr(module.shutil, "which", lambda name: None)
     return module, tmp_path
 
@@ -65,13 +66,14 @@ def test_windows_ships_a_folder_with_the_engine_and_ffmpeg_beside_the_app(packag
 @pytest.mark.skipif(os.name == "nt", reason="zip modes come from POSIX permissions; these zips are packaged on macOS and Linux")
 def test_macos_keeps_the_bundle_and_its_executables(packager):
     module, root = packager
-    app = root / "src-tauri" / "target" / "aarch64-apple-darwin" / "release" / "bundle" / "macos" / "formcut.app"
+    app = root / "src-tauri" / "target" / "aarch64-apple-darwin" / "release" / "bundle" / "macos" / "FormCut.app"
     _file(app / "Contents" / "MacOS" / "formcut", mode=0o755)
     _file(app / "Contents" / "MacOS" / "formcut-engine", mode=0o755)
     _file(app / "Contents" / "Info.plist")
     modes = _modes(module.package("aarch64-apple-darwin", root / "out"))
-    assert modes["formcut.app/Contents/MacOS/formcut-engine"] & stat.S_IXUSR
-    assert "formcut.app/Contents/Info.plist" in modes
+    assert modes["FormCut.app/Contents/MacOS/formcut-engine"] & stat.S_IXUSR
+    assert modes["FormCut.app/Contents/MacOS/formcut"] & stat.S_IXUSR
+    assert "FormCut.app/Contents/Info.plist" in modes
 
 
 def test_a_build_missing_its_engine_packages_nothing(packager):
