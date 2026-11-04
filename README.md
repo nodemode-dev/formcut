@@ -103,6 +103,10 @@ FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC 
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
 
+### MCP server
+
+The installed app includes the server: **Settings, Connections, AI agents** shows the command or config for each client, with this copy's path filled in. The 32 workflow tools: `formcut_status`, `formcut_list_media`, `formcut_import_media`, `formcut_create_project`, `formcut_get_project`, `formcut_media_proxy`, `formcut_find_scenes`, `formcut_list_projects`, `formcut_add_clip`, `formcut_set_frame`, `formcut_render`, `formcut_render_status`, `formcut_plan_cutdown`, `formcut_music`, `formcut_transcribe`, `formcut_speech_range`, `formcut_speech_check`, `formcut_devices`, `formcut_device`, `formcut_focus_motion`, `formcut_frame_check`, `formcut_qc`, `formcut_render_audio`, `formcut_cancel_render`, `formcut_catalogue`, `formcut_edit`, `formcut_package_guide`, `formcut_add_package`, `formcut_preview_package`, `formcut_list_packages`, `formcut_remove_package` and `formcut_capabilities`.
+
 ## Under the hood
 
 - **One renderer:** decode, effects, masks, grade and composite share one path for the canvas and the file, held together by a golden-frame check in CI.
