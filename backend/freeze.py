@@ -1,4 +1,5 @@
 import argparse
+import importlib.util
 import os
 import subprocess
 import sys
@@ -18,6 +19,16 @@ lgpl = Path(os.environ.get("LGPL_FFMPEG_PREFIX") or root / ".lgpl-ffmpeg")
 os.environ["PATH"] = str(lgpl / "bin") + os.pathsep + os.environ.get("PATH", "")
 if subprocess.run([sys.executable, str(root.parent / "setup" / "check_lgpl_av.py"), str(lgpl)]).returncode:
     raise SystemExit("Refusing to freeze PyAV linked to a GPL FFmpeg. Run setup/build_lgpl_av first.")
+sys.path.insert(0, str(root.parent / "setup"))
+from vendor_av_dlls import ffmpeg_dlls, imports_av
+
+# PyInstaller's PyAV hook imports av in a fresh process; when that fails it only
+# warns and freezes an engine without PyAV, so a PyAV that does not import stops here.
+if importlib.util.find_spec("av") is not None:
+    av_ok, av_detail = imports_av(sys.executable)
+    if not av_ok:
+        last = av_detail.splitlines()[-1] if av_detail else "no output"
+        raise SystemExit(f"Refusing to freeze: PyAV does not import ({last}). Run setup/build_lgpl_av first.")
 os.chdir(root)
 arguments = [
     '--clean', '--noconfirm', '--name', 'formcut-engine',
@@ -38,6 +49,11 @@ arguments = [
     '--exclude-module', 'espeakng_loader', '--exclude-module', 'torch',
     str(root / 'desktop_entry.py'),
 ]
+
+# Windows: the FFmpeg DLLs PyAV's .pyd files load, beside them in the engine as in site-packages.
+if sys.platform == "win32" and importlib.util.find_spec("av") is not None:
+    for dll in ffmpeg_dlls(lgpl):
+        arguments.extend(["--add-binary", str(dll) + os.pathsep + "av"])
 
 for package in ("mcp", "mcp-types", "numpy", "Pillow", "opencv-python-headless", "wgpu", "onnxruntime", "fastapi", "uvicorn", "python-multipart", "httpx", "grpcio", "yt-dlp"):
     arguments.extend(["--copy-metadata", package])

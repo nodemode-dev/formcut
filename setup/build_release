@@ -94,6 +94,10 @@ say "freeze the engine"
   check=$(./dist/formcut-engine$suffix --selfcheck)
   echo "$check"
   case "$check" in *'"native_kernels": true'*) ;; *) echo "the engine was frozen without formcut's Rust kernels"; exit 1 ;; esac
+  # Windows: PyAV built from source loads FFmpeg's DLLs from beside it; an engine frozen without PyAV is refused
+  if [ "$RUNNER_OS" = Windows ]; then
+    case "$check" in *'"pyav": "'*) ;; *) echo "the engine was frozen without PyAV"; exit 1 ;; esac
+  fi
   mkdir -p ../src-tauri/binaries
   cp "dist/formcut-engine$suffix" "../src-tauri/binaries/formcut-engine-$TARGET$suffix"
 )
