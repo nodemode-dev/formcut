@@ -28,3 +28,22 @@ def test_missing_kernels_are_reported_without_failing_the_selfcheck(monkeypatch,
     assert info["native_kernels"] is False
     assert info["native_error"].startswith(("ImportError", "ModuleNotFoundError"))
     assert without_kernels == with_kernels
+
+
+def test_the_selfcheck_says_whether_pyav_imports(capsys):
+    _, info = _run(capsys)
+    if importlib.util.find_spec("av") is None:
+        assert info["pyav"] is False
+    else:
+        import av
+
+        assert info["pyav"] == av.__version__
+
+
+def test_a_pyav_that_does_not_import_is_reported_without_failing_the_selfcheck(monkeypatch, capsys):
+    with_av, _ = _run(capsys)
+    monkeypatch.setitem(sys.modules, "av", None)
+    without_av, info = _run(capsys)
+    assert info["pyav"] is False
+    assert info["pyav_error"].startswith(("ImportError", "ModuleNotFoundError"))
+    assert without_av == with_av

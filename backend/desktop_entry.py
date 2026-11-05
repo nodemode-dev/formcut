@@ -30,6 +30,15 @@ def selfcheck() -> int:
     except ImportError as exc:
         info["native_kernels"] = False
         info["native_error"] = f"{type(exc).__name__}: {exc}"
+    # PyAV, the in-process decoder: without it the engine falls back to ffmpeg pipes,
+    # so it is reported, and setup/build_release refuses a Windows engine without it.
+    try:
+        import av
+
+        info["pyav"] = av.__version__
+    except ImportError as exc:
+        info["pyav"] = False
+        info["pyav_error"] = f"{type(exc).__name__}: {exc}"
     print(json.dumps(info))
     return 1 if any(str(value).startswith("missing:") for value in info.values()) or (getattr(sys, "frozen", False) and not info["dist_bundled"]) else 0
 
