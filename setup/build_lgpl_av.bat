@@ -22,7 +22,7 @@ if not exist "%LGPL_FFMPEG_PREFIX%\include\libavcodec\avcodec.h" (
   if not exist "%MSYS%" ( echo [lgpl-av] MSYS2 was not found at C:\msys64; install it from https://www.msys2.org & exit /b 1 )
   if not exist "%WORK%" mkdir "%WORK%" || ( echo [lgpl-av] could not create %WORK% & exit /b 1 )
   set "MSYS2_PATH_TYPE=inherit"
-  "%MSYS%" -l "%HERE:\=/%build_lgpl_ffmpeg_msvc" "%MSVC_BIN%.""%WORK%" "%LGPL_FFMPEG_PREFIX%" "%FFMPEG_VERSION%" "%FFMPEG_SHA256%" || ( echo [lgpl-av] the FFmpeg build failed & exit /b 1 )
+  "%MSYS%" -l "%HERE:\=/%build_lgpl_ffmpeg_msvc" "%MSVC_BIN%." "%WORK%" "%LGPL_FFMPEG_PREFIX%" "%FFMPEG_VERSION%" "%FFMPEG_SHA256%" || ( echo [lgpl-av] the FFmpeg build failed & exit /b 1 )
 )
 findstr /m /c:"libavcodec license: LGPL" "%LGPL_FFMPEG_PREFIX%\bin\avcodec-*.dll" >nul || ( echo [lgpl-av] the FFmpeg in %LGPL_FFMPEG_PREFIX% is not LGPL & exit /b 1 )
 set "INCLUDE=%LGPL_FFMPEG_PREFIX%\include;%INCLUDE%"
