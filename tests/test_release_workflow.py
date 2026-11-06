@@ -81,3 +81,10 @@ def test_a_failed_engine_self_check_is_reported_not_silent():
     and set -e exited before it was printed."""
     assert "check=$(./dist/formcut-engine$suffix --selfcheck) || rc=$?" in BUILD
     assert BUILD.index('echo "$check"') < BUILD.index('if [ "$rc" -ne 0 ]; then')
+
+
+def test_intel_macs_install_crypto_from_a_wheel_not_a_source_build():
+    """2.12.4's Intel engine failed its self-check: cryptography 50 has no Intel Mac wheel, so it was built against
+    Homebrew's OpenSSL and could not load PyInstaller's bundled libssl. 48.0.1 is the last Intel Mac wheel."""
+    req = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
+    assert 'cryptography<49; sys_platform == "darwin" and platform_machine == "x86_64"' in req
