@@ -2,6 +2,7 @@
 # Builds formcut's release zip for one platform, from the repository root.
 #
 #   setup/build_release --target aarch64-apple-darwin      (macOS, Apple Silicon; run on macOS 14)
+#   setup/build_release --target x86_64-apple-darwin       (macOS, Intel; run on an Intel Mac, macos-15-intel)
 #   setup/build_release --target x86_64-pc-windows-msvc    (Windows, x86_64; run in bash on Windows)
 #   setup/build_release --target x86_64-unknown-linux-gnu  (Linux, x86_64; run on Ubuntu 22.04)
 #
@@ -13,7 +14,7 @@
 # for each platform from a compile_vX.Y.Z branch and opens the draft release.
 #
 # Why Ubuntu 22.04: the AppImage then runs on glibc 2.35 and newer.
-# Intel Macs are not built here: setup/build_macos_app --intel builds one on any Mac.
+# Intel Macs build natively on an Intel runner; setup/build_macos_app --intel also builds one on any Mac.
 # macOS: when formcompiler has the Apple identity (APPLE_SIGNING_IDENTITY, with
 # APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID), the app is Developer ID signed with
 # hardened runtime and src-tauri/entitlements.plist, and notarized and stapled by
@@ -42,9 +43,10 @@ case "${1:-}" in
 esac
 case "$TARGET" in
   aarch64-apple-darwin) BUNDLES="--bundles app" ;;
+  x86_64-apple-darwin) BUNDLES="--bundles app" ;;
   x86_64-pc-windows-msvc) BUNDLES="--bundles nsis" ;;
   x86_64-unknown-linux-gnu) BUNDLES="--bundles appimage" ;;
-  *) echo "usage: setup/build_release --target aarch64-apple-darwin|x86_64-pc-windows-msvc|x86_64-unknown-linux-gnu"; exit 1 ;;
+  *) echo "usage: setup/build_release --target aarch64-apple-darwin|x86_64-apple-darwin|x86_64-pc-windows-msvc|x86_64-unknown-linux-gnu"; exit 1 ;;
 esac
 
 cd "$(dirname "$0")/.."

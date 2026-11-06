@@ -4,7 +4,7 @@ The name is kept from when a workflow here did this. Now nodemode-dev/formcompil
 builds and publishes formcut, and calls setup/build_release, setup/build_phone and
 setup/release_assets; when it runs, who starts it and the publishing live there.
 These scripts cannot run here, so their rules are checked from the files: the
-three targets, every platform checked, bundled and packaged the same way, the
+four desktop targets, every platform checked, bundled and packaged the same way, the
 phone apps built unsigned, the macOS app sealed and checked after packaging, and
 the notes naming exactly the zips setup/package_release.py writes.
 """
@@ -32,8 +32,8 @@ def _targets() -> list[str]:
     return re.findall(r"^  (\S+)\) BUNDLES=", BUILD, re.MULTILINE)
 
 
-def test_the_three_platforms_it_ships():
-    assert _targets() == ["aarch64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
+def test_the_four_desktop_platforms_it_ships():
+    assert _targets() == ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
 
 
 def test_every_platform_is_checked_bundled_and_packaged_alike():
