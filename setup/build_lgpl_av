@@ -21,11 +21,26 @@ if [ ! -f "$prefix/lib/pkgconfig/libavcodec.pc" ]; then
   [ "$sum" = "$FFMPEG_SHA256" ] || { say "checksum mismatch for $tarball"; exit 1; }
   rm -rf "$work/src" && mkdir -p "$work/src"
   tar -xJf "$tarball" -C "$work/src" --strip-components 1
+  # x86 builds assemble FFmpeg's SIMD paths with nasm; Apple silicon (NEON) does not need it. GitHub's Intel Mac
+  # runner has no nasm, so it is installed there, as setup/build_lgpl_ffmpeg_msvc does with pacman on Windows.
+  if [ "$(uname -m)" = x86_64 ] && ! command -v nasm >/dev/null 2>&1; then
+    if [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1; then
+      say "installing nasm, FFmpeg's x86 assembler"
+      brew install nasm >/dev/null
+    else
+      say "nasm is required to build FFmpeg for x86_64: install it first"; exit 1
+    fi
+  fi
   say "building FFmpeg $FFMPEG_VERSION (LGPL, shared) into $prefix"
-  (cd "$work/src" && ./configure --prefix="$prefix" --enable-shared --disable-static \
+  if ! (cd "$work/src" && ./configure --prefix="$prefix" --enable-shared --disable-static \
     --disable-gpl --disable-nonfree --disable-version3 \
     --disable-programs --disable-doc --disable-debug --disable-autodetect --disable-network "${extra[@]}" \
-    --extra-ldflags="-Wl,-rpath,$prefix/lib" >/dev/null && make -j"$jobs" >/dev/null && make install >/dev/null)
+    --extra-ldflags="-Wl,-rpath,$prefix/lib" >/dev/null); then
+    say "FFmpeg's configure failed; the end of its log:"
+    tail -n 40 "$work/src/ffbuild/config.log" 2>/dev/null || true
+    exit 1
+  fi
+  (cd "$work/src" && make -j"$jobs" >/dev/null && make install >/dev/null)
 fi
 grep -aq "libavcodec license: LGPL" "$prefix"/lib/libavcodec.* || { say "the FFmpeg in $prefix is not LGPL"; exit 1; }
 say "building PyAV $AV_VERSION from source against it"

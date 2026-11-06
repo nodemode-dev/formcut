@@ -11,3 +11,13 @@ def test_the_windows_batch_passes_every_argument_the_ffmpeg_script_needs():
     wanted = max(int(n) for n in re.findall(r"\$\{(\d):\?", script))
     assert '""' not in call
     assert len(re.findall(r'"[^"]*"', call)) == wanted
+
+
+def test_the_unix_build_installs_nasm_for_x86_and_shows_configure_errors():
+    """Intel Macs (GitHub's macos-15-intel) have no nasm, which FFmpeg needs for its x86 SIMD paths; the 2.12.2 Intel
+    build stopped at configure with its output thrown away. The script installs nasm there and prints the log tail."""
+    sh = (ROOT / "setup" / "build_lgpl_av").read_text(encoding="utf-8")
+    assert '[ "$(uname -m)" = x86_64 ] && ! command -v nasm' in sh
+    assert "brew install nasm" in sh
+    assert sh.index("brew install nasm") < sh.index("./configure")
+    assert 'tail -n 40 "$work/src/ffbuild/config.log"' in sh
