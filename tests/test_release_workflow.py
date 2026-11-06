@@ -74,3 +74,10 @@ def test_the_macos_app_is_sealed_and_checked_as_a_download():
     assert BUILD.rindex('if [ "$RUNNER_OS" = macOS ]; then', 0, sealed) > BUILD.index('say "package the zip"')
     check = BUILD[sealed:]
     assert "ditto -x -k release-dist/*.zip" in check and "codesign --verify --deep --strict" in check
+
+
+def test_a_failed_engine_self_check_is_reported_not_silent():
+    """2.12.3's Intel engine failed its self-check and the build stopped with no report: the output was captured
+    and set -e exited before it was printed."""
+    assert "check=$(./dist/formcut-engine$suffix --selfcheck) || rc=$?" in BUILD
+    assert BUILD.index('echo "$check"') < BUILD.index('if [ "$rc" -ne 0 ]; then')

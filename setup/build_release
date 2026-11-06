@@ -93,8 +93,15 @@ say "freeze the engine"
   python freeze.py --onefile
   suffix=""
   if [ "$RUNNER_OS" = "Windows" ]; then suffix=".exe"; fi
-  check=$(./dist/formcut-engine$suffix --selfcheck)
+  # The self-check's verdict and its output, shown even when it fails: a failure used to stop the build here silently.
+  rc=0
+  check=$(./dist/formcut-engine$suffix --selfcheck) || rc=$?
   echo "$check"
+  if [ "$rc" -ne 0 ]; then
+    echo "the frozen engine's self-check exited $rc (above: its report; 137 or 9 means the system killed it)"
+    if [ "$RUNNER_OS" = macOS ]; then file "./dist/formcut-engine$suffix"; codesign -dv "./dist/formcut-engine$suffix" 2>&1 | head -8 || true; fi
+    exit 1
+  fi
   case "$check" in *'"native_kernels": true'*) ;; *) echo "the engine was frozen without formcut's Rust kernels"; exit 1 ;; esac
   # Windows: PyAV built from source loads FFmpeg's DLLs from beside it; an engine frozen without PyAV is refused
   if [ "$RUNNER_OS" = Windows ]; then
