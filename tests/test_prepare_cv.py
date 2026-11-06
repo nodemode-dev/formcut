@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def test_eigen_is_switched_off_with_ffmpeg_and_gstreamer():
     flags = prepare_cv.CMAKE_ARGS.split()
-    assert {"-DWITH_EIGEN=OFF", "-DWITH_FFMPEG=OFF", "-DWITH_GSTREAMER=OFF"} <= set(flags)
+    assert {"-DWITH_EIGEN=OFF", "-DWITH_FFMPEG=OFF", "-DWITH_GSTREAMER=OFF", "-DWITH_AVIF=OFF"} <= set(flags)
     assert prepare_cv.build_environment("linux")["CMAKE_ARGS"] == prepare_cv.CMAKE_ARGS
 
 

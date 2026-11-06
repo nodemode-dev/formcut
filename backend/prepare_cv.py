@@ -20,9 +20,14 @@ from pathlib import Path
 # Macro invoked with incorrect arguments". The four modules built here do not use
 # Eigen, and like FFmpeg and GStreamer the build should not depend on what the build
 # machine happens to have installed.
+# WITH_AVIF=OFF: imgcodecs finds a Homebrew libavif when the machine has one. On an
+# Intel Mac (Homebrew in /usr/local, on CMake's default path) the engine then links a
+# library from outside it, and on an Apple Silicon Mac building for Intel it compiles
+# against arm64 headers and fails to import ("symbol not found '_avifDecoderCreate'").
+# formcut reads no AVIF through OpenCV, so it is off like the others.
 CMAKE_ARGS = (
     "-DWITH_FFMPEG=OFF -DWITH_GSTREAMER=OFF -DBUILD_LIST=core,imgproc,imgcodecs,features2d,python3 -DWITH_OPENEXR=OFF"
-    " -DWITH_VTK=OFF -DWITH_QT=OFF -DWITH_GTK=OFF -DWITH_IPP=OFF -DWITH_ITT=OFF -DWITH_EIGEN=OFF"
+    " -DWITH_VTK=OFF -DWITH_QT=OFF -DWITH_GTK=OFF -DWITH_IPP=OFF -DWITH_ITT=OFF -DWITH_EIGEN=OFF -DWITH_AVIF=OFF"
 )
 
 
