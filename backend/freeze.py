@@ -38,6 +38,9 @@ arguments = [
     '--add-data', str(root / 'app' / 'effect_library') + os.pathsep + 'app/effect_library',
     '--add-data', str(root / 'app' / 'bundled_models') + os.pathsep + 'app/bundled_models',
     '--add-data', str(root / 'app' / 'device_library') + os.pathsep + 'app/device_library',
+    # the demo project's media (backend/app/demo.py reads it from _MEIPASS/examples/demo): without it the first-run
+    # demo opens with no clips, voice or still
+    '--add-data', str(root.parent / 'examples' / 'demo') + os.pathsep + 'examples/demo',
     '--collect-all', 'uvicorn',
     '--collect-binaries', 'wgpu', '--collect-data', 'wgpu',
     '--hidden-import', 'wgpu.backends.wgpu_native', '--hidden-import', 'wgpu.utils.compute',

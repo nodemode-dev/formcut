@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Merged by the Tauri CLI into the app's Info.plist. macOS asks before an app talks to other devices on the
+       network; formcut does only when phone pairing is turned on in Settings, and this is the reason shown then. -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>FormCut uses your local network only when you turn on phone pairing in Settings.</string>
+</dict>
+</plist>

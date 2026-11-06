@@ -140,3 +140,28 @@ def test_every_network_access_label_is_translated_and_keeps_its_placeholder():
         assert "{code}" in strings["remote.code"], code
     assert not [english[key] for key in keys if english[key] not in packed]
     assert all("{code}" in text for text in packed[english["remote.code"]])
+
+
+def test_settings_with_pairing_off_never_looks_up_addresses(tmp_path, monkeypatch):
+    """macOS shows its Local Network prompt when an app resolves its own name through Bonjour; opening Settings with
+    phone pairing off must not touch the network."""
+    monkeypatch.setattr(remote, "STORE", tmp_path / "remote.json")
+    looked = []
+    monkeypatch.setattr(remote, "addresses", lambda: looked.append(1) or ["192.168.1.5"])
+    state = desk.get("/api/remote").json()
+    assert state["enabled"] is False and state["addresses"] == [] and looked == []
+
+
+def test_addresses_never_resolve_the_machines_own_name(monkeypatch):
+    def refuse(*_args):
+        raise AssertionError("hostname resolution goes through Bonjour and raises the macOS prompt")
+
+    monkeypatch.setattr(socket, "gethostbyname_ex", refuse)
+    monkeypatch.setattr(socket, "gethostbyname", refuse)
+    assert all(not a.startswith("127.") for a in remote.addresses())
+
+
+def test_the_mac_app_says_why_it_uses_the_local_network():
+    from conftest import ROOT
+
+    assert "<key>NSLocalNetworkUsageDescription</key>" in (ROOT / "src-tauri" / "Info.plist").read_text(encoding="utf-8")

@@ -15,5 +15,5 @@ The Pexels License allows free use and modification without attribution; it does
 allow selling unaltered copies or redistributing the files on their own as stock
 media. The credits above are given as a courtesy.
 
-These files are for the demo project and development. They are not bundled into
-formcut's release builds.
+These files are the demo project's media. Since 2.12.5 they ship inside formcut's release
+builds, with this file, so the demo opens complete on first run.
