@@ -10,7 +10,13 @@ export PATH="$(cygpath -u "$msvc_bin"):$PATH"
 command -v link | grep -qv '^/usr/bin/'
 cd "$(cygpath -u "$work")"
 tarball="ffmpeg-$version.tar.xz"
-[ -f "$tarball" ] || curl -fL --retry 3 -o "$tarball" "https://ffmpeg.org/releases/$tarball"
+if [ ! -f "$tarball" ]; then
+  for url in "https://ffmpeg.org/releases/$tarball" "https://dl.formai.studio/sources/ffmpeg/$tarball"; do
+    curl -fL --retry 3 -o "$tarball" "$url" && break
+    rm -f "$tarball"
+  done
+  [ -f "$tarball" ] || { echo "[lgpl-av] could not download $tarball from ffmpeg.org or dl.formai.studio"; exit 1; }
+fi
 [ "$(sha256sum "$tarball" | cut -d' ' -f1)" = "$sha" ] || { echo "[lgpl-av] checksum mismatch for $tarball"; exit 1; }
 rm -rf src && mkdir src && tar -xJf "$tarball" -C src --strip-components 1
 cd src
