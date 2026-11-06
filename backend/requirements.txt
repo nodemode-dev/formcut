@@ -30,3 +30,8 @@ pytest==8.3.4
 av==18.1.0
 # the native crate's builder, for a checkout that builds its own kernels (setup/build_native_gpu)
 maturin==1.15.0
+# Intel Macs: cryptography (pulled in by mcp through PyJWT) publishes no x86_64 macOS wheel after 48, so pip compiles
+# it there against the build machine's Homebrew OpenSSL, and the frozen engine then pairs it with Python's own older
+# libssl ("Symbol not found: _SSL_get0_group_name", formcompiler run for 2.12.4). 48.x ships a universal2 wheel with
+# its own OpenSSL. Every other platform keeps the latest.
+cryptography>=48.0.1,<49; sys_platform == "darwin" and platform_machine == "x86_64"

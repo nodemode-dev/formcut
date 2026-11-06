@@ -81,3 +81,10 @@ def test_a_failed_engine_self_check_is_reported_not_silent():
     and set -e exited before it was printed."""
     assert "check=$(./dist/formcut-engine$suffix --selfcheck) || rc=$?" in BUILD
     assert BUILD.index('echo "$check"') < BUILD.index('if [ "$rc" -ne 0 ]; then')
+
+
+def test_intel_macs_get_a_cryptography_wheel_rather_than_a_local_build():
+    """cryptography 49 and later publish no x86_64 macOS wheel; built from source on the Intel runner it links
+    Homebrew's OpenSSL and the frozen engine cannot load mcp."""
+    reqs = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
+    assert 'cryptography>=48.0.1,<49; sys_platform == "darwin" and platform_machine == "x86_64"' in reqs
