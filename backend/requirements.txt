@@ -2,6 +2,10 @@ fastapi==0.115.*
 uvicorn[standard]==0.39.*
 # The MCP server agents connect to (app/agent_mcp.py, formcut-engine --mcp).
 mcp==2.2.*
+# Intel Macs: cryptography 48.0.1 is the last release with an Intel Mac wheel. Newer ones build from source there,
+# link the runner's Homebrew OpenSSL, and the frozen engine then loads PyInstaller's older libssl and fails
+# ("Symbol not found: _SSL_get0_group_name"). mcp needs it through pyjwt[crypto] (cryptography>=3.4).
+cryptography<49; sys_platform == "darwin" and platform_machine == "x86_64"
 python-multipart==0.0.*
 # The Pro tab's interchange parses FCP XML files from elsewhere without entity expansion (app/interchange.py).
 defusedxml==0.7.*
