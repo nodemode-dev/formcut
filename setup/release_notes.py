@@ -43,6 +43,7 @@ def notes(version: str) -> str:
         "| Platform | File |",
         "| --- | --- |",
         f"| macOS, Apple silicon | `{name}-macos-arm64.zip` |",
+        f"| macOS, Intel | `{name}-macos-x64.zip` |",
         f"| Windows, x86_64 (installer) | `{name}-windows-x64-setup.exe` |",
         f"| Windows, x86_64 (portable) | `{name}-windows-x64.zip` |",
         f"| Linux, x86_64 | `{name}-linux-x64.zip` |",
