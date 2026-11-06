@@ -140,3 +140,27 @@ def test_every_network_access_label_is_translated_and_keeps_its_placeholder():
         assert "{code}" in strings["remote.code"], code
     assert not [english[key] for key in keys if english[key] not in packed]
     assert all("{code}" in text for text in packed[english["remote.code"]])
+
+
+def test_settings_with_pairing_off_never_looks_at_the_network(tmp_path, monkeypatch):
+    """Opening Settings asks GET /api/remote. With pairing off it must not resolve this machine's
+    name (on macOS that is a Bonjour lookup, which shows the Local Network prompt) or read an address."""
+    monkeypatch.setattr(remote, "STORE", tmp_path / "remote.json")
+
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("looked at the network with pairing off")
+
+    monkeypatch.setattr(socket, "gethostbyname_ex", refuse)
+    monkeypatch.setattr(remote, "addresses", refuse)
+    state = desk.get("/api/remote").json()
+    assert state["enabled"] is False and state["addresses"] == []
+
+
+def test_the_address_never_comes_from_a_hostname_lookup(monkeypatch):
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("resolved this machine's name")
+
+    monkeypatch.setattr(socket, "gethostbyname_ex", refuse)
+    monkeypatch.setattr(socket, "gethostname", refuse)
+    found = remote.addresses()
+    assert all(not address.startswith("127.") for address in found)

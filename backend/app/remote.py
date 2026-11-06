@@ -116,14 +116,16 @@ def admitted(scope: dict, headers: dict) -> bool:
 
 
 def addresses() -> list[str]:
-    """This machine's IPv4 addresses a phone on the same network could reach."""
+    """This machine's IPv4 address a phone on the same network could reach.
+
+    Only the outgoing interface's address, read from a UDP socket that sends nothing. No
+    lookup of this machine's own name: on macOS that resolves <name>.local through Bonjour,
+    which shows the Local Network prompt to people who never turned pairing on."""
     found = set()
     with contextlib.suppress(OSError), socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
         probe.connect(("192.0.2.1", 9))  # a documentation address: no packet is sent
         found.add(probe.getsockname()[0])
-    with contextlib.suppress(OSError):
-        found.update(socket.gethostbyname_ex(socket.gethostname())[2])
-    return sorted(address for address in found if not address.startswith("127."))
+    return sorted(address for address in found if not address.startswith(("127.", "0.")))
 
 
 def start(app) -> None:
@@ -158,7 +160,9 @@ def _desktop(request: Request) -> None:
 def _public() -> dict:
     data = _read()
     devices = [{key: device.get(key) for key in ("id", "name", "created", "lastSeen")} for device in data.get("devices", [])]
-    return {"enabled": bool(data.get("enabled")), "port": port(), "addresses": addresses(), "devices": devices}
+    enabled = bool(data.get("enabled"))
+    # the network is looked at only once pairing is on, so opening Settings never touches it
+    return {"enabled": enabled, "port": port(), "addresses": addresses() if enabled else [], "devices": devices}
 
 
 @router.get("/api/remote")
