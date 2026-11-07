@@ -98,3 +98,7 @@ localizeElement(document.body);
 void loadExtraLocales().then(() => document.dispatchEvent(new CustomEvent("formcut:locales")));
 void bin.load();
 Object.defineProperty(window, "formcut", { value: { engine, bin, actions, liveMix, loadExtraLocales } });
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  const shell = (window as unknown as { __TAURI_INTERNALS__?: { invoke: (command: string) => Promise<unknown> } }).__TAURI_INTERNALS__;
+  if (shell) requestAnimationFrame(() => void shell.invoke("app_ready").catch(() => undefined));
+}));
