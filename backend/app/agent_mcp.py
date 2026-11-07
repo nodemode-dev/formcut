@@ -125,7 +125,7 @@ def _session_id() -> str | None:
     return None
 
 
-def _rpc(method: str, params: dict | None = None, identify: bool = True) -> tuple[bool, Any]:
+def _rpc(method: str, params: dict | None = None, identify: bool = True, timeout: float = TIMEOUT) -> tuple[bool, Any]:
     body: dict[str, Any] = {"jsonrpc": "2.0", "id": 1, "method": method}
     params = dict(params or {})
     if identify:
@@ -135,7 +135,7 @@ def _rpc(method: str, params: dict | None = None, identify: bool = True) -> tupl
     if params:
         body["params"] = params
     try:
-        with httpx.Client(timeout=TIMEOUT, headers=HEADERS) as client:
+        with httpx.Client(timeout=timeout, headers=HEADERS) as client:
             response = client.post(f"{_engine()}/api/rpc", json=body)
     except httpx.HTTPError as error:
         return False, _explain(error)
@@ -1112,6 +1112,51 @@ def formcut_remove_package(
 def formcut_capabilities() -> str:
     ok, caps = _rpc("capabilities")
     return _text(caps) if ok else caps
+
+
+@mcp.tool(
+    name="formcut_extensions_list",
+    description=(
+        "List the extensions formcut has loaded (installed from FormPortal or run from a folder by form.ext): each one's id, "
+        "name, version, source, state (ready, needs-permission or refused with the reason) and the commands it contributes. "
+        "Use it before formcut_extension_command to find the id and command."
+    ),
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def formcut_extensions_list() -> str:
+    ok, result = _rpc("extensions.list", timeout=30)
+    if not ok:
+        return result
+    rows = result.get("extensions", [])
+    if not rows:
+        return "formcut has no extensions. Install one in FormPortal, or run one from a folder with form.ext."
+    lines = [] if result.get("window") else [f"Note: {result.get('note', 'the formcut window is not open')}."]
+    for row in rows:
+        state = row.get("state", "?") + (f" ({row['reason']})" if row.get("reason") else "")
+        lines.append(f"{row['id']}  {row.get('name', '')} {row.get('version', '')}  {row.get('source', '')}  {state}")
+        lines += [f"    command {c['id']}: {c['title']}" for c in row.get("commands", [])]
+    return "\n".join(lines)
+
+
+@mcp.tool(
+    name="formcut_extension_command",
+    description=(
+        "Run a command an extension contributes, in the open formcut window, as if the person chose it from the Extensions "
+        "menu. The first run of an extension version asks the person in the window to allow its permissions, so the call "
+        "can wait for them; Not Now fails the call. Take the id and command from formcut_extensions_list."
+    ),
+    annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
+)
+def formcut_extension_command(
+    id: Annotated[str, Field(description="The extension id, from formcut_extensions_list")],
+    command: Annotated[str, Field(description="The command id, from formcut_extensions_list")],
+    args: Annotated[dict | None, Field(description="Arguments for the command, if it takes any")] = None,
+) -> str:
+    ok, result = _rpc("extensions.command", {"id": id, "command": command, "args": args or {}}, timeout=180)
+    if not ok:
+        return result
+    value = result.get("result")
+    return f"Ran {id}: {command}." + ("" if value is None else f" Result: {_text(value)}")
 
 
 def main() -> None:

@@ -878,8 +878,10 @@ dependencies = [
 
 [[package]]
 name = "formcut"
-version = "2.12.6"
+version = "2.14.1"
 dependencies = [
+ "objc2",
+ "objc2-app-kit",
  "regex",
  "tauri",
  "tauri-build",

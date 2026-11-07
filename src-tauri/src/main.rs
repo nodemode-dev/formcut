@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod engine_lifecycle;
+mod reveal;
 use std::sync::Mutex;
 
 use tauri::menu::{
@@ -23,11 +24,14 @@ fn kill_backend(handle: &tauri::AppHandle) {
 }
 
 fn main() {
+    reveal::mark_launch();
     let app = tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![reveal::app_ready])
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(Backend(Mutex::new(None)))
         .setup(|app| {
+            reveal::round_splash(app.handle());
             let file_new = MenuItemBuilder::new("New Project")
                 .id("file-new")
                 .accelerator("CmdOrCtrl+N")

@@ -6,7 +6,7 @@ license: Apache-2.0
 
 # formcut MCP
 
-formcut's MCP server puts the editor in front of an agent. It is one Python module, `backend/app/agent_mcp.py`, exposing 32 workflow-shaped tools over stdio; the installed app runs it as `formcut-engine --mcp`, and it talks to the running formcut engine over HTTP. This pack is the knowledge layer over it: how to connect it, how to get real work done with it, and how to change it without breaking the agents that depend on it.
+formcut's MCP server puts the editor in front of an agent. It is one Python module, `backend/app/agent_mcp.py`, exposing 34 workflow-shaped `formcut_*` tools over stdio, two of them (`formcut_extensions_list` and `formcut_extension_command`) for the extensions loaded in the window; the installed app runs it as `formcut-engine --mcp`, and it talks to the running formcut engine over HTTP. This pack is the knowledge layer over it: how to connect it, how to get real work done with it, and how to change it without breaking the agents that depend on it.
 
 The server gives access; it does not give judgment about order, preconditions or recovery. That is what these sub-skills carry.
 

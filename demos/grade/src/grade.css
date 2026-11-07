@@ -1,0 +1,131 @@
+.stage { position: relative; }
+
+.compare-canvas { clip-path: inset(0 calc(100% - var(--split, 44%)) 0 0); }
+.stage[data-compare="off"] .compare-canvas,
+.stage[data-compare="off"] .compare-tag,
+.stage[data-compare="off"] .compare-bar { display: none; }
+
+.compare-tag {
+  position: absolute;
+  top: var(--sp-2);
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-s);
+  background: var(--veil);
+  color: var(--ink);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  z-index: var(--z-base);
+}
+.compare-tag.is-left { left: var(--sp-2); }
+.compare-tag.is-right { right: var(--sp-2); }
+
+.compare-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split, 44%);
+  width: 18px;
+  margin-left: -9px;
+  display: grid;
+  place-items: center;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: var(--z-base);
+}
+.compare-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  opacity: 0.85;
+}
+.compare-bar:focus-visible { outline: 2px solid var(--cue); outline-offset: -2px; }
+.compare-grip {
+  position: relative;
+  width: 14px;
+  height: 36px;
+  border-radius: var(--radius-m);
+  background: var(--float);
+  border: 1px solid var(--edge-strong);
+}
+.compare-grip::before,
+.compare-grip::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  width: 2px;
+  height: 10px;
+  background: var(--ink-soft);
+}
+.compare-grip::before { left: 4px; }
+.compare-grip::after { right: 4px; }
+
+.demo-links { display: inline-flex; align-items: center; gap: var(--sp-1); margin-right: var(--sp-2); }
+.demo-links a {
+  padding: 3px var(--sp-2);
+  border-radius: var(--radius-s);
+  color: var(--ink-faint);
+  font-size: 12px;
+  text-decoration: none;
+}
+.demo-links a:hover { color: var(--ink); background: var(--control); }
+.demo-links a[aria-current="page"] { color: var(--ink); background: var(--control); }
+.demo-links a:focus-visible { outline: 2px solid var(--cue); outline-offset: 1px; }
+
+.prop-row.has-slide.has-key { grid-template-columns: 88px minmax(0, 1fr) 24px; }
+.prop-row.has-slide.has-key .prop-aux { display: grid; place-items: center; }
+.key-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.key-btn svg { width: 13px; height: 13px; }
+.key-btn:hover { background: var(--control); color: var(--ink); }
+.key-btn:focus-visible { outline: 2px solid var(--cue); outline-offset: 1px; }
+.key-btn[data-state="keyed"] { color: var(--cue); }
+.key-btn[data-state="here"] { color: var(--cue); }
+.key-btn[data-state="here"] svg { fill: currentColor; }
+
+.grade-actions { margin: var(--sp-2) 0; }
+
+.key-lane,
+.speed-graph {
+  display: block;
+  width: 100%;
+  margin: var(--sp-2) 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-s);
+  background: var(--ground);
+  touch-action: none;
+}
+.key-lane { aspect-ratio: 240 / 22; height: auto; }
+.speed-graph { aspect-ratio: 240 / 90; }
+.lane-base { stroke: var(--edge); stroke-width: 1; }
+.lane-key { fill: var(--cue); cursor: pointer; }
+.lane-head { stroke: var(--accent); stroke-width: 1; }
+.speed-grid { stroke: var(--edge); stroke-width: 0.5; }
+.speed-line { fill: none; stroke: var(--cue); stroke-width: 1.6; }
+.speed-point { fill: var(--pane); stroke: var(--ink); stroke-width: 1.2; cursor: grab; }
+.speed-read { margin-top: 0; }
+.lut-name { margin-top: 0; }
+
+.fx-card canvas,
+.trans-card canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.trans-card .effect-thumb { background: var(--inset); }

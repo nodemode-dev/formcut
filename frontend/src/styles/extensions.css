@@ -1,0 +1,45 @@
+.ext-view { flex-direction: column; min-height: 0; overflow-y: auto; }
+.ext-main { display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-2) var(--sp-3); min-width: 0; }
+.ext-list .panel-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.ext-rows { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ext-row {
+  display: flex; flex-direction: column; gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-m);
+  background: var(--inset);
+  min-width: 0;
+}
+.ext-row[data-state="refused"] { border-color: var(--fault-wash); }
+.ext-row-head { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; flex-wrap: wrap; }
+.ext-name { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-version { color: var(--ink-faint); font-family: var(--font-mono); font-size: 11px; }
+.ext-desc { color: var(--ink-soft); font-size: 12px; line-height: 1.4; }
+.ext-chips { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.ext-chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+.ext-reason { color: var(--fault); font-size: 12px; line-height: 1.4; }
+.ext-actions { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.ext-actions .tool-chip { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.ext-path, .ext-root { color: var(--ink-faint); font-family: var(--font-mono); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-root:empty { display: none; }
+.ext-empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) 0; }
+.ext-empty .panel-note { margin: 0; }
+.ext-docks { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.ext-dock-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.ext-dock-tabs:has(> :only-child) { display: none; }
+.ext-dock { display: flex; flex-direction: column; border: 1px solid var(--edge); border-radius: var(--radius-m); background: var(--pane); overflow: hidden; }
+.ext-dock-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); }
+.ext-dock-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.formext-frame { display: block; width: 100%; height: 360px; border: 0; background: var(--pane); }
+.ext-dialog { width: min(640px, 94vw); padding: 0; overflow: hidden; }
+.ext-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0; }
+.ext-dialog-head .modal-title { margin-bottom: var(--sp-2); }
+.ext-dialog .formext-frame { height: 420px; max-height: calc(100vh - 140px); }
+.ext-consent-list { margin: 0 0 var(--sp-2); padding-left: var(--sp-4); color: var(--ink); font-size: 13px; line-height: 1.6; }
+.ext-sandbox { position: fixed; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }

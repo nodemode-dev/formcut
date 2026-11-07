@@ -36,6 +36,7 @@ The rest is written by hand.
 | devices.py | /api/devices | 3 |
 | effect_previews.py | /api/catalogue/preview | 1 |
 | engine_report.py | /api/engine | 1 |
+| extensions.py | /api/extensions | 9 |
 | focus_motion.py | /api/focus-motion | 1 |
 | fonts.py | /api/assets | 1 |
 | generate.py | /api/generate | 6 |
@@ -106,6 +107,7 @@ the automation transports.
 - `fast_layers.py`
 - `features.py`
 - `ffmpeg_fetch.py`
+- `formext_host.py`
 - `frame_cache.py`
 - `gif_export.py`
 - `gpu.py`

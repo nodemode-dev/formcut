@@ -115,7 +115,41 @@ export class ProjectEngine {
     if (this.undoStack.length > HISTORY_LIMIT) this.undoStack.shift();
   }
 
+  private grouping = false;
+  private groupTouched = 0;
+
+  /** Runs fn as one undo step: every command inside records into one delta, and a throw puts the document back. */
+  transaction<T>(fn: (touched: () => number) => T): T {
+    if (this.grouping) return fn(() => this.groupTouched);
+    this.settlePending();
+    const before = this.snapshotObj();
+    this.pendingBefore = before;
+    this.foldKey = null;
+    this.grouping = true;
+    this.groupTouched = 0;
+    try {
+      const result = fn(() => this.groupTouched);
+      this.grouping = false;
+      if (this.groupTouched > 0 && this.pendingBefore) this.settlePending();
+      else this.pendingBefore = null;
+      return result;
+    } catch (error) {
+      this.grouping = false;
+      this.pendingBefore = null;
+      Object.assign(this.state, structuredClone(before));
+      this.emit("clips");
+      this.emit("timeline");
+      this.emit("clip-selection");
+      throw error;
+    }
+  }
+
   private pushHistory(foldKey?: string) {
+    if (this.grouping) {
+      this.groupTouched += 1;
+      this.redoStack.length = 0;
+      return;
+    }
     const now = performance.now();
     if (foldKey && this.pendingBefore && this.foldKey === foldKey && now - this.foldAt < FOLD_MS) {
       this.foldAt = now;

@@ -73,6 +73,8 @@ class LocalOnly:
                 allowed = loopback(client) and loopback(host) and (origin is None or window_origin(origin, headers.get("host", "")))
                 if origin is None and headers.get("sec-fetch-site", "").strip().lower() == "cross-site":
                     allowed = False
+                if not allowed and scope.get("method") in ("GET", "HEAD") and scope.get("path", "").startswith("/api/extensions/files/"):
+                    allowed = loopback(client) and loopback(host)
                 if not allowed and remote_token():
                     # P11: remote access is off unless a token is set in the engine,
                     # and then every request must present it. Loopback is untouched.

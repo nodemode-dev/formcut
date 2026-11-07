@@ -96,6 +96,14 @@ In addition, the Cisco-provided binary of this Software is licensed under Cisco'
 
                           v1.0
 
+Demo media. The browser demo in demo/ carries eight Pexels video clips (Pexels License) and one piano recording (CC0 1.0, The Open Goldberg Variations). They are not covered by formcut's Apache-2.0 licence; each file, its author, source page and licence is listed in demo/CREDITS.md. The demo is not bundled into frozen builds.
+
+Demo media, grade. The browser demo in demos/grade/ carries six Pexels video clips (Pexels License, five distinct source videos) and one piano recording (CC0 1.0, The Open Goldberg Variations). They are not covered by formcut's Apache-2.0 licence; each file, its author, source page and licence is listed in demos/grade/CREDITS.md. The demo is not bundled into frozen builds.
+
+Demo media, deliver. The browser demo in demos/deliver/ carries eight Pexels video clips (Pexels License), a reading of Thoreau's Walden by Gord Mackenzie for LibriVox (public domain) and one piano recording (CC0 1.0, The Open Goldberg Variations). They are not covered by formcut's Apache-2.0 licence; each file, its author, source page and licence is listed in demos/deliver/CREDITS.md. The demo is not bundled into frozen builds.
+
+Form Extension Contract kit, Apache-2.0, nodemode. backend/app/formext_host.py and frontend/src/extensions/host-bridge.ts are the kit's host files, included unchanged.
+
 Trademarks. Adobe, After Effects and Premiere are either registered trademarks or trademarks of Adobe in the
 United States and/or other countries. Apple and Final Cut Pro are trademarks of Apple Inc. CapCut is a trademark of
 its owner. Cisco is a trademark of Cisco Systems, Inc. formcut is not affiliated with or endorsed by

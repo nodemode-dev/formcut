@@ -25,6 +25,7 @@ import { compact } from "./compact";
 import { buildDevicesView } from "./devices-view";
 import { buildBrowserView } from "./browser-view";
 import { buildProView } from "./pro-view";
+import { buildExtensionsView } from "./extensions";
 
 const TABS: Array<[string, string]> = [
   ["Media", "tab.media"],
@@ -39,6 +40,7 @@ const TABS: Array<[string, string]> = [
   ["Stickers", "tab.stickers"],
   ["Music", "tab.music"],
   ["Sounds", "tab.sounds"],
+  ["Extensions", "tab.extensions"],
 ];
 const EFFECT_GROUPS: Array<[string, string[]]> = [
   ["Video effects", ["Blur", "Stylize", "Distort", "Texture", "Looks", "Packages", "Mask", "Cutout"]],
@@ -689,6 +691,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     buildDevicesView(engine),
     buildBrowserView(engine),
     buildProView(engine, bin),
+    buildExtensionsView(engine, bin),
   ];
   tmplView.after(...libraries.map((library) => library.el));
   tabs.addEventListener("click", (ev) => {

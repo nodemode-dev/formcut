@@ -86,6 +86,8 @@ pub async fn supervise(
                                 WebviewUrl::External(url),
                             )
                             .title("FormCut")
+                            .visible(crate::reveal::BUILD_VISIBLE)
+                            .background_color(crate::reveal::BACKGROUND)
                             .inner_size(width, height)
                             .min_inner_size(
                                 crate::MIN_LOGICAL.0.min(width),
@@ -94,7 +96,8 @@ pub async fn supervise(
                             .center()
                             .build()
                             {
-                                Ok(_) => {
+                                Ok(window) => {
+                                    crate::reveal::conceal(&window);
                                     ready = true;
                                     pending.clear();
                                 }
@@ -125,6 +128,7 @@ pub async fn supervise(
         }
     }
     if !ready || handle.get_webview_window("main").is_some() {
+        crate::reveal::close_splash(&handle);
         handle.dialog().message(failure).blocking_show();
     }
     crate::kill_backend(&handle);

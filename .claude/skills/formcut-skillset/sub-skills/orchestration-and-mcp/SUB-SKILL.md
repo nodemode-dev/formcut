@@ -28,4 +28,6 @@ For connecting the server, driving formcut through it, or changing its tools, lo
 
 Settings, Connections, AI agents gives each client the exact command or config (`app/agent_connect.py`). The server finds the running engine through `engine.json` (`app/discovery.py`); `FORMCUT_ENGINE` overrides it. It identifies itself to the engine with `session.hello`, so a person watching the app sees the agent driving.
 
+Two tools carry the Form Extension Contract's names with formcut's prefix, as the contract asks of a prefixed server: `formcut_extensions_list` and `formcut_extension_command`. They call the RPC methods `extensions.list` and `extensions.command`, which reach the window through the engine's bridge (`app/extensions.py`: the window long-polls `GET /api/extensions/agent/next` and posts each answer), because extension pages and their consent live in the window. `http_rpc` runs those two methods in the thread pool, since they wait on the window and would otherwise block the event loop the window answers through.
+
 When adding a tool: name it `formcut_verb_noun`, write the description for a model choosing between tools, take and return handles rather than holding state, and say in the failure text what the caller should do next.

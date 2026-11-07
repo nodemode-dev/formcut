@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version v2.12.6" src="https://img.shields.io/badge/version-v2.12.6-eef0f4?style=flat-square">
+  <img alt="version v2.14.1" src="https://img.shields.io/badge/version-v2.14.1-eef0f4?style=flat-square">
   <img alt="TypeScript and Vite" src="https://img.shields.io/badge/TypeScript-Vite-3178c6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Python FastAPI" src="https://img.shields.io/badge/Python-FastAPI-3776ab?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
@@ -93,7 +93,7 @@
 
 ## Built for agents
 
-FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
+FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
 
 ```sh
 ./formcut mcp            # MCP server on stdio, starts the engine if nothing answers
@@ -102,6 +102,10 @@ FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC 
 ```
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
+
+## Extensions
+
+FormCut loads extensions under the Form Extension Contract (API 1): install them with FormPortal, or make one with form.ext and run it from its folder. They appear in the Extensions menu and the Extensions tab, run in a sandboxed frame, ask before they touch the project, and change it only through FormCut's own commands, one undo step per change. The API is in [`docs/EXTENSIONS.md`](docs/EXTENSIONS.md); agents reach them with `formcut_extensions_list` and `formcut_extension_command`, which go through the engine's HTTP RPC to the open window.
 
 ## Under the hood
 
@@ -137,6 +141,8 @@ chmod +x formcut
 ```
 
 The interface opens at http://localhost:3040. On first run `.env` is created from `example.env`; every key in it is optional.
+
+**Demo:** open [`demo/index.html`](demo/index.html) in a browser, no install and no network, to play, re-cut, grade, caption and export a finished 48 second film made of real clips and music, or your own files. See [`demo/README.md`](demo/README.md). Two more demos sit beside it and link to each other: [`demos/grade`](demos/grade/README.md) for colour, looks, a LUT, masks, speed ramps and transitions, and [`demos/deliver`](demos/deliver/README.md) for captions from an SRT, ducking, loudness, chapters, a vertical reframe and export presets.
 
 On Windows run `formcut.bat`. The engine listens on http://127.0.0.1:8040; `FORMCUT_DATA_DIR`, `FORMCUT_MODELS_DIR` and `FORMCUT_PORT` in `.env` move its data, models and port.
 
