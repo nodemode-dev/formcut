@@ -60,12 +60,12 @@ export function buildPreview(engine: ProjectEngine, mixer: Mixer, scope: LumaSco
     const s = engine.snapshot;
     sizeCanvas();
     mixer.syncVideos(s, s.playhead, s.playing);
+    setText(tc, formatTimecode(s.playhead, s.fps));
+    setText(total, `/ ${formatTimecode(s.duration, s.fps)}`);
+    if (!s.playing && mixer.waiting(s, s.playhead)) return;
     drawFrame(ctx, s, s.playhead, mixer);
     scope.update(canvas, scopeForce || !s.playing);
     scopeForce = false;
-    const next = formatTimecode(s.playhead, s.fps);
-    setText(tc, next);
-    setText(total, `/ ${formatTimecode(s.duration, s.fps)}`);
     if (s.playing) schedule();
   };
 

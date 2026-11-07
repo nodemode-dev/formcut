@@ -1,4 +1,4 @@
-import type { Clip, ProjectState } from "../../frontend/src/engine/types";
+import type { Clip, ProjectState, Track } from "../../frontend/src/engine/types";
 import { sourceTime } from "../../frontend/src/engine/timing";
 import { getSource } from "./media";
 
@@ -71,6 +71,26 @@ export class Mixer {
     return slot.el;
   }
 
+  private tailOf(track: Track, clip: Clip): number {
+    const end = clip.start + clip.duration;
+    const next = track.clips.find((other) => other !== clip && other.transitionIn && Math.abs(other.start - end) < 0.06);
+    return next?.transitionIn?.duration ?? 0;
+  }
+
+  waiting(state: ProjectState, t: number): boolean {
+    for (const track of state.timelines[state.activeTimeline].tracks) {
+      if (track.hidden) continue;
+      for (const clip of track.clips) {
+        if (clip.kind !== "video") continue;
+        const local = t - clip.start;
+        if (local < 0 || local >= clip.duration + this.tailOf(track, clip)) continue;
+        const el = this.slots.get(clip.id)?.el;
+        if (el && !el.error && (el.seeking || el.readyState < 2)) return true;
+      }
+    }
+    return false;
+  }
+
   syncVideos(state: ProjectState, t: number, playing: boolean): void {
     const tracks = state.timelines[state.activeTimeline].tracks;
     const live = new Set<string>();
@@ -78,7 +98,7 @@ export class Mixer {
       for (const clip of track.clips) {
         if (clip.kind !== "video" || !getSource(clip.mediaId)?.url) continue;
         const local = t - clip.start;
-        const active = local >= 0 && local < clip.duration && !track.hidden;
+        const active = local >= 0 && local < clip.duration + this.tailOf(track, clip) && !track.hidden;
         const el = this.videoFor(clip);
         if (!el) continue;
         const slot = this.slots.get(clip.id)!;
@@ -101,7 +121,7 @@ export class Mixer {
           if (Math.abs(el.currentTime - target) > 0.02) el.currentTime = target;
         }
         const fadeIn = clip.fadeIn && local < clip.fadeIn ? local / clip.fadeIn : 1;
-        const fadeOut = clip.fadeOut && clip.duration - local < clip.fadeOut ? (clip.duration - local) / clip.fadeOut : 1;
+        const fadeOut = clip.fadeOut && clip.duration - local < clip.fadeOut ? Math.max(0, clip.duration - local) / clip.fadeOut : 1;
         const level = clip.muted || track.muted ? 0 : (clip.volume ?? 1) * Math.min(fadeIn, fadeOut);
         if (slot.gain) slot.gain.gain.value = level;
         else el.volume = Math.min(1, Math.max(0, level));
