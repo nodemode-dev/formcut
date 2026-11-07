@@ -878,7 +878,7 @@ dependencies = [
 
 [[package]]
 name = "formcut"
-version = "2.13.2"
+version = "2.13.3"
 dependencies = [
  "objc2",
  "objc2-app-kit",
