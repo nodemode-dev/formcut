@@ -12,6 +12,7 @@ Reasoning behind the demo, newest first.
 - **Tracks.** Captions, Titles, Video and Audio. The Overlay track went because nothing real sits on it; `trackFor` sends a dropped image to Video when there is no Overlay track.
 - **Grade.** Each clip carries its own exposure, contrast, saturation, temperature and vignette so the Color tab shows real values on selection, not zeros.
 - **Credits in the film.** The last 2.6 s print the footage and music credit over the aurora, in addition to `CREDITS.md`.
+- **Seeking never blanks the picture.** A video element that is seeking drops below ready state, and the renderer skips a clip it cannot draw, so pausing or scrubbing flashed black until `seeked`. While paused, the preview now holds the last frame until every active video is ready (`Mixer.waiting`), and a clip stays live for the length of the next clip's transition so the outgoing picture keeps moving through a crossfade instead of freezing on its last frame. Measured: mean luma of the canvas sampled every 25 ms after pausing at four points and while scrubbing eight jumps, no zero reading.
 - **Size.** 26 MB for the folder, of which the packs are 25 MB (base64 adds a third over the 18.8 MB of mp4 and 0.8 MB of mp3). The budget is 40 MB.
 
 ## 2.13.0 · offline demo
