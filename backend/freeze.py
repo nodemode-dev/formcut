@@ -30,6 +30,13 @@ if importlib.util.find_spec("av") is not None:
         last = av_detail.splitlines()[-1] if av_detail else "no output"
         raise SystemExit(f"Refusing to freeze: PyAV does not import ({last}). Run setup/build_lgpl_av first.")
 os.chdir(root)
+# The first-run demo (app/demo.py) reads these from examples/demo inside the frozen engine.
+# Their credits are in NOTICE and examples/demo/README.md.
+DEMO = root.parent / "examples" / "demo"
+DEMO_FILES = ("input-clip-example.mp4", "model-drop-MV.mp4", "a-sample.wav", "effect-example-image.jpg")
+missing_demo = [name for name in DEMO_FILES if not (DEMO / name).is_file()]
+if missing_demo:
+    raise SystemExit("Refusing to freeze without the demo media: " + ", ".join(missing_demo))
 arguments = [
     '--clean', '--noconfirm', '--name', 'formcut-engine',
     '--onefile' if args.onefile else '--onedir',
@@ -49,6 +56,8 @@ arguments = [
     '--exclude-module', 'espeakng_loader', '--exclude-module', 'torch',
     str(root / 'desktop_entry.py'),
 ]
+for name in DEMO_FILES:
+    arguments.extend(["--add-data", str(DEMO / name) + os.pathsep + "examples/demo"])
 
 # Windows: the FFmpeg DLLs PyAV's .pyd files load, beside them in the engine as in site-packages.
 if sys.platform == "win32" and importlib.util.find_spec("av") is not None:

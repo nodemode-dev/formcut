@@ -6,8 +6,8 @@ This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
 It includes third-party components under their own licences, among them the
 timeline glyphs derived from the Lucide icon set (ISC) and, in release builds,
-formcut's LGPL-2.1 build of FFmpeg. The demo media in examples/demo keep their
-own licences (examples/demo/README.md). The device models in
+formcut's LGPL-2.1 build of FFmpeg. The demo media in examples/demo ship inside
+the app and keep their own licences (listed under Demo media below). The device models in
 backend/app/device_library (from 3d-mock-models) are original designs, modelled
 from scratch in code, under CC0-1.0; their keyboard legends were drawn with the
 Inter font (SIL Open Font License 1.1). They are provided as is and used at
@@ -100,3 +100,23 @@ Trademarks. Adobe, After Effects and Premiere are either registered trademarks o
 United States and/or other countries. Apple and Final Cut Pro are trademarks of Apple Inc. CapCut is a trademark of
 its owner. Cisco is a trademark of Cisco Systems, Inc. formcut is not affiliated with or endorsed by
 any of them; the names describe file formats, key sets and compatibility only.
+
+Demo media
+----------
+The first-run demo ships these files from examples/demo inside the app. They are
+not covered by formcut's Apache-2.0 licence, and their creators do not endorse formcut.
+
+- input-clip-example.mp4: "Abstract Digital Light Particle Animation" by Nicola Narracci
+  (https://www.pexels.com/@nicola-narracci-157460431/), from
+  https://www.pexels.com/video/abstract-digital-light-particle-animation-34637281/
+  Pexels License, https://www.pexels.com/license/
+- model-drop-MV.mp4: "Abstract Waves of Blue and Purple Animation" by Nicola Narracci
+  (https://www.pexels.com/@nicola-narracci-157460431/), from
+  https://www.pexels.com/video/abstract-waves-of-blue-and-purple-animation-38724728/
+  Pexels License, https://www.pexels.com/license/
+- effect-example-image.jpg: "Abstract Orange Sculptural Form on Gradient Background" by
+  Mahmoud Ramadan (https://www.pexels.com/@mahmoudramadan/), from
+  https://www.pexels.com/photo/abstract-orange-sculptural-form-on-gradient-background-36025195/
+  Pexels License, https://www.pexels.com/license/
+- a-sample.wav: a spoken line generated for formcut with Kokoro-82M
+  (https://huggingface.co/hexgrad/Kokoro-82M), Apache-2.0.
