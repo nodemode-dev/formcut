@@ -75,7 +75,9 @@ fn show_main<R: Runtime>(app: &tauri::AppHandle<R>) {
 
 #[cfg(target_os = "macos")]
 fn set_seen<R: Runtime>(window: &WebviewWindow<R>, seen: bool) {
-    let Ok(ns_window) = window.ns_window() else { return };
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
     let address = ns_window as usize;
     let _ = window.run_on_main_thread(move || unsafe {
         if let Some(window) = (address as *const objc2_app_kit::NSWindow).as_ref() {
@@ -94,16 +96,24 @@ fn set_seen<R: Runtime>(_window: &WebviewWindow<R>, _seen: bool) {}
 #[cfg(target_os = "macos")]
 pub fn round_splash<R: Runtime>(app: &tauri::AppHandle<R>) {
     const RADIUS: f64 = 16.0;
-    let Some(splash) = app.get_webview_window("splash") else { return };
-    let Ok(ns_window) = splash.ns_window() else { return };
+    let Some(splash) = app.get_webview_window("splash") else {
+        return;
+    };
+    let Ok(ns_window) = splash.ns_window() else {
+        return;
+    };
     let address = ns_window as usize;
     let _ = splash.run_on_main_thread(move || unsafe {
         use objc2::msg_send;
         use objc2::runtime::AnyObject;
-        let Some(window) = (address as *const objc2_app_kit::NSWindow).as_ref() else { return };
+        let Some(window) = (address as *const objc2_app_kit::NSWindow).as_ref() else {
+            return;
+        };
         window.setOpaque(false);
         window.setBackgroundColor(Some(&objc2_app_kit::NSColor::clearColor()));
-        let Some(content) = window.contentView() else { return };
+        let Some(content) = window.contentView() else {
+            return;
+        };
         content.setWantsLayer(true);
         let layer: *mut AnyObject = msg_send![&*content, layer];
         if let Some(layer) = layer.as_ref() {
