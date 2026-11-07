@@ -29,6 +29,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       <button class="menu-item" data-ref="file" data-feature="menu.file">${t("menu.file")}</button>
       <button class="menu-item" data-ref="edit" data-feature="menu.edit">${t("menu.edit")}</button>
       <button class="menu-item" data-ref="view" data-feature="menu.view">${t("menu.view")}</button>
+      <button class="menu-item" data-ref="extensions" data-feature="menu.extensions">${t("menu.extensions")}</button>
     </div>
     <div class="titlebar-center">
       <span class="project-title" data-ref="title" title="Click to rename">${escapeHtml(s.title)}</span>
@@ -131,6 +132,12 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       toast.hidden = true;
     }, ms);
   };
+  document.addEventListener("formcut:toast", (event) => {
+    const message = (event as CustomEvent<{ message?: string }>).detail?.message;
+    if (!message) return;
+    showToast(message);
+    hideToastSoon(4000);
+  });
 
   const fileBtn = el.querySelector<HTMLElement>('[data-ref="file"]')!;
   const menu = document.createElement("div");
