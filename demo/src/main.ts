@@ -272,6 +272,7 @@ bar.innerHTML = `
     <span class="save-state" data-ref="status" role="status">loading media</span>
   </div>
   <div class="titlebar-right">
+    <nav class="demo-links" aria-label="The three demos"><a href="./index.html" aria-current="page">Edit</a><a href="../demos/grade/index.html">Grade</a><a href="../demos/deliver/index.html">Deliver</a></nav>
     <select class="mini-select" data-ref="theme" aria-label="Theme">${THEMES.map(([id, name]) => `<option value="${id}">${name}</option>`).join("")}</select>
     <div class="export-wrap">
       <button class="btn-export" data-ref="export" aria-haspopup="true" aria-expanded="false">${icon("export")}<span data-ref="export-label">Export</span></button>
