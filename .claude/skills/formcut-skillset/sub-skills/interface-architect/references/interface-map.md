@@ -32,6 +32,8 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/seed.ts`
 - `engine/timing.ts`
 - `engine/types.ts`
+- `extensions/catalogue.ts`
+- `extensions/host-bridge.ts`
 - `i18n/index.ts`
 - `i18n/language-pack.ts`
 - `i18n/text.ts`
@@ -52,6 +54,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/editor-actions.ts`
 - `ui/effect-parameters.ts`
 - `ui/export-job.ts`
+- `ui/extensions.ts`
 - `ui/file-menu.ts`
 - `ui/focus-moves.ts`
 - `ui/font-tools.ts`
