@@ -96,6 +96,8 @@ In addition, the Cisco-provided binary of this Software is licensed under Cisco'
 
                           v1.0
 
+Demo media. The browser demo in demo/ carries eight Pexels video clips (Pexels License) and one piano recording (CC0 1.0, The Open Goldberg Variations). They are not covered by formcut's Apache-2.0 licence; each file, its author, source page and licence is listed in demo/CREDITS.md. The demo is not bundled into frozen builds.
+
 Trademarks. Adobe, After Effects and Premiere are either registered trademarks or trademarks of Adobe in the
 United States and/or other countries. Apple and Final Cut Pro are trademarks of Apple Inc. CapCut is a trademark of
 its owner. Cisco is a trademark of Cisco Systems, Inc. formcut is not affiliated with or endorsed by
