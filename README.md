@@ -136,7 +136,7 @@ chmod +x formcut
 
 The interface opens at http://localhost:3040. On first run `.env` is created from `example.env`; every key in it is optional.
 
-**Demo:** open [`demo/index.html`](demo/index.html) in a browser, no install and no network, to cut, grade, caption and export a timeline of built-in samples or your own files. See [`demo/README.md`](demo/README.md).
+**Demo:** open [`demo/index.html`](demo/index.html) in a browser, no install and no network, to play, re-cut, grade, caption and export a finished 48 second film made of real clips and music, or your own files. See [`demo/README.md`](demo/README.md).
 
 On Windows run `formcut.bat`. The engine listens on http://127.0.0.1:8040; `FORMCUT_DATA_DIR`, `FORMCUT_MODELS_DIR` and `FORMCUT_PORT` in `.env` move its data, models and port.
 

@@ -1,6 +1,8 @@
 # FormCut demo
 
-An offline editor you can open by double-clicking `index.html`. No backend, no network, no install: every script, style and sample is in this folder.
+An offline editor you can open by double-clicking `index.html`. No backend, no network, no install: every script, style and piece of media is in this folder.
+
+It opens on a finished 48 second film, High Country: eight real aerial and time-lapse clips cut to a piano piece, with a title, chapter tags, captions, a per-clip colour grade, and crossfade, wipe, zoom and dip transitions. Press Space to play it, select any clip to see its grade, and change anything. Every clip, its photographer and its licence is listed in [`CREDITS.md`](CREDITS.md).
 
 ## What it shows
 
@@ -15,7 +17,7 @@ The real FormCut state engine (`frontend/src/engine/project.ts`, with its undo h
 
 ## Your own files
 
-Drop a video, audio file, image, `.srt`, `.vtt` or a project `.json` anywhere on the page, or use Open files. Files are read in this page and never uploaded. With nothing dropped it runs on built-in samples: generated waves, embers, a test pattern, a gradient plate and a synthesised chord loop. None of them is a file; they are drawn and synthesised in code.
+Drop a video, audio file, image, `.srt`, `.vtt` or a project `.json` anywhere on the page, or use Open files. Files are read in this page and never uploaded. The film's media ship as JavaScript data packs in `assets/media/` (`film.js` is the manifest with names, thumbnails and facts; `clip-NN.js` and `music.js` hold base64 files). Chrome blocks reading local files from `file://`, so each pack is loaded by a script tag on demand, decoded to a Blob or an audio buffer, and swapped in while the bin cards, timeline and thumbnails stay in place. If the manifest cannot load, the demo falls back to generated waves, embers, a test pattern, a gradient plate and a synthesised chord loop, drawn and synthesised in code.
 
 ## Open it
 

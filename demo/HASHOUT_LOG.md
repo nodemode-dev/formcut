@@ -2,6 +2,18 @@
 
 Reasoning behind the demo, newest first.
 
+## 2.13.1 · real media
+
+- **Theme and story.** Eight Pexels clips run from a Milky Way time-lapse through sunrise, snow peaks, fog, a waterfall slope, a cloud sea and a campfire to a southern lights time-lapse, a night-to-night day with no person in frame. Landscapes make a film that looks finished without faces, brands or releases to worry about. The cloud sea page calls its clip a sunrise and the frames could be either, so its tag and caption say only what is visible.
+- **Why packs, not plain files.** A `<video>` could play a relative mp4 from `file://`, but the renderer reads the video through a canvas and the export records that canvas; a canvas fed from a `file://` video is tainted, so `captureStream` and the luma scope's `getImageData` would fail. Each clip is therefore a base64 string in `clip-NN.js`, turned into a Blob URL, which the page treats as same-origin.
+- **Zero flash.** `film.js` registers all nine sources with thumbnails and facts before the project is built, so bin cards, timeline clips and thumbnails exist at their final size from the first frame. Packs then load one at a time, the sunrise clip and the music first because the project opens at 8.2 s on them; cards dim and say "loading" in place, the preview note counts progress, and each swap only sets a source's `url` or `buffer`. Waveforms paint when the music decodes.
+- **Music.** The first choice was Grieg's Morning Mood by the Musopen Symphony on Wikimedia Commons (public domain on its page), but every download from upload.wikimedia.org returned 429 for over half an hour, and the polite client was not changed to get around it. freepd.com, named in the brief, now says it is permanently closed. The Aria from The Open Goldberg Variations is CC0 on its Internet Archive item page, is a studio recording, and is slow enough to sit under landscape footage. Trimmed to 52 s, normalised to -17 LUFS, MP3 128 kbps.
+- **Encoding.** 1280x720 H.264 at CRF 21, keyframe every 15 frames so scrubbing seeks fast, no audio track (the clips' own sound would fight the music and cost bytes). 60 fps sources went to 30 fps. Each clip keeps about 1.4 s of tail beyond its use because the renderer continues an outgoing clip through the next clip's transition.
+- **Tracks.** Captions, Titles, Video and Audio. The Overlay track went because nothing real sits on it; `trackFor` sends a dropped image to Video when there is no Overlay track.
+- **Grade.** Each clip carries its own exposure, contrast, saturation, temperature and vignette so the Color tab shows real values on selection, not zeros.
+- **Credits in the film.** The last 2.6 s print the footage and music credit over the aurora, in addition to `CREDITS.md`.
+- **Size.** 26 MB for the folder, of which the packs are 25 MB (base64 adds a third over the 18.8 MB of mp4 and 0.8 MB of mp3). The budget is 40 MB.
+
 ## 2.13.0 · offline demo
 
 - **Why the real UI was not run against a shim.** The interface's preview, thumbnails, waveforms and render all call the Python engine, so a fetch shim would have meant rewriting the engine in the page. The demo instead reuses what is pure: `ProjectEngine` and its commands, `timing.ts`, `types.ts`, the tokens, themes, `app.css`, `containers.css`, `creator.css` and `icons.ts`, and adds a canvas renderer and a Web Audio mixer behind the same state engine.
