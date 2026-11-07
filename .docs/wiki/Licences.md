@@ -9,6 +9,7 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 | fastapi | MIT | engine web framework | ship |
 | uvicorn | BSD-3-Clause | engine server | ship |
 | python-multipart | Apache-2.0 | upload parsing | ship |
+| Form Extension Contract kit (nodemode) | Apache-2.0 | extension host: backend/app/formext_host.py and frontend/src/extensions/host-bridge.ts, vendored unchanged | ship |
 | vite, typescript | MIT | build-time only, output ships | ship |
 | Inter font | OFL-1.1 | No remote stylesheet or font file is shipped; system UI fonts are used | not bundled |
 | 3d-mock-models device library v0.10.0 | CC0-1.0 | ten device models in backend/app/device_library (generated in code by the owner's 3d-mock-models; LICENSE beside them) | ship |

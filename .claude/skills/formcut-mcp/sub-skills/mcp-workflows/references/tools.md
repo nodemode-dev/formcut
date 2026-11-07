@@ -2,7 +2,7 @@
 
 Generated from `backend/app/agent_mcp.py` by `setup/mcp_tool_reference.py`: every tool the server declares, with its exact name, its parameters (limits and defaults as the server enforces them) and whether it changes anything. Names are case sensitive. If a host's tool listing disagrees with this file, the listing is current and this file is stale.
 
-The server declares 32 tools.
+The server declares 34 tools.
 
 | Tool | Parameters | Effect | What it does |
 | --- | --- | --- | --- |
@@ -38,3 +38,5 @@ The server declares 32 tools.
 | `formcut_list_packages` | none | read only | List the effect packages a person has added, with their kind and category, and any that failed to load with the reason. |
 | `formcut_remove_package` | `package_id` str | destructive | Remove an effect package a person added. formcut's built-in looks cannot be removed, and a package that a saved project still uses is refused, naming the projects, since they would no longer load without it. |
 | `formcut_capabilities` | none | read only | Report the engine's automation surface: the methods it accepts, the project properties an edit may set and the edit operation names. Use it when an edit is refused, or before constructing raw commands. |
+| `formcut_extensions_list` | none | read only | List the extensions formcut has loaded (installed from FormPortal or run from a folder by form.ext): each one's id, name, version, source, state (ready, needs-permission or refused with the reason) and the commands it contributes. Use it before formcut_extension_command to find the id and command. |
+| `formcut_extension_command` | `id` str; `command` str; `args` dict = None | changes state | Run a command an extension contributes, in the open formcut window, as if the person chose it from the Extensions menu. The first run of an extension version asks the person in the window to allow its permissions, so the call can wait for them; Not Now fails the call. Take the id and command from formcut_extensions_list. |

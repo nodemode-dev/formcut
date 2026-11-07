@@ -93,7 +93,7 @@
 
 ## Built for agents
 
-FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
+FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
 
 ```sh
 ./formcut mcp            # MCP server on stdio, starts the engine if nothing answers
@@ -102,6 +102,10 @@ FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC 
 ```
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
+
+## Extensions
+
+FormCut loads extensions under the Form Extension Contract (API 1): install them with FormPortal, or make one with form.ext and run it from its folder. They appear in the Extensions menu and the Extensions tab, run in a sandboxed frame, ask before they touch the project, and change it only through FormCut's own commands, one undo step per change. The API is in [`docs/EXTENSIONS.md`](docs/EXTENSIONS.md); agents reach them with `formcut_extensions_list` and `formcut_extension_command`, which go through the engine's HTTP RPC to the open window.
 
 ## Under the hood
 

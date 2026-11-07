@@ -6,6 +6,7 @@
 - [Architecture](Architecture)
 - [Creator workflow](Creator-workflow)
 - [Automation](Automation)
+- [Extensions](Extensions)
 - [Packaging](Packaging)
 - [Translation](Translation)
 - [Mobile notes](Mobile-notes)

@@ -69,7 +69,7 @@ Title styles ride `clip.text` patches like any other style field, so the full pr
 
 ## MCP server
 
-The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 32 tools over stdio,
+The app carries an MCP server (`formcut-engine --mcp`, module `backend/app/agent_mcp.py`) with 34 tools over stdio,
 each a thin, documented wrapper over the RPC above; the full listing is generated into
 `.claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md`. By purpose:
 

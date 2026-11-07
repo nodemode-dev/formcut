@@ -65,6 +65,14 @@ A video package is a stack of formcut's own effects and grades, run by the same 
 
 `formcut_list_packages` lists what has been added and any that failed to load. `formcut_remove_package` deletes one; formcut's own looks cannot be removed, and a package a saved project uses is refused with the projects' names, since they would not load without it.
 
+## Workflow 5: run an extension's command
+
+Extensions (Form Extension Contract, API 1) run in the formcut window, not in the engine, so these two tools need the window open. They reach it through the engine's HTTP RPC; `python -m app.cli` cannot run extension commands.
+
+1. `formcut_extensions_list`: each extension's id, version, source, state and commands. A row in state `refused` carries the reason (wrong product, newer API, `minimum_app`); it cannot run. With the window closed the list still comes back, marked as such, without permission state.
+2. `formcut_extension_command` with the id and command from that list, and `args` if the command takes any. The first run of an extension version shows formcut's consent dialog to the person; the call waits for them, and Not Now fails it with code -32001. Say so to the user instead of retrying.
+3. An extension changes the project through formcut's own commands, as one undo step, so re-read the project (`formcut_get_project` after a save, or ask the person) before further raw edits.
+
 ## When something goes wrong
 
 - **Stale revision.** The edit is refused and the reply carries the current revision. Call `formcut_get_project`, rebuild the command against what the project now contains (someone, or another agent, changed it), and retry once. Never retry with a guessed revision.
