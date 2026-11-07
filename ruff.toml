@@ -11,8 +11,9 @@ target-version = "py312"
 line-length = 140
 
 # A standalone, standard-library-only tool the owner keeps in its own style; it
-# is left out of lint and format rather than rewritten to this file's rules.
-extend-exclude = ["setup/merge_macos_bundle_v1.0.0.py"]
+# is left out of lint and format rather than rewritten to this file's rules. The Form Extension Contract kit's
+# resolver is vendored unchanged, so it is left out for the same reason.
+extend-exclude = ["setup/merge_macos_bundle_v1.0.0.py", "backend/app/formext_host.py"]
 
 [lint]
 # The set the check was already applying, made explicit. Widening it is a

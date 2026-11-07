@@ -6,6 +6,7 @@ from .catalogue import router as catalogue
 from .clip_visuals import router as clip_visuals
 from .demo import router as demo
 from .effect_previews import router as previews
+from .extensions import router as extensions
 from .fonts import router as fonts
 from .jobs import router as jobs
 from .local_speech import router as speech
@@ -39,5 +40,6 @@ for module in (
     storage,
     orchestration,
     recovery,
+    extensions,
 ):
     router.include_router(module)

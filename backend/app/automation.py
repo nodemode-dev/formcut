@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.concurrency import run_in_threadpool
 
 from . import jobs, store
 from .catalogue import catalogue
@@ -736,6 +737,14 @@ def dispatch(method: str, params: dict):
         return proxy_module.status(media_id, source)
     if method == "media.list":
         return list_media()
+    if method == "extensions.list":
+        from .extensions import agent_list
+
+        return agent_list()
+    if method == "extensions.command":
+        from .extensions import agent_command
+
+        return agent_command(str(params.get("id") or ""), str(params.get("command") or ""), params.get("args"))
     if method == "media.import":
         source = Path(str(params.get("path") or ""))
         if not source.is_file():
@@ -800,6 +809,8 @@ def dispatch(method: str, params: dict):
                 "job.result",
                 "job.status",
                 "job.cancel",
+                "extensions.list",
+                "extensions.command",
             ],
             "clip_properties": [
                 "transform",
@@ -963,7 +974,10 @@ def rpc(message):
 @router.post("")
 async def http_rpc(request: Request):
     try:
-        return rpc(await request.json())
+        message = await request.json()
+        if isinstance(message, dict) and str(message.get("method", "")).startswith("extensions."):
+            return await run_in_threadpool(rpc, message)
+        return rpc(message)
     except (ValueError, UnicodeError):
         return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Invalid JSON"}}
 
@@ -976,7 +990,11 @@ async def websocket_rpc(socket: WebSocket):
     await socket.accept()
     try:
         while True:
-            response = rpc(await socket.receive_json())
+            message = await socket.receive_json()
+            if isinstance(message, dict) and str(message.get("method", "")).startswith("extensions."):
+                response = await run_in_threadpool(rpc, message)
+            else:
+                response = rpc(message)
             if response is not None:
                 await socket.send_json(response)
     except WebSocketDisconnect:
