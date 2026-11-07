@@ -113,6 +113,7 @@ export function buildLibrary(engine: ProjectEngine, hooks: LibraryHooks, say: (t
         bin.append(card);
       }
       card.classList.toggle("is-active", source.id === activeSource);
+      card.classList.toggle("is-loading", !!source.pending);
     }
     setText(count, `${sources.length} items`);
   };

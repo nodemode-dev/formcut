@@ -16,6 +16,28 @@ export interface Source {
   peaks?: Float32Array;
   thumb?: string;
   facts: Array<[string, string]>;
+  pack?: string;
+  pending?: boolean;
+}
+
+export interface FilmItem {
+  id: string;
+  name: string;
+  kind: SourceKind;
+  duration: number;
+  width: number;
+  height: number;
+  pack: string;
+  mime: string;
+  thumb?: string;
+  facts: Array<[string, string]>;
+}
+
+declare global {
+  interface Window {
+    __formcutMedia?: Record<string, string>;
+    __formcutFilm?: { items: FilmItem[] };
+  }
 }
 
 export const PEAKS_PER_SECOND = 50;
@@ -444,4 +466,67 @@ export async function loadFile(file: File): Promise<Source> {
   if (type.startsWith("audio/") || /\.(wav|mp3|m4a|aac|ogg|oga|opus|flac)$/.test(name)) return addSource(await loadAudio(file));
   if (type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|avif)$/.test(name)) return addSource(await loadImage(file));
   throw new Error(`${file.name} is not a video, audio or image file`);
+}
+
+const MEDIA_DIR = "assets/media/";
+
+function injectScript(name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = `${MEDIA_DIR}${name}.js`;
+    tag.async = true;
+    tag.addEventListener("load", () => {
+      tag.remove();
+      resolve();
+    }, { once: true });
+    tag.addEventListener("error", () => {
+      tag.remove();
+      reject(new Error(`Could not load ${name}`));
+    }, { once: true });
+    document.head.append(tag);
+  });
+}
+
+function bytesOf(encoded: string): Uint8Array {
+  const raw = atob(encoded);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+  return bytes;
+}
+
+export async function installFilm(): Promise<FilmItem[] | null> {
+  try {
+    await injectScript("film");
+  } catch {
+    return null;
+  }
+  const film = window.__formcutFilm;
+  if (!film || !film.items.length) return null;
+  for (const item of film.items) {
+    addSource({
+      id: item.id, name: item.name, kind: item.kind, duration: item.duration, width: item.width, height: item.height,
+      origin: "file", thumb: item.thumb, facts: item.facts, pack: item.pack, pending: true,
+    });
+  }
+  return film.items;
+}
+
+export async function loadFilmItem(item: FilmItem): Promise<void> {
+  const source = registry.get(item.id);
+  if (!source) return;
+  await injectScript(item.pack);
+  const encoded = window.__formcutMedia?.[item.pack];
+  if (!encoded) throw new Error(`${item.name} is missing from its pack`);
+  const bytes = bytesOf(encoded);
+  delete window.__formcutMedia![item.pack];
+  if (item.kind === "video") {
+    source.url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: item.mime }));
+  } else if (item.kind === "audio") {
+    const buffer = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes.buffer as ArrayBuffer);
+    source.buffer = buffer;
+    source.peaks = computePeaks(buffer);
+    source.facts = [...source.facts, ...audioFacts(buffer)];
+  }
+  source.pending = false;
+  addSource(source);
 }

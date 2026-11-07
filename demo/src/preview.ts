@@ -9,6 +9,7 @@ export interface Preview {
   element: HTMLElement;
   canvas: HTMLCanvasElement;
   setFull: (full: boolean) => void;
+  setNote: (text: string) => void;
   redraw: () => void;
 }
 
@@ -133,6 +134,7 @@ export function buildPreview(engine: ProjectEngine, mixer: Mixer, scope: LumaSco
       setText(message, full ? "Rendering to WebM in real time" : "");
       schedule();
     },
+    setNote: (text) => setText(message, text),
     redraw: schedule,
   };
 }

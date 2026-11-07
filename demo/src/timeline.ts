@@ -250,7 +250,9 @@ export function buildTimeline(engine: ProjectEngine, say: (text: string) => void
     const tracks = engine.snapshot.timelines[engine.snapshot.activeTimeline].tracks;
     const name = kind === "audio" ? "Audio" : kind === "text" ? "Titles" : kind === "image" ? "Overlay" : "Video";
     const found = tracks.findIndex((track) => track.name === name);
-    return found >= 0 ? found : 0;
+    if (found >= 0) return found;
+    const video = tracks.findIndex((track) => track.name === "Video");
+    return kind === "image" && video >= 0 ? video : 0;
   };
 
   const snapPoints = (skip: Set<string>): number[] => {

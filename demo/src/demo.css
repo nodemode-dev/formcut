@@ -156,3 +156,7 @@
 
 .pane-timeline.mode-blade .lane { cursor: crosshair; }
 .tl-ruler .tick { white-space: nowrap; }
+
+.bin-card .effect-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.bin-card.is-loading .effect-thumb { opacity: 0.5; }
+.bin-card.is-loading .dur-chip::after { content: " · loading"; }
