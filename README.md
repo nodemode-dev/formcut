@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version v2.12.5" src="https://img.shields.io/badge/version-v2.12.5-eef0f4?style=flat-square">
+  <img alt="version v2.12.6" src="https://img.shields.io/badge/version-v2.12.6-eef0f4?style=flat-square">
   <img alt="TypeScript and Vite" src="https://img.shields.io/badge/TypeScript-Vite-3178c6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Python FastAPI" src="https://img.shields.io/badge/Python-FastAPI-3776ab?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
@@ -120,6 +120,8 @@ FormCut ships an MCP server with 32 workflow tools; the interface, the JSON-RPC 
 | Linux | [Download FormCut for Linux](https://formai.studio/get/formcut/linux) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
 
 All FormCut builds are compiled and released from [FormCompiler](https://github.com/nodemode-dev/formcompiler); this repo holds the source.
+
+**Updates:** FormCut does not update itself. Install [FormPortal](https://formai.studio/formportal/) and it keeps FormCut up to date, or download the new version from [formai.studio](https://formai.studio/formcut/download/).
 
 ## Run it from source
 
