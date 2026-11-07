@@ -1,9 +1,11 @@
 {
   "identifier": "default",
-  "windows": ["main"],
+  "windows": ["splash", "main"],
+  "remote": { "urls": ["http://127.0.0.1:*"] },
   "permissions": [
     "core:default",
     "dialog:default",
+    "allow-app-ready",
     {
       "identifier": "shell:allow-execute",
       "allow": [{ "name": "binaries/formcut-engine", "sidecar": true }]

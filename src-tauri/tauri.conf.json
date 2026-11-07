@@ -7,7 +7,22 @@
     "frontendDist": "../frontend/dist"
   },
   "app": {
-    "windows": [],
+    "windows": [
+      {
+        "label": "splash",
+        "title": "FormCut",
+        "url": "splash.html",
+        "width": 360,
+        "height": 200,
+        "resizable": false,
+        "decorations": false,
+        "center": true,
+        "transparent": true,
+        "shadow": false,
+        "visible": false
+      }
+    ],
+    "macOSPrivateApi": true,
     "security": {
       "csp": null
     }
