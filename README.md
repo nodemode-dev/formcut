@@ -125,6 +125,8 @@ FormCut loads extensions under the Form Extension Contract (API 1): install them
 
 All FormCut builds are compiled and released from [FormCompiler](https://github.com/nodemode-dev/formcompiler); this repo holds the source.
 
+**Updates:** FormCut does not update itself. Install [FormPortal](https://formai.studio/formportal/) and it keeps FormCut up to date, or download the new version from [formai.studio](https://formai.studio/formcut/download/).
+
 ## Run it from source
 
 Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
