@@ -128,3 +128,64 @@ not covered by formcut's Apache-2.0 licence, and their creators do not endorse f
   Pexels License, https://www.pexels.com/license/
 - a-sample.wav: a spoken line generated for formcut with Kokoro-82M
   (https://huggingface.co/hexgrad/Kokoro-82M), Apache-2.0.
+
+Demo films
+----------
+Help > Demos and the start screen open the repository's three demo films (demo/,
+demos/grade, demos/deliver) inside the app. Their media ships in the built interface
+under demos/<id>/ (written from the demos' data packs by scripts/extract_demo_media.py),
+with poster.jpg, a thumbnail of each film's first clip. What was changed in each file is
+in that demo's CREDITS.md. The Pexels License is https://www.pexels.com/license/.
+
+- demos/edit/film-01.mp4: "Stunning Milky Way Timelapse Over Mountains" by Erhan Dayi (@moments), from https://www.pexels.com/video/stunning-milky-way-timelapse-over-mountains-39220755/
+  License: Free (Pexels License)
+- demos/edit/film-02.mp4: "Stunning Mountain Sunrise Aerial View" by GIANG VU, from https://www.pexels.com/video/stunning-mountain-sunrise-aerial-view-33354461/
+  License: Free (Pexels License)
+- demos/edit/film-03.mp4: "Dramatic Sunrise Over Snowy Swiss Peaks" by Marek Piwnicki, from https://www.pexels.com/video/dramatic-sunrise-over-snowy-swiss-peaks-39264188/
+  License: Free (Pexels License)
+- demos/edit/film-04.mp4: "Aerial View of Misty Forest in Autumn" by Julien Goettelmann, from https://www.pexels.com/video/aerial-view-of-misty-forest-in-autumn-29792712/
+  License: Free (Pexels License)
+- demos/edit/film-05.mp4: "Stunning Cascading Waterfall in Remote Valley" by Gylfi Gylfason, from https://www.pexels.com/video/stunning-cascading-waterfall-in-remote-valley-40393750/
+  License: Free (Pexels License)
+- demos/edit/film-06.mp4: "Breathtaking Sunrise Over Ocean of Clouds" by 小小 兵 (pexels.com/@1516822895), from https://www.pexels.com/video/breathtaking-sunrise-over-ocean-of-clouds-34470558/
+  License: Free (Pexels License)
+- demos/edit/film-07.mp4: "Evening Campfire Glowing in Dark Outdoors" by yaman ozuduru, from https://www.pexels.com/video/evening-campfire-glowing-in-dark-outdoors-33667473/
+  License: Free (Pexels License)
+- demos/edit/film-08.mp4: "Stunning Southern Lights Over Queenstown Lake" by Eclipse Chasers, from https://www.pexels.com/video/stunning-southern-lights-over-queenstown-lake-34794659/
+  License: Free (Pexels License)
+- demos/edit/film-music.mp3: "J.S. Bach, Aria from the Goldberg Variations, BWV 988 (track 01 of The Open Goldberg Variations)" by Kimiko Ishizaka, from https://archive.org/details/OpenGoldbergVariations
+  CC0 1.0 Universal, license URL http://creativecommons.org/publicdomain/zero/1.0/
+- demos/grade/grade-01.mp4: "Silhouette Of Mountains At Sunset" by Engin Akyurt, from https://www.pexels.com/video/silhouette-of-mountains-at-sunset-1722697/
+  License: Free (Pexels License)
+- demos/grade/grade-02.mp4: "Silhouette Of Mountains At Sunset" by Engin Akyurt, from https://www.pexels.com/video/silhouette-of-mountains-at-sunset-1722697/
+  License: Free (Pexels License)
+- demos/grade/grade-03.mp4: "Dramatic Sunrise Over Snowy Swiss Peaks" by Marek Piwnicki, from https://www.pexels.com/video/dramatic-sunrise-over-snowy-swiss-peaks-39264188/
+  License: Free (Pexels License)
+- demos/grade/grade-04.mp4: "Aerial View of Misty Forest in Autumn" by Julien Goettelmann, from https://www.pexels.com/video/aerial-view-of-misty-forest-in-autumn-29792712/
+  License: Free (Pexels License)
+- demos/grade/grade-05.mp4: "Evening Campfire Glowing in Dark Outdoors" by yaman ozuduru, from https://www.pexels.com/video/evening-campfire-glowing-in-dark-outdoors-33667473/
+  License: Free (Pexels License)
+- demos/grade/grade-06.mp4: "Stunning Southern Lights Over Queenstown Lake" by Eclipse Chasers, from https://www.pexels.com/video/stunning-southern-lights-over-queenstown-lake-34794659/
+  License: Free (Pexels License)
+- demos/grade/grade-music.mp3: "J.S. Bach, Variatio 13 a 2 Clav., BWV 988 (The Open Goldberg Variations)" by Kimiko Ishizaka, from https://archive.org/details/OpenGoldbergVariations
+  CC0 1.0 Universal, license URL http://creativecommons.org/publicdomain/zero/1.0/
+- demos/deliver/talk-01.mp4: "Stunning Mountain Sunrise Aerial View" by GIANG VU, from https://www.pexels.com/video/stunning-mountain-sunrise-aerial-view-33354461/
+  License: Free (Pexels License)
+- demos/deliver/talk-02.mp4: "Aerial View of Misty Forest in Autumn" by Julien Goettelmann, from https://www.pexels.com/video/aerial-view-of-misty-forest-in-autumn-29792712/
+  License: Free (Pexels License)
+- demos/deliver/talk-03.mp4: "Stunning Cascading Waterfall in Remote Valley" by Gylfi Gylfason, from https://www.pexels.com/video/stunning-cascading-waterfall-in-remote-valley-40393750/
+  License: Free (Pexels License)
+- demos/deliver/talk-04.mp4: "Silhouette Of Mountains At Sunset" by Engin Akyurt, from https://www.pexels.com/video/silhouette-of-mountains-at-sunset-1722697/
+  License: Free (Pexels License)
+- demos/deliver/talk-05.mp4: "Dramatic Sunrise Over Snowy Swiss Peaks" by Marek Piwnicki, from https://www.pexels.com/video/dramatic-sunrise-over-snowy-swiss-peaks-39264188/
+  License: Free (Pexels License)
+- demos/deliver/talk-06.mp4: "Evening Campfire Glowing in Dark Outdoors" by yaman ozuduru, from https://www.pexels.com/video/evening-campfire-glowing-in-dark-outdoors-33667473/
+  License: Free (Pexels License)
+- demos/deliver/talk-07.mp4: "Breathtaking Sunrise Over Ocean of Clouds" by 小小 兵 (pexels.com/@1516822895), from https://www.pexels.com/video/breathtaking-sunrise-over-ocean-of-clouds-34470558/
+  License: Free (Pexels License)
+- demos/deliver/talk-08.mp4: "Stunning Milky Way Timelapse Over Mountains" by Erhan Dayi (@moments), from https://www.pexels.com/video/stunning-milky-way-timelapse-over-mountains-39220755/
+  License: Free (Pexels License)
+- demos/deliver/talk-voice.mp3: Henry David Thoreau, Walden (1854), chapter 2 "Where I Lived, and What I Lived For", part 2, read by Gord Mackenzie for LibriVox, from https://archive.org/details/walden_librivox
+  Public Domain, license URL http://creativecommons.org/licenses/publicdomain/
+- demos/deliver/talk-music.mp3: "J.S. Bach, Variatio 13 a 2 Clav., BWV 988 (The Open Goldberg Variations)" by Kimiko Ishizaka, from https://archive.org/details/OpenGoldbergVariations
+  CC0 1.0 Universal, license URL http://creativecommons.org/publicdomain/zero/1.0/
