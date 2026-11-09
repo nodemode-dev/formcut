@@ -1,10 +1,9 @@
-const GREY_W = 480;
+import type { Crop } from "../../../frontend/src/demos/film-kit";
 
-export interface Crop {
-  t: number;
-  x: number;
-  w: number;
-}
+export { cropKeyframes } from "../../../frontend/src/demos/film-kit";
+export type { Crop } from "../../../frontend/src/demos/film-kit";
+
+const GREY_W = 480;
 
 function laplacian(grey: Uint8ClampedArray | Uint8Array, w: number, h: number): Float32Array {
   const out = new Float32Array(w * h);
@@ -105,12 +104,4 @@ export async function analyseVideo(url: string, duration: number, progress: (fra
   video.removeAttribute("src");
   video.load();
   return reframe(frames, GREY_W, h);
-}
-
-export function cropKeyframes(crops: Crop[], scalePercent: number, canvasW: number, imageW: number): Array<{ t: number; props: Record<string, number>; interp: "ease" }> {
-  return crops.map((crop) => ({
-    t: Math.round(crop.t * 0.5 * 100) / 100,
-    props: { scale: scalePercent, posX: Math.round((0.5 - (crop.x + crop.w / 2)) * ((imageW * scalePercent) / 100 / canvasW) * 100 * 10) / 10 },
-    interp: "ease" as const,
-  }));
 }

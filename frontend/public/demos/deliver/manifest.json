@@ -1,0 +1,64 @@
+{
+ "items": [
+  {
+   "id": "talk-01",
+   "name": "First light",
+   "kind": "video",
+   "file": "talk-01.mp4"
+  },
+  {
+   "id": "talk-02",
+   "name": "Mist and pine",
+   "kind": "video",
+   "file": "talk-02.mp4"
+  },
+  {
+   "id": "talk-03",
+   "name": "The stream",
+   "kind": "video",
+   "file": "talk-03.mp4"
+  },
+  {
+   "id": "talk-04",
+   "name": "Open water",
+   "kind": "video",
+   "file": "talk-04.mp4"
+  },
+  {
+   "id": "talk-05",
+   "name": "Peaks",
+   "kind": "video",
+   "file": "talk-05.mp4"
+  },
+  {
+   "id": "talk-06",
+   "name": "Fire",
+   "kind": "video",
+   "file": "talk-06.mp4"
+  },
+  {
+   "id": "talk-07",
+   "name": "Above the clouds",
+   "kind": "video",
+   "file": "talk-07.mp4"
+  },
+  {
+   "id": "talk-08",
+   "name": "Night sky",
+   "kind": "video",
+   "file": "talk-08.mp4"
+  },
+  {
+   "id": "talk-voice",
+   "name": "Walden, Where I Lived (read)",
+   "kind": "audio",
+   "file": "talk-voice.mp3"
+  },
+  {
+   "id": "talk-music",
+   "name": "Goldberg Variation 13 (piano)",
+   "kind": "audio",
+   "file": "talk-music.mp3"
+  }
+ ]
+}

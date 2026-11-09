@@ -1,0 +1,46 @@
+{
+ "items": [
+  {
+   "id": "grade-01",
+   "name": "Last light",
+   "kind": "video",
+   "file": "grade-01.mp4"
+  },
+  {
+   "id": "grade-02",
+   "name": "Open water",
+   "kind": "video",
+   "file": "grade-02.mp4"
+  },
+  {
+   "id": "grade-03",
+   "name": "Warm peaks",
+   "kind": "video",
+   "file": "grade-03.mp4"
+  },
+  {
+   "id": "grade-04",
+   "name": "Mist and pine",
+   "kind": "video",
+   "file": "grade-04.mp4"
+  },
+  {
+   "id": "grade-05",
+   "name": "Fire",
+   "kind": "video",
+   "file": "grade-05.mp4"
+  },
+  {
+   "id": "grade-06",
+   "name": "Southern lights",
+   "kind": "video",
+   "file": "grade-06.mp4"
+  },
+  {
+   "id": "grade-music",
+   "name": "Goldberg Variation 13 (piano)",
+   "kind": "audio",
+   "file": "grade-music.mp3"
+  }
+ ]
+}

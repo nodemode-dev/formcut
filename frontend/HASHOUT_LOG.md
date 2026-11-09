@@ -2,6 +2,14 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.0 · the three demo films open in the app
+
+- **What was missing.** The start screen's Demo project chip builds a short project from the four engine sample files in examples/demo; it is not any of the repository demos. High Country (demo/), Last Light (demos/grade) and the Walden talk (demos/deliver) existed only as file:// pages. Now each opens in the app; the old chip stays as it was.
+- **One builder per film.** The browser demos' project builders moved into `frontend/src/demos/` and the demos import them by path (they already imported the engine, tokens and icons that way). `film-kit.ts` takes the three helpers the builders need from page modules (caption parsing, word timing, crop keyframes); the demos' own modules re-export them, so their other importers are untouched. The app's tsc and the three demos' tsc all pass on the same files.
+- **Media ids.** The builders name media by the demo's ids (film-01, grade-music, talk-voice). The engine seeds a demo's files once and answers with a map from those ids to library items, and `openRepoDemo` swaps each clip's id before `project.load`, with `projectId: null` and `saved: false`, so the film is a new project and nothing of the person's is replaced. It seeks to the time the browser demo opens at and selects the same clip.
+- **Where they appear.** A Demos row above the projects (mounted once at build time, so the grid below it never moves), cards reusing `.home-card.is-project`, with the poster in a fixed 16:9 art box so nothing shifts when it loads. A Help menu after Extensions in the titlebar, built like the Extensions menu, and Demo items in the native Help menu calling `window.formcut.actions.openDemo`. Cards and items are found by `data-open-demo` and `data-demo`, never by text.
+- **Not carried over.** Page code in the browser demos that is not part of the project stays in the pages: the Grade demo's Compare split and the Deliver demo's ducking, loudness and export presets. The Walden music bed opens at its builder's levels, not ducked.
+
 ## 2.14.0 · extension host (Form Extension Contract, API 1)
 
 - **Where things live.** formcut has an in-page titlebar menu bar, so the Extensions menu is a fourth `.menu-item` after View, static in the titlebar markup and so laid out with it before the first paint. It has no command palette; contributed commands are in the menu and as Run chips on each row. The panels formcut keeps are the left pane's tabs, so the Extensions panel is a tab there, built as a library-style view (`{ el, tab, load, pause }`) like Devices and Pro, and contributed dock panels open inside it under the list, one at a time with a tab row when there are several. Dialog panels use `.modal-scrim` and `.modal-panel`.

@@ -6,24 +6,8 @@ export const captionsOf = (state: ProjectState, timeline = state.activeTimeline)
   return track ? [...track.clips].filter((clip) => clip.kind === "text").sort((a, b) => a.start - b.start) : [];
 };
 
-export interface TimedWord {
-  text: string;
-  t: number;
-  d: number;
-}
-
-export function wordTimes(text: string, span: number): TimedWord[] {
-  const parts = text.trim().split(/\s+/).filter(Boolean);
-  const total = parts.reduce((sum, word) => sum + word.length + 1, 0) || 1;
-  const length = Math.max(0.05, span);
-  let at = 0;
-  return parts.map((part) => {
-    const d = (length * (part.length + 1)) / total;
-    const word = { text: part, t: Math.round(at * 1000) / 1000, d: Math.round(d * 1000) / 1000 };
-    at += d;
-    return word;
-  });
-}
+export { wordTimes } from "../../../frontend/src/demos/film-kit";
+export type { TimedWord } from "../../../frontend/src/demos/film-kit";
 
 const stamp = (value: number, comma: boolean): string => {
   const ms = Math.round(value * 1000);

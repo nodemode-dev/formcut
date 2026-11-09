@@ -31,7 +31,7 @@ The rest is written by hand.
 | clip_visuals.py | /api/media | 2 |
 | cloud.py | /api/cloud | 9 |
 | codecs_api.py | /api/codecs | 4 |
-| demo.py | /api/demo | 2 |
+| demo.py | /api/demo | 3 |
 | device_templates.py | /api/devices | 2 |
 | devices.py | /api/devices | 3 |
 | effect_previews.py | /api/catalogue/preview | 1 |

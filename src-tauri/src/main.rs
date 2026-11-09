@@ -80,7 +80,16 @@ fn main() {
                 .id("help-version")
                 .enabled(false)
                 .build(app)?;
-            let help = SubmenuBuilder::new(app, "Help").item(&help_version).build()?;
+            let demo_edit = MenuItemBuilder::new("Demo: High Country").id("help-demo-edit").build(app)?;
+            let demo_grade = MenuItemBuilder::new("Demo: Last Light").id("help-demo-grade").build(app)?;
+            let demo_deliver = MenuItemBuilder::new("Demo: Why I went to the woods").id("help-demo-deliver").build(app)?;
+            let help = SubmenuBuilder::new(app, "Help")
+                .item(&demo_edit)
+                .item(&demo_grade)
+                .item(&demo_deliver)
+                .separator()
+                .item(&help_version)
+                .build()?;
             #[cfg(target_os = "macos")]
             help.set_as_help_menu_for_nsapp()?;
             let menu = MenuBuilder::new(app)
@@ -91,6 +100,9 @@ fn main() {
                 let script = match event.id().as_ref() {
                     "file-new" => "window.formcut && window.formcut.actions.newProject()",
                     "file-save" => "window.formcut && window.formcut.actions.save()",
+                    "help-demo-edit" => "window.formcut && window.formcut.actions.openDemo(\"edit\")",
+                    "help-demo-grade" => "window.formcut && window.formcut.actions.openDemo(\"grade\")",
+                    "help-demo-deliver" => "window.formcut && window.formcut.actions.openDemo(\"deliver\")",
                     "edit-undo" => "document.activeElement?.matches(\"input,textarea,[contenteditable=true]\") ? document.execCommand(\"undo\") : window.formcut?.engine.dispatch(\"history.undo\")",
                     "edit-redo" => "document.activeElement?.matches(\"input,textarea,[contenteditable=true]\") ? document.execCommand(\"redo\") : window.formcut?.engine.dispatch(\"history.redo\")",
                     _ => return,

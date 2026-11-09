@@ -1,5 +1,5 @@
-import { defaultTextStyle } from "../../../frontend/src/engine/types";
-import type { Clip, ProjectState, TextStyle, Track } from "../../../frontend/src/engine/types";
+import { defaultTextStyle } from "../engine/types";
+import type { Clip, ProjectState, TextStyle, Track } from "../engine/types";
 
 export const FILM_LENGTH = 38.5;
 export const FILM_OPEN_AT = 2.9;

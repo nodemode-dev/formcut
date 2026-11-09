@@ -1355,6 +1355,10 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
   align-content: start; padding: var(--sp-2) 0;
 }
+/* The repository's demo films, one card each, above the person's own projects. */
+.home-demos { padding-bottom: var(--sp-3); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--edge); }
+.home-demos-title { color: var(--ink-soft); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.home-demos .home-card-art img { display: block; }
 /* The home screen is panels, the same ones the editor uses: rounded, inset,
    with the same border and background rather than a flat sheet of cards. */
 .home-card.is-project {

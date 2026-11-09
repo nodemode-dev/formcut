@@ -30,6 +30,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
       <button class="menu-item" data-ref="edit" data-feature="menu.edit">${t("menu.edit")}</button>
       <button class="menu-item" data-ref="view" data-feature="menu.view">${t("menu.view")}</button>
       <button class="menu-item" data-ref="extensions" data-feature="menu.extensions">${t("menu.extensions")}</button>
+      <button class="menu-item" data-ref="help" data-feature="menu.help">${t("menu.help")}</button>
     </div>
     <div class="titlebar-center">
       <span class="project-title" data-ref="title" title="Click to rename">${escapeHtml(s.title)}</span>

@@ -1,0 +1,58 @@
+{
+ "items": [
+  {
+   "id": "film-01",
+   "name": "Milky Way",
+   "kind": "video",
+   "file": "film-01.mp4"
+  },
+  {
+   "id": "film-02",
+   "name": "Sunrise ridge",
+   "kind": "video",
+   "file": "film-02.mp4"
+  },
+  {
+   "id": "film-03",
+   "name": "Snow peaks",
+   "kind": "video",
+   "file": "film-03.mp4"
+  },
+  {
+   "id": "film-04",
+   "name": "Fog and forest",
+   "kind": "video",
+   "file": "film-04.mp4"
+  },
+  {
+   "id": "film-05",
+   "name": "Waterfall slope",
+   "kind": "video",
+   "file": "film-05.mp4"
+  },
+  {
+   "id": "film-06",
+   "name": "Cloud sea",
+   "kind": "video",
+   "file": "film-06.mp4"
+  },
+  {
+   "id": "film-07",
+   "name": "Campfire",
+   "kind": "video",
+   "file": "film-07.mp4"
+  },
+  {
+   "id": "film-08",
+   "name": "Southern lights",
+   "kind": "video",
+   "file": "film-08.mp4"
+  },
+  {
+   "id": "film-music",
+   "name": "Goldberg Aria (piano)",
+   "kind": "audio",
+   "file": "film-music.mp3"
+  }
+ ]
+}

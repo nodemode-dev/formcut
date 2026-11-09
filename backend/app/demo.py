@@ -33,6 +33,56 @@ def _stored(item: dict) -> bool:
     return path is not None and path.stat().st_size > 0 and (not source.is_file() or path.stat().st_size == source.stat().st_size)
 
 
+REPO_DEMOS = ("edit", "grade", "deliver")
+
+
+def repo_demo_dir(demo_id: str) -> Path:
+    """The repository demos' media, shipped in the built interface (frontend/public/demos/<id>, copied by Vite)."""
+    folders = [Path(__file__).resolve().parents[2] / "frontend" / "public" / "demos" / demo_id]
+    if os.environ.get("FORMCUT_DIST"):
+        folders.insert(0, Path(os.environ["FORMCUT_DIST"]) / "demos" / demo_id)
+    if getattr(sys, "frozen", False):
+        folders.insert(0, Path(getattr(sys, "_MEIPASS", "")) / "frontend_dist" / "demos" / demo_id)
+    return next((folder for folder in folders if (folder / "manifest.json").is_file()), folders[-1])
+
+
+@router.post("/{demo_id}")
+def seed_repo_demo(demo_id: str) -> dict:
+    """One of the repository demos (edit, grade, deliver) into the library, each file once, keyed by its media id."""
+    import json
+
+    if demo_id not in REPO_DEMOS:
+        raise HTTPException(404, f"No demo called {demo_id}")
+    folder = repo_demo_dir(demo_id)
+    manifest = folder / "manifest.json"
+    if not manifest.is_file():
+        raise HTTPException(404, f"The {demo_id} demo's media is not included in this build")
+    items = json.loads(manifest.read_text(encoding="utf-8"))["items"]
+    with _seeding:
+        with _lock:
+            known = {}
+            for item in _read():
+                if item.get("source") == f"demo:{demo_id}" and item.get("name") not in known:
+                    known[item["name"]] = item
+        media = {}
+        for entry in items:
+            from .media import media_path
+
+            item = known.get(entry["file"])
+            path = media_path(item["id"]) if item else None
+            if item and path is not None and path.stat().st_size == (folder / entry["file"]).stat().st_size:
+                media[entry["id"]] = item
+                continue
+            MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+            staged = MEDIA_DIR / f"upload_{uuid.uuid4().hex}{Path(entry['file']).suffix.lower()}"
+            try:
+                shutil.copyfile(folder / entry["file"], staged)
+                media[entry["id"]] = ingest_path(staged, entry["file"], extra={"source": f"demo:{demo_id}"})
+            finally:
+                staged.unlink(missing_ok=True)
+    return {"media": media}
+
+
 @router.get("")
 def demo_status() -> dict:
     folder = demo_dir()
