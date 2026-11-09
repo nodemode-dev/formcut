@@ -545,6 +545,8 @@ def _continuous(
             "started": 0,
             "finishAfter": None,
             "handled": 0,
+            "taken": 0,
+            "lock": threading.Lock(),
             "wrap": len(entries) if wrap else 0,
         }
         ending = {"now": False}
@@ -578,6 +580,11 @@ def _continuous(
         def on_picture(seed_value: int, path: Path) -> None:
             from PIL import Image
 
+            with session["lock"]:
+                if session["finishAfter"] is not None and session["taken"] >= session["finishAfter"]:
+                    path.unlink(missing_ok=True)
+                    return
+                session["taken"] += 1
             seconds = round(clock.time() - last["time"], 1)
             last["time"] = clock.time()
             index = session["handled"] - run.get("handled_before", 0)
@@ -749,9 +756,12 @@ def finish_session(job_id: str) -> dict:
     if session is None:
         raise HTTPException(404, "No continuous session by that id")
     # the picture in hand now, and any before it not yet saved, are finished; nothing begun after
-    session["finishAfter"] = max(1, session["started"])
-    if session["handled"] >= session["finishAfter"]:
-        session["ending"]["now"] = True  # between pictures, none in hand: it stops now
+    with session["lock"]:
+        # a picture already being saved counts even when its start was not read yet: mflux can write it before the
+        # line that begins the next one reaches formcut
+        session["finishAfter"] = max(1, session["started"], session["taken"])
+        if session["handled"] >= session["finishAfter"]:
+            session["ending"]["now"] = True  # between pictures, none in hand: it stops now
     session["finish"].set()
     return {"finishing": True, "after": session["finishAfter"]}
 
