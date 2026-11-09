@@ -12,6 +12,7 @@ import { showMissingMedia, type MissingItem } from "./missing-media";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { loadDemoProject } from "../engine/demo";
+import { REPO_DEMOS, openRepoDemo } from "../demos";
 import { listProjects, newProject, openProject, listJournals, restoreJournal, clearJournal } from "../engine/persistence";
 import { api } from "../engine/api";
 import { icon } from "./icons";
@@ -205,6 +206,42 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
       delete el.dataset.busy;
     }
   };
+
+  // The three demo films from the repository (demo/, demos/grade, demos/deliver), each opened as a
+  // new unsaved project built by its browser demo's own code; mounted once, above the projects.
+  const demos = child(panel("projects"), "home-demos");
+  demos.dataset.ref = "demos";
+  demos.innerHTML = `<div class="home-demos-title">${t("demos.title")}</div><div class="home-grid">${REPO_DEMOS.map((demo) =>
+    `<div class="home-card is-project" data-demo-card="${demo.id}">` +
+    `<div class="home-card-open" role="button" tabindex="0" data-open-demo="${demo.id}">` +
+    `<span class="home-card-art"><img src="demos/${demo.id}/poster.jpg" alt="" width="160" height="90" /></span>` +
+    `<span class="home-card-name">${escapeHtml(demo.title)}</span>` +
+    `<span class="home-card-facts" data-demo-line>${t(demo.line)}</span>` +
+    `</div></div>`).join("")}</div>`;
+  const openRepo = async (id: string) => {
+    if (el.dataset.busy) return;
+    el.dataset.busy = "demo";
+    const line = demos.querySelector<HTMLElement>(`[data-demo-card="${id}"] [data-demo-line]`)!;
+    const idle = line.textContent;
+    line.textContent = t("start.demo.loading");
+    try {
+      await openRepoDemo(engine, bin, id);
+      dismiss();
+    } catch (error) {
+      say(error instanceof Error ? error.message : t("home.failed"));
+    } finally {
+      line.textContent = idle;
+      delete el.dataset.busy;
+    }
+  };
+  demos.addEventListener("click", (event) => {
+    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-open-demo]");
+    if (hit) void openRepo(hit.dataset.openDemo!);
+  });
+  demos.addEventListener("keydown", (event) => {
+    const hit = (event.target as HTMLElement).closest<HTMLElement>("[data-open-demo]");
+    if (hit && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); void openRepo(hit.dataset.openDemo!); }
+  });
 
   const projectCards = new Map<string, HTMLElement>();
   const projectRecords = new Map<string, Record<string, number | string | boolean>>();

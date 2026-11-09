@@ -1,33 +1,10 @@
 import { defaultTextStyle } from "../../frontend/src/engine/types";
 import type { Clip, ProjectState } from "../../frontend/src/engine/types";
 
-export interface Cue {
-  start: number;
-  end: number;
-  text: string;
-}
+import type { Cue } from "../../frontend/src/demos/film-kit";
 
-const STAMP = /(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
-
-const seconds = (match: RegExpMatchArray): number =>
-  Number(match[1] ?? 0) * 3600 + Number(match[2]) * 60 + Number(match[3]) + Number(match[4].padEnd(3, "0")) / 1000;
-
-export function parseCaptions(text: string): Cue[] {
-  const cues: Cue[] = [];
-  for (const block of text.replace(/\r/g, "").split(/\n{2,}/)) {
-    const lines = block.split("\n").filter((line) => line.trim() !== "");
-    const at = lines.findIndex((line) => line.includes("-->"));
-    if (at < 0) continue;
-    const [from, to] = lines[at].split("-->");
-    const a = from.trim().match(STAMP);
-    const b = to.trim().match(STAMP);
-    if (!a || !b) continue;
-    const body = lines.slice(at + 1).join("\n").replace(/<[^>]+>/g, "").trim();
-    if (!body) continue;
-    cues.push({ start: seconds(a), end: seconds(b), text: body });
-  }
-  return cues.filter((cue) => cue.end > cue.start).sort((x, y) => x.start - y.start);
-}
+export { parseCaptions } from "../../frontend/src/demos/film-kit";
+export type { Cue } from "../../frontend/src/demos/film-kit";
 
 export function captionClips(cues: Cue[]): Clip[] {
   return cues.map((cue) => ({

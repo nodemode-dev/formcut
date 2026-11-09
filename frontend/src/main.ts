@@ -19,6 +19,8 @@ import "./styles/device.css";
 import "./styles/settings.css";
 import "./styles/extensions.css";
 import { installExtensionsMenu } from "./ui/extensions";
+import { installHelpMenu } from "./ui/help-menu";
+import { openRepoDemo } from "./demos";
 import { ProjectEngine } from "./engine/project";
 import { MediaBin } from "./engine/media";
 import { newProject, saveProject } from "./engine/persistence";
@@ -75,6 +77,12 @@ const liveMix = new LiveMixer();
 const actions = {
   save: () => void saveProject(engine),
   newProject: () => newProject(engine, undefined, activeProfile().behaviour.magneticMain),
+  // a repository demo (edit, grade, deliver) as a new unsaved project; Help, the start screen and the native Help menu
+  openDemo: async (id: string) => {
+    await openRepoDemo(engine, bin, id);
+    const start = document.querySelector<HTMLElement>(".start-overlay");
+    if (start && !start.hidden) start.hidden = true;
+  },
 };
 const titlebar = buildTitlebar(engine, actions);
 localizeElement(titlebar);
@@ -90,6 +98,9 @@ const settingsButton = titlebar.querySelector<HTMLElement>('[data-ref="settings"
 if (settingsButton) installSettingsPopout(engine, bin, settingsButton);
 installEditorActions(engine, bin);
 installExtensionsMenu();
+installHelpMenu((id) => actions.openDemo(id).catch((error: unknown) => {
+  document.dispatchEvent(new CustomEvent("formcut:toast", { detail: { message: error instanceof Error ? error.message : String(error) } }));
+}));
 installWorkspaceLayout();
 installAccordions(workspace);
 workspace.querySelector(".pane-inspector")?.dispatchEvent(new Event("formcut:fit-tabs"));

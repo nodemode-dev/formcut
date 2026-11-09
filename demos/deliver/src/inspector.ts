@@ -4,8 +4,8 @@ import { getSource, onSources } from "../../../demo/src/media";
 import { DeliverMixer, ducking, gainFor, measure, meterOf, renderMix, toDb } from "./audio";
 import type { Loudness } from "./audio";
 import { captionsOf } from "./captions";
-import { COVER_SCALE, VERTICAL } from "./film";
-import { PATHS } from "./paths";
+import { COVER_SCALE, VERTICAL } from "../../../frontend/src/demos/woods";
+import { PATHS } from "../../../frontend/src/demos/woods-paths";
 import { analyseVideo, cropKeyframes } from "./reframe";
 import type { Crop } from "./reframe";
 

@@ -1,11 +1,9 @@
-import { defaultTextStyle } from "../../../frontend/src/engine/types";
-import type { Clip, ProjectState, TextStyle, Track } from "../../../frontend/src/engine/types";
-import { wordTimes } from "./captions";
-import { parseCaptions } from "../../../demo/src/captions";
-import { CHAPTERS, FILM_LENGTH, SRT, VOICE_START } from "./data";
-import { PATHS } from "./paths";
-import { cropKeyframes } from "./reframe";
-import type { Crop } from "./reframe";
+import { defaultTextStyle } from "../engine/types";
+import type { Clip, ProjectState, TextStyle, Track } from "../engine/types";
+import { cropKeyframes, parseCaptions, wordTimes } from "./film-kit";
+import type { Crop } from "./film-kit";
+import { CHAPTERS, FILM_LENGTH, SRT, VOICE_START } from "./woods-data";
+import { PATHS } from "./woods-paths";
 
 export const LANDSCAPE = { width: 1280, height: 720, fps: 30 };
 export const VERTICAL = { width: 540, height: 960, fps: 30 };

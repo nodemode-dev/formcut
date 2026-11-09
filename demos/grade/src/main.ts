@@ -20,7 +20,7 @@ import { buildLibrary } from "./library";
 import { buildInspector } from "./inspector";
 import { cubeName, latticeFor, parseCube, registerCube } from "./grade";
 import { defaultMask } from "./render";
-import { FILM_LENGTH, FILM_OPEN_AT, filmTimelines } from "./film";
+import { FILM_LENGTH, FILM_OPEN_AT, filmTimelines } from "../../../frontend/src/demos/last-light";
 
 const THEMES: Array<[string, string]> = [
   ["studio", "Studio"], ["formcut-dark", "FormCut Dark"], ["obsidian", "Obsidian"], ["graphite", "Graphite"],
