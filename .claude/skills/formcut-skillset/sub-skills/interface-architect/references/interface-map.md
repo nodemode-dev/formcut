@@ -15,6 +15,13 @@ The module list and the engine commands are generated from `frontend/src` by
 
 ## Modules
 
+- `demos/film-kit.ts`
+- `demos/high-country.ts`
+- `demos/index.ts`
+- `demos/last-light.ts`
+- `demos/woods-data.ts`
+- `demos/woods-paths.ts`
+- `demos/woods.ts`
 - `engine/api.ts`
 - `engine/audio-playback.ts`
 - `engine/captions.ts`
@@ -58,6 +65,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `ui/file-menu.ts`
 - `ui/focus-moves.ts`
 - `ui/font-tools.ts`
+- `ui/help-menu.ts`
 - `ui/icons-lucide.ts`
 - `ui/icons.ts`
 - `ui/inspector-pane.ts`
