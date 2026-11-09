@@ -146,6 +146,23 @@ fi
 # shellcheck disable=SC2086
 APPIMAGE_EXTRACT_AND_RUN=1 npx --yes @tauri-apps/cli@2 build --target "$TARGET" $BUNDLES ${FORMCOMPILER_CONFIG_ARG:-} ${HARDENED:+--config "$HARDENED"}
 
+# Tauri staples once, right after Apple accepts the notarization, and goes on if
+# the ticket is not served yet (Apple's ticket service can lag the acceptance by
+# minutes): the app then ships unstapled and the seal check below fails. Staple
+# here until stapler validate passes, before the app is zipped.
+if [ "$RUNNER_OS" = macOS ] && [ -n "${APPLE_SIGNING_IDENTITY:-}" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+  say "staple the notarization ticket"
+  built="src-tauri/target/$TARGET/release/bundle/macos/$(python -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["productName"])').app"
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if xcrun stapler validate "$built" >/dev/null 2>&1 || { xcrun stapler staple "$built" && xcrun stapler validate "$built"; }; then
+      echo "stapled (attempt $attempt)"
+      break
+    fi
+    if [ "$attempt" = 10 ]; then echo "Apple did not serve the notarization ticket for $built after 10 attempts"; exit 1; fi
+    sleep 30
+  done
+fi
+
 say "package the zip"
 python setup/package_release.py --target "$TARGET"
 # Windows ships the NSIS installer beside the portable zip; a build without it stops here.
