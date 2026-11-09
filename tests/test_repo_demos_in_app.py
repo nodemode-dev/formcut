@@ -49,13 +49,14 @@ def test_notice_credits_every_shipped_demo_file():
 
 
 def test_seeding_a_demo_returns_every_media_id(monkeypatch):
-    from fastapi.testclient import TestClient
-
     from app import demo
     from app.main import app
+    from fastapi.testclient import TestClient
 
     calls = []
-    monkeypatch.setattr(demo, "ingest_path", lambda path, name, extra=None: calls.append(name) or {"id": name, "name": name, **(extra or {})})
+    monkeypatch.setattr(
+        demo, "ingest_path", lambda path, name, extra=None: calls.append(name) or {"id": name, "name": name, **(extra or {})}
+    )
     monkeypatch.setattr(demo, "_read", lambda: [])
     client = TestClient(app)
     headers = {"x-formcut-local": "1"}
