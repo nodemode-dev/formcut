@@ -314,7 +314,7 @@ def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
             ticks = fast_export._timebase(layer.rate, plan.fps)
             steps = [
                 f"[{number}:v:0]fps={layer.rate},scale={layer.width}:{layer.height},format=bgr24,format=rgba",
-                f"settb=1/{ticks},setpts=PTS-{round(layer.shift * ticks)},tpad=stop_mode=clone:stop=-1",
+                f"{fast_export.padding(layer.frames, plan.fps, layer.rate, layer.shift)},settb=1/{ticks},setpts=PTS-{round(layer.shift * ticks)}",
                 f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={layer.frames}",
             ]
         if number in cubes:

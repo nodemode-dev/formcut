@@ -68,8 +68,11 @@ def main(argv: list[str] | None = None) -> int:
 
 def _here(args) -> int:
     """The child side of isolation.py: the work in this process, a FunctionError reported as {"error": ...}."""
+    from ..tools import prefer_bundled
     from .rendering import render_project_here
     from .transcription import transcribe_here
+
+    prefer_bundled()  # formcut's own ffmpeg first, as the engine puts it at start (FORMCUT_FFMPEG_DIR, then its folders)
 
     here = {"transcribe": transcribe_here, "render_project": render_project_here}[args.function]
     try:

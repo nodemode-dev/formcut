@@ -10,9 +10,11 @@ passed through, so a Whisper model fetched once stays fetched.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -32,21 +34,34 @@ def run_isolated(function_id: str, inputs: dict, params: dict, out_dir: str) -> 
     try:
         command = [sys.executable, "-m", "app.functions", "_here", function_id]
         command += ["--inputs", json.dumps(inputs), "--params", json.dumps(params or {}), "--out", str(folder)]
+        # A session of its own, so a timeout ends the child and every ffmpeg it started (one may ignore SIGTERM).
+        child = subprocess.Popen(
+            command,
+            cwd=BACKEND,
+            env=_child_env(private),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=os.name != "nt",
+        )
+        limit = spec(function_id)["timeout_s"]
         try:
-            done = subprocess.run(
-                command,
-                cwd=BACKEND,
-                env=_child_env(private),
-                capture_output=True,
-                text=True,
-                timeout=spec(function_id)["timeout_s"],
-                check=False,
-            )
+            stdout, stderr = child.communicate(timeout=limit)
         except subprocess.TimeoutExpired as exc:
-            raise FunctionError(f"{function_id} did not finish within {exc.timeout:.0f} s") from exc
+            _kill(child)
+            raise FunctionError(f"{function_id} did not finish within {limit} s") from exc
     finally:
         shutil.rmtree(private, ignore_errors=True)
-    return _result(function_id, done)
+    return _result(function_id, subprocess.CompletedProcess(command, child.returncode, stdout, stderr))
+
+
+def _kill(child: subprocess.Popen) -> None:
+    if os.name != "nt":
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(child.pid, signal.SIGKILL)
+    else:
+        child.kill()
+    child.communicate()
 
 
 def _child_env(private: str) -> dict:

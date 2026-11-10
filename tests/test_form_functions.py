@@ -6,18 +6,22 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shutil
+import signal
 import subprocess
 import sys
 import zipfile
 
+import numpy as np
 import pytest
-from app import media, project_files, project_packages, store
+from app import fast_export, media, project_files, project_packages, store
 from app import transcribe as engine_transcribe
 from app.assets import upload_lut
 from app.functions import FunctionError, render_project, transcribe
 from app.functions.__main__ import ROOT_MANIFEST, manifest_text
 from app.functions.contract import checked_params
+from app.render_document import validate_document
 from conftest import ROOT
 from fastapi import UploadFile
 
@@ -27,8 +31,8 @@ needs_ffmpeg = pytest.mark.skipif(FFMPEG is None or FFPROBE is None, reason="ffm
 TINY = engine_transcribe.model_for("en", "tiny")
 
 
-def _generated(path, source: str, seconds: float = 1.0, tone: int | None = 440):
-    command = [FFMPEG, "-v", "error", "-y", "-f", "lavfi", "-i", f"{source}=size=160x90:rate=30:duration={seconds}"]
+def _generated(path, source: str, seconds: float = 1.0, tone: int | None = 440, rate: int = 30):
+    command = [FFMPEG, "-v", "error", "-y", "-f", "lavfi", "-i", f"{source}=size=160x90:rate={rate}:duration={seconds}"]
     if tone:
         command += ["-f", "lavfi", "-i", f"sine=frequency={tone}:duration={seconds}", "-c:a", "aac", "-shortest"]
     subprocess.run([*command, "-pix_fmt", "yuv420p", str(path)], check=True)
@@ -42,9 +46,9 @@ def _probe(path) -> dict:
     return json.loads(out.stdout)
 
 
-def _stored_project(tmp_path) -> str:
-    """Two generated clips, one after the other, as the engine's own project model holds them."""
-    first = media.ingest_path(_generated(tmp_path / "bars.mp4", "testsrc2"), "bars.mp4")
+def _stored_project(tmp_path, first_seconds: float = 1.0, first_rate: int = 30) -> str:
+    """Two generated clips, one after the other, as the engine's own project model holds them, each in a 1 s slot."""
+    first = media.ingest_path(_generated(tmp_path / "bars.mp4", "testsrc2", first_seconds, rate=first_rate), "bars.mp4")
     second = media.ingest_path(_generated(tmp_path / "rgb.mp4", "rgbtestsrc", tone=660), "rgb.mp4")
     clips = [
         {"id": "a", "kind": "video", "label": "bars", "mediaId": first["id"], "start": 0, "duration": 1, "sourceIn": 0},
@@ -131,6 +135,58 @@ def test_a_package_renders_to_the_asked_format(package, tmp_path, fmt, codec):
     assert any(s["codec_type"] == "audio" for s in probed["streams"])
     assert float(probed["format"]["duration"]) == pytest.approx(2.0, abs=0.1)
     assert [p.name for p in out.iterdir()] == [f"video.{fmt}"]
+
+
+@needs_ffmpeg
+def test_a_clip_shorter_than_its_slot_is_held_and_the_render_finishes(tmp_path):
+    """The native graph pads a 0.5 s, 24 fps clip in a 1 s slot by holding its last frame. On FFmpeg 7.1.5, the build
+    formcut bundles, an unbounded tpad never finished and ignored SIGTERM; the render now ends within the limit. Set
+    FORMCUT_FFMPEG_DIR to a formcut ffmpeg folder to run this against that build."""
+    project_id = _stored_project(tmp_path, first_seconds=0.5, first_rate=24)
+    assert fast_export.plan(validate_document(store.get_project(project_id)), 60) is not None  # the graph this is about
+    built = tmp_path / "short.fc"
+    shutil.move(project_packages.build(project_id), built)
+    out = tmp_path / "out"
+    command = [sys.executable, "-m", "app.functions", "run", "render_project", "--inputs", json.dumps({"project": str(built)})]
+    command += ["--params", '{"format": "webm", "quality": "low"}', "--out", str(out)]
+    # its own process group, so a hung ffmpeg (deaf to SIGTERM) is killed with everything else
+    child = subprocess.Popen(command, cwd=ROOT / "backend", stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    try:
+        _, error = child.communicate(timeout=90)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        pytest.fail("the render did not finish within 90 s")
+    assert child.returncode == 0, error.decode(errors="replace")
+    probed = _probe(out / "video.webm")
+    assert float(probed["format"]["duration"]) == pytest.approx(2.0, abs=0.1)
+
+    def frame_at(seconds: float) -> np.ndarray:
+        raw = subprocess.run(
+            [
+                FFMPEG,
+                "-v",
+                "error",
+                "-ss",
+                f"{seconds}",
+                "-i",
+                str(out / "video.webm"),
+                "-frames:v",
+                "1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "gray",
+                "-",
+            ],
+            capture_output=True,
+            check=True,
+        ).stdout
+        return np.frombuffer(raw, np.uint8).astype(np.int16)
+
+    # the clip's last frame held through the rest of its slot, while testsrc2 itself moves from frame to frame
+    assert np.abs(frame_at(0.6) - frame_at(0.95)).mean() < 2
+    assert np.abs(frame_at(0.1) - frame_at(0.4)).mean() > 2
 
 
 @needs_ffmpeg

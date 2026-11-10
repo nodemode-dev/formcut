@@ -219,6 +219,17 @@ def _timebase(rate: float, fps: int) -> int:
     return ticks * max(1, min(1000, (2**31 - 1) // ticks))
 
 
+def padding(frames: int, fps: int, rate: float, shift: float) -> str:
+    """tpad holding the source's last frame, bounded, placed before the settb that follows it in both graphs.
+
+    FFmpeg 7.1.5, the LGPL build formcut bundles, mishandles a tpad after that settb: with stop=-1 (pad for ever) the
+    export never finishes, ffmpeg spinning at full CPU and ignoring SIGTERM, and with a bounded stop it pads nothing,
+    so a clip shorter than its slot comes out short. Before settb, bounded, 7.1.5 pads and ends, and 9.0.2 gives the
+    same frames as the old graph (framemd5, 2026-11-10). The count is enough source-rate frames to fill the whole
+    output span on their own, plus two, so the trim after it always reaches its end frame."""
+    return f"tpad=stop_mode=clone:stop={math.ceil((frames / fps + abs(shift)) * rate) + 2}"
+
+
 def inputs(plan: Plan) -> list[str]:
     args: list[str] = []
     for segment in plan.sources:
@@ -241,7 +252,7 @@ def graph(plan: Plan, out_w: int, out_h: int) -> str:
             place = "" if (w, h) == (segment.width, segment.height) else f",scale={w}:{h}:flags=bilinear"
             chains.append(
                 f"[{index}:v:0]fps={segment.rate},scale={segment.width}:{segment.height},format=bgr24,format=rgba,"
-                f"settb=1/{ticks},setpts=PTS-{round(segment.shift * ticks)},tpad=stop_mode=clone:stop=-1,"
+                f"{padding(segment.frames, plan.fps, segment.rate, segment.shift)},settb=1/{ticks},setpts=PTS-{round(segment.shift * ticks)},"
                 f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={segment.frames}"
                 f"{place},pad={plan.width}:{plan.height}:{(plan.width - w) // 2}:{(plan.height - h) // 2}:color=black,"
                 f"setsar=1[{label}]"
