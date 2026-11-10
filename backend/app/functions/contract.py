@@ -127,6 +127,26 @@ def input_file(inputs: dict | None, name: str) -> Path:
     return path.resolve()
 
 
+# Every field by which the renderer looks an item up in the engine's library: media files (clips, device screens, an
+# image background), LUTs and shaders (clips) and fonts (text styles). None of them has a built-in item by id.
+LIBRARY_KEYS = {"mediaId": "media", "lutId": "LUT", "shaderId": "shader", "fontId": "font"}
+
+
+def library_references(value) -> list[tuple[str, str]]:
+    """(key, id) for every library reference anywhere in a document, at any depth."""
+    found = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in LIBRARY_KEYS and isinstance(child, str) and child:
+                found.append((key, child))
+            else:
+                found.extend(library_references(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(library_references(child))
+    return found
+
+
 def output_dir(out_dir: str) -> Path:
     folder = Path(out_dir).expanduser()
     folder.mkdir(parents=True, exist_ok=True)

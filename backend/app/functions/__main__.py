@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from . import FunctionError, manifest, render_project, transcribe
+from .isolation import FAILED
 
 ENTRIES = {"transcribe": transcribe, "render_project": render_project}
 ROOT_MANIFEST = Path(__file__).resolve().parents[3] / "form-functions.json"
@@ -39,11 +40,12 @@ def _object(text: str, flag: str) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.functions", description="formcut's Form functions")
     commands = parser.add_subparsers(dest="command", required=True)
-    run = commands.add_parser("run", help="run one function")
-    run.add_argument("function", choices=sorted(ENTRIES))
-    run.add_argument("--inputs", required=True, help='JSON object, input name to file path, e.g. {"media": "a.mp4"}')
-    run.add_argument("--params", default="{}", help="JSON object of params")
-    run.add_argument("--out", required=True, help="folder the outputs are written to")
+    for name, text in (("run", "run one function"), ("_here", "internal: run one function in this process")):
+        run = commands.add_parser(name, help=text)
+        run.add_argument("function", choices=sorted(ENTRIES))
+        run.add_argument("--inputs", required=True, help='JSON object, input name to file path, e.g. {"media": "a.mp4"}')
+        run.add_argument("--params", default="{}", help="JSON object of params")
+        run.add_argument("--out", required=True, help="folder the outputs are written to")
     listing = commands.add_parser("manifest", help="print the manifest")
     listing.add_argument("--write", action="store_true", help="write form-functions.json at the repository root")
     args = parser.parse_args(argv)
@@ -53,11 +55,28 @@ def main(argv: list[str] | None = None) -> int:
             ROOT_MANIFEST.write_text(text, encoding="utf-8")
         sys.stdout.write(text if not args.write else f"{ROOT_MANIFEST}\n")
         return 0
+    if args.command == "_here":
+        return _here(args)
     try:
         result = ENTRIES[args.function](_object(args.inputs, "--inputs"), _object(args.params, "--params"), args.out)
     except FunctionError as exc:
         sys.stderr.write(f"{args.function}: {exc}\n")
         return 1
+    sys.stdout.write(json.dumps(result) + "\n")
+    return 0
+
+
+def _here(args) -> int:
+    """The child side of isolation.py: the work in this process, a FunctionError reported as {"error": ...}."""
+    from .rendering import render_project_here
+    from .transcription import transcribe_here
+
+    here = {"transcribe": transcribe_here, "render_project": render_project_here}[args.function]
+    try:
+        result = here(_object(args.inputs, "--inputs"), _object(args.params, "--params"), args.out)
+    except FunctionError as exc:
+        sys.stdout.write(json.dumps({"error": str(exc)}) + "\n")
+        return FAILED
     sys.stdout.write(json.dumps(result) + "\n")
     return 0
 

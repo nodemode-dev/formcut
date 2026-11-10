@@ -149,10 +149,11 @@ file, the result maps each output name to a file written inside `out_dir`, and a
   transcriber (`transcribe.py`), with the model fetched once by the pinned hub fetcher into the models folder.
 - `render_project` (`project`, a `.fc` package or a `.fmc` file) writes `video.<format>`. Params: `format` mp4, webm
   or gif (default mp4), `quality` high, medium or low (default high). It is the export behind `POST /api/render/export`
-  (`render_api.export_media`), run in the calling process. A `.fc` brings its media; a `.fmc` reads each media file
-  only at its path relative to the `.fmc`, which must stay inside the `.fmc`'s folder (Collect Files makes such a
-  folder). A clip naming media that did not come with the project is refused, and an mp4 is refused rather than
-  fetching OpenH264 when the FFmpeg has no H.264 encoder.
+  (`render_api.export_media`) with no engine server. A `.fc` brings its media, LUTs, shaders and fonts; a `.fmc`
+  brings only its clips' media, each read at its path relative to the `.fmc`, which must stay inside the `.fmc`'s
+  folder (Collect Files makes such a folder). Any media, background image, LUT, shader or font the project names that
+  did not come with it is refused, and an mp4 is refused rather than fetching OpenH264 when the FFmpeg has no H.264
+  encoder.
 
 From a shell, inside `backend/`:
 
@@ -162,8 +163,9 @@ python -m app.functions run render_project --inputs '{"project": "cut.fc"}' --pa
 python -m app.functions manifest --write
 ```
 
-`run` prints the result as one JSON line, or the error on stderr with exit status 1. Imported before the rest of the
-engine with no `FORMCUT_DATA_DIR` set, the package gives the engine a private temporary data folder, removed at exit,
-so a function never adds to a person's library. After changing a function's declaration in
+`run` prints the result as one JSON line, or the error on stderr with exit status 1. Every call, from the shell or
+through an entry, checks its params and inputs and then runs in a child process whose `FORMCUT_DATA_DIR` is a fresh,
+empty temporary folder, removed afterwards: a function can neither read from nor add to a person's library, and the
+caller's environment is left as it was. The models folder is shared, so a Whisper model is fetched once. After changing a function's declaration in
 `backend/app/functions/contract.py`, run `manifest --write`; `tests/test_form_functions.py` fails while the file
 drifts.

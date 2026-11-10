@@ -3,28 +3,26 @@
 `form-functions.json` at the repository root declares them (written from contract.FUNCTIONS by
 `python -m app.functions manifest --write`); each entry is a callable here, `fn(inputs, params, out_dir) -> dict`.
 
-The engine keeps a library, a project store and its renders in its data folder. Imported before the rest of the engine,
-with no FORMCUT_DATA_DIR set, this package points the data folder at a private temporary one (removed at exit), so a
-function never adds media or renders to a person's own library. The models folder is not moved: from a checkout it
-is `models/` beside `backend/` (or FORMCUT_MODELS_DIR), so a downloaded Whisper model is kept between runs.
+Each call checks its params and inputs, then runs in a child process with a fresh, empty data folder of its own
+(isolation.py), so it can neither read from nor add to a person's library, whatever FORMCUT_DATA_DIR says. The models
+folder is shared: from a checkout `models/` beside `backend/` (or FORMCUT_MODELS_DIR), so a Whisper model is fetched
+once.
 """
 
 from __future__ import annotations
 
-import atexit
-import os
-import shutil
-import sys
-import tempfile
-
-if "FORMCUT_DATA_DIR" not in os.environ and "app.paths" not in sys.modules:
-    _PRIVATE = tempfile.mkdtemp(prefix="formcut-functions-")
-    os.environ["FORMCUT_DATA_DIR"] = _PRIVATE
-    os.environ.setdefault("FORMCUT_NO_WARM", "1")
-    atexit.register(shutil.rmtree, _PRIVATE, ignore_errors=True)
-
 from .contract import FunctionError, manifest
-from .rendering import render_project
-from .transcription import transcribe
+from .isolation import run_isolated
+
+
+def transcribe(inputs: dict, params: dict, out_dir: str) -> dict:
+    """Speech in a media file to transcript.json and subtitles.srt (transcription.py)."""
+    return run_isolated("transcribe", inputs, params, out_dir)
+
+
+def render_project(inputs: dict, params: dict, out_dir: str) -> dict:
+    """A .fc or .fmc project rendered to video.<format> (rendering.py)."""
+    return run_isolated("render_project", inputs, params, out_dir)
+
 
 __all__ = ["FunctionError", "manifest", "render_project", "transcribe"]

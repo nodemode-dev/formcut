@@ -3,12 +3,16 @@
 The same render as POST /api/render/export: render_document.validate_document, then render_api.export_media, the
 renderer the preview draws with, run in this process with no engine server. The project's media must come with it:
 
-- a .fc package carries its media; project_packages.unpack_document ingests them as opening a package does, and any
-  clip naming media the package does not hold is refused.
-- a .fmc names its media in a table, each also relative to the .fmc's folder; only that relative path is read, it
-  must stay inside the folder, and each file is linked into the library (linking.link_path) under a new id.
+- a .fc package carries its media, LUTs, shaders and fonts; project_packages.unpack_document ingests them as opening
+  a package does.
+- a .fmc names its clips' media in a table, each also relative to the .fmc's folder; only that relative path is
+  read, it must stay inside the folder, and each file is linked into the library (linking.link_path) under a new id.
+  A .fmc carries no LUTs, shaders or fonts.
 
-Nothing is saved to the project store, and the exported file is moved into out_dir.
+Any library reference in the document (contract.LIBRARY_KEYS, at any depth) that did not come with this project is
+refused before rendering, and the entry runs all of this in a child process with an empty data folder of its own, so
+a reference this check missed still finds nothing. Nothing is saved to the project store, and the exported file is
+moved into out_dir.
 """
 
 from __future__ import annotations
@@ -22,15 +26,16 @@ from fastapi import HTTPException
 
 from .. import encoders, linking, media, openh264, project_files, project_packages, render_api
 from ..render_document import validate_document
-from .contract import FunctionError, checked_params, input_file, output_dir
+from .contract import LIBRARY_KEYS, FunctionError, checked_params, input_file, library_references, output_dir
 
 
-def render_project(inputs: dict, params: dict, out_dir: str) -> dict:
+def render_project_here(inputs: dict, params: dict, out_dir: str) -> dict:
+    """The render in this process, against whatever data folder it has; the entry runs it isolated (isolation.py)."""
     options = checked_params("render_project", params)
     source = input_file(inputs, "project")
     folder = output_dir(out_dir)
     document, brought = _document(source)
-    _require_media(document, brought)
+    _require_brought(document, brought)
     try:
         project = validate_document({k: v for k, v in document.items() if k != "revision"})
     except (TypeError, ValueError, KeyError) as exc:
@@ -105,12 +110,12 @@ def _beside(home: Path, entry: dict, media_id: str) -> Path:
     return found
 
 
-def _require_media(document: dict, brought: set[str]) -> None:
-    """Every clip's media came with the project: never a library item that merely shares its id."""
-    for clip, media_id in project_packages._media_uses(document):
-        if media_id not in brought or media.media_path(media_id) is None:
-            label = clip.get("label") or clip.get("id")
-            raise FunctionError(f"clip {label!r} uses media that did not come with the project")
+def _require_brought(document: dict, brought: set[str]) -> None:
+    """Every library item the project names (media, background, LUT, shader, font) came with this project: never a
+    library item that merely shares its id."""
+    for key, item_id in library_references(document):
+        if item_id not in brought or (key == "mediaId" and media.media_path(item_id) is None):
+            raise FunctionError(f"the project names a {LIBRARY_KEYS[key]} ({item_id}) that did not come with the project")
 
 
 def _require_encoder(fmt: str) -> None:

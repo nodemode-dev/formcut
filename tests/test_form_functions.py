@@ -4,6 +4,7 @@ unless the model is already in the models folder (the tiny English one is 41 MB 
 
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import subprocess
@@ -13,10 +14,12 @@ import zipfile
 import pytest
 from app import media, project_files, project_packages, store
 from app import transcribe as engine_transcribe
+from app.assets import upload_lut
 from app.functions import FunctionError, render_project, transcribe
 from app.functions.__main__ import ROOT_MANIFEST, manifest_text
 from app.functions.contract import checked_params
 from conftest import ROOT
+from fastapi import UploadFile
 
 FFMPEG = shutil.which("ffmpeg")
 FFPROBE = shutil.which("ffprobe")
@@ -164,6 +167,70 @@ def test_the_cli_runs_a_render_and_prints_one_json_line(package, tmp_path):
         check=False,
     )
     assert bad.returncode == 1 and "input 'project' is required" in bad.stderr
+
+
+IDENTITY_CUBE = "LUT_3D_SIZE 2\n" + "".join(f"{r} {g} {b}\n" for b in (0, 1) for g in (0, 1) for r in (0, 1))
+ABSENT = "0123456789abcdef0123456789abcdef"
+
+
+def _library_reference(kind: str, tmp_path) -> tuple[str, str]:
+    """A library item that exists here (in the suite's own library) but is not in the package, and the field naming it."""
+    if kind == "background":
+        image = tmp_path / "backdrop.png"
+        subprocess.run([FFMPEG, "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=160x90", "-frames:v", "1", str(image)], check=True)
+        return "background", media.ingest_path(image, "backdrop.png")["id"]
+    if kind == "lut":
+        return "lutId", upload_lut(UploadFile(filename="look.cube", file=io.BytesIO(IDENTITY_CUBE.encode())))["id"]
+    return ("shaderId" if kind == "shader" else "fontId"), ABSENT
+
+
+def _repackaged(package, tmp_path, field: str, item_id: str):
+    """The package with its project naming the library item: on the background, the first clip, or its text style."""
+    changed = tmp_path / f"with-{field}.fc"
+    with zipfile.ZipFile(package) as source, zipfile.ZipFile(changed, "w") as target:
+        for name in source.namelist():
+            raw = source.read(name)
+            if name == "project.json":
+                document = json.loads(raw)
+                clip = document["timelines"][0]["tracks"][0]["clips"][0]
+                if field == "background":
+                    document["background"] = {"type": "image", "mediaId": item_id}
+                elif field == "fontId":
+                    text = {
+                        "id": "t",
+                        "kind": "text",
+                        "label": "t",
+                        "start": 0,
+                        "duration": 1,
+                        "textStyle": {"content": "x", "fontId": item_id},
+                    }
+                    document["timelines"][0]["tracks"].append({"id": "tt", "name": "T", "clips": [text]})
+                else:
+                    clip[field] = item_id
+                raw = json.dumps(document).encode()
+            target.writestr(name, raw)
+    return changed
+
+
+@needs_ffmpeg
+@pytest.mark.parametrize("kind", ["background", "lut", "shader", "font"])
+def test_a_library_item_the_package_does_not_carry_is_refused(package, tmp_path, kind):
+    field, item_id = _library_reference(kind, tmp_path)
+    crafted = _repackaged(package, tmp_path, field, item_id)
+    named = {"background": "media", "lut": "LUT", "shader": "shader", "font": "font"}[kind]
+    with pytest.raises(FunctionError, match=f"names a {named} \\({item_id}\\) that did not come with the project"):
+        render_project({"project": str(crafted)}, {"format": "webm", "quality": "low"}, str(tmp_path / "out"))
+    assert not (tmp_path / "out" / "video.webm").exists()
+
+
+@needs_ffmpeg
+def test_a_render_runs_in_its_own_data_folder_and_leaves_this_one_alone(package, tmp_path):
+    import os
+
+    before, environment = sorted(item["id"] for item in media.list_media()), dict(os.environ)
+    render_project({"project": str(package)}, {"format": "webm", "quality": "low"}, str(tmp_path / "out"))
+    assert sorted(item["id"] for item in media.list_media()) == before  # the package's media went to the child's library
+    assert dict(os.environ) == environment
 
 
 @needs_ffmpeg

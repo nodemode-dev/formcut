@@ -19,7 +19,8 @@ from .contract import FunctionError, checked_params, input_file, output_dir
 LONGEST = 4 * 3600  # seconds; the engine's own transcription request takes no more
 
 
-def transcribe(inputs: dict, params: dict, out_dir: str) -> dict:
+def transcribe_here(inputs: dict, params: dict, out_dir: str) -> dict:
+    """The transcription in this process; the entry runs it isolated (isolation.py)."""
     options = checked_params("transcribe", params)
     media = input_file(inputs, "media")
     folder = output_dir(out_dir)
