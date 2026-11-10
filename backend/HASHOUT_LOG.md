@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.3 · a project file's media ids are checked before they name a file
+
+- **The hole.** `open_file` in `app/project_files.py` took the keys of an .fmc's media table as media ids and passed them to `media.media_path` and `linking.link_path`. `linking._place` globs `MEDIA_DIR/<id>.*`, unlinks what it finds there and plants a symlink at `MEDIA_DIR/<id><ext>`, so an id such as `../../folder/*` deleted files outside the data folder and wrote a link there. Reproduced outside the repo with the cv2 import stubbed: two files in a sibling folder were deleted.
+- **The fix.** The media loop skips any id that does not fully match `media._ID` (32 hex digits, the id every library item gets), before the library lookup, the link, the missing list or `_keep_record` see it. The other callers are safe as they are: `link_files` passes no id, and `relink` goes through `media._find`, which only knows indexed ids.
+- **Checked.** The same repro with the guard: the folder keeps both files and nothing is linked.
+
 ## 2.14.0 · extension host (Form Extension Contract, API 1)
 
 - **Kit vendored unchanged.** `app/formext_host.py` is the contract kit's resolver and file checks, byte for byte, so every Form app refuses the same manifests with the same words. It is excluded from ruff in `ruff.toml` because formatting it would make it differ from the kit; `app/extensions.py` wraps it.

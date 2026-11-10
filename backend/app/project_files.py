@@ -142,6 +142,8 @@ def open_file(path: Path) -> dict:
     saved = store._save_project(project)  # the file is the word on it; the file itself is not written back yet
     missing, linked = [], []
     for media_id, entry in (document.get("media") or {}).items():
+        if not media._ID.fullmatch(str(media_id)):
+            continue
         if media.media_path(media_id) is not None:
             continue
         found = None
