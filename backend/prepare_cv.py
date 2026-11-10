@@ -109,7 +109,7 @@ def main() -> int:
     print(notice, flush=True)
     if target:
         print(f"It will run on macOS {target} and later.", flush=True)
-    pip = [sys.executable, "-m", "pip", "install", "--force-reinstall", "--no-deps", "--no-cache-dir"]
+    pip = [sys.executable, "-m", "pip", "install", "--force-reinstall", "--no-deps"]
     if sys.platform == "win32":
         with tempfile.TemporaryDirectory() as folder:
             subprocess.run([*pip, str(windows_source(Path(folder)))], env=environment, check=True)

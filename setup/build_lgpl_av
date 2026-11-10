@@ -45,5 +45,5 @@ fi
 grep -aq "libavcodec license: LGPL" "$prefix"/lib/libavcodec.* || { say "the FFmpeg in $prefix is not LGPL"; exit 1; }
 say "building PyAV $AV_VERSION from source against it"
 PKG_CONFIG_PATH="$prefix/lib/pkgconfig" LDFLAGS="-Wl,-rpath,$prefix/lib" \
-  "$py" -m pip install --no-binary av --no-deps --force-reinstall --no-cache-dir "av==$AV_VERSION"
+  "$py" -m pip install --no-binary av --no-deps --force-reinstall "av==$AV_VERSION"
 "$py" "$here/check_lgpl_av.py" "$prefix"

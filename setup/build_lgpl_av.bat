@@ -29,7 +29,7 @@ set "INCLUDE=%LGPL_FFMPEG_PREFIX%\include;%INCLUDE%"
 set "LIB=%LGPL_FFMPEG_PREFIX%\lib;%LGPL_FFMPEG_PREFIX%\bin;%LIB%"
 set "PATH=%LGPL_FFMPEG_PREFIX%\bin;%PATH%"
 echo [lgpl-av] building PyAV %AV_VERSION% from source against it
-"%PY%" -m pip install --no-binary av --no-deps --force-reinstall --no-cache-dir "av==%AV_VERSION%" || exit /b 1
+"%PY%" -m pip install --no-binary av --no-deps --force-reinstall "av==%AV_VERSION%" || exit /b 1
 "%PY%" "%HERE%vendor_av_dlls.py" "%LGPL_FFMPEG_PREFIX%" || exit /b 1
 "%PY%" "%HERE%check_lgpl_av.py" "%LGPL_FFMPEG_PREFIX%" || exit /b 1
 exit /b 0
