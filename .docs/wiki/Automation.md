@@ -133,3 +133,37 @@ job's result whole when it is not a file.
 - `media.cutdowns` (`id`, `length`, `top`): ranked scripts of the length with their exact source segments, bars and
   pauses (whole sentences, an opener that can stand first, bar-aligned joins with natural pauses, music bridges, the
   call to action last on the button); one job first measures what is missing (sentences, voice map, music map).
+
+## Form functions
+
+`form-functions.json` at the repository root declares formcut's Form functions for NodeMode's hub (format
+`form-functions`, version 1): typed files in, typed files out, no window and no engine server. Each `entry` is a
+callable in `backend/app/functions/`, `fn(inputs, params, out_dir) -> dict`: `inputs` maps each input name to a local
+file, the result maps each output name to a file written inside `out_dir`, and a refusal or failure raises
+`FunctionError` with a short message. Params are checked against the manifest's schema first, defaults filled in.
+
+- `transcribe` (`media`, a video or audio file) writes `transcript.json` (model, size, language, provider, duration,
+  and segments of start, end, text and words, each word with start and end) and `subtitles.srt` (the caption chunks
+  the Captions panel lays out). Params: `model` tiny, base, small, medium or large (default tiny), `language` en,
+  auto or a language code (default en; anything but en runs the multilingual model). It is the engine's own
+  transcriber (`transcribe.py`), with the model fetched once by the pinned hub fetcher into the models folder.
+- `render_project` (`project`, a `.fc` package or a `.fmc` file) writes `video.<format>`. Params: `format` mp4, webm
+  or gif (default mp4), `quality` high, medium or low (default high). It is the export behind `POST /api/render/export`
+  (`render_api.export_media`), run in the calling process. A `.fc` brings its media; a `.fmc` reads each media file
+  only at its path relative to the `.fmc`, which must stay inside the `.fmc`'s folder (Collect Files makes such a
+  folder). A clip naming media that did not come with the project is refused, and an mp4 is refused rather than
+  fetching OpenH264 when the FFmpeg has no H.264 encoder.
+
+From a shell, inside `backend/`:
+
+```sh
+python -m app.functions run transcribe --inputs '{"media": "talk.mp4"}' --params '{"model": "base"}' --out out
+python -m app.functions run render_project --inputs '{"project": "cut.fc"}' --params '{"format": "webm"}' --out out
+python -m app.functions manifest --write
+```
+
+`run` prints the result as one JSON line, or the error on stderr with exit status 1. Imported before the rest of the
+engine with no `FORMCUT_DATA_DIR` set, the package gives the engine a private temporary data folder, removed at exit,
+so a function never adds to a person's library. After changing a function's declaration in
+`backend/app/functions/contract.py`, run `manifest --write`; `tests/test_form_functions.py` fails while the file
+drifts.

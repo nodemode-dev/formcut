@@ -1,0 +1,214 @@
+"""The Form functions (hub plan section 12): the manifest at the root matches the code, params are checked against it,
+and each function runs headless on generated media, with no engine server. A test that needs a Whisper model skips
+unless the model is already in the models folder (the tiny English one is 41 MB through the pinned fetcher)."""
+
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import sys
+import zipfile
+
+import pytest
+from app import media, project_files, project_packages, store
+from app import transcribe as engine_transcribe
+from app.functions import FunctionError, render_project, transcribe
+from app.functions.__main__ import ROOT_MANIFEST, manifest_text
+from app.functions.contract import checked_params
+from conftest import ROOT
+
+FFMPEG = shutil.which("ffmpeg")
+FFPROBE = shutil.which("ffprobe")
+needs_ffmpeg = pytest.mark.skipif(FFMPEG is None or FFPROBE is None, reason="ffmpeg makes the clips and ffprobe reads the result")
+TINY = engine_transcribe.model_for("en", "tiny")
+
+
+def _generated(path, source: str, seconds: float = 1.0, tone: int | None = 440):
+    command = [FFMPEG, "-v", "error", "-y", "-f", "lavfi", "-i", f"{source}=size=160x90:rate=30:duration={seconds}"]
+    if tone:
+        command += ["-f", "lavfi", "-i", f"sine=frequency={tone}:duration={seconds}", "-c:a", "aac", "-shortest"]
+    subprocess.run([*command, "-pix_fmt", "yuv420p", str(path)], check=True)
+    return path
+
+
+def _probe(path) -> dict:
+    out = subprocess.run(
+        [FFPROBE, "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path)], capture_output=True, check=True
+    )
+    return json.loads(out.stdout)
+
+
+def _stored_project(tmp_path) -> str:
+    """Two generated clips, one after the other, as the engine's own project model holds them."""
+    first = media.ingest_path(_generated(tmp_path / "bars.mp4", "testsrc2"), "bars.mp4")
+    second = media.ingest_path(_generated(tmp_path / "rgb.mp4", "rgbtestsrc", tone=660), "rgb.mp4")
+    clips = [
+        {"id": "a", "kind": "video", "label": "bars", "mediaId": first["id"], "start": 0, "duration": 1, "sourceIn": 0},
+        {"id": "b", "kind": "video", "label": "rgb", "mediaId": second["id"], "start": 1, "duration": 1, "sourceIn": 0},
+    ]
+    project = {
+        "id": f"fn-{tmp_path.name}",
+        "title": "Functions",
+        "width": 160,
+        "height": 90,
+        "fps": 30,
+        "duration": 2,
+        "activeTimeline": 0,
+        "timelines": [{"id": "t", "name": "t", "tracks": [{"id": "v", "name": "V", "clips": clips}]}],
+    }
+    return store.save_project(project)["id"]
+
+
+@pytest.fixture
+def package(tmp_path):
+    built = project_packages.build(_stored_project(tmp_path))
+    target = tmp_path / "Functions.fc"
+    shutil.move(built, target)
+    return target
+
+
+def test_the_root_manifest_is_the_one_the_code_declares():
+    from app.main import APP_VERSION
+
+    written = json.loads(ROOT_MANIFEST.read_text(encoding="utf-8"))
+    assert ROOT_MANIFEST == ROOT / "form-functions.json"
+    assert ROOT_MANIFEST.read_text(encoding="utf-8") == manifest_text(), "run: cd backend && python -m app.functions manifest --write"
+    assert written["app_version"] == APP_VERSION and written["format"] == "form-functions" and written["format_version"] == 1
+    for function in written["functions"]:
+        module, name = function["entry"].split(":")
+        assert callable(getattr(__import__(module, fromlist=[name]), name)), function["entry"]
+        assert set(function) == {"id", "title", "description", "entry", "inputs", "outputs", "params", "runs", "cost", "timeout_s"}
+
+
+def test_params_take_their_defaults_and_refuse_what_the_schema_does_not_allow():
+    assert checked_params("transcribe", {}) == {"model": "tiny", "language": "en"}
+    assert checked_params("render_project", None) == {"format": "mp4", "quality": "high"}
+    assert checked_params("transcribe", {"model": "large", "language": "auto"})["model"] == "large"
+    with pytest.raises(FunctionError, match="expected one of tiny, base"):
+        checked_params("transcribe", {"model": "huge"})
+    with pytest.raises(FunctionError, match="unknown param 'codec'"):
+        checked_params("render_project", {"codec": "h264"})
+    with pytest.raises(FunctionError, match="language"):
+        checked_params("transcribe", {"language": "English"})
+    with pytest.raises(FunctionError, match="must be a string"):
+        checked_params("render_project", {"quality": 3})
+
+
+@pytest.mark.parametrize("function", [transcribe, render_project])
+def test_a_missing_input_is_refused_before_anything_runs(function, tmp_path):
+    with pytest.raises(FunctionError, match="is required"):
+        function({}, {}, str(tmp_path / "out"))
+    name = "media" if function is transcribe else "project"
+    with pytest.raises(FunctionError, match="no file at"):
+        function({name: str(tmp_path / "nothing.mp4")}, {}, str(tmp_path / "out"))
+
+
+def test_a_file_that_is_not_a_project_is_refused(tmp_path):
+    other = tmp_path / "notes.txt"
+    other.write_text("hello", encoding="utf-8")
+    with pytest.raises(FunctionError, match=r"give a \.fc package or a \.fmc file"):
+        render_project({"project": str(other)}, {}, str(tmp_path / "out"))
+
+
+@needs_ffmpeg
+@pytest.mark.parametrize(("fmt", "codec"), [("mp4", "h264"), ("webm", "vp9")])
+def test_a_package_renders_to_the_asked_format(package, tmp_path, fmt, codec):
+    out = tmp_path / "out"
+    try:
+        result = render_project({"project": str(package)}, {"format": fmt, "quality": "low"}, str(out))
+    except FunctionError as exc:
+        if "no H.264 encoder" in str(exc):
+            pytest.skip(str(exc))
+        raise
+    assert result == {"video": str((out / f"video.{fmt}").resolve())}
+    probed = _probe(result["video"])
+    video = next(s for s in probed["streams"] if s["codec_type"] == "video")
+    assert (video["codec_name"], video["width"], video["height"]) == (codec, 160, 90)
+    assert any(s["codec_type"] == "audio" for s in probed["streams"])
+    assert float(probed["format"]["duration"]) == pytest.approx(2.0, abs=0.1)
+    assert [p.name for p in out.iterdir()] == [f"video.{fmt}"]
+
+
+@needs_ffmpeg
+def test_the_cli_runs_a_render_and_prints_one_json_line(package, tmp_path):
+    out = tmp_path / "cli"
+    inputs = json.dumps({"project": str(package)})
+    run = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "app.functions",
+            "run",
+            "render_project",
+            "--inputs",
+            inputs,
+            "--params",
+            '{"format": "webm"}',
+            "--out",
+            str(out),
+        ],
+        cwd=ROOT / "backend",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert run.returncode == 0, run.stderr
+    lines = run.stdout.strip().splitlines()
+    assert len(lines) == 1 and json.loads(lines[0]) == {"video": str((out / "video.webm").resolve())}
+    bad = subprocess.run(
+        [sys.executable, "-m", "app.functions", "run", "render_project", "--inputs", "{}", "--out", str(out)],
+        cwd=ROOT / "backend",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert bad.returncode == 1 and "input 'project' is required" in bad.stderr
+
+
+@needs_ffmpeg
+def test_a_package_missing_its_media_is_refused(package, tmp_path):
+    stripped = tmp_path / "stripped.fc"
+    with zipfile.ZipFile(package) as source, zipfile.ZipFile(stripped, "w") as target:
+        for name in source.namelist():
+            if not name.startswith("media/") or name == "media/index.json":
+                target.writestr(name, source.read(name))
+    with pytest.raises(FunctionError, match="did not come with the project"):
+        render_project({"project": str(stripped)}, {"format": "webm"}, str(tmp_path / "out"))
+
+
+@needs_ffmpeg
+@pytest.mark.skipif(sys.platform == "win32", reason="links need developer mode on Windows")
+def test_a_collected_project_file_renders_from_the_media_beside_it(tmp_path):
+    collected = project_files.collect(_stored_project(tmp_path), tmp_path / "Collected")
+    result = render_project({"project": collected["path"]}, {"format": "webm", "quality": "low"}, str(tmp_path / "out"))
+    assert float(_probe(result["video"])["format"]["duration"]) == pytest.approx(2.0, abs=0.1)
+
+
+@needs_ffmpeg
+def test_a_project_file_naming_media_outside_its_folder_is_refused(tmp_path):
+    written = project_files.write_file(_stored_project(tmp_path), tmp_path / "Elsewhere" / "Loose.fmc")
+    with pytest.raises(FunctionError, match="outside the project's folder"):
+        render_project({"project": str(written)}, {"format": "webm"}, str(tmp_path / "out"))
+
+
+@needs_ffmpeg
+def test_media_without_audio_is_refused_with_a_reason(tmp_path):
+    silent = _generated(tmp_path / "silent.mp4", "testsrc2", tone=None)
+    with pytest.raises(FunctionError, match=r"no audio could be read from silent\.mp4"):
+        transcribe({"media": str(silent)}, {}, str(tmp_path / "out"))
+
+
+@needs_ffmpeg
+@pytest.mark.skipif(not engine_transcribe.cached(TINY), reason=f"{TINY} is not downloaded here (models/hub)")
+def test_transcribe_writes_a_transcript_and_captions(tmp_path):
+    clip = _generated(tmp_path / "tone.mp4", "testsrc2", seconds=2.0)
+    out = tmp_path / "out"
+    result = transcribe({"media": str(clip)}, {"model": "tiny"}, str(out))
+    assert result == {"transcript": str((out / "transcript.json").resolve()), "subtitles": str((out / "subtitles.srt").resolve())}
+    transcript = json.loads((out / "transcript.json").read_text(encoding="utf-8"))
+    assert transcript["model"] == TINY and transcript["duration"] == pytest.approx(2.0, abs=0.05)
+    assert isinstance(transcript["segments"], list)
+    for segment in transcript["segments"]:
+        assert {"start", "end", "text", "words"} <= set(segment)
+    assert (out / "subtitles.srt").is_file()
