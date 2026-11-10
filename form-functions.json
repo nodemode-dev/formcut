@@ -75,7 +75,23 @@
         {
           "name": "video",
           "kind": "video",
-          "ext": "mp4"
+          "ext": "mp4",
+          "by_param": {
+            "format": {
+              "mp4": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "webm": {
+                "kind": "video",
+                "ext": "webm"
+              },
+              "gif": {
+                "kind": "video",
+                "ext": "gif"
+              }
+            }
+          }
         }
       ],
       "params": {

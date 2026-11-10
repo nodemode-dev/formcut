@@ -86,6 +86,13 @@ def test_the_root_manifest_is_the_one_the_code_declares():
         module, name = function["entry"].split(":")
         assert callable(getattr(__import__(module, fromlist=[name]), name)), function["entry"]
         assert set(function) == {"id", "title", "description", "entry", "inputs", "outputs", "params", "runs", "cost", "timeout_s"}
+        for output in function["outputs"]:
+            for param, values in output.get("by_param", {}).items():
+                # every value the param allows says what it makes, and nothing else is named
+                assert set(values) == set(function["params"]["properties"][param]["enum"]), (function["id"], param)
+                assert all(set(made) == {"kind", "ext"} for made in values.values())
+    render = next(f for f in written["functions"] if f["id"] == "render_project")
+    assert render["outputs"][0]["by_param"]["format"] == {f: {"kind": "video", "ext": f} for f in ("mp4", "webm", "gif")}
 
 
 def test_params_take_their_defaults_and_refuse_what_the_schema_does_not_allow():

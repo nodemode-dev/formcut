@@ -54,7 +54,14 @@ FUNCTIONS = [
         ),
         "entry": "app.functions:render_project",
         "inputs": [{"name": "project", "kind": "project.formcut", "required": True, "many": False}],
-        "outputs": [{"name": "video", "kind": "video", "ext": "mp4"}],
+        "outputs": [
+            {
+                "name": "video",
+                "kind": "video",
+                "ext": "mp4",
+                "by_param": {"format": {fmt: {"kind": "video", "ext": fmt} for fmt in EXPORT_FORMATS}},
+            }
+        ],
         "params": {
             "type": "object",
             "properties": {
