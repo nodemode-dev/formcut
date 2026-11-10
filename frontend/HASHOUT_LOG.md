@@ -2,6 +2,11 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.3 · the last two raw z-index values take a token
+
+- **What moved.** `.fav-star` and `.fx-remove` in `styles/app.css` wrote `z-index: 1`. The scale in `styles/tokens.css` starts at `--z-base: 0`, so `--z-raised: 1` is added and both rules use it. The number is the same, so stacking is unchanged; only the property value was touched.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
 ## 2.15.0 · the three demo films open in the app
 
 - **What was missing.** The start screen's Demo project chip builds a short project from the four engine sample files in examples/demo; it is not any of the repository demos. High Country (demo/), Last Light (demos/grade) and the Walden talk (demos/deliver) existed only as file:// pages. Now each opens in the app; the old chip stays as it was.
