@@ -142,13 +142,14 @@ def open_file(path: Path) -> dict:
     saved = store._save_project(project)  # the file is the word on it; the file itself is not written back yet
     missing, linked = [], []
     for media_id, entry in (document.get("media") or {}).items():
-        if not media._ID.fullmatch(str(media_id)):
+        if not media._ID.fullmatch(str(media_id)) or not isinstance(entry, dict):
             continue
         if media.media_path(media_id) is not None:
             continue
         found = None
-        for candidate in (entry.get("path"), entry.get("relative") and str(path.parent / entry["relative"])):
-            if candidate and Path(candidate).is_file():
+        relative = entry.get("relative")
+        for candidate in (entry.get("path"), isinstance(relative, str) and relative and str(path.parent / relative)):
+            if isinstance(candidate, str) and candidate and Path(candidate).is_file():
                 found = Path(candidate)
                 break
         if found is not None:
@@ -174,7 +175,7 @@ def _keep_record(media_id: str, entry: dict) -> None:
                 "thumb": False,
                 "linked": True,
                 "missingSince": time.time(),
-                **{k: v for k, v in entry.items() if k != "relative"},
+                **{k: v for k, v in entry.items() if k not in ("relative", "id")},
             }
         )
         media._write(items)
