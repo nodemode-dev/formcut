@@ -45,7 +45,10 @@ def evaluate(expression: str, time: float, duration: float, value: float) -> flo
             return FUNCTIONS[node.func.id](*(visit(arg) for arg in node.args))
         raise ValueError("Only arithmetic, t, duration, value and named math functions are allowed")
 
-    result = float(visit(root))
+    try:
+        result = float(visit(root))
+    except (ArithmeticError, TypeError) as exc:
+        raise ValueError("Expression could not be evaluated") from exc
     if not math.isfinite(result) or abs(result) > 1e6:
         raise ValueError("Expression result is outside the supported range")
     return result

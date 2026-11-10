@@ -2,6 +2,11 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.3 · expressions fail as ValueError
+
+- **What escaped.** `evaluate` in `app/expressions.py` promised `ValueError` for an expression it cannot use, and the callers (`brush.py`, `project_tracking.py`) catch only that. Division or modulo by zero, a float too large for `floor` or `ceil`, and a function called with the wrong number of arguments raised `ZeroDivisionError`, `OverflowError` or `TypeError` instead, which reached the renderer's `transform_at` and the routes as a crash.
+- **The fix.** The walk is wrapped, and `ArithmeticError` and `TypeError` become `ValueError("Expression could not be evaluated")`. Results already handled (non-finite, over 1e6) are unchanged.
+
 ## 2.15.3 · a project file's media ids are checked before they name a file
 
 - **The hole.** `open_file` in `app/project_files.py` took the keys of an .fmc's media table as media ids and passed them to `media.media_path` and `linking.link_path`. `linking._place` globs `MEDIA_DIR/<id>.*`, unlinks what it finds there and plants a symlink at `MEDIA_DIR/<id><ext>`, so an id such as `../../folder/*` deleted files outside the data folder and wrote a link there. Reproduced outside the repo with the cv2 import stubbed: two files in a sibling folder were deleted.
