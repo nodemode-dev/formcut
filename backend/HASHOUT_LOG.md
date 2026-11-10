@@ -9,8 +9,8 @@ Reasoning behind engine changes, newest first.
 
 ## 2.15.3 · expressions fail as ValueError
 
-- **What escaped.** `evaluate` in `app/expressions.py` promised `ValueError` for an expression it cannot use, and the callers (`brush.py`, `project_tracking.py`) catch only that. Division or modulo by zero, a float too large for `floor` or `ceil`, and a function called with the wrong number of arguments raised `ZeroDivisionError`, `OverflowError` or `TypeError` instead, which reached the renderer's `transform_at` and the routes as a crash.
-- **The fix.** The walk is wrapped, and `ArithmeticError` and `TypeError` become `ValueError("Expression could not be evaluated")`. Results already handled (non-finite, over 1e6) are unchanged.
+- **What escaped.** `evaluate` in `app/expressions.py` promised `ValueError` for an expression it cannot use. Division or modulo by zero, a float too large for `floor` or `ceil`, a function called with the wrong number of arguments, and text that does not parse (`2+`, `((((`) raised `ZeroDivisionError`, `OverflowError`, `TypeError` or `SyntaxError` instead. The call sites in `brush.py` (line 34) and `project_tracking.py` (line 71) have no `try` of their own; the enclosing route handlers catch `ValueError` (`brush.py` `source_brush`, `project_tracking.py` the track route) and answer 422, so only a `ValueError` was handled there and the other exceptions became a 500. `renderer.transform_at` has no handler, so a `ValueError` from it propagates to whoever renders the frame.
+- **The fix.** The parse and the walk are wrapped: `SyntaxError`, `RecursionError` and `MemoryError` from `ast.parse` become `ValueError("Expression could not be parsed")`, and `ArithmeticError` and `TypeError` from the walk become `ValueError("Expression could not be evaluated")`. Results already handled (non-finite, over 1e6) are unchanged.
 
 ## 2.15.3 · a project file's media ids are checked before they name a file
 

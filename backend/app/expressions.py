@@ -19,7 +19,10 @@ OPERATORS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mu
 def evaluate(expression: str, time: float, duration: float, value: float) -> float:
     if len(expression) > 512:
         raise ValueError("Expression is too long")
-    root = ast.parse(expression, mode="eval")
+    try:
+        root = ast.parse(expression, mode="eval")
+    except (SyntaxError, RecursionError, MemoryError) as exc:
+        raise ValueError("Expression could not be parsed") from exc
     if sum(1 for _ in ast.walk(root)) > 100:
         raise ValueError("Expression is too complex")
     variables = {"t": time, "duration": duration, "value": value, "pi": math.pi}
