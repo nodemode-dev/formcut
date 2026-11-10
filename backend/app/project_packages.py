@@ -218,6 +218,8 @@ def _restore_assets(assets: dict) -> dict:
     if not isinstance(assets, dict) or len(assets) > 256:
         raise ValueError("Invalid package assets")
     for key, asset in assets.items():
+        if not isinstance(asset, dict):
+            raise ValueError("Invalid package assets")
         source = asset.get("source")
         if not isinstance(source, str):
             raise ValueError("Asset source must be text")
@@ -264,6 +266,8 @@ def unpack(path: Path) -> dict:
             if "/" in stem or ".." in stem:
                 raise ValueError("Malformed package")
             meta = media_index.get(old_id, {})
+            if not isinstance(meta, dict):
+                raise ValueError("Malformed package")
             staged = MEDIA_DIR.parent / ("package-" + uuid.uuid4().hex + Path(stem).suffix.lower())
             staged.parent.mkdir(parents=True, exist_ok=True)
             with archive.open(name) as src, staged.open("wb") as dst:

@@ -2,6 +2,11 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.3 · malformed package entries are refused, not crashed on
+
+- **What happened.** `import_package` turns `ValueError`, `KeyError` and `TypeError` into a 422, but a package whose `assets.json` or `media/index.json` held a non-object value hit `.get` on an int or string and raised `AttributeError`, a 500.
+- **The fix.** `_restore_assets` refuses a non-object asset ("Invalid package assets") and the media loop in `unpack` refuses a non-object index entry ("Malformed package"), the messages the module already uses.
+
 ## 2.15.3 · expressions fail as ValueError
 
 - **What escaped.** `evaluate` in `app/expressions.py` promised `ValueError` for an expression it cannot use, and the callers (`brush.py`, `project_tracking.py`) catch only that. Division or modulo by zero, a float too large for `floor` or `ceil`, and a function called with the wrong number of arguments raised `ZeroDivisionError`, `OverflowError` or `TypeError` instead, which reached the renderer's `transform_at` and the routes as a crash.
