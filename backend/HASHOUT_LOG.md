@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · device thumbnails follow the model they picture
+
+- **What was wrong.** `devices.thumbnail` names its cached picture `<id>-<first 12 of sha256>.png` so a changed model gets a new one, but `_describe` never copied the manifest's `sha256` into the description, so the name was always `<id>-v1.png` and an updated .glb kept its old picture for good.
+- **The fix.** `_describe` carries `"sha256": entry["sha256"]`, the hash it has just checked the file against.
+- **Checked.** A throwaway script outside the repo: `devices.catalogue()` lists `browser-window` with its sha256 (`ad2c66e4f364...`), which `device()` hands to `thumbnail`. The thumbnail render was not run (OpenCV not installed here). ruff clean.
+
 ## 2.15.4 · relink search passes over files it cannot read
 
 - **What was wrong.** `linking.search` added each walked file to `by_name` before its `stat` was tried, so a dangling symlink with a missing item's name stayed a candidate, and the sort key's `stat` raised `OSError`. A matching file that could be stat'ed but not opened made `fingerprint` raise `PermissionError`. Either way the whole relink search answered 500 and relinked nothing.
