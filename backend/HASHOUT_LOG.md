@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · an audio package's chain is one comma list, nothing more
+
+- **The hole.** `_check_chain` in `app/effect_packages.py` split a chain on `,` and checked only the first filter name of each piece, but ffmpeg's filtergraph syntax also has `;` chains and `[label]` pads. `volume=1[a];[a]ametadata=mode=print:file=<path>` passed as `volume` and, rendered through `-af`, created or truncated the named file; `amovie=` in the same position mixed in any local audio file.
+- **The fix.** A chain holding `;`, `[`, `]`, a quote or a backslash is refused ("a chain is one list of filters separated by commas") before the per-filter check, so the allowlist sees every filter that will run. None of the allowlisted filters takes a file argument.
+- **Checked.** A throwaway script outside the repo: both report payloads are refused, `volume={gain},highpass=f=200` still loads. `tests/test_effect_library.py` with a cv2 stub plugin from outside the repo: 11 passed, 1 failed (`test_every_look_renders_and_no_two_are_the_same`, which needs the real OpenCV that is not installed here). ruff clean.
+
 ## 2.15.4 · the system file dialogs take no script text from an extension
 
 - **The hole.** `linking.choose` writes the dialog as AppleScript (macOS) or PowerShell (Windows) source. An extension's `files.open` `accept` list reached the AppleScript `of type {...}` list between plain double quotes, and its `files.save` name reached a single-quoted PowerShell string unescaped, so an extension could close the string and run a command as the person, outside its sandboxed frame. A trailing backslash in a title or name could also end an AppleScript string early.
