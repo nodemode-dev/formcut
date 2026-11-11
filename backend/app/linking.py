@@ -195,11 +195,12 @@ def search(folder: Path, ids: list[str] | None = None, limit: int = 200_000) -> 
             if name.startswith("."):
                 continue
             path = Path(root) / name
-            by_name.setdefault(name.lower(), []).append(path)
             try:
-                by_size.setdefault(path.stat().st_size, []).append(path)
+                length = path.stat().st_size
             except OSError:
                 continue
+            by_name.setdefault(name.lower(), []).append(path)
+            by_size.setdefault(length, []).append(path)
             seen += 1
         if seen >= limit:
             break
@@ -212,11 +213,20 @@ def search(folder: Path, ids: list[str] | None = None, limit: int = 200_000) -> 
         found = None
         candidates = sorted(by_name.get(name, []), key=lambda p: p.stat().st_size != size)
         for path in candidates:
-            if not mark or path.stat().st_size != size or fingerprint(path) == mark:
-                found = path
-                break
+            try:
+                if not mark or path.stat().st_size != size or fingerprint(path) == mark:
+                    found = path
+                    break
+            except OSError:
+                continue
         if found is None and size and mark:
-            found = next((p for p in by_size.get(size, []) if fingerprint(p) == mark), None)
+            for path in by_size.get(size, []):
+                try:
+                    if fingerprint(path) == mark:
+                        found = path
+                        break
+                except OSError:
+                    continue
         if found is None:
             left.append(entry)
             continue

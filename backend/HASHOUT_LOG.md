@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · relink search passes over files it cannot read
+
+- **What was wrong.** `linking.search` added each walked file to `by_name` before its `stat` was tried, so a dangling symlink with a missing item's name stayed a candidate, and the sort key's `stat` raised `OSError`. A matching file that could be stat'ed but not opened made `fingerprint` raise `PermissionError`. Either way the whole relink search answered 500 and relinked nothing.
+- **The fix.** A file joins `by_name` and `by_size` only after its `stat` succeeds, and the per-candidate `stat` and `fingerprint` calls (by name, then by size) skip a candidate that raises `OSError`.
+- **Checked.** A throwaway script outside the repo with `missing` and `list_media` replaced: a folder holding a dangling `clip.mp4` symlink returns both items in `missing` (looked 1) instead of raising, and with `fingerprint` raising `PermissionError` the same. ruff clean.
+
 ## 2.15.4 · .cube files with an input range line import
 
 - **What was wrong.** `assets.parse_cube` counted any three-token line as a table row, so a `LUT_3D_INPUT_RANGE 0.0 1.0` line, which Resolve writes, put the row count off by one and the upload was refused as "LUT size or color domain is invalid". A bare `LUT_3D_SIZE` line raised `IndexError`, which `upload_lut` does not map, so it was a 500.
