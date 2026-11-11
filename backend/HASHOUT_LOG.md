@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · preview read-ahead fills the frames the frame route serves
+
+- **What was wrong.** `ReadAhead` stored its frames under tag `""`, but the only reader, `GET /sessions/{id}/frame`, asks for tag `"orig"`, so every read-ahead frame was waste that evicted still frames from the shared 240-frame cache and held the session lock. Its render function also closed over the renderer the session was created with, so after `retarget_session` closed that renderer and installed a new one, read-ahead kept drawing the old document through a closed renderer.
+- **The fix.** `ReadAhead` takes a `tag` and uses it for both `get` and `put`; the session passes `"orig"`. `render_locked` looks up the session's current renderer under the session lock and draws from the original with `allow_proxy = False`, exactly as the frame route does, so a read-ahead frame is the frame the route would have drawn (no display roll-off, which the route does not apply either).
+- **Checked.** A throwaway script outside the repo with a fake renderer: after a frame at 0 s the read-ahead frames are cached, a request at 0.5 s is a hit (it was a miss), and after a retarget the closed renderer draws nothing more while the new one fills the cache. Not run with the real renderer (OpenCV is not installed here). ruff clean.
+
 ## 2.15.4 · without ffprobe, a video keeps its frame rate
 
 - **What broke.** When ffprobe is missing or fails, `tools.probe` reads ffmpeg's own report through `_from_ffmpeg`, which wrote `avg_frame_rate` as `f"{float}/1"`, for example `"30.0/1"` or `"29.97/1"`. `Fraction` and `int` both refuse a decimal numerator, so the media record got fps 0 and `VideoSource` fell back to 30 fps, decoding a 24, 25 or 60 fps clip with the wrong frame-to-time mapping.
