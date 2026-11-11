@@ -70,7 +70,7 @@ def save_project(project: dict, expected_revision: int | None = None) -> dict:
         from .project_packages import sync_after_save
 
         # a folder that vanished or a full disk does not fail the save; the next save tries again
-        with contextlib.suppress(OSError):
+        with contextlib.suppress(OSError, ValueError):
             sync_after_save(saved)
     # a project kept in a .fmc file: the file follows the save (project_files.py)
     from .project_files import after_save

@@ -29,7 +29,10 @@ def gather(project: dict):
                 ]:
                     key = holder.get(field)
                     if key and key not in found:
-                        path = asset_path(key, suffix)
+                        try:
+                            path = asset_path(key, suffix)
+                        except ValueError:
+                            continue
                         found[key] = {
                             "type": field,
                             "source": base64.b64encode(path.read_bytes()).decode() if suffix == ".font" else path.read_text(),

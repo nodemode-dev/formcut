@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · an asset that is not on this computer is left out, not fatal
+
+- **What was wrong.** A project opened from an .fmc made elsewhere (only media travels in one) can name a LUT, shader or font id this data folder lacks. `assets.asset_path` raises `ValueError("Asset is unavailable")` for it, before `project_packages.gather_assets` reached its `if not path.is_file(): continue`, so package export failed with 500, "Save as template" (`template_assets.gather`) did the same, and a save with a sync folder answered 409 although the project had been stored, because `store.save_project` suppressed only `OSError` around `sync_after_save`.
+- **The fix.** Both gather functions skip an id `asset_path` refuses, which is what the dead `is_file` check meant to do, and `save_project` suppresses `ValueError` as well as `OSError` around the sync, as its comment says a failed sync must not fail the save.
+- **Checked.** A throwaway script outside the repo: a clip with a random lutId and fontId gives an empty asset set from both gather functions instead of raising. The sync path was not run. ruff clean.
+
 ## 2.15.4 · the fast-path check runs when an export names a rate
 
 - **What was wrong.** `held_to_frame_path` (R25) found the middle frame's instant as `index / float(out_rate)`, but `out_rate` is a ratio string whenever the export names a rate (`"24000/1001"`, and `"30/1"` for a whole rate too). `float` raised, the handler logged "the check failed; keeping the export", and the comparison against the frame path never ran for those exports.

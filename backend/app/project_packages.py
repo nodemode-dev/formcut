@@ -74,8 +74,9 @@ def gather_assets(document: dict) -> dict:
         ]:
             key = holder.get(field)
             if key and key not in found:
-                path = asset_path(key, suffix)
-                if not path.is_file():
+                try:
+                    path = asset_path(key, suffix)
+                except ValueError:
                     continue
                 found[key] = {
                     "type": field,
