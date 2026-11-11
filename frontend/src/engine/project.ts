@@ -310,7 +310,7 @@ export class ProjectEngine {
         this.emit("playhead");
         break;
       case "transport.step":
-        s.playhead = Math.min(Math.max(s.playhead + (payload as number) / s.fps, 0), s.duration);
+        s.playhead = Math.min(Math.max((Math.floor(s.playhead * s.fps + 1e-6) + (payload as number)) / s.fps, 0), s.duration);
         this.emit("playhead");
         break;
       case "clip.stabilise": {
@@ -1442,11 +1442,12 @@ export class ProjectEngine {
 }
 
 export function formatTimecode(seconds: number, fps: number): string {
-  const total = Math.max(0, seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = Math.floor(total % 60);
-  const f = Math.floor((total - Math.floor(total)) * fps);
+  const rate = Math.max(1, Math.round(fps));
+  const frames = Math.floor(Math.max(0, seconds) * rate + 1e-6);
+  const h = Math.floor(frames / rate / 3600);
+  const m = Math.floor(frames / rate / 60) % 60;
+  const s = Math.floor(frames / rate) % 60;
+  const f = frames % rate;
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(h)}:${p(m)}:${p(s)}:${p(f)}`;
 }

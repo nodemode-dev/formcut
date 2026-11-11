@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · timecode shows the frame the playhead is on
+
+- **What was wrong.** `formatTimecode` took the frame as `floor(fraction of the second * fps)`, which floors values such as 5.9999999, so 1.2 s at 30 fps read 00:00:01:05 and 4.1 s read :02. Frame steps added `n / fps` to the playhead without snapping, so stepping drifted off the frame grid: 22 of the first 90 frames showed the wrong number.
+- **What changed.** The timecode counts whole frames once, `floor(seconds * fps + 1e-6)` at the rounded frame rate, and takes frames, seconds, minutes and hours from that count. `transport.step` moves from the frame the timecode shows (`floor(playhead * fps + 1e-6) + n`) and divides back, so every step lands on the grid. Floor rather than round keeps a mid-frame playhead on the frame being shown.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`: 1.2 s reads :06 and 4.1 s :03; 3000 steps forward and 3000 back at 30 fps give 0 wrong readouts; every frame time `i/30` over ten minutes reads correctly.
+
 ## 2.15.4 · range edits cut tails the way a split does
 
 - **What was wrong.** Lift, Extract, Overwrite, Insert, `clip.remove-range`, and Roll and Slide on the clip after the edit moved a cut clip's source by timeline seconds (`sourceIn + offset`) and copied its keyframes and speed curve unchanged. `clip.split` and `clip.trim` already use `sourceTime`, `shiftedCurve` and `retimedKeys`. On a clip at speed 2 from 0 to 10 s, Lift 2-4 gave the tail source in 4 (a split at 4 gives 8), so the tail replayed footage the head had shown, and its keyframe at 8 stayed at 8 instead of 4.
