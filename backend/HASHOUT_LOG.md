@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · an OpenH264 export works without ffprobe
+
+- **What was wrong.** `openh264.encode_mp4` called `ffprobe` directly twice: to count the intermediate's packets (used only for progress) and to see whether it has audio. On a machine with no ffprobe, which the engine otherwise supports through `tools.probe`, the first call raised `FileNotFoundError` and the export failed after the whole lossless intermediate had been rendered.
+- **The fix.** One `tools.probe(intermediate)` gives both: the frame total for progress is its duration times the rate, and audio is present when it lists an audio stream. `tools.probe` falls back to ffmpeg's own report when ffprobe is missing.
+- **Checked.** A throwaway script outside the repo with `tools.have` reporting no ffprobe: a 2 s 30 fps FFV1 intermediate with PCM audio gives a total of 60 and audio true. `encode_mp4` itself was not run (no OpenH264 library here); `tests/test_openh264.py`: 6 passed, 3 failed in the export tests, which need OpenCV. ruff clean.
+
 ## 2.15.4 · proxy builds and video upscales cannot stall on a full stderr pipe
 
 - **What was wrong.** `proxies.build_proxy` ran ffmpeg with `stderr=PIPE` and only polled it, reading stderr after exit; `upscale._video` read stdout (progress) to its end before reading stderr. A source whose decode makes ffmpeg write more than the pipe buffer (64 KB) of errors would block ffmpeg on the write: the single proxy worker would poll for ever, leaving every later proxy queued, and the upscale job would hang.

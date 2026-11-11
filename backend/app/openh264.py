@@ -271,25 +271,14 @@ def encode_mp4(
     fraction = Fraction(rate).limit_denominator(1001)
     stream = output.with_suffix(".h264")
     frame_size = width * height * 3 // 2
-    probe = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-count_packets",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=nb_read_packets",
-            "-of",
-            "csv=p=0",
-            str(intermediate),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    total = max(1, int((probe.stdout.strip() or "1").split(",")[0] or 1))
+    from .tools import probe
+
+    facts = probe(intermediate)
+    try:
+        seconds = float((facts.get("format") or {}).get("duration") or 0)
+    except ValueError:
+        seconds = 0.0
+    total = max(1, round(seconds * float(fraction)))
     encoder = Encoder(library_path, width, height, float(fraction), bitrate, max(1, round(float(fraction) * 2)))
     decode = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-i", str(intermediate), "-map", "0:v:0", "-f", "rawvideo", "-pix_fmt", "yuv420p", "-"],
@@ -314,12 +303,7 @@ def encode_mp4(
         if decode.poll() is None:
             decode.kill()
             decode.wait()
-    audio = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", str(intermediate)],
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout.strip()
+    audio = any(s.get("codec_type") == "audio" for s in facts.get("streams") or [])
     command = [
         "ffmpeg",
         "-v",
