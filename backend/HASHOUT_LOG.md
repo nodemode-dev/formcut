@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · a malformed .fc is refused before anything is ingested
+
+- **What was wrong.** The 2.15.3 hardening covered assets and the media index only. In `project_packages.unpack` a manifest that is a JSON array raised `AttributeError` at `manifest.get`; a document with `"timelines": [5]` or a clip with `"textStyle": "x"` was only validated after its media had been ingested, and the `AttributeError` from `clip_values` escaped `import_package` as a 500; a clip with `"device": 3` raised in the screen loop. `POST /api/project-files/open` called `unpack` with no mapping at all, so even "Not a formcut project package" was a 500 there.
+- **The fix.** A manifest that is not an object is "Not a formcut project package". The document is validated right after it is read, before any asset or media is restored. The device-screen loop reads `device` and `screens` only when they are objects. `import_package` and `open_project_file` map `ValueError`, `KeyError`, `TypeError` and `AttributeError` to 422.
+- **Checked.** A throwaway script outside the repo posted four crafted packages to both routes with `ingest_path` counted: the array manifest, `timelines [5]` and `textStyle "x"` answer 422 on both with nothing ingested; a text clip carrying `device: 3` imports (the field is ignored). `tests/test_package_import.py` and `test_project_files.py` with a cv2 stub plugin: 16 passed, 2 failed in tests that call OpenCV's `cvtColor` (not installed here). ruff clean.
+
 ## 2.15.4 · a credentials file restored from its backup stays private
 
 - **What was wrong.** `durable.read_json` restores a missing or damaged file from `<name>.bak` with `write_json(..., keep_backup=False)` and no `private`, so `providers.json` or `cloud.json` (written 0600, holding API keys and OAuth tokens) came back with the umask default, usually 0644.

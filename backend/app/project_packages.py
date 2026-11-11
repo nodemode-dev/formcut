@@ -246,7 +246,7 @@ def unpack(path: Path) -> dict:
         if "manifest.json" not in names or "project.json" not in names:
             raise ValueError("Not a formcut project package")
         manifest = json.loads(archive.read("manifest.json"))
-        if manifest.get("format") != FORMAT:
+        if not isinstance(manifest, dict) or manifest.get("format") != FORMAT:
             raise ValueError("Not a formcut project package")
         if int(manifest.get("formatVersion", 0)) > FORMAT_VERSION:
             raise ValueError(f"This package was written by a newer formcut (format {manifest.get('formatVersion')})")
@@ -255,6 +255,7 @@ def unpack(path: Path) -> dict:
         media_index = json.loads(archive.read("media/index.json")) if "media/index.json" in names else {}
         if not isinstance(document, dict) or not isinstance(media_index, dict):
             raise ValueError("Malformed package")
+        validate_document({k: v for k, v in document.items() if k != "revision"})
         replacements = _restore_assets(assets)
         # Media: each file is staged beside the library and ingested under a new
         # id, so a package never clobbers a file the library already holds.
@@ -285,7 +286,9 @@ def unpack(path: Path) -> dict:
         for holder, field in [(clip, "lutId"), (clip, "shaderId"), (clip, "mediaId"), (clip.get("textStyle") or {}, "fontId")]:
             if holder.get(field) in replacements:
                 holder[field] = replacements[holder[field]]
-        for screen in ((clip.get("device") or {}).get("screens") or {}).values():
+        device = clip.get("device") if isinstance(clip.get("device"), dict) else {}
+        screens = device.get("screens") if isinstance(device.get("screens"), dict) else {}
+        for screen in screens.values():
             if isinstance(screen, dict) and screen.get("mediaId") in replacements:
                 screen["mediaId"] = replacements[screen["mediaId"]]
     validate_document({k: v for k, v in document.items() if k != "revision"})
@@ -325,7 +328,7 @@ def import_package(file: UploadFile) -> dict:
             spool.write(chunk)
     try:
         return unpack(staged)
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise HTTPException(422, str(exc)) from exc
     finally:
         staged.unlink(missing_ok=True)

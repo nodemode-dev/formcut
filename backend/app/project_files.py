@@ -307,7 +307,10 @@ def open_project_file(body: OpenBody) -> dict:
 
         if not path.is_file():
             raise HTTPException(404, f"{path.name} was not found")
-        return {"project": unpack(path), "missing": []}
+        try:
+            return {"project": unpack(path), "missing": []}
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
     if suffix != ".fmc":
         raise HTTPException(400, f"{path.name} is not a formcut project: open a .fc or .fmc file")
     return open_file(path)
