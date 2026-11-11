@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · .cube files with an input range line import
+
+- **What was wrong.** `assets.parse_cube` counted any three-token line as a table row, so a `LUT_3D_INPUT_RANGE 0.0 1.0` line, which Resolve writes, put the row count off by one and the upload was refused as "LUT size or color domain is invalid". A bare `LUT_3D_SIZE` line raised `IndexError`, which `upload_lut` does not map, so it was a 500.
+- **The fix.** `LUT_3D_INPUT_RANGE lo hi` sets the domain to `lo` and `hi` on all three channels; `LUT_3D_SIZE` without exactly one number is a `ValueError`; a `LUT_1D...` keyword still says "Only 3D .cube LUTs are supported"; any other keyword (a letter-first token with an underscore) is skipped rather than read as a row.
+- **Checked.** A throwaway script outside the repo: a 2-point cube parses plain, with `TITLE` and `LUT_3D_INPUT_RANGE 0.0 1.0`, and with an unknown `LUT_IN_VIDEO_RANGE` line; a bare `LUT_3D_SIZE` and a 1D cube are refused with `ValueError`. ruff clean.
+
 ## 2.15.4 · malformed JSON-RPC answers with a JSON-RPC error
 
 - **What was wrong.** `automation.rpc` passed `params` to the dispatcher whatever its type, so `"params": [1]` raised `AttributeError` at `params.get`, which `rpc` does not catch: HTTP 500, which the MCP tools report as "non-JSON reply". `timeline.cuts` and `timeline.frames` built their source map with `next(iter(MEDIA_DIR.glob(...)))`, and a clip whose media file is gone raised `StopIteration`, which a coroutine turns into `RuntimeError`. On `/api/rpc/ws` any of these, or a frame that is not JSON, ended the socket.
