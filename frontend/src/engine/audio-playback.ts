@@ -54,7 +54,8 @@ export class AudioPlayback {
 
   // A mix is needed when the audio signature moved, not when the project did.
   needsMix(project: ProjectState): boolean {
-    return audioSignature(project) !== this.signature;
+    const signature = audioSignature(project);
+    return signature !== this.signature || (this.pending !== "" && this.pending !== signature);
   }
 
   ready(): boolean {
@@ -72,7 +73,14 @@ export class AudioPlayback {
   // render was requested would rewind the playhead on resume.
   async prepare(project: ProjectState, resumeAt?: () => number | null): Promise<void> {
     const signature = audioSignature(project);
-    if (signature === this.signature || signature === this.pending) return;
+    if (signature === this.signature) {
+      if (this.pending) {
+        this.controller?.abort();
+        this.pending = "";
+      }
+      return;
+    }
+    if (signature === this.pending) return;
     this.pending = signature;
     this.controller?.abort();
     const controller = new AbortController();

@@ -173,6 +173,7 @@ def _describe(entry: dict) -> dict:
         "kind": extras["kind"],
         "style": extras["style"],
         "file": entry["file"],
+        "sha256": entry["sha256"],
         "bytes": entry["bytes"],
         "triangles": entry["triangles"],
         "dimensionsMm": extras["dimensionsMm"],

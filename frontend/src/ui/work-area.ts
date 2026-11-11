@@ -23,9 +23,9 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
     try {
       const raw = localStorage.getItem(STORE);
       const all = raw ? (JSON.parse(raw) as Record<string, { start: number; end: number }>) : {};
-      area = all[key()] ?? wholeProject();
+      area = all[key()] ?? null;
     } catch {
-      area = wholeProject();
+      area = null;
     }
   };
   const save = (): void => {
@@ -40,12 +40,9 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
     }
   };
   const paint = (): void => {
-    if (!area) {
-      if (!bar.hidden) bar.hidden = true;
-      return;
-    }
-    const left = `${area.start * scale()}px`;
-    const width = `${(area.end - area.start) * scale()}px`;
+    const shown = area ?? wholeProject();
+    const left = `${shown.start * scale()}px`;
+    const width = `${(shown.end - shown.start) * scale()}px`;
     if (bar.style.left !== left) bar.style.left = left;
     if (bar.style.width !== width) bar.style.width = width;
     if (bar.hidden && bar.dataset.featureOff !== "true") bar.hidden = false;
@@ -57,10 +54,10 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
   };
 
   const drag = (event: PointerEvent, mode: "start" | "end" | "move"): void => {
-    if (event.button !== 0 || !area) return;
+    if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const from = { ...area };
+    const from = { ...(area ?? wholeProject()) };
     const originX = event.clientX;
     const px = scale();
     const min = 0.1;
@@ -131,7 +128,7 @@ export function installWorkArea(root: HTMLElement, engine: ProjectEngine, ruler:
       load();
       engine.setWorkArea(area);
       paint();
-    }
+    } else if (!area && (changed === "clips" || changed === "timeline")) paint();
   });
   load();
   engine.setWorkArea(area);

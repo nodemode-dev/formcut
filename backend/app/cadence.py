@@ -126,7 +126,8 @@ def solve_clip(clip: dict, rate: float, fps: float, pictures: np.ndarray) -> dic
         {"t": 0, "props": {"scale": 100}, "interp": "linear"},
         {"t": round(clip["duration"], 6), "props": {"scale": end}, "interp": "linear"},
     ]
-    return {"repeats": before, "change": {"keyframes": push}}
+    kept = [key for key in clip.get("keyframes") or [] if isinstance(key, dict)]
+    return {"repeats": before, "change": {"keyframes": sorted([*kept, *push], key=lambda key: key.get("t", 0))}}
 
 
 def _plane_differs(current: np.ndarray, reference: np.ndarray) -> bool:

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -98,6 +99,9 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
     target = proxy_path(media_id)
     staging = target.with_name(f"{media_id}.part.mp4")
     report(0.05)
+    from .encoders import detect
+
+    encoder = "libx264" if "libx264" in (detect().get("h264") or []) else "mpeg4"
     command = [
         "ffmpeg",
         "-hide_banner",
@@ -119,15 +123,10 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         "-r",
         rate,
         "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-tune",
-        "fastdecode",
+        encoder,
+        *(["-preset", "veryfast", "-tune", "fastdecode", "-crf", "23"] if encoder == "libx264" else ["-q:v", "3"]),
         "-g",
         "1",
-        "-crf",
-        "23",
         "-pix_fmt",
         "yuv420p",
         "-metadata:s:v:0",
@@ -136,17 +135,19 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         "+faststart",
         str(staging),
     ]
-    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-    while process.poll() is None:
-        if cancelled():
-            process.kill()
+    with tempfile.TemporaryFile("w+") as log:
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log, text=True)
+        while process.poll() is None:
+            if cancelled():
+                process.kill()
+                staging.unlink(missing_ok=True)
+                raise InterruptedError("Cancelled")
+            time.sleep(0.2)
+        if process.returncode != 0:
+            log.seek(0)
+            error = log.read()[-300:]
             staging.unlink(missing_ok=True)
-            raise InterruptedError("Cancelled")
-        time.sleep(0.2)
-    if process.returncode != 0:
-        error = (process.stderr.read() if process.stderr else "")[-300:]
-        staging.unlink(missing_ok=True)
-        raise ValueError(f"Could not build a proxy: {error}")
+            raise ValueError(f"Could not build a proxy: {error}")
     staging.replace(target)
     made = _ffprobe(target)
     out = next((s for s in made.get("streams", []) if s.get("codec_type") == "video"), {})
@@ -158,7 +159,7 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
                 "width": int(out.get("width") or 0),
                 "height": int(out.get("height") or 0),
                 "fps": rate,
-                "encoder": "libx264",
+                "encoder": encoder,
                 "longSide": long_side,
             }
         ),

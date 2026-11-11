@@ -1,5 +1,5 @@
 import type { ProjectEngine } from "./project";
-import type { Timeline } from "./types";
+import type { ProjectState, Timeline } from "./types";
 import { blankProject, type ProjectFormat } from "./seed";
 
 const API = "/api/projects";
@@ -18,11 +18,15 @@ interface ProjectRecord {
   fps: number;
   timelines: Timeline[];
   activeTimeline?: number;
+  background?: unknown;
+  syncFolder?: string;
+  outputColour?: ProjectState["outputColour"];
 }
 
 export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary | null> {
   const s = engine.snapshot;
   const origin = s.timelines;
+  const key = journalKey(engine);
   const signature = JSON.stringify([s.title, engine.baseFormat, s.timelines, s.activeTimeline]);
   const body = JSON.stringify({
     title: s.title,
@@ -31,6 +35,9 @@ export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary
     fps: engine.baseFormat.fps,
     timelines: s.timelines,
     activeTimeline: s.activeTimeline,
+    background: (s as unknown as Record<string, unknown>).background,
+    syncFolder: s.syncFolder,
+    outputColour: s.outputColour,
     revision: s.revision ?? 0,
   });
   const url = s.projectId ? `${API}/${s.projectId}` : API;
@@ -46,6 +53,8 @@ export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary
       const current = engine.snapshot;
       const unchanged = signature === JSON.stringify([current.title, engine.baseFormat, current.timelines, current.activeTimeline]);
       engine.dispatch("project.saved", { id: record.id, revision: record.revision, unchanged });
+      void clearJournal(key);
+      if (journalKey(engine) !== key) void clearJournal(journalKey(engine));
     }
     return { id: record.id, title: record.title };
   } catch {
@@ -78,6 +87,9 @@ export async function openProject(engine: ProjectEngine, id: string): Promise<bo
       fps: record.fps,
       timelines: record.timelines,
       activeTimeline: record.activeTimeline ?? 0,
+      background: record.background,
+      syncFolder: record.syncFolder,
+      outputColour: record.outputColour,
     });
     return true;
   } catch {
@@ -121,7 +133,7 @@ const journalKey = (engine: ProjectEngine) => engine.snapshot.projectId ?? "unsa
 
 function journalDocument(engine: ProjectEngine) {
   const s = engine.snapshot;
-  return { title: s.title, width: engine.baseFormat.width, height: engine.baseFormat.height, fps: engine.baseFormat.fps, timelines: s.timelines, activeTimeline: s.activeTimeline };
+  return { title: s.title, width: engine.baseFormat.width, height: engine.baseFormat.height, fps: engine.baseFormat.fps, timelines: s.timelines, activeTimeline: s.activeTimeline, background: (s as unknown as Record<string, unknown>).background, syncFolder: s.syncFolder, outputColour: s.outputColour };
 }
 
 export async function listJournals(): Promise<JournalSummary[]> {
@@ -152,6 +164,9 @@ export async function restoreJournal(engine: ProjectEngine, key: string): Promis
       fps: doc.fps,
       timelines: doc.timelines,
       activeTimeline: doc.activeTimeline ?? 0,
+      background: doc.background,
+      syncFolder: doc.syncFolder,
+      outputColour: doc.outputColour,
       saved: false,
     });
     return true;
@@ -181,11 +196,13 @@ export function installAutosave(engine: ProjectEngine, onState: (state: "idle" |
     if (saving) { dirtyWhileSaving = true; return; }
     saving = true;
     onState("saving");
+    const key = journalKey(engine);
     const result = await saveProjectChecked(engine);
     saving = false;
     if (result === "conflict") { onState("conflict"); return; }
     if (result === "saved") {
-      void clearJournal(journalKey(engine));
+      void clearJournal(key);
+      if (journalKey(engine) !== key) void clearJournal(journalKey(engine));
       onState("saved");
     } else {
       onState("idle");
@@ -218,6 +235,7 @@ export async function saveProjectChecked(engine: ProjectEngine): Promise<"saved"
   const body = JSON.stringify({
     title: s.title, width: engine.baseFormat.width, height: engine.baseFormat.height, fps: engine.baseFormat.fps,
     timelines: s.timelines, activeTimeline: s.activeTimeline, revision: s.revision ?? 0,
+    background: (s as unknown as Record<string, unknown>).background, syncFolder: s.syncFolder, outputColour: s.outputColour,
   });
   const url = s.projectId ? `${API}/${s.projectId}` : API;
   try {

@@ -31,6 +31,8 @@ def parse_cube(text: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if not parts or parts[0] == "TITLE":
             continue
         if parts[0] == "LUT_3D_SIZE":
+            if len(parts) != 2:
+                raise ValueError("LUT_3D_SIZE needs one number")
             size = int(parts[1])
             if not 2 <= size <= 65:
                 raise ValueError("LUT grid must be between 2 and 65")
@@ -38,6 +40,14 @@ def parse_cube(text: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             low = np.array([float(x) for x in parts[1:]])
         elif parts[0] == "DOMAIN_MAX":
             high = np.array([float(x) for x in parts[1:]])
+        elif parts[0] == "LUT_3D_INPUT_RANGE":
+            if len(parts) != 3:
+                raise ValueError("LUT_3D_INPUT_RANGE needs two numbers")
+            low, high = np.full(3, float(parts[1])), np.full(3, float(parts[2]))
+        elif parts[0].startswith("LUT_1D"):
+            raise ValueError("Only 3D .cube LUTs are supported")
+        elif parts[0][0].isalpha() and "_" in parts[0]:
+            continue
         elif len(parts) == 3:
             rows.append([float(x) for x in parts])
         else:

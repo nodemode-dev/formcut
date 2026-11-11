@@ -316,7 +316,8 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     }
     selected.clear();
     event.preventDefault();
-  });
+    event.stopImmediatePropagation();
+  }, true);
   const addPointAt = (block: Block, index: number, event: PointerEvent, timeAt: (x: number) => number) => {
     const [low, high] = rangeOf(block.prop, clipsOn(index));
     const box = block.graph.getBoundingClientRect();
@@ -520,16 +521,17 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
         if (!found || !group) return;
         const side = grip.getAttribute("data-grip") === "in" ? 1 : 0;
         const list = propPoints(found.clip, block.prop);
-        const index = list.findIndex((entry) => Math.abs(entry.t - at) < 1e-4);
-        const next = list[index + 1];
-        if (!next) return;
+        const keyIndex = list.findIndex((entry) => Math.abs(entry.t - at) < 1e-4);
+        const next = list[keyIndex + 1];
+        if (keyIndex < 0 || !next) return;
         const box = block.graph.getBoundingClientRect();
-        const x0 = (found.clip.start + list[index].t) * px, x1 = (found.clip.start + next.t) * px;
+        const x0 = (found.clip.start + list[keyIndex].t) * px, x1 = (found.clip.start + next.t) * px;
         const [lowValue, highValue] = rangeOf(block.prop, clipsOn(index));
         const graphH = graphHeight(block.body);
         const toY = (value: number) => graphH - ((value - lowValue) / (highValue - lowValue)) * graphH;
-        const y0 = toY(list[index].v), y1 = toY(next.v);
-        const start = (list[index].handles ?? EASING_HANDLES[list[index].interp] ?? EASING_HANDLES.linear).slice() as [number, number, number, number];
+        const y0 = toY(list[keyIndex].v), y1 = toY(next.v);
+        const start = (list[keyIndex].handles ?? EASING_HANDLES[list[keyIndex].interp] ?? EASING_HANDLES.linear).slice() as [number, number, number, number];
+        let first = true;
         const move = (moveEvent: PointerEvent) => {
           const gx = moveEvent.clientX - box.left;
           const gy = moveEvent.clientY - box.top;
@@ -542,7 +544,8 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
           handles[side ? 3 : 1] = Math.max(-2, Math.min(3, fy));
           const rebuilt = (found.clip.keyframes ?? []).map((frame) =>
             Math.abs(frame.t - at) < 1e-4 ? { ...frame, interp: "bezier" as const, handles } : frame);
-          engine.dispatch("clip.keyframes.replace", { clipId: found.clip.id, keyframes: rebuilt, quiet: true });
+          engine.dispatch("clip.keyframes.replace", { clipId: found.clip.id, keyframes: rebuilt, quiet: !first });
+          first = false;
         };
         const stop = () => {
           window.removeEventListener("pointermove", move);
@@ -699,6 +702,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
   };
 
   engine.subscribe((_state, changed) => {
+    if (changed === "clip-selection" || changed === "timeline") selected.clear();
     if (changed === "clips" || changed === "timeline" || changed === "project") sync();
   });
   new MutationObserver(() => {

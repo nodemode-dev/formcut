@@ -2,6 +2,107 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · an undone audio edit cancels the mix it started
+
+- **What was wrong.** During playback an audio edit starts a mix render for the new signature B while the old buffer A keeps playing. Undoing before B finished brought the signature back to A, so `needsMix` said no and `prepare` was never asked; B then finished, was still `pending`, and was installed and played while the timeline was A, until the next edit or transport change.
+- **What changed.** `needsMix` also answers yes while a render for another signature is in flight, and `prepare`, called with the signature already loaded, aborts that render and clears `pending`. Buffer A keeps playing.
+- **Checked.** A copy of `audio-playback.ts` under `node --experimental-transform-types` with the API, fetch and AudioContext stubbed, driven the way `render-preview.ts` drives it (prepare only when `needsMix`): render A, edit to B, undo to A, let B's job finish. Before the change B's buffer was played; after it only A's.
+
+## 2.15.4 · removing or adding a timeline applies the active one's format
+
+- **What was wrong.** With more than one timeline each can keep its own width, height and frame rate. `timeline.activate` applies the active one's format, but `timeline.remove` did not: removing the active 1080x1920 60 fps timeline made timeline 0 active while the preview, exports and timecode kept 1080x1920 at 60 fps. `timeline.add` and `timeline.import` likewise kept the previous timeline's format, and all three kept clip ids from the old timeline in `selection`.
+- **What changed.** After those three creator commands the engine sets width, height, fps and aspect from the new active timeline, falling back to the project's base format, as `timeline.activate` does, and clears `selection`.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`: after activating a 1080x1920 60 fps timeline, adding one gives 1920x1080 30 with an empty selection, and removing the 60 fps one while active gives 1920x1080 30, aspect 1920:1080.
+
+## 2.15.4 · a tab drag released off the strip ends
+
+- **What was wrong.** The timeline tab drag listened for `pointerup` and `pointercancel` on the strip only, without pointer capture, so a press on a tab released below the strip never ran `release`. The `pointermove` listener stayed, and moving across the tabs afterwards with no button pressed dispatched `timeline.move` and reordered timelines.
+- **What changed.** The move handler releases the drag as soon as it sees a move with the primary button up.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
+## 2.15.4 · easing grips follow the pointer and can be undone
+
+- **What was wrong.** In the graph's grip drag, `const index = list.findIndex(...)` shadowed the lane `index`, so `rangeOf(block.prop, clipsOn(index))` read the clips of the track whose number was the keyframe's position, and the handle's y mapping was wrong. Every move dispatched `quiet: true`, including the first, so no history step was pushed and the reshape folded into the previous undo step or could not be undone.
+- **What changed.** The key's position is `keyIndex` (and the drag returns when the key is not found), so the range uses the lane's own clips; the first move dispatches without `quiet`, as `dragAlong` does, and later moves stay quiet.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
+## 2.15.4 · Delete on box-selected keyframes deletes only the keyframes
+
+- **What was wrong.** `timeline-pane.ts` and `track-keyframes.ts` both listen for Delete and Backspace on the window in the bubble phase, and the timeline's listener was registered first, so with keyframes box-selected and a clip selected (the usual case) Delete removed the clip and then the keys. The keyframe selection was also never cleared, so a later Delete meant for a clip also stripped stale keys.
+- **What changed.** The keyframe listener runs in the capture phase and stops the event once it has deleted keys; it still returns early when no keys are selected, so the clip Delete is unchanged then. The selection is cleared on "clip-selection" and "timeline" events.
+- **Checked.** `tsc --noEmit` is clean. The timeline pane is built in `main.ts` before `installEditorActions` installs the key layouts, so this listener also runs before a layout that binds Delete or Backspace (the Final Cut Pro layout's ripple delete). Not verified in a browser.
+
+## 2.15.4 · a left trim stops at the start of the media
+
+- **What was wrong.** Dragging a video or audio clip's left edge had no lower bound from its source, and `clip.trim` clamped the new source in to 0 instead of refusing. A fresh clip (source in 0) dragged 2 s left started 2 s earlier and was 2 s longer, so every frame played 2 s earlier than before and the tail read past the end of the media. The browser demo (`demo/src/timeline.ts`) already bounds this.
+- **What changed.** The drag records `minStart = start - sourceIn / speedAt(clip, 0)` for video and audio clips and clamps the dragged and snapped start to it. `clip.trim` refuses, with nothing recorded, a video or audio trim whose new source in would fall below 0 (`sourceIn + sourceDelta(clip, offset)`). Text, image and other clips without a timed source are not bounded, as before.
+- **Checked.** `tsc --noEmit` is clean. A copy of the engine under `node --experimental-strip-types`: trimming a 5-10 s clip with source in 0 to start at 3 is refused; with source in 4 at speed 2, a start of 3 is accepted (source in 0) and 2.9 refused; a text clip extends freely. The drag itself was not run in a browser.
+
+## 2.15.4 · keyframe sampling eases the way the renderer does
+
+- **What was wrong.** `samplePoints` in `engine/keyframes.ts` used the old `easeProgress` (smoothstep or a quadratic for three names, linear for every other mode) and ignored dragged handles, while the renderer (`backend/app/timing.py` `ease`) and the graph (`timing.ts` `easeAt`) use the cubic-bezier handles. At p 0.3, ease sampled 0.216 against 0.513 rendered, overshoot 0.300 against 0.907, snap 0.300 against 0.018. The inspector's values, the preview's move, scale and crop handles, and lanes-mode "add key here" (which writes the sampled value) all used the wrong curve.
+- **What changed.** `samplePoints` calls `easeAt(progress, interp, handles)`; the hold early return stays.
+- **Checked.** A copy of the engine under `node --experimental-strip-types` against `property_at` from `backend/app/timing.py` under `python3`: every named mode, hold, a `bezier` with handles and a named mode with handles past the 0 to 1 range, at p 0.1, 0.3, 0.5, 0.7 and 0.9, give identical values to six decimals (60 of 60).
+
+## 2.15.4 · timecode shows the frame the playhead is on
+
+- **What was wrong.** `formatTimecode` took the frame as `floor(fraction of the second * fps)`, which floors values such as 5.9999999, so 1.2 s at 30 fps read 00:00:01:05 and 4.1 s read :02. Frame steps added `n / fps` to the playhead without snapping, so stepping drifted off the frame grid: 22 of the first 90 frames showed the wrong number.
+- **What changed.** The timecode counts whole frames once, `floor(seconds * fps + 1e-6)` at the rounded frame rate, and takes frames, seconds, minutes and hours from that count. `transport.step` moves from the frame the timecode shows (`floor(playhead * fps + 1e-6) + n`) and divides back, so every step lands on the grid. Floor rather than round keeps a mid-frame playhead on the frame being shown.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`: 1.2 s reads :06 and 4.1 s :03; 3000 steps forward and 3000 back at 30 fps give 0 wrong readouts; every frame time `i/30` over ten minutes reads correctly.
+
+## 2.15.4 · range edits cut tails the way a split does
+
+- **What was wrong.** Lift, Extract, Overwrite, Insert, `clip.remove-range`, and Roll and Slide on the clip after the edit moved a cut clip's source by timeline seconds (`sourceIn + offset`) and copied its keyframes and speed curve unchanged. `clip.split` and `clip.trim` already use `sourceTime`, `shiftedCurve` and `retimedKeys`. On a clip at speed 2 from 0 to 10 s, Lift 2-4 gave the tail source in 4 (a split at 4 gives 8), so the tail replayed footage the head had shown, and its keyframe at 8 stayed at 8 instead of 4.
+- **What changed.** One helper, `tailOf(clip, offset, duration)`, beside `carveRange`, returns the clip with source in, speed curve and keyframes moved on by `offset` the way `splitOne` does. Every tail and head-trim in those paths uses it; Roll and Slide apply it to the clip after with the delta, and their "source before its start" check uses `sourceDelta` instead of the raw delta.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`, speed-2 clip with a key at 8: Lift 2-4, Extract 2-4 and 0-4, Insert at 4 and remove-range 2-4 all give the tail source in 8 and the key at 4, as `clip.split` at 4 does; with a speed curve from 1 to 3, Lift and split both give source in 5.6. Roll +1 on a speed-2 clip after gives source in 6 and the key at 7, Roll -1 gives 2 and 9, and Roll -1 with only 1 s of source before is refused.
+
+## 2.15.4 · range edits leave locked tracks alone
+
+- **What was wrong.** The dispatch lock guard covers only commands that start with `clip.`. Lift, Extract (`timeline.cut-range`), Insert and Overwrite loop over every track, so a locked track was carved, split or moved by them, from the timeline toolbar, the Pro tab, a key layout or the extension command.
+- **What changed.** Lift, Extract and Insert's ripple skip locked tracks, and Insert and Overwrite do nothing when their target track is locked. Extract therefore leaves a locked track where it is.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`, a locked 10 s clip beside an unlocked one: Lift, Extract and Insert change only the unlocked track, and Insert or Overwrite aimed at the locked track change nothing.
+
+## 2.15.4 · opening a project starts from a clean slate
+
+- **What was wrong.** `project.load` merged the payload into the state with `Object.assign`, so optional fields the payload did not carry (background, sync folder, output colour) stayed from the previous project, and the engine's marked range (`engine.range`, not part of the document) stayed set: opening B after marking a range in A showed the band on B, and Extract or Lift would cut that span out of B.
+- **What changed.** `project.load` removes `background`, clears `syncFolder`, `outputColour` and the marked range before it applies the payload.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`: after a sync folder, a background and a range in A, loading B gives no background, sync folder undefined and range null.
+
+## 2.15.4 · a relink is not undone with the edit before it
+
+- **What was wrong.** Undo deltas are computed when the next step starts, as a diff of the current document against the copy taken before the step. `media.relink` changed clip media ids without closing the step in flight, so the next Ctrl+Z after (say) a move also put the old, missing media ids back.
+- **What changed.** `media.relink` settles the pending step and clears the fold key before it changes anything. The relink itself stays unrecorded, as before, and no undo reverts it.
+- **Checked.** A copy of the engine run under `node --experimental-strip-types`: move a clip, relink "old" to "new", undo, gives start 0 and media id "new" (before the change: "old").
+
+## 2.15.4 · a save clears the recovery journal it replaces
+
+- **What was wrong.** The journal is keyed by the project id, or "unsaved" for a new project. Autosave cleared `journalKey(engine)` after the save, by which time `project.saved` had set the new id, so a new project's "unsaved" journal stayed and the home screen offered to recover a project that was saved (Restore then made a duplicate). The manual save cleared no journal at all, so with autosave off every saved project was offered again at an older revision.
+- **What changed.** Both save paths read the key before saving and, on success, clear it and also the post-save key when it differs. The manual save clears only when the document was not edited while the save was in flight.
+- **Checked.** `tsc --noEmit` is clean. Not verified against a running backend.
+
+## 2.15.4 · closing Missing media reloads only after a save that worked
+
+- **What was wrong.** Closing the Missing media dialog ran `saveProject` and then `openProject` on the same id without looking at the save's result. When the save failed (a conflict with a newer server copy, or the backend down), the reload replaced the document with the server copy, dropping unsaved edits and the undo history without a word.
+- **What changed.** The project is reopened only when the save returns a record; otherwise the titlebar toast says the action did not work and the document stays as it is.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
+## 2.15.4 · saves keep the background, sync folder and output colour
+
+- **What was wrong.** `saveProject`, `saveProjectChecked` and the recovery journal sent a fixed field list (title, format, timelines, active timeline, revision). The backend keeps extra fields but replaces the whole record on a save, so a background set in the inspector was lost on the next save, a `syncFolder` or `background` set over RPC was wiped by the next interface save, and the opt-in sync folder never reached the backend from the app.
+- **What changed.** The three bodies also carry `background`, `syncFolder` and `outputColour`, and `openProject` and `restoreJournal` read the same keys back into `project.load`. The backend is unchanged.
+- **Checked.** `tsc --noEmit` is clean. Not verified against a running backend.
+
+## 2.15.4 · the work area follows the opened project
+
+- **What was wrong.** The work area reloaded only on a "project" event, and `project.load` never emitted one. At start-up it was set from the seed project (0.1 s long), so `{0, 0.2}` was handed to the engine, and after opening a real project from the home screen Space looped over the first 0.2 s. Opening any project also kept the previous one's work area. With no saved area the default was frozen at the duration seen when it loaded.
+- **What changed.** `project.load` now emits "project" after its other events. `work-area.ts` keeps no area when none is saved for the project, so the engine plays the whole timeline; the bar draws the whole project span in that case (and repaints on clip and timeline changes), and a drag starts from that span. Double-click still clears back to the whole.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
+## 2.15.3 · the last two raw z-index values take a token
+
+- **What moved.** `.fav-star` and `.fx-remove` in `styles/app.css` wrote `z-index: 1`. The scale in `styles/tokens.css` starts at `--z-base: 0`, so `--z-raised: 1` is added and both rules use it. The number is the same, so stacking is unchanged; only the property value was touched.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
 ## 2.15.0 · the three demo films open in the app
 
 - **What was missing.** The start screen's Demo project chip builds a short project from the four engine sample files in examples/demo; it is not any of the repository demos. High Country (demo/), Last Light (demos/grade) and the Walden talk (demos/deliver) existed only as file:// pages. Now each opens in the app; the old chip stays as it was.

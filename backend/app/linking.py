@@ -195,11 +195,12 @@ def search(folder: Path, ids: list[str] | None = None, limit: int = 200_000) -> 
             if name.startswith("."):
                 continue
             path = Path(root) / name
-            by_name.setdefault(name.lower(), []).append(path)
             try:
-                by_size.setdefault(path.stat().st_size, []).append(path)
+                length = path.stat().st_size
             except OSError:
                 continue
+            by_name.setdefault(name.lower(), []).append(path)
+            by_size.setdefault(length, []).append(path)
             seen += 1
         if seen >= limit:
             break
@@ -212,11 +213,20 @@ def search(folder: Path, ids: list[str] | None = None, limit: int = 200_000) -> 
         found = None
         candidates = sorted(by_name.get(name, []), key=lambda p: p.stat().st_size != size)
         for path in candidates:
-            if not mark or path.stat().st_size != size or fingerprint(path) == mark:
-                found = path
-                break
+            try:
+                if not mark or path.stat().st_size != size or fingerprint(path) == mark:
+                    found = path
+                    break
+            except OSError:
+                continue
         if found is None and size and mark:
-            found = next((p for p in by_size.get(size, []) if fingerprint(p) == mark), None)
+            for path in by_size.get(size, []):
+                try:
+                    if fingerprint(path) == mark:
+                        found = path
+                        break
+                except OSError:
+                    continue
         if found is None:
             left.append(entry)
             continue
@@ -234,16 +244,17 @@ def choose(
     system = platform.system()
     title = title or {"open": "Choose files", "folder": "Choose a folder", "save": "Save as"}.get(kind, "Choose")
     if system == "Darwin":
-        quoted = title.replace('"', "'")
+        quoted = title.replace('"', "'").replace("\\", "/")
         if kind == "folder":
             script = f'POSIX path of (choose folder with prompt "{quoted}")'
         elif kind == "save":
-            script = f'POSIX path of (choose file name with prompt "{quoted}" default name "{default_name.replace(chr(34), "")}")'
+            script = f'POSIX path of (choose file name with prompt "{quoted}" default name "{default_name.replace(chr(34), "").replace(chr(92), "")}")'
         else:
             # macOS matches "of type" against registered file types; formcut's own (.fc, .fmc, .fcpreset, .fcui) are not
             # registered, so a filter naming them greyed formcut's own files out. Those dialogs go unfiltered and the
             # caller checks what was chosen; other filters (video, audio, images) stay.
             own = {"fc", "fmc", "fcpreset", "fcui"}
+            types = [t.lstrip(".") for t in types or [] if t.lstrip(".").isascii() and t.lstrip(".").isalnum() and len(t.lstrip(".")) <= 16]
             unfiltered = not types or own.intersection(t.lstrip(".").lower() for t in types)
             of_type = "" if unfiltered else f" of type {{{', '.join(chr(34) + t.lstrip('.') + chr(34) for t in types)}}}"
             many = " with multiple selections allowed" if multiple else ""
@@ -272,7 +283,9 @@ def choose(
         if kind == "folder":
             body = "$d = New-Object System.Windows.Forms.FolderBrowserDialog; if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }"
         elif kind == "save":
-            body = f"$d = New-Object System.Windows.Forms.SaveFileDialog; $d.FileName = '{default_name}'; if ($d.ShowDialog() -eq 'OK') {{ $d.FileName }}"
+            quotes = ("'", chr(0x2018), chr(0x2019), chr(0x201A), chr(0x201B))
+            name = "".join(c * 2 if c in quotes else c for c in default_name if c != '"')
+            body = f"$d = New-Object System.Windows.Forms.SaveFileDialog; $d.FileName = '{name}'; if ($d.ShowDialog() -eq 'OK') {{ $d.FileName }}"
         else:
             body = f"$d = New-Object System.Windows.Forms.OpenFileDialog; $d.Multiselect = ${'true' if multiple else 'false'}; if ($d.ShowDialog() -eq 'OK') {{ $d.FileNames -join \"`n\" }}"
         done = subprocess.run(

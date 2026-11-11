@@ -9,7 +9,7 @@ import {
   type TextStyle,
 } from "./types";
 import { seedProject } from "./seed";
-import { sourceTime, shiftedCurve, retimedKeys } from "./timing";
+import { sourceDelta, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 import { CREATOR_COMMANDS, creatorCommand } from "./creator-commands";
 import { cycleKeyframeInterp, removeKeyframeProp, upsertKeyframe } from "./keyframes";
 import { apply, diff, deltaSize, type Delta } from "./json-delta";
@@ -20,6 +20,15 @@ const FOLD_MS = 500;
 import type { ClipKey, ClipMask, KeyframeProp, TransformProp } from "./types";
 
 type Listener = (state: ProjectState, changed: string) => void;
+
+function tailOf(clip: Clip, offset: number, duration: number): Clip {
+  return {
+    ...structuredClone(clip),
+    sourceIn: sourceTime(clip, offset),
+    speedCurve: shiftedCurve(clip, offset, duration),
+    keyframes: retimedKeys(clip.keyframes, offset, duration),
+  };
+}
 
 /**
  * The Pro tab's three-point edits (from FilmCraft's Premiere workflow): [start, end) taken out of one track in place.
@@ -43,17 +52,16 @@ function carveRange(clips: Clip[], start: number, end: number): { kept: Clip[]; 
       kept.push(clip);
       if (clipEnd > end + 1e-6) {
         kept.push({
-          ...structuredClone(clip),
+          ...tailOf(clip, end - clip.start, clipEnd - end),
           id: crypto.randomUUID(),
           start: end,
           duration: clipEnd - end,
-          sourceIn: (clip.sourceIn ?? 0) + (end - clip.start),
         } as Clip);
       }
       clip.duration = start - clip.start;
       continue;
     }
-    clip.sourceIn = (clip.sourceIn ?? 0) + (end - clip.start);
+    Object.assign(clip, tailOf(clip, end - clip.start, clipEnd - end));
     clip.duration = clipEnd - end;
     clip.start = end;
     kept.push(clip);
@@ -272,6 +280,14 @@ export class ProjectEngine {
       try { creatorCommand(s, command, payload); }
       catch (error) { this.dropPending(true); throw error; }
       if (command === "project.settings" && s.timelines.length === 1) this.baseFormat = { width: s.width, height: s.height, fps: s.fps };
+      if (command === "timeline.remove" || command === "timeline.add" || command === "timeline.import") {
+        const active = s.timelines[s.activeTimeline];
+        s.width = active.width ?? this.baseFormat.width;
+        s.height = active.height ?? this.baseFormat.height;
+        s.fps = active.fps ?? this.baseFormat.fps;
+        s.aspect = `${s.width}:${s.height}`;
+        s.selection = [];
+      }
       s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
       this.emit("clips");
       this.emit("timeline");
@@ -302,7 +318,7 @@ export class ProjectEngine {
         this.emit("playhead");
         break;
       case "transport.step":
-        s.playhead = Math.min(Math.max(s.playhead + (payload as number) / s.fps, 0), s.duration);
+        s.playhead = Math.min(Math.max((Math.floor(s.playhead * s.fps + 1e-6) + (payload as number)) / s.fps, 0), s.duration);
         this.emit("playhead");
         break;
       case "clip.stabilise": {
@@ -433,11 +449,10 @@ export class ProjectEngine {
         const track = s.timelines[s.activeTimeline].tracks[found.trackIndex];
         const clip = found.clip;
         const tail = {
-          ...structuredClone(clip),
+          ...tailOf(clip, p.end - clip.start, Math.max(0.05, clip.start + clip.duration - p.end)),
           id: crypto.randomUUID(),
           start: p.start,
           duration: Math.max(0.05, clip.start + clip.duration - p.end),
-          sourceIn: (clip.sourceIn ?? 0) + (p.end - clip.start),
         };
         clip.duration = Math.max(0.05, p.start - clip.start);
         track.clips.splice(track.clips.indexOf(clip) + 1, 0, tail);
@@ -465,12 +480,12 @@ export class ProjectEngine {
         const after = touching(clip, clips[at + 1]) ? clips[at + 1] : undefined;
         const MIN = 0.05;
         if (command === "edit.roll") {
-          if (!after || clip.duration + delta < MIN || after.duration - delta < MIN || (after.sourceIn ?? 0) + delta < 0) break;
+          if (!after || clip.duration + delta < MIN || after.duration - delta < MIN || (after.sourceIn ?? 0) + sourceDelta(after, delta) < 0) break;
           this.pushHistory();
           clip.duration += delta;
+          Object.assign(after, tailOf(after, delta, after.duration - delta));
           after.start += delta;
           after.duration -= delta;
-          after.sourceIn = (after.sourceIn ?? 0) + delta;
         } else if (command === "edit.slip") {
           if ((clip.sourceIn ?? 0) + delta < 0) break;
           this.pushHistory();
@@ -479,14 +494,14 @@ export class ProjectEngine {
           const room = { start: clips[at - 1] && !before ? clips[at - 1].start + clips[at - 1].duration : 0, end: clips[at + 1] && !after ? clips[at + 1].start : Infinity };
           if (clip.start + delta < room.start - 1e-6 || clip.start + clip.duration + delta > room.end + 1e-6) break;
           if (before && before.duration + delta < MIN) break;
-          if (after && (after.duration - delta < MIN || (after.sourceIn ?? 0) + delta < 0)) break;
+          if (after && (after.duration - delta < MIN || (after.sourceIn ?? 0) + sourceDelta(after, delta) < 0)) break;
           this.pushHistory();
           clip.start += delta;
           if (before) before.duration += delta;
           if (after) {
+            Object.assign(after, tailOf(after, delta, after.duration - delta));
             after.start += delta;
             after.duration -= delta;
-            after.sourceIn = (after.sourceIn ?? 0) + delta;
           }
         }
         for (const each of [clip, before, after]) {
@@ -521,7 +536,7 @@ export class ProjectEngine {
           if (end - start <= 0.01) break;
           this.pushHistory();
           tracks.forEach((track, index) => {
-            if (p.tracks && !p.tracks.includes(index)) return;
+            if (track.locked || (p.tracks && !p.tracks.includes(index))) return;
             const { kept, removed } = carveRange(track.clips, start, end);
             track.clips = kept;
             forget(removed);
@@ -533,7 +548,7 @@ export class ProjectEngine {
         }
         const target = tracks[p.trackIndex ?? -1];
         const clip = p.clip;
-        if (!target || !clip || clip.duration <= 0.01) break;
+        if (!target || target.locked || !clip || clip.duration <= 0.01) break;
         this.pushHistory();
         if (command === "edit.overwrite") {
           const { kept, removed } = carveRange(target.clips, clip.start, clip.start + clip.duration);
@@ -543,6 +558,7 @@ export class ProjectEngine {
           const at = clip.start;
           const length = clip.duration;
           for (const track of tracks) {
+            if (track.locked) continue;
             const next: Clip[] = [];
             for (const each of track.clips) {
               const eachEnd = each.start + each.duration;
@@ -553,11 +569,10 @@ export class ProjectEngine {
                 next.push(each);
               } else {
                 next.push(each, {
-                  ...structuredClone(each),
+                  ...tailOf(each, at - each.start, eachEnd - at),
                   id: crypto.randomUUID(),
                   start: Math.round((at + length) * 1000) / 1000,
                   duration: eachEnd - at,
-                  sourceIn: (each.sourceIn ?? 0) + (at - each.start),
                 } as Clip);
                 each.duration = at - each.start;
               }
@@ -598,6 +613,7 @@ export class ProjectEngine {
         const end = start + length;
         this.pushHistory();
         for (const track of s.timelines[s.activeTimeline].tracks) {
+          if (track.locked) continue;
           const kept: Clip[] = [];
           for (const clip of track.clips) {
             const clipEnd = clip.start + clip.duration;
@@ -611,11 +627,10 @@ export class ProjectEngine {
             }
             if (clip.start < start && clipEnd > end) {
               const tail = {
-                ...structuredClone(clip),
+                ...tailOf(clip, end - clip.start, Math.max(0.05, clipEnd - end)),
                 id: crypto.randomUUID(),
                 start,
                 duration: Math.max(0.05, clipEnd - end),
-                sourceIn: (clip.sourceIn ?? 0) + (end - clip.start),
               };
               clip.duration = Math.max(0.05, start - clip.start);
               kept.push(clip, tail);
@@ -626,7 +641,7 @@ export class ProjectEngine {
               kept.push(clip);
               continue;
             }
-            clip.sourceIn = (clip.sourceIn ?? 0) + (end - clip.start);
+            Object.assign(clip, tailOf(clip, end - clip.start, Math.max(0.05, clipEnd - end)));
             clip.duration = Math.max(0.05, clipEnd - end);
             clip.start = start;
             kept.push(clip);
@@ -894,8 +909,9 @@ export class ProjectEngine {
         const p = payload as { clipId: string; start: number; duration: number };
         const found = this.findClip(p.clipId);
         if (!found || p.duration < 0.1) break;
-        this.pushHistory();
         const offset = p.start - found.clip.start;
+        if ((found.clip.kind === "video" || found.clip.kind === "audio") && (found.clip.sourceIn ?? 0) + sourceDelta(found.clip, offset) < -1e-6) break;
+        this.pushHistory();
         const previous = structuredClone(found.clip);
         found.clip.start = Math.max(0, Math.round(p.start * 100) / 100);
         found.clip.sourceIn = sourceTime(previous, offset);
@@ -995,6 +1011,10 @@ export class ProjectEngine {
       }
       case "project.load": {
         const p = payload as Partial<ProjectState>;
+        delete (s as unknown as Record<string, unknown>).background;
+        s.syncFolder = undefined;
+        s.outputColour = undefined;
+        this.range = null;
         Object.assign(s, structuredClone(p));
         s.revision = p.revision ?? 0;
         s.activeTimeline = s.timelines[p.activeTimeline ?? 0] ? (p.activeTimeline ?? 0) : 0;
@@ -1022,6 +1042,7 @@ export class ProjectEngine {
         this.emit("clip-selection");
         this.emit("playhead");
         this.emit("transport");
+        this.emit("project");
         break;
       }
       case "clip.timing": {
@@ -1307,6 +1328,8 @@ export class ProjectEngine {
       }
       case "media.relink": {
         const map = payload as Record<string, string>;
+        this.settlePending();
+        this.foldKey = null;
         let changed = false;
         for (const timeline of s.timelines) {
           for (const track of timeline.tracks) {
@@ -1428,11 +1451,12 @@ export class ProjectEngine {
 }
 
 export function formatTimecode(seconds: number, fps: number): string {
-  const total = Math.max(0, seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = Math.floor(total % 60);
-  const f = Math.floor((total - Math.floor(total)) * fps);
+  const rate = Math.max(1, Math.round(fps));
+  const frames = Math.floor(Math.max(0, seconds) * rate + 1e-6);
+  const h = Math.floor(frames / rate / 3600);
+  const m = Math.floor(frames / rate / 60) % 60;
+  const s = Math.floor(frames / rate) % 60;
+  const f = frames % rate;
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(h)}:${p(m)}:${p(s)}:${p(f)}`;
 }

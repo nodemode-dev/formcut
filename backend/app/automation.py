@@ -368,20 +368,32 @@ def apply_edit(project: dict, command: dict):
                 elif clip["start"] >= start - 1e-6 and clip_end <= end + 1e-6:
                     continue
                 elif clip["start"] < start and clip_end > end:
+                    offset = end - clip["start"]
                     tail = {
                         **clip,
                         "id": uuid.uuid4().hex,
                         "start": start,
                         "duration": max(0.05, clip_end - end),
-                        "sourceIn": clip.get("sourceIn", 0) + (end - clip["start"]),
+                        "sourceIn": source_time(clip, offset),
+                        "keyframes": [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])],
                     }
+                    if clip.get("speedCurve"):
+                        tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                            {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+                        ]
                     clip["duration"] = max(0.05, start - clip["start"])
                     kept += [clip, tail]
                 elif clip["start"] < start:
                     clip["duration"] = max(0.05, start - clip["start"])
                     kept.append(clip)
                 else:
-                    clip["sourceIn"] = clip.get("sourceIn", 0) + (end - clip["start"])
+                    offset = end - clip["start"]
+                    clip["sourceIn"] = source_time(clip, offset)
+                    clip["keyframes"] = [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])]
+                    if clip.get("speedCurve"):
+                        clip["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                            {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+                        ]
                     clip["duration"] = max(0.05, clip_end - end)
                     clip["start"] = start
                     kept.append(clip)
@@ -535,7 +547,9 @@ def dispatch(method: str, params: dict):
         ]
         missing = sorted({c["mediaId"] for c in sounding if not (SPEECH_CACHE / f"{c['mediaId']}.npy").exists()})
         if missing:
-            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*"))) for m in missing}
+            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in missing}
+            if None in sources.values():
+                raise ValueError("Media file is missing")
 
             def listen(job_id, report, cancelled):
                 for media_id, path in sources.items():
@@ -569,7 +583,9 @@ def dispatch(method: str, params: dict):
         clips = [c for track in timeline["tracks"] for c in track["clips"] if c.get("kind") == "video" and c.get("mediaId")]
         missing = sorted({c["mediaId"] for c in clips if not (CACHE / f"{c['mediaId']}.npy").exists()})
         if missing:
-            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*"))) for m in missing}
+            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in missing}
+            if None in sources.values():
+                raise ValueError("Media file is missing")
 
             def measure(job_id, report, cancelled):
                 for media_id, path in sources.items():
@@ -964,18 +980,28 @@ def rpc(message):
     request_id = message.get("id") if isinstance(message, dict) else None
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str):
         return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32600, "message": "Invalid JSON-RPC request"}}
+    params = message.get("params") or {}
+    if not isinstance(params, dict):
+        return (
+            {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": "params must be an object"}}
+            if "id" in message
+            else None
+        )
     try:
-        result = dispatch(message["method"], message.get("params") or {})
+        result = dispatch(message["method"], params)
         return {"jsonrpc": "2.0", "id": request_id, "result": result} if "id" in message else None
     except (ValueError, KeyError, IndexError, TypeError, HTTPException) as exc:
         return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": str(exc)}} if "id" in message else None
+
+
+OFF_LOOP = ("extensions.", "media.qc", "media.import", "media.scenes", "media.music", "media.beats", "media.ducking", "speech.range")
 
 
 @router.post("")
 async def http_rpc(request: Request):
     try:
         message = await request.json()
-        if isinstance(message, dict) and str(message.get("method", "")).startswith("extensions."):
+        if isinstance(message, dict) and str(message.get("method", "")).startswith(OFF_LOOP):
             return await run_in_threadpool(rpc, message)
         return rpc(message)
     except (ValueError, UnicodeError):
@@ -990,8 +1016,12 @@ async def websocket_rpc(socket: WebSocket):
     await socket.accept()
     try:
         while True:
-            message = await socket.receive_json()
-            if isinstance(message, dict) and str(message.get("method", "")).startswith("extensions."):
+            try:
+                message = await socket.receive_json()
+            except (ValueError, KeyError):
+                await socket.send_json({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Invalid JSON"}})
+                continue
+            if isinstance(message, dict) and str(message.get("method", "")).startswith(OFF_LOOP):
                 response = await run_in_threadpool(rpc, message)
             else:
                 response = rpc(message)

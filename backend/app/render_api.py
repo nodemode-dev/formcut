@@ -98,23 +98,17 @@ def create_session(body: RenderInput):
         cache = FrameCache(project)
 
         def render_locked(at: float):
-            # Read-ahead feeds playback, which may use proxies.
             with lock:
-                renderer.allow_proxy = True
-                try:
-                    # step 4 of the HDR working space: a deep frame is rolled off for the SDR monitor here,
-                    # after the whole frame is composed, so the edit happens in the transfer and only the
-                    # picture shown is SDR
-                    return rolloff_for_display(renderer.frame(at), renderer.transfer)
-                finally:
-                    renderer.allow_proxy = False
+                current = _sessions[session_id]["renderer"]
+                current.allow_proxy = False
+                return current.frame(at)
 
         _sessions[session_id] = {
             "renderer": renderer,
             "lock": lock,
             "touched": time.monotonic(),
             "cache": cache,
-            "ahead": ReadAhead(render_locked, cache, project["fps"]),
+            "ahead": ReadAhead(render_locked, cache, project["fps"], tag="orig"),
         }
     return {"id": session_id, "width": renderer.width, "height": renderer.height, "duration": project["duration"]}
 
@@ -656,7 +650,7 @@ def export_media(
                 # the frame path renders frame k at k / rate; the file's frame k is read by index, not by a seek,
                 # and decoded through the file's own colour tags into full-range RGB as the renderer's frame is
                 index = max(0, int(count) // 2)
-                middle = index / float(out_rate)
+                middle = index / float(Fraction(out_rate))
                 probe = subprocess.run(
                     [
                         "ffmpeg",

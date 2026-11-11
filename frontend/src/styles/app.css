@@ -1011,7 +1011,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 
 .fx-card { position: relative; }
 .fx-card.is-fav { order: -1; }
-.fav-star { position: absolute; top: 2px; right: 2px; z-index: 1; padding: 0 3px; border: 0; background: transparent; color: var(--ink-faint); font-size: 13px; line-height: 1; cursor: pointer; }
+.fav-star { position: absolute; top: 2px; right: 2px; z-index: var(--z-raised); padding: 0 3px; border: 0; background: transparent; color: var(--ink-faint); font-size: 13px; line-height: 1; cursor: pointer; }
 .fx-card.is-fav .fav-star { color: var(--cue); }
 .audition-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: var(--z-clip); pointer-events: none; background: var(--ground); }
 .audition-frame[hidden] { display: none; }
@@ -1524,7 +1524,7 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
 .fx-registry-desc { grid-column: 1; font-size: 11px; line-height: 1.4; color: var(--ink-soft); }
 .fx-registry-install { grid-column: 2; grid-row: 1 / span 2; }
 .fx-card { position: relative; }
-.fx-remove { position: absolute; top: 6px; left: 6px; z-index: 1; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--edge); background: var(--pane); color: var(--ink); font-size: 14px; line-height: 1; opacity: 0; transition: opacity 120ms; }
+.fx-remove { position: absolute; top: 6px; left: 6px; z-index: var(--z-raised); width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--edge); background: var(--pane); color: var(--ink); font-size: 14px; line-height: 1; opacity: 0; transition: opacity 120ms; }
 .fx-card:hover .fx-remove, .fx-remove:focus-visible { opacity: 1; }
 /* The inspector's two tab rows fill their width: each button grows to share the
    spare room but never shrinks below its own label (German stays unclipped), and

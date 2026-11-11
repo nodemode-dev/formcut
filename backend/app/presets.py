@@ -18,6 +18,7 @@ import uuid
 import zipfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import Response
@@ -113,7 +114,10 @@ def export_preset(preset_id: str) -> Response:
             return Response(
                 content=payload,
                 media_type="application/json",
-                headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+                headers={
+                    "Content-Disposition": f'attachment; filename="{fname if fname.isascii() else "preset.fcpreset"}"; '
+                    f"filename*=UTF-8''{quote(fname)}"
+                },
             )
     raise HTTPException(status_code=404, detail="unknown preset")
 

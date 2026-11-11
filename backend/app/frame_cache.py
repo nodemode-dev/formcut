@@ -105,9 +105,10 @@ def _all_clips(project: dict) -> list[dict]:
 class ReadAhead:
     """Renders a short run past the playhead on one background worker."""
 
-    def __init__(self, render, cache: FrameCache, fps: float, ahead: float = 1.5):
+    def __init__(self, render, cache: FrameCache, fps: float, ahead: float = 1.5, tag: str = ""):
         self.render = render
         self.cache = cache
+        self.tag = tag
         self.fps = max(1.0, float(fps))
         self.ahead = ahead
         self.target = 0.0
@@ -138,9 +139,9 @@ class ReadAhead:
                 at = start + index * step
                 if at > self.cache.project.get("duration", 0):
                     break
-                if self.cache.get(at) is not None:
+                if self.cache.get(at, self.tag) is not None:
                     continue
                 try:
-                    self.cache.put(at, self.render(at))
+                    self.cache.put(at, self.render(at), self.tag)
                 except Exception:
                     break

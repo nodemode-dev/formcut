@@ -75,6 +75,15 @@ class LocalOnly:
                     allowed = False
                 if not allowed and scope.get("method") in ("GET", "HEAD") and scope.get("path", "").startswith("/api/extensions/files/"):
                     allowed = loopback(client) and loopback(host)
+                if (
+                    not allowed
+                    and scope["type"] == "http"
+                    and scope.get("method") == "GET"
+                    and scope.get("path") in ("/api/cloud/google/callback", "/api/connect/tiktok/callback/")
+                    and headers.get("sec-fetch-mode", "navigate").strip().lower() == "navigate"
+                    and headers.get("sec-fetch-dest", "document").strip().lower() == "document"
+                ):
+                    allowed = loopback(client) and loopback(host)
                 if not allowed and remote_token():
                     # P11: remote access is off unless a token is set in the engine,
                     # and then every request must present it. Loopback is untouched.

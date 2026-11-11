@@ -19,7 +19,10 @@ OPERATORS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mu
 def evaluate(expression: str, time: float, duration: float, value: float) -> float:
     if len(expression) > 512:
         raise ValueError("Expression is too long")
-    root = ast.parse(expression, mode="eval")
+    try:
+        root = ast.parse(expression, mode="eval")
+    except (SyntaxError, RecursionError, MemoryError) as exc:
+        raise ValueError("Expression could not be parsed") from exc
     if sum(1 for _ in ast.walk(root)) > 100:
         raise ValueError("Expression is too complex")
     variables = {"t": time, "duration": duration, "value": value, "pi": math.pi}
@@ -45,7 +48,10 @@ def evaluate(expression: str, time: float, duration: float, value: float) -> flo
             return FUNCTIONS[node.func.id](*(visit(arg) for arg in node.args))
         raise ValueError("Only arithmetic, t, duration, value and named math functions are allowed")
 
-    result = float(visit(root))
+    try:
+        result = float(visit(root))
+    except (ArithmeticError, TypeError) as exc:
+        raise ValueError("Expression could not be evaluated") from exc
     if not math.isfinite(result) or abs(result) > 1e6:
         raise ValueError("Expression result is outside the supported range")
     return result

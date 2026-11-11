@@ -1,5 +1,7 @@
 import base64
 import io
+import re
+import uuid
 
 from fastapi import UploadFile
 
@@ -27,7 +29,10 @@ def gather(project: dict):
                 ]:
                     key = holder.get(field)
                     if key and key not in found:
-                        path = asset_path(key, suffix)
+                        try:
+                            path = asset_path(key, suffix)
+                        except ValueError:
+                            continue
                         found[key] = {
                             "type": field,
                             "source": base64.b64encode(path.read_bytes()).decode() if suffix == ".font" else path.read_text(),
@@ -69,7 +74,10 @@ def restore(item: dict):
         elif asset["type"] == "lutId":
             result = upload_lut(UploadFile(filename="Template color.cube", file=io.BytesIO(source.encode())))
         elif asset["type"] == "mediaId":
-            staged = MEDIA_DIR.parent / ("template-" + key + asset.get("suffix", ".bin"))
+            suffix = str(asset.get("suffix") or ".bin").lower()
+            if not re.fullmatch(r"\.[a-z0-9]{1,8}", suffix):
+                raise ValueError("Invalid template media suffix")
+            staged = MEDIA_DIR.parent / ("template-" + uuid.uuid4().hex + suffix)
             staged.parent.mkdir(parents=True, exist_ok=True)
             staged.write_bytes(base64.b64decode(source, validate=True))
             try:

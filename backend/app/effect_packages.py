@@ -172,6 +172,8 @@ def _check_chain(template: str, declarations: dict) -> str | None:
     for slot in SLOT.findall(template):
         if slot not in declarations:
             return f"the chain uses {{{slot}}} but declares no such parameter"
+    if re.search(r"[;\[\]'\"\\]", template):
+        return "a chain is one list of filters separated by commas"
     # A chain is filters separated by commas; each filter is name=args or name.
     for step in template.split(","):
         head = step.strip().split("=", 1)[0].strip()
