@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · malformed JSON-RPC answers with a JSON-RPC error
+
+- **What was wrong.** `automation.rpc` passed `params` to the dispatcher whatever its type, so `"params": [1]` raised `AttributeError` at `params.get`, which `rpc` does not catch: HTTP 500, which the MCP tools report as "non-JSON reply". `timeline.cuts` and `timeline.frames` built their source map with `next(iter(MEDIA_DIR.glob(...)))`, and a clip whose media file is gone raised `StopIteration`, which a coroutine turns into `RuntimeError`. On `/api/rpc/ws` any of these, or a frame that is not JSON, ended the socket.
+- **The fix.** `params` that is not an object answers -32602 "params must be an object". The two source maps use `next(..., None)` and raise `ValueError("Media file is missing")`, which `rpc` already answers as -32602. The websocket answers a frame that does not parse as JSON (or is binary) with -32700 and keeps the connection.
+- **Checked.** A throwaway script outside the repo: the report's `session.hello` with `[1]` answers HTTP 200 with the -32602 error; on the websocket, text that is not JSON and a binary frame each get -32700 and the next request on the same socket is answered. The missing-media path was not run. ruff clean. `tests/test_agent_connection.py`: 7 passed, 1 failed (`test_an_agent_drives_the_running_engine` starts the real engine, which needs uvicorn and OpenCV, not installed here).
+
 ## 2.15.4 · a closed terminal leaves no zombie, and an exited shell closes its pane
 
 - **What was wrong.** `terminal.Session.close` sent SIGHUP and at once called `waitpid(pid, WNOHANG)`; the shell had not exited yet, so it was never reaped and each closed pane left a zombie until the engine stopped. When the shell exited by itself (`exit`), the reader's `None` only ended the sender, the socket stayed open, and the next keystroke's `os.write` raised `OSError` (EIO) out of the handler.

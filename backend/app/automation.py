@@ -547,7 +547,9 @@ def dispatch(method: str, params: dict):
         ]
         missing = sorted({c["mediaId"] for c in sounding if not (SPEECH_CACHE / f"{c['mediaId']}.npy").exists()})
         if missing:
-            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*"))) for m in missing}
+            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in missing}
+            if None in sources.values():
+                raise ValueError("Media file is missing")
 
             def listen(job_id, report, cancelled):
                 for media_id, path in sources.items():
@@ -581,7 +583,9 @@ def dispatch(method: str, params: dict):
         clips = [c for track in timeline["tracks"] for c in track["clips"] if c.get("kind") == "video" and c.get("mediaId")]
         missing = sorted({c["mediaId"] for c in clips if not (CACHE / f"{c['mediaId']}.npy").exists()})
         if missing:
-            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*"))) for m in missing}
+            sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in missing}
+            if None in sources.values():
+                raise ValueError("Media file is missing")
 
             def measure(job_id, report, cancelled):
                 for media_id, path in sources.items():
@@ -976,8 +980,15 @@ def rpc(message):
     request_id = message.get("id") if isinstance(message, dict) else None
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str):
         return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32600, "message": "Invalid JSON-RPC request"}}
+    params = message.get("params") or {}
+    if not isinstance(params, dict):
+        return (
+            {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": "params must be an object"}}
+            if "id" in message
+            else None
+        )
     try:
-        result = dispatch(message["method"], message.get("params") or {})
+        result = dispatch(message["method"], params)
         return {"jsonrpc": "2.0", "id": request_id, "result": result} if "id" in message else None
     except (ValueError, KeyError, IndexError, TypeError, HTTPException) as exc:
         return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": str(exc)}} if "id" in message else None
@@ -1005,7 +1016,11 @@ async def websocket_rpc(socket: WebSocket):
     await socket.accept()
     try:
         while True:
-            message = await socket.receive_json()
+            try:
+                message = await socket.receive_json()
+            except (ValueError, KeyError):
+                await socket.send_json({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Invalid JSON"}})
+                continue
             if isinstance(message, dict) and str(message.get("method", "")).startswith(OFF_LOOP):
                 response = await run_in_threadpool(rpc, message)
             else:
