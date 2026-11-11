@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · saves keep the background, sync folder and output colour
+
+- **What was wrong.** `saveProject`, `saveProjectChecked` and the recovery journal sent a fixed field list (title, format, timelines, active timeline, revision). The backend keeps extra fields but replaces the whole record on a save, so a background set in the inspector was lost on the next save, a `syncFolder` or `background` set over RPC was wiped by the next interface save, and the opt-in sync folder never reached the backend from the app.
+- **What changed.** The three bodies also carry `background`, `syncFolder` and `outputColour`, and `openProject` and `restoreJournal` read the same keys back into `project.load`. The backend is unchanged.
+- **Checked.** `tsc --noEmit` is clean. Not verified against a running backend.
+
 ## 2.15.4 · the work area follows the opened project
 
 - **What was wrong.** The work area reloaded only on a "project" event, and `project.load` never emitted one. At start-up it was set from the seed project (0.1 s long), so `{0, 0.2}` was handed to the engine, and after opening a real project from the home screen Space looped over the first 0.2 s. Opening any project also kept the previous one's work area. With no saved area the default was frozen at the duration seen when it loaded.
