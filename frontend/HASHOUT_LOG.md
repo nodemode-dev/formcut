@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · easing grips follow the pointer and can be undone
+
+- **What was wrong.** In the graph's grip drag, `const index = list.findIndex(...)` shadowed the lane `index`, so `rangeOf(block.prop, clipsOn(index))` read the clips of the track whose number was the keyframe's position, and the handle's y mapping was wrong. Every move dispatched `quiet: true`, including the first, so no history step was pushed and the reshape folded into the previous undo step or could not be undone.
+- **What changed.** The key's position is `keyIndex` (and the drag returns when the key is not found), so the range uses the lane's own clips; the first move dispatches without `quiet`, as `dragAlong` does, and later moves stay quiet.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
 ## 2.15.4 · Delete on box-selected keyframes deletes only the keyframes
 
 - **What was wrong.** `timeline-pane.ts` and `track-keyframes.ts` both listen for Delete and Backspace on the window in the bubble phase, and the timeline's listener was registered first, so with keyframes box-selected and a clip selected (the usual case) Delete removed the clip and then the keys. The keyframe selection was also never cleared, so a later Delete meant for a clip also stripped stale keys.
