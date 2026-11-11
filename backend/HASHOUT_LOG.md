@@ -2,6 +2,13 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the frame check's keep-alive push keeps a clip's other keyframes
+
+- **What was wrong.** When no source shift or speed-up frees a clip of repeated pictures, `cadence.solve_clip` answers with a scale push, and `timeline.frames` with `fix` applies it as `clip.update` with `{"keyframes": push}`, replacing the whole list. A hold carrying posX, opacity or effect keys lost all of them.
+- **The fix.** The change is the clip's existing keyframes plus the two push keys, sorted by time. `solve_clip` only reaches the push when the clip has no scale key (`pushed`), so nothing the push sets is duplicated; keys of other properties at the same time are read per property, as `focus_motion.merged_keyframes` already relies on.
+- **Not changed.** The push still compounds 0.1 % per output frame, so a long hold ends far above 100 % (about 135 % at 10 s, 605 % at 60 s). Capping it would let the last frames of a long hold repeat again, so the limit is left to the owner.
+- **Checked.** A throwaway script outside the repo: a 2 s hold with two posX keys comes back with both posX keys and the scale keys 100 and 106.18. ruff clean.
+
 ## 2.15.4 · timeline.cut-range keeps a sped-up clip's tail on the right footage
 
 - **What was wrong.** The RPC's `timeline.cut-range` in `app/automation.py` moved a kept tail's `sourceIn` on by timeline seconds (`sourceIn + (end - start)`), where `clip.split` uses `source_time`. At 2x the tail of a 2 to 4 s cut restarted at source 4 s instead of 8 s, replaying the words the remove-speech workflow meant to take out. Its keyframes and speed curve also kept their old clip-local times.
