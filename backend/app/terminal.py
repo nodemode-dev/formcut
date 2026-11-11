@@ -104,8 +104,12 @@ class Session:
                 os.kill(self.pid, signal.SIGHUP)
             with contextlib.suppress(OSError):
                 os.close(self.fd)
-            with contextlib.suppress(OSError):
-                os.waitpid(self.pid, os.WNOHANG)
+
+            def reap(pid: int) -> None:
+                with contextlib.suppress(OSError):
+                    os.waitpid(pid, 0)
+
+            threading.Thread(target=reap, args=(self.pid,), daemon=True).start()
         elif self.process:
             self.process.kill()
 
@@ -161,6 +165,8 @@ async def terminal(socket: WebSocket) -> None:
         while True:
             data = await queue.get()
             if data is None:
+                with contextlib.suppress(RuntimeError, OSError, WebSocketDisconnect):
+                    await socket.close()
                 break
             await socket.send_text(data.decode("utf-8", errors="replace"))
 
@@ -176,7 +182,10 @@ async def terminal(socket: WebSocket) -> None:
                 if isinstance(control.get("resize"), list) and len(control["resize"]) == 2:
                     session.resize(int(control["resize"][0]), int(control["resize"][1]))
                     continue
-            session.write(message.encode("utf-8"))
+            try:
+                session.write(message.encode("utf-8"))
+            except OSError:
+                break
     except WebSocketDisconnect:
         pass
     finally:

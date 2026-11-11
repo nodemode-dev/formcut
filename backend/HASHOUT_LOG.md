@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · a closed terminal leaves no zombie, and an exited shell closes its pane
+
+- **What was wrong.** `terminal.Session.close` sent SIGHUP and at once called `waitpid(pid, WNOHANG)`; the shell had not exited yet, so it was never reaped and each closed pane left a zombie until the engine stopped. When the shell exited by itself (`exit`), the reader's `None` only ended the sender, the socket stayed open, and the next keystroke's `os.write` raised `OSError` (EIO) out of the handler.
+- **The fix.** `close` reaps the shell with a blocking `waitpid` on a daemon thread. The sender closes the socket when the reader ends (errors from a socket already gone are ignored), and a write that fails with `OSError` ends the loop, so the `finally` cleans up as on a disconnect.
+- **Checked.** A throwaway script outside the repo with `/bin/sh` through the real route: five panes opened and closed left no `Z` child of the process, and typing `exit` closed the socket with 1000. ruff clean. Windows path (pipe-driven cmd.exe) not run.
+
 ## 2.15.4 · formcut.bat mcp and agents pass on python's exit code
 
 - **What was wrong.** In `formcut.bat` (the launcher at the top of the checkout; there is no log beside it, so it is noted here with the engine it starts) the `mcp` and `agents` branches ended with `exit /b %ERRORLEVEL%` inside a parenthesised `if` block. cmd expands `%ERRORLEVEL%` when it parses the block, before python runs, so the script exited with the earlier level (normally 0) and `formcut.bat agents sync --check` never failed on drift.
