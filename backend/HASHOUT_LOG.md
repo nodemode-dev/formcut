@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · a credentials file restored from its backup stays private
+
+- **What was wrong.** `durable.read_json` restores a missing or damaged file from `<name>.bak` with `write_json(..., keep_backup=False)` and no `private`, so `providers.json` or `cloud.json` (written 0600, holding API keys and OAuth tokens) came back with the umask default, usually 0644.
+- **The fix.** The restoring write is private when the backup itself grants nothing to group or others (`st_mode & 0o077 == 0`); a private file's backup is written 0600 by `write_json`, so the restored file keeps that mode. Callers did not change.
+- **Checked.** A throwaway script outside the repo under umask 022: a file written private, then deleted, is restored 0600; one written normally is restored 0644. `tests/test_durable.py`: 4 passed. ruff clean.
+
 ## 2.15.4 · the exported mix follows keyed volume
 
 - **What was wrong.** `audio_render.mix_audio` built its own envelope from the fades times the static `volume`, so a clip's `volumeKeys` (accepted by `clip.update`, listed in the RPC capabilities, checked by `validation.py`) never reached the export. `clip_envelope`, the curve `render_api.clip_audio`'s docstring says the export applies, was never called by the export.

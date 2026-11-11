@@ -61,7 +61,7 @@ def read_json(path: Path, default):
         return json.loads(json.dumps(default))
     _say(f"{path.name} restored from {path.name}.bak")
     with contextlib.suppress(OSError):
-        write_json(path, data, keep_backup=False)
+        write_json(path, data, private=_backup(path).stat().st_mode & 0o077 == 0, keep_backup=False)
     return data
 
 
