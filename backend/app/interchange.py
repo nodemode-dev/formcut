@@ -37,11 +37,20 @@ def _seconds(rt: dict | None) -> float:
     return float(rt.get("value") or 0.0) / rate
 
 
-def _timecode(seconds: float, fps: float) -> str:
-    """Non-drop timecode at the nearest whole rate."""
+def _frame_index(seconds: float, fps: float) -> int:
+    """The frame a time falls in, at the exact rate: the grid the window's formatTimecode and frame step use."""
     base = max(1, round(fps))
-    frames = round(seconds * base)
+    return math.floor(max(0.0, seconds) * (fps if fps > 0 else base) + 1e-6)
+
+
+def _label(frames: int, fps: float) -> str:
+    base = max(1, round(fps))
     return f"{frames // (3600 * base):02d}:{frames // (60 * base) % 60:02d}:{frames // base % 60:02d}:{frames % base:02d}"
+
+
+def _timecode(seconds: float, fps: float, offset_frames: int = 0) -> str:
+    """Non-drop timecode: the exact-rate frame index, labelled at the nearest whole rate."""
+    return _label(_frame_index(seconds, fps) + offset_frames, fps)
 
 
 def _frames(code: str, fps: float, drop: bool) -> int:
@@ -248,7 +257,7 @@ EVENT = re.compile(
     r"^\s*(\d{3,6})\s+(\S+)\s+(\S+)\s+(C|D|W\d+|K\s*B?|K\s*O)\s+(\d+\s+)?"
     r"(\d\d[:;]\d\d[:;]\d\d[:;.]\d\d)\s+(\d\d[:;]\d\d[:;]\d\d[:;.]\d\d)\s+(\d\d[:;]\d\d[:;]\d\d[:;.]\d\d)\s+(\d\d[:;]\d\d[:;]\d\d[:;.]\d\d)"
 )
-RECORD_START = 3600.0  # 01:00:00:00, where a CMX record starts by convention
+RECORD_START_HOURS = 1  # 01:00:00:00, where a CMX record starts by convention
 
 
 def export_edl(project: dict, track_index: int, timeline_index: int | None = None) -> tuple[str, list[str]]:
@@ -270,10 +279,11 @@ def export_edl(project: dict, track_index: int, timeline_index: int | None = Non
         source_in = float(clip.get("sourceIn") or 0.0)
         speed = float(clip.get("speed") or 1.0)
         source_out = source_in + clip["duration"] * speed
-        record_in = RECORD_START + clip["start"]
-        record_out = record_in + clip["duration"]
+        record = RECORD_START_HOURS * 3600 * max(1, round(fps))
+        record_in = _timecode(clip["start"], fps, record)
+        record_out = _timecode(clip["start"] + clip["duration"], fps, record)
         lines.append(
-            f"{event:03d}  AX       {channel:<5} C        {_timecode(source_in, fps)} {_timecode(source_out, fps)} {_timecode(record_in, fps)} {_timecode(record_out, fps)}"
+            f"{event:03d}  AX       {channel:<5} C        {_timecode(source_in, fps)} {_timecode(source_out, fps)} {record_in} {record_out}"
         )
         if abs(speed - 1.0) > 1e-6:
             lines.append(f"M2   AX       {fps * speed:05.1f}                {_timecode(source_in, fps)}")
@@ -303,7 +313,7 @@ def import_edl(text: str, media: list[dict], fps: float) -> tuple[dict, list[str
             events[-1]["name"] = comment.group(1).strip()
     if not events:
         raise ValueError("No CMX 3600 events in this file")
-    base = max(1, round(fps))
+    rate = fps if fps > 0 else 1.0
     origin = min(e["codes"][2] for e in events)
     lanes: dict[str, dict] = {}
     for e in events:
@@ -318,10 +328,10 @@ def import_edl(text: str, media: list[dict], fps: float) -> tuple[dict, list[str
             "id": str(uuid.uuid4()),
             "kind": found["kind"],
             "label": found["name"],
-            "start": round((record_in - origin) / base, 6),
-            "duration": round(max(1, record_out - record_in) / base, 6),
+            "start": round((record_in - origin) / rate, 6),
+            "duration": round(max(1, record_out - record_in) / rate, 6),
             "mediaId": found["id"],
-            "sourceIn": round(source_in / base, 6),
+            "sourceIn": round(source_in / rate, 6),
         }
         if found["kind"] == "video":
             clip["filmstrip"] = True

@@ -1450,6 +1450,13 @@ export class ProjectEngine {
   }
 }
 
+export const RULER_TICK_SECONDS = 2;
+
+export function rulerTickTime(index: number, fps: number): number {
+  const rate = Math.max(1, Math.round(fps));
+  return (index * RULER_TICK_SECONDS * rate) / (fps > 0 ? fps : rate);
+}
+
 export function formatTimecode(seconds: number, fps: number): string {
   const rate = Math.max(1, Math.round(fps));
   const frames = Math.floor(Math.max(0, seconds) * (fps > 0 ? fps : rate) + 1e-6);
