@@ -901,8 +901,9 @@ export class ProjectEngine {
         const p = payload as { clipId: string; start: number; duration: number };
         const found = this.findClip(p.clipId);
         if (!found || p.duration < 0.1) break;
-        this.pushHistory();
         const offset = p.start - found.clip.start;
+        if ((found.clip.kind === "video" || found.clip.kind === "audio") && (found.clip.sourceIn ?? 0) + sourceDelta(found.clip, offset) < -1e-6) break;
+        this.pushHistory();
         const previous = structuredClone(found.clip);
         found.clip.start = Math.max(0, Math.round(p.start * 100) / 100);
         found.clip.sourceIn = sourceTime(previous, offset);

@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · a left trim stops at the start of the media
+
+- **What was wrong.** Dragging a video or audio clip's left edge had no lower bound from its source, and `clip.trim` clamped the new source in to 0 instead of refusing. A fresh clip (source in 0) dragged 2 s left started 2 s earlier and was 2 s longer, so every frame played 2 s earlier than before and the tail read past the end of the media. The browser demo (`demo/src/timeline.ts`) already bounds this.
+- **What changed.** The drag records `minStart = start - sourceIn / speedAt(clip, 0)` for video and audio clips and clamps the dragged and snapped start to it. `clip.trim` refuses, with nothing recorded, a video or audio trim whose new source in would fall below 0 (`sourceIn + sourceDelta(clip, offset)`). Text, image and other clips without a timed source are not bounded, as before.
+- **Checked.** `tsc --noEmit` is clean. A copy of the engine under `node --experimental-strip-types`: trimming a 5-10 s clip with source in 0 to start at 3 is refused; with source in 4 at speed 2, a start of 3 is accepted (source in 0) and 2.9 refused; a text clip extends freely. The drag itself was not run in a browser.
+
 ## 2.15.4 · keyframe sampling eases the way the renderer does
 
 - **What was wrong.** `samplePoints` in `engine/keyframes.ts` used the old `easeProgress` (smoothstep or a quadratic for three names, linear for every other mode) and ignored dragged handles, while the renderer (`backend/app/timing.py` `ease`) and the graph (`timing.ts` `easeAt`) use the cubic-bezier handles. At p 0.3, ease sampled 0.216 against 0.513 rendered, overshoot 0.300 against 0.907, snap 0.300 against 0.018. The inspector's values, the preview's move, scale and crop handles, and lanes-mode "add key here" (which writes the sampled value) all used the wrong curve.

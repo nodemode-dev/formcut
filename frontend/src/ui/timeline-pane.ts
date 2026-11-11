@@ -2,6 +2,7 @@ import { escapeHtml } from "./safe-text";
 import { formatTimecode, type ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import type { Clip } from "../engine/types";
+import { speedAt } from "../engine/timing";
 import { icon } from "./icons";
 import { reconcile as orderNodes } from "./keyed-list";
 import { t } from "../i18n";
@@ -416,6 +417,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     moved: boolean;
     laneIndex: number;
     snapPoints: number[];
+    minStart: number;
   };
   let drag: Drag | null = null;
 
@@ -514,6 +516,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
       moved: false,
       laneIndex: found.trackIndex,
       snapPoints: snapOn ? collectSnapPoints(clipId) : [],
+      minStart: found.clip.kind === "video" || found.clip.kind === "audio" ? found.clip.start - (found.clip.sourceIn ?? 0) / speedAt(found.clip, 0) : 0,
     };
     node.setPointerCapture(ev.pointerId);
   });
@@ -543,10 +546,10 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     }
     if (drag.kind === "trim-l") {
       const shift = Math.min(dx, drag.duration - 0.1);
-      start = Math.max(0, drag.start + shift);
+      start = Math.max(0, drag.minStart, drag.start + shift);
       if (drag.snapPoints.length > 0) {
         const snapped = snapValue(start, drag.snapPoints);
-        if (snapped <= drag.start + drag.duration - 0.1) start = Math.max(0, snapped);
+        if (snapped <= drag.start + drag.duration - 0.1) start = Math.max(0, drag.minStart, snapped);
       }
       duration = drag.duration - (start - drag.start);
     }
