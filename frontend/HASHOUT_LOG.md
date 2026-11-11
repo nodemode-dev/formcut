@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.5 · ruler ticks sit on frames whose timecode ends in :00
+
+- **What was wrong.** With `formatTimecode` counting frames at the exact rate, the ruler's ticks, placed every 2.000 s of clock time, fell inside the last frame of each labelled second at fractional rates: at 29.97, 23.976 and 59.94 fps they read 00:00:01:29, 00:00:03:29 and so on (00:00:01:23 and 00:00:01:59 at the others).
+- **What changed.** `project.ts` gains `RULER_TICK_SECONDS` (2) and `rulerTickTime(index, fps)`, the start of the frame `index * 2 * rounded rate` on the exact grid (`index * 2 * round(fps) / fps`), so each tick sits on the first frame of an even second of non-drop timecode and reads :00, 0.1 % right of the clock second at fractional rates. The pane builds every tick, including those added when the timeline grows, through it, keeps each tick's time in `data-t`, and zoom places ticks from that time instead of `index * 2`. Integer rates are unchanged.
+- **Checked.** `tests/test_timecode_grid.py` lifts `formatTimecode` and `rulerTickTime` from `project.ts` into Node: 1900 ticks (over an hour) at 23.976, 29.97, 59.94, 24, 25 and 30 fps each read HH:MM:SS:00 for their even second, and a source check that no tick in `timeline-pane.ts` is placed at `i * 2` or `index * 2`. Red on the previous commit (`rulerTickTime` did not exist, and the pane placed ticks at `index * 2`). `tsc --noEmit` clean; not looked at in a browser.
+
 ## 2.15.5 · the timecode counts frames on the grid a frame step moves on
 
 - **What was wrong.** 2.15.4 made `transport.step` move on the exact frame grid (`floor(playhead * fps + 1e-6) + n`, divided by fps) but counted the timecode's frames at the rounded rate. At 29.97, 23.976 and 59.94 fps the two grids part by one frame every thousand frames, so one step in about a thousand showed a two-frame jump (steps 1000, 2000, 3000 and on).
