@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · a template's media asset is staged under a fresh name
+
+- **The hole.** `restore` in `app/template_assets.py` named the staged file for a `mediaId` asset from the template's own asset key and `suffix`, both untrusted. A key such as `x/../../folder/notes` made `mkdir` create `template-x` and the `..` steps resolve past it, so `write_bytes` overwrote a file outside the data folder and the `finally` unlink then deleted it.
+- **The fix.** The staged name is `template-<uuid hex><suffix>`, and the suffix (lower-cased, `.bin` when absent) must match `\.[a-z0-9]{1,8}` or the import is refused with `ValueError`, which `import_template` already answers as 422.
+- **Checked.** A throwaway script outside the repo (cv2 stubbed, `ingest_path` replaced): a template whose key climbs to a sibling folder left that folder's file untouched and staged `template-<hex>.txt` in the data folder; suffixes `/../x.txt` and `.t/x` were refused. ruff clean.
+
 ## 2.15.3 · malformed package entries are refused, not crashed on
 
 - **What happened.** `import_package` turns `ValueError`, `KeyError` and `TypeError` into a 422, but a package whose `assets.json` or `media/index.json` held a non-object value hit `.get` on an int or string and raised `AttributeError`, a 500.

@@ -1,5 +1,7 @@
 import base64
 import io
+import re
+import uuid
 
 from fastapi import UploadFile
 
@@ -69,7 +71,10 @@ def restore(item: dict):
         elif asset["type"] == "lutId":
             result = upload_lut(UploadFile(filename="Template color.cube", file=io.BytesIO(source.encode())))
         elif asset["type"] == "mediaId":
-            staged = MEDIA_DIR.parent / ("template-" + key + asset.get("suffix", ".bin"))
+            suffix = str(asset.get("suffix") or ".bin").lower()
+            if not re.fullmatch(r"\.[a-z0-9]{1,8}", suffix):
+                raise ValueError("Invalid template media suffix")
+            staged = MEDIA_DIR.parent / ("template-" + uuid.uuid4().hex + suffix)
             staged.parent.mkdir(parents=True, exist_ok=True)
             staged.write_bytes(base64.b64decode(source, validate=True))
             try:
