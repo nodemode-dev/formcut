@@ -355,3 +355,78 @@ def test_object_removal_reports_an_ffmpeg_that_fails(shot, tmp_path, monkeypatch
     done = _removal(_client(), media_id, truth, size, fps)
     assert done["status"] == "error", done
     assert "Could not write the clip with the object removed" in done["error"] and "disk full" in done["error"], done
+
+
+def _removed_files():
+    from app.planar_api import DATA_DIR
+
+    return sorted((DATA_DIR / "renders").glob("removed-*"))
+
+
+def _media_count():
+    from app.media import list_media
+
+    return len(list_media())
+
+
+def _filled_then(monkeypatch, after, action):
+    from app import planar_api
+
+    real = planar_api._filled
+    calls = []
+
+    def counted(t, window, homographies):
+        calls.append(t)
+        if len(calls) == after:
+            action()
+        return real(t, window, homographies)
+
+    monkeypatch.setattr(planar_api, "_filled", counted)
+    return calls
+
+
+def test_a_cancelled_removal_ingests_nothing_and_leaves_no_partial_clip(shot, monkeypatch):
+    from app import jobs
+
+    media_id, truth, size, fps = shot
+    before, files = _media_count(), _removed_files()
+
+    def cancel_removals():
+        for job_id, job in list(jobs._jobs.items()):
+            if job.get("kind") == "planar-remove":
+                jobs.cancel(job_id)
+
+    _filled_then(monkeypatch, 2, cancel_removals)
+    done = _removal(_client(), media_id, truth, size, fps)
+    assert done["status"] == "cancelled", done
+    assert _media_count() == before
+    assert _removed_files() == files
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stand-in ffmpeg is a shell script")
+def test_a_pipe_broken_while_ffmpeg_exits_0_is_an_error_not_a_short_clip(shot, tmp_path, monkeypatch):
+    media_id, truth, size, fps = shot
+    real = shutil.which("ffmpeg")
+    two_frames = size[0] * size[1] * 3 * 2
+    short = f'case " $* " in *" -i - "*) head -c {two_frames} | "{real}" "$@"; exit $?;; esac\nexec "{real}" "$@"\n'
+    lgpl_ffmpeg(tmp_path, monkeypatch, tail=short)
+    before, files = _media_count(), _removed_files()
+    done = _removal(_client(), media_id, truth, size, fps)
+    assert done["status"] == "error", done
+    assert "frames" in done["error"], done
+    assert _media_count() == before
+    assert _removed_files() == files
+
+
+def test_a_removal_that_fails_mid_clip_leaves_no_partial_file(shot, monkeypatch):
+    media_id, truth, size, fps = shot
+    files = _removed_files()
+
+    def fail():
+        raise ValueError("a frame could not be filled")
+
+    _filled_then(monkeypatch, 3, fail)
+    done = _removal(_client(), media_id, truth, size, fps)
+    assert done["status"] == "error", done
+    assert "could not be filled" in done["error"], done
+    assert _removed_files() == files

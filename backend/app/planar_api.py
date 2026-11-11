@@ -465,23 +465,12 @@ def remove_object(body: RemoveBody) -> dict:
         values = own.get(str(index))
         return cv2.dilate(_raster(body.remove, (width, height), _matrix(values) if values else None, index), np.ones((5, 5), np.uint8))
 
-    def operation(job_id, report, cancelled):
-        out_path = DATA_DIR / "renders" / f"removed-{job_id}.mkv"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        raw_in = ["-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{width}x{height}", "-r", f"{fps}", "-i", "-"]
-        from .encoders import detect
-
-        if "libx264" in (detect().get("h264") or []):
-            full_colour = ["-c:v", "libx264", "-crf", "12", "-preset", "medium", "-pix_fmt", "yuv444p", "-profile:v", "high444"]
-        else:
-            full_colour = ["-c:v", "ffv1", "-level", "3", "-pix_fmt", "yuv444p"]
+    def write_removed(out_path, codec, first, last, report, cancelled) -> None:
         window: dict[int, tuple[np.ndarray, np.ndarray]] = {}
         frames = _frames(source, fps, width, height, max(0, first - body.reach), min(count - 1, last + body.reach))
         pending = list(range(first, last + 1))
         with tempfile.TemporaryFile("w+") as log:
-            writer = subprocess.Popen(
-                ["ffmpeg", "-v", "error", "-y", *raw_in, *full_colour, str(out_path)], stdin=subprocess.PIPE, stderr=log
-            )
+            writer = subprocess.Popen(["ffmpeg", "-v", "error", "-y", *codec, str(out_path)], stdin=subprocess.PIPE, stderr=log)
             try:
                 for index, frame in frames:
                     if cancelled():
@@ -499,12 +488,33 @@ def remove_object(body: RemoveBody) -> dict:
                 with contextlib.suppress(BrokenPipeError):
                     writer.stdin.close()
                 writer.wait()
-            if writer.returncode != 0:
-                log.seek(0)
-                out_path.unlink(missing_ok=True)
-                raise RuntimeError(
-                    f"Could not write the clip with the object removed (ffmpeg exit {writer.returncode}): {log.read()[-300:].strip()}"
-                )
+            log.seek(0)
+            detail = log.read()[-300:].strip()
+        if writer.returncode != 0:
+            raise RuntimeError(f"Could not write the clip with the object removed (ffmpeg exit {writer.returncode}): {detail}")
+        if cancelled():
+            raise InterruptedError("Cancelled")
+        if pending:
+            written = last - first + 1 - len(pending)
+            raise RuntimeError(
+                f"The clip with the object removed stopped after {written} of {last - first + 1} frames: {detail or 'ffmpeg closed its input'}"
+            )
+
+    def operation(job_id, report, cancelled):
+        out_path = DATA_DIR / "renders" / f"removed-{job_id}.mkv"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_in = ["-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{width}x{height}", "-r", f"{fps}", "-i", "-"]
+        from .encoders import detect
+
+        if "libx264" in (detect().get("h264") or []):
+            full_colour = ["-c:v", "libx264", "-crf", "12", "-preset", "medium", "-pix_fmt", "yuv444p", "-profile:v", "high444"]
+        else:
+            full_colour = ["-c:v", "ffv1", "-level", "3", "-pix_fmt", "yuv444p"]
+        try:
+            write_removed(out_path, [*raw_in, *full_colour], first, last, report, cancelled)
+        except BaseException:
+            out_path.unlink(missing_ok=True)
+            raise
         from .media import ingest_path
 
         entry = ingest_path(out_path, f"removed {body.remove.id}.mkv")
