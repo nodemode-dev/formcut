@@ -92,3 +92,23 @@ def moving_frames() -> list[np.ndarray]:
 # controls both builds; Homebrew's newer major release rounds a little differently,
 # which says nothing about formcut's code. They run on every Linux check.
 DECODER_PARITY = pytest.mark.skipif(sys.platform != "linux", reason="compares two ffmpeg builds; pinned to Linux, where CI controls both")
+
+
+def lgpl_ffmpeg(tmp_path, monkeypatch, tail=""):
+    """An ffmpeg on PATH that behaves like the LGPL build the desktop app ships: libx264 and libx265 are neither
+    listed nor accepted. `tail` replaces the real encode, to stand for an ffmpeg that fails."""
+    import shutil
+
+    from app import encoders
+
+    real = shutil.which("ffmpeg")
+    folder = tmp_path / "lgpl-bin"
+    folder.mkdir()
+    script = folder / "ffmpeg"
+    refuse = 'for a in "$@"; do case "$a" in libx264|libx265) echo "Unknown encoder $a" >&2; exit 8;; esac; done\n'
+    unlisted = f'case " $* " in *" -encoders "*) "{real}" "$@" | grep -v "libx26[45]"; exit 0;; esac\n'
+    script.write_text("#!/bin/sh\n" + refuse + unlisted + (tail or f'exec "{real}" "$@"\n'), encoding="utf-8")
+    script.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(encoders, "_detected", None)
+    return folder

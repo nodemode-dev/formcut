@@ -4,6 +4,8 @@ losslessly, so its true corners are known."""
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import time
 
@@ -11,6 +13,7 @@ import numpy as np
 import pytest
 from app import planar_bench
 from app.main import app
+from conftest import lgpl_ffmpeg
 from fastapi.testclient import TestClient
 
 
@@ -301,3 +304,54 @@ def test_a_track_applied_as_a_corner_pin_and_as_transform_keys(shot):
         "/api/planar/apply", json={"project": project, "tracked_clip": "plate", "layer_id": "nothing", "target_clip": "insert"}
     )
     assert refused.status_code == 400
+
+
+def _removal(client, media_id, truth, size, fps):
+    tracked = _finish(
+        client,
+        client.post("/api/planar/track", json={"media_id": media_id, "layer": _layer(truth, size), "start": 0, "stop": 6 / fps}).json()[
+            "job_id"
+        ],
+    )
+    assert tracked["status"] == "done", tracked
+    centre = truth[0].mean(0) / size
+    blot = {
+        "id": "blot",
+        "shapes": [{"points": (centre + np.array([[-0.03, -0.03], [0.03, -0.03], [0.03, 0.03], [-0.03, 0.03]])).round(6).tolist()}],
+        "reference": 0,
+        "settings": {},
+    }
+    job = client.post(
+        "/api/planar/remove", json={"media_id": media_id, "background": "screen", "remove": blot, "start": 0, "stop": 6 / fps, "reach": 3}
+    ).json()
+    return _finish(client, job["job_id"])
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stand-in ffmpeg is a shell script")
+def test_object_removal_writes_its_clip_with_an_ffmpeg_that_has_no_libx264(shot, tmp_path, monkeypatch):
+    media_id, truth, size, fps = shot
+    lgpl_ffmpeg(tmp_path, monkeypatch)
+    done = _removal(_client(), media_id, truth, size, fps)
+    assert done["status"] == "done", done
+    from app.media import media_path
+
+    out = media_path(done["result"]["media_id"])
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,pix_fmt", "-of", "csv=p=0", str(out)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert probe == "ffv1,yuv444p", probe
+    assert done["result"]["frames"] == 7
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stand-in ffmpeg is a shell script")
+def test_object_removal_reports_an_ffmpeg_that_fails(shot, tmp_path, monkeypatch):
+    media_id, truth, size, fps = shot
+    real = shutil.which("ffmpeg")
+    fails = f'case " $* " in *" -i - "*) cat > /dev/null; echo "disk full" >&2; exit 1;; esac\nexec "{real}" "$@"\n'
+    lgpl_ffmpeg(tmp_path, monkeypatch, tail=fails)
+    done = _removal(_client(), media_id, truth, size, fps)
+    assert done["status"] == "error", done
+    assert "Could not write the clip with the object removed" in done["error"] and "disk full" in done["error"], done

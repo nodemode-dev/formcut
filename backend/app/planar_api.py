@@ -14,11 +14,13 @@ Frames are read at full size from the media by ffmpeg, a range at a time (backwa
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import math
 import re
 import subprocess
+import tempfile
 import threading
 from pathlib import Path
 
@@ -467,25 +469,42 @@ def remove_object(body: RemoveBody) -> dict:
         out_path = DATA_DIR / "renders" / f"removed-{job_id}.mkv"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         raw_in = ["-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{width}x{height}", "-r", f"{fps}", "-i", "-"]
-        full_colour = ["-c:v", "libx264", "-crf", "12", "-preset", "medium", "-pix_fmt", "yuv444p", "-profile:v", "high444"]
-        writer = subprocess.Popen(["ffmpeg", "-v", "error", "-y", *raw_in, *full_colour, str(out_path)], stdin=subprocess.PIPE)
+        from .encoders import detect
+
+        if "libx264" in (detect().get("h264") or []):
+            full_colour = ["-c:v", "libx264", "-crf", "12", "-preset", "medium", "-pix_fmt", "yuv444p", "-profile:v", "high444"]
+        else:
+            full_colour = ["-c:v", "ffv1", "-level", "3", "-pix_fmt", "yuv444p"]
         window: dict[int, tuple[np.ndarray, np.ndarray]] = {}
         frames = _frames(source, fps, width, height, max(0, first - body.reach), min(count - 1, last + body.reach))
         pending = list(range(first, last + 1))
-        try:
-            for index, frame in frames:
-                if cancelled():
-                    break
-                window[index] = (frame, hole_at(index))
-                while pending and (pending[0] + body.reach <= index or index >= min(count - 1, last + body.reach)):
-                    t = pending.pop(0)
-                    writer.stdin.write(_filled(t, window, homographies).tobytes())
-                    for old in [k for k in window if k < t - body.reach]:
-                        window.pop(old)
-                    report((t - first + 1) / (last - first + 1), f"frame {t}")
-        finally:
-            writer.stdin.close()
-            writer.wait()
+        with tempfile.TemporaryFile("w+") as log:
+            writer = subprocess.Popen(
+                ["ffmpeg", "-v", "error", "-y", *raw_in, *full_colour, str(out_path)], stdin=subprocess.PIPE, stderr=log
+            )
+            try:
+                for index, frame in frames:
+                    if cancelled():
+                        break
+                    window[index] = (frame, hole_at(index))
+                    while pending and (pending[0] + body.reach <= index or index >= min(count - 1, last + body.reach)):
+                        t = pending.pop(0)
+                        writer.stdin.write(_filled(t, window, homographies).tobytes())
+                        for old in [k for k in window if k < t - body.reach]:
+                            window.pop(old)
+                        report((t - first + 1) / (last - first + 1), f"frame {t}")
+            except BrokenPipeError:
+                pass
+            finally:
+                with contextlib.suppress(BrokenPipeError):
+                    writer.stdin.close()
+                writer.wait()
+            if writer.returncode != 0:
+                log.seek(0)
+                out_path.unlink(missing_ok=True)
+                raise RuntimeError(
+                    f"Could not write the clip with the object removed (ffmpeg exit {writer.returncode}): {log.read()[-300:].strip()}"
+                )
         from .media import ingest_path
 
         entry = ingest_path(out_path, f"removed {body.remove.id}.mkv")
