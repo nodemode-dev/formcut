@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.5 · the timecode counts frames on the grid a frame step moves on
+
+- **What was wrong.** 2.15.4 made `transport.step` move on the exact frame grid (`floor(playhead * fps + 1e-6) + n`, divided by fps) but counted the timecode's frames at the rounded rate. At 29.97, 23.976 and 59.94 fps the two grids part by one frame every thousand frames, so one step in about a thousand showed a two-frame jump (steps 1000, 2000, 3000 and on).
+- **What changed.** `formatTimecode` takes the frame index at the exact rate, as the step does, and still labels it in non-drop-frame hours, minutes, seconds and frames of the rounded rate. The project has no drop-frame display, so none was added; at fractional rates the label runs behind the clock by 0.1 % as non-drop-frame timecode does. A rate of 0 or less falls back to the rounded one.
+- **Checked.** `tests/test_timecode_steps.py` lifts both functions from `project.ts` and runs them in Node: 18000 steps forward and 18000 back at 24, 25, 30, 60, 23.976, 29.97 and 59.94 fps. Before the change the three fractional rates each had 36 jumps; after it none do, and 1.2 s and 4.1 s at 30 fps still read :06 and :03.
+
 ## 2.15.4 · an undone audio edit cancels the mix it started
 
 - **What was wrong.** During playback an audio edit starts a mix render for the new signature B while the old buffer A keeps playing. Undoing before B finished brought the signature back to A, so `needsMix` said no and `prepare` was never asked; B then finished, was still `pending`, and was installed and played while the timeline was A, until the next edit or transport change.

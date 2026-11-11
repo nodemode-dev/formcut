@@ -1452,7 +1452,7 @@ export class ProjectEngine {
 
 export function formatTimecode(seconds: number, fps: number): string {
   const rate = Math.max(1, Math.round(fps));
-  const frames = Math.floor(Math.max(0, seconds) * rate + 1e-6);
+  const frames = Math.floor(Math.max(0, seconds) * (fps > 0 ? fps : rate) + 1e-6);
   const h = Math.floor(frames / rate / 3600);
   const m = Math.floor(frames / rate / 60) % 60;
   const s = Math.floor(frames / rate) % 60;
