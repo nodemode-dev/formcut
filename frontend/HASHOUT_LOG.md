@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · the work area follows the opened project
+
+- **What was wrong.** The work area reloaded only on a "project" event, and `project.load` never emitted one. At start-up it was set from the seed project (0.1 s long), so `{0, 0.2}` was handed to the engine, and after opening a real project from the home screen Space looped over the first 0.2 s. Opening any project also kept the previous one's work area. With no saved area the default was frozen at the duration seen when it loaded.
+- **What changed.** `project.load` now emits "project" after its other events. `work-area.ts` keeps no area when none is saved for the project, so the engine plays the whole timeline; the bar draws the whole project span in that case (and repaints on clip and timeline changes), and a drag starts from that span. Double-click still clears back to the whole.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
 ## 2.15.3 · the last two raw z-index values take a token
 
 - **What moved.** `.fav-star` and `.fx-remove` in `styles/app.css` wrote `z-index: 1`. The scale in `styles/tokens.css` starts at `--z-base: 0`, so `--z-raised: 1` is added and both rules use it. The number is the same, so stacking is unchanged; only the property value was touched.

@@ -1022,6 +1022,7 @@ export class ProjectEngine {
         this.emit("clip-selection");
         this.emit("playhead");
         this.emit("transport");
+        this.emit("project");
         break;
       }
       case "clip.timing": {
