@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the speech runtime installs where .env puts the data folder
+
+- **What was wrong.** `./formcut` and `formcut.bat` run `setup_local_ai` before `formcut_boot`, the only step that loads `.env`. `backend/setup_local_ai.py` read `app.paths.DATA_DIR` at import, so with `FORMCUT_DATA_DIR` set in `.env` (as `example.env` documents) kokoro-onnx went into the default data folder, the engine looked in the configured one, and local voices stayed unavailable while every launch said "already installed".
+- **The fix.** `setup_local_ai.main` reads `FORMCUT_DATA_DIR` from the checkout's `.env` (the same `key=value` reading `setup/mcp_stdio.py` does, quotes stripped) before importing `DATA_DIR`. A value in `.env` wins, as it does for the engine, which both boot scripts start after loading `.env` over the environment. Neither launcher changed.
+- **Checked.** A throwaway copy of the script in a scratch tree with a `.env` naming `/tmp/fixA-data` (venv creation and pip stubbed) chose `/tmp/fixA-data/ai-runtime`. ruff reports only the `subprocess.run` without `check` that was already there.
+
 ## 2.15.4 · preview read-ahead fills the frames the frame route serves
 
 - **What was wrong.** `ReadAhead` stored its frames under tag `""`, but the only reader, `GET /sessions/{id}/frame`, asks for tag `"orig"`, so every read-ahead frame was waste that evicted still frames from the shared 240-frame cache and held the session lock. Its render function also closed over the renderer the session was created with, so after `retarget_session` closed that renderer and installed a new one, read-ahead kept drawing the old document through a closed renderer.

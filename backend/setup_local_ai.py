@@ -4,10 +4,16 @@ import sys
 import venv
 from pathlib import Path
 
-from app.paths import DATA_DIR
-
 
 def main():
+    dotenv = Path(__file__).resolve().parent.parent / ".env"
+    if dotenv.is_file():
+        for line in dotenv.read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.strip().partition("=")
+            if sep and key.strip() == "FORMCUT_DATA_DIR":
+                os.environ["FORMCUT_DATA_DIR"] = value.strip().strip("\"'")
+    from app.paths import DATA_DIR
+
     root = DATA_DIR / "ai-runtime"
     python = root / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     if python.is_file():
