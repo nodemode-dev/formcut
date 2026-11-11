@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · a preset with a non-Latin name exports
+
+- **What was wrong.** `presets.export_preset` put the preset's name raw into `Content-Disposition`. `_clean_name` keeps any letters, so a preset named "Заголовок" or "見出し" made Starlette's latin-1 header encoding raise and the download answered 500.
+- **The fix.** The header carries `filename*=UTF-8''<percent-encoded name>` (RFC 6266), and the plain `filename` is the name when it is ASCII, `preset.fcpreset` otherwise.
+- **Checked.** A throwaway script outside the repo: "Заголовок" exports 200 with `filename="preset.fcpreset"; filename*=UTF-8''%D0%97...`, and "Title one" still gives `Title_one.fcpreset`. ruff clean.
+
 ## 2.15.4 · a malformed .fc is refused before anything is ingested
 
 - **What was wrong.** The 2.15.3 hardening covered assets and the media index only. In `project_packages.unpack` a manifest that is a JSON array raised `AttributeError` at `manifest.get`; a document with `"timelines": [5]` or a clip with `"textStyle": "x"` was only validated after its media had been ingested, and the `AttributeError` from `clip_values` escaped `import_package` as a 500; a clip with `"device": 3` raised in the screen loop. `POST /api/project-files/open` called `unpack` with no mapping at all, so even "Not a formcut project package" was a 500 there.
