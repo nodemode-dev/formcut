@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · a tab drag released off the strip ends
+
+- **What was wrong.** The timeline tab drag listened for `pointerup` and `pointercancel` on the strip only, without pointer capture, so a press on a tab released below the strip never ran `release`. The `pointermove` listener stayed, and moving across the tabs afterwards with no button pressed dispatched `timeline.move` and reordered timelines.
+- **What changed.** The move handler releases the drag as soon as it sees a move with the primary button up.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
 ## 2.15.4 · easing grips follow the pointer and can be undone
 
 - **What was wrong.** In the graph's grip drag, `const index = list.findIndex(...)` shadowed the lane `index`, so `rangeOf(block.prop, clipsOn(index))` read the clips of the track whose number was the keyframe's position, and the handle's y mapping was wrong. Every move dispatched `quiet: true`, including the first, so no history step was pushed and the reshape folded into the previous undo step or could not be undone.

@@ -733,6 +733,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     const startX = event.clientX;
     let moved = false;
     const move = (next: PointerEvent) => {
+      if (!(next.buttons & 1)) return release();
       if (!moved && Math.abs(next.clientX - startX) < 8) return;
       moved = true;
       tab.classList.add("is-dragging");
