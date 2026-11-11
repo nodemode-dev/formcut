@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · formcut.bat mcp and agents pass on python's exit code
+
+- **What was wrong.** In `formcut.bat` (the launcher at the top of the checkout; there is no log beside it, so it is noted here with the engine it starts) the `mcp` and `agents` branches ended with `exit /b %ERRORLEVEL%` inside a parenthesised `if` block. cmd expands `%ERRORLEVEL%` when it parses the block, before python runs, so the script exited with the earlier level (normally 0) and `formcut.bat agents sync --check` never failed on drift.
+- **The fix.** Both lines are `exit /b`, which leaves the current errorlevel, the one python just set, as the exit code. CRLF endings kept (checked with `file` and a count of CR lines before and after).
+- **Checked.** Reasoned from cmd's documented block parsing and `exit /b` behaviour. Not run on Windows.
+
 ## 2.15.4 · an asset that is not on this computer is left out, not fatal
 
 - **What was wrong.** A project opened from an .fmc made elsewhere (only media travels in one) can name a LUT, shader or font id this data folder lacks. `assets.asset_path` raises `ValueError("Asset is unavailable")` for it, before `project_packages.gather_assets` reached its `if not path.is_file(): continue`, so package export failed with 500, "Save as template" (`template_assets.gather`) did the same, and a save with a sync folder answered 409 although the project had been stored, because `store.save_project` suppressed only `OSError` around `sync_after_save`.
