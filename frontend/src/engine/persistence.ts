@@ -26,6 +26,7 @@ interface ProjectRecord {
 export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary | null> {
   const s = engine.snapshot;
   const origin = s.timelines;
+  const key = journalKey(engine);
   const signature = JSON.stringify([s.title, engine.baseFormat, s.timelines, s.activeTimeline]);
   const body = JSON.stringify({
     title: s.title,
@@ -52,6 +53,8 @@ export async function saveProject(engine: ProjectEngine): Promise<ProjectSummary
       const current = engine.snapshot;
       const unchanged = signature === JSON.stringify([current.title, engine.baseFormat, current.timelines, current.activeTimeline]);
       engine.dispatch("project.saved", { id: record.id, revision: record.revision, unchanged });
+      void clearJournal(key);
+      if (journalKey(engine) !== key) void clearJournal(journalKey(engine));
     }
     return { id: record.id, title: record.title };
   } catch {
@@ -193,11 +196,13 @@ export function installAutosave(engine: ProjectEngine, onState: (state: "idle" |
     if (saving) { dirtyWhileSaving = true; return; }
     saving = true;
     onState("saving");
+    const key = journalKey(engine);
     const result = await saveProjectChecked(engine);
     saving = false;
     if (result === "conflict") { onState("conflict"); return; }
     if (result === "saved") {
-      void clearJournal(journalKey(engine));
+      void clearJournal(key);
+      if (journalKey(engine) !== key) void clearJournal(journalKey(engine));
       onState("saved");
     } else {
       onState("idle");

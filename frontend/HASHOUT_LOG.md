@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · a save clears the recovery journal it replaces
+
+- **What was wrong.** The journal is keyed by the project id, or "unsaved" for a new project. Autosave cleared `journalKey(engine)` after the save, by which time `project.saved` had set the new id, so a new project's "unsaved" journal stayed and the home screen offered to recover a project that was saved (Restore then made a duplicate). The manual save cleared no journal at all, so with autosave off every saved project was offered again at an older revision.
+- **What changed.** Both save paths read the key before saving and, on success, clear it and also the post-save key when it differs. The manual save clears only when the document was not edited while the save was in flight.
+- **Checked.** `tsc --noEmit` is clean. Not verified against a running backend.
+
 ## 2.15.4 · closing Missing media reloads only after a save that worked
 
 - **What was wrong.** Closing the Missing media dialog ran `saveProject` and then `openProject` on the same id without looking at the save's result. When the save failed (a conflict with a newer server copy, or the backend down), the reload replaced the document with the server copy, dropping unsaved edits and the undo history without a word.
