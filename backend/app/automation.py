@@ -368,20 +368,32 @@ def apply_edit(project: dict, command: dict):
                 elif clip["start"] >= start - 1e-6 and clip_end <= end + 1e-6:
                     continue
                 elif clip["start"] < start and clip_end > end:
+                    offset = end - clip["start"]
                     tail = {
                         **clip,
                         "id": uuid.uuid4().hex,
                         "start": start,
                         "duration": max(0.05, clip_end - end),
-                        "sourceIn": clip.get("sourceIn", 0) + (end - clip["start"]),
+                        "sourceIn": source_time(clip, offset),
+                        "keyframes": [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])],
                     }
+                    if clip.get("speedCurve"):
+                        tail["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                            {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+                        ]
                     clip["duration"] = max(0.05, start - clip["start"])
                     kept += [clip, tail]
                 elif clip["start"] < start:
                     clip["duration"] = max(0.05, start - clip["start"])
                     kept.append(clip)
                 else:
-                    clip["sourceIn"] = clip.get("sourceIn", 0) + (end - clip["start"])
+                    offset = end - clip["start"]
+                    clip["sourceIn"] = source_time(clip, offset)
+                    clip["keyframes"] = [{**k, "t": k["t"] - offset} for k in clip.get("keyframes", [])]
+                    if clip.get("speedCurve"):
+                        clip["speedCurve"] = [{"t": 0, "speed": speed_at(clip, offset)}] + [
+                            {"t": p["t"] - offset, "speed": p["speed"]} for p in clip["speedCurve"] if p["t"] > offset
+                        ]
                     clip["duration"] = max(0.05, clip_end - end)
                     clip["start"] = start
                     kept.append(clip)

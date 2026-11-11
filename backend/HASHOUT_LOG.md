@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · timeline.cut-range keeps a sped-up clip's tail on the right footage
+
+- **What was wrong.** The RPC's `timeline.cut-range` in `app/automation.py` moved a kept tail's `sourceIn` on by timeline seconds (`sourceIn + (end - start)`), where `clip.split` uses `source_time`. At 2x the tail of a 2 to 4 s cut restarted at source 4 s instead of 8 s, replaying the words the remove-speech workflow meant to take out. Its keyframes and speed curve also kept their old clip-local times.
+- **The fix.** For the tail of a clip that straddles the range, and for a clip that starts inside it, the offset into the clip is `end - clip start`: `sourceIn` becomes `source_time(clip, offset)`, keyframes move back by the offset, and a speed curve is rebased the way `clip.split` does it (a point at 0 with the speed there, then the later points shifted). The interface's own copy of the command is fixed separately in the frontend.
+- **Checked.** A throwaway script outside the repo: a 2x clip cut over 2 to 4 s leaves a tail at sourceIn 8 with its key at t 0; a 2x clip starting inside the range at 3 s with sourceIn 1 becomes sourceIn 3; a 1 to 3 ramp over 6 s cut over 1 to 3 gives sourceIn 4.5 and the curve [0: 2, 3: 3]. No existing test covers cut-range. ruff clean.
+
 ## 2.15.4 · the speech runtime installs where .env puts the data folder
 
 - **What was wrong.** `./formcut` and `formcut.bat` run `setup_local_ai` before `formcut_boot`, the only step that loads `.env`. `backend/setup_local_ai.py` read `app.paths.DATA_DIR` at import, so with `FORMCUT_DATA_DIR` set in `.env` (as `example.env` documents) kokoro-onnx went into the default data folder, the engine looked in the configured one, and local voices stayed unavailable while every launch said "already installed".
