@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · an undone audio edit cancels the mix it started
+
+- **What was wrong.** During playback an audio edit starts a mix render for the new signature B while the old buffer A keeps playing. Undoing before B finished brought the signature back to A, so `needsMix` said no and `prepare` was never asked; B then finished, was still `pending`, and was installed and played while the timeline was A, until the next edit or transport change.
+- **What changed.** `needsMix` also answers yes while a render for another signature is in flight, and `prepare`, called with the signature already loaded, aborts that render and clears `pending`. Buffer A keeps playing.
+- **Checked.** A copy of `audio-playback.ts` under `node --experimental-transform-types` with the API, fetch and AudioContext stubbed, driven the way `render-preview.ts` drives it (prepare only when `needsMix`): render A, edit to B, undo to A, let B's job finish. Before the change B's buffer was played; after it only A's.
+
 ## 2.15.4 · removing or adding a timeline applies the active one's format
 
 - **What was wrong.** With more than one timeline each can keep its own width, height and frame rate. `timeline.activate` applies the active one's format, but `timeline.remove` did not: removing the active 1080x1920 60 fps timeline made timeline 0 active while the preview, exports and timecode kept 1080x1920 at 60 fps. `timeline.add` and `timeline.import` likewise kept the previous timeline's format, and all three kept clip ids from the old timeline in `selection`.
