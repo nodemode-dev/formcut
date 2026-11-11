@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · without ffprobe, a video keeps its frame rate
+
+- **What broke.** When ffprobe is missing or fails, `tools.probe` reads ffmpeg's own report through `_from_ffmpeg`, which wrote `avg_frame_rate` as `f"{float}/1"`, for example `"30.0/1"` or `"29.97/1"`. `Fraction` and `int` both refuse a decimal numerator, so the media record got fps 0 and `VideoSource` fell back to 30 fps, decoding a 24, 25 or 60 fps clip with the wrong frame-to-time mapping.
+- **The fix.** The rate is read as a `Fraction` and written as an integer ratio. A rate that is within 0.01 of an n x 1000/1001 rate becomes that (ffmpeg prints 30000/1001 as `29.97` and 24000/1001 as `23.98`); any other non-integer rate is limited to a denominator of 1001.
+- **Checked.** Clips made here at 24, 25, 23.976, 29.97, 60 and 12.5 fps read back as 24/1, 25/1, 24000/1001, 30000/1001, 60/1 and 25/2. `tests/test_tools_resolver.py`, `test_probe_colours.py` and `test_ffmpeg_source_fallback.py`: 35 passed, 1 skipped. ruff clean.
+
 ## 2.15.4 · a paired device does not get the terminal
 
 - **The hole.** `remote.Marked` marks every request from the network listener with `formcut.remote`, and `LocalOnly` admits a paired device to every route there. `app/terminal.py` never looked at the mark, so a paired phone, or anyone on the LAN who read its cookie from the plain-HTTP traffic on port 8977, could open `/api/terminal/ws` and get a login shell as the desktop user.

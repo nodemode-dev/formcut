@@ -23,6 +23,7 @@ import re
 import shutil
 import subprocess
 import sys
+from fractions import Fraction
 from functools import lru_cache
 from pathlib import Path
 
@@ -247,15 +248,19 @@ def _from_ffmpeg(path: Path) -> dict:
     video = _VIDEO.search(text) or _VIDEO_NO_FPS.search(text)
     if video:
         groups = video.groups()
-        rate = float(groups[3]) if len(groups) > 3 else 0.0
+        rate = Fraction(groups[3]) if len(groups) > 3 else Fraction(0)
+        if rate.denominator != 1:
+            ntsc = Fraction(round(rate * Fraction(1001, 1000)) * 1000, 1001)
+            rate = ntsc if abs(ntsc - rate) < Fraction(1, 100) else rate.limit_denominator(1001)
+        ratio = f"{rate.numerator}/{rate.denominator}" if rate else "0/0"
         streams.append(
             {
                 "codec_type": "video",
                 "codec_name": groups[0],
                 "width": int(groups[1]),
                 "height": int(groups[2]),
-                "avg_frame_rate": f"{rate}/1" if rate else "0/0",
-                "r_frame_rate": f"{rate}/1" if rate else "0/0",
+                "avg_frame_rate": ratio,
+                "r_frame_rate": ratio,
                 **_video_colours(text),
             }
         )
