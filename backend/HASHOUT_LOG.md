@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the Google Drive and TikTok sign-in callbacks get through LocalOnly
+
+- **What broke.** The provider sends the browser back to `http://127.0.0.1:<port>/api/cloud/google/callback` or `/api/connect/tiktok/callback/` through a cross-site redirect, so the navigation carries no Origin and `Sec-Fetch-Site: cross-site`. `LocalOnly` refuses exactly that, so both sign-ins ended on "Local API request refused" and no account was stored. The tests passed because TestClient sends no Fetch Metadata.
+- **The fix.** A loopback `GET` to one of those two exact paths is let through when it is a top-level navigation: `Sec-Fetch-Mode` is `navigate` and `Sec-Fetch-Dest` is `document`, or the headers are absent (a browser without Fetch Metadata). Frames, images and fetches to the same paths are still refused. Each handler still pops its one-time `state` first and answers 400 for an unknown or expired one, so a forged navigation changes nothing.
+- **Checked.** A throwaway script outside the repo mounted both routers behind `LocalOnly`: a cross-site navigation to either callback with an unknown state answers 400 (was 403), the same request as an iframe or image load answers 403, and `/api/cloud` stays 403. `tests/test_family_guard.py`: 47 passed; `tests/test_cloud.py` and `tests/test_tiktok.py` pass. ruff clean.
+
 ## 2.15.4 · an audio package's chain is one comma list, nothing more
 
 - **The hole.** `_check_chain` in `app/effect_packages.py` split a chain on `,` and checked only the first filter name of each piece, but ffmpeg's filtergraph syntax also has `;` chains and `[label]` pads. `volume=1[a];[a]ametadata=mode=print:file=<path>` passed as `volume` and, rendered through `-af`, created or truncated the named file; `amovie=` in the same position mixed in any local audio file.
