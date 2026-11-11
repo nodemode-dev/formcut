@@ -12,6 +12,7 @@ import {
   type KeyframeProp,
   type TransformProp,
 } from "./types";
+import { easeAt } from "./timing";
 
 export function easeProgress(p: number, interp: KeyframeInterp): number {
   switch (interp) {
@@ -49,7 +50,7 @@ export function samplePoints(
     const b = points[i + 1];
     if (local >= a.t && local < b.t) {
       if (a.interp === "hold" || b.t === a.t) return a.v;
-      const p = easeProgress((local - a.t) / (b.t - a.t), a.interp);
+      const p = easeAt((local - a.t) / (b.t - a.t), a.interp, a.handles);
       return a.v + (b.v - a.v) * p;
     }
   }

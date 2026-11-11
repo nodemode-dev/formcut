@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · keyframe sampling eases the way the renderer does
+
+- **What was wrong.** `samplePoints` in `engine/keyframes.ts` used the old `easeProgress` (smoothstep or a quadratic for three names, linear for every other mode) and ignored dragged handles, while the renderer (`backend/app/timing.py` `ease`) and the graph (`timing.ts` `easeAt`) use the cubic-bezier handles. At p 0.3, ease sampled 0.216 against 0.513 rendered, overshoot 0.300 against 0.907, snap 0.300 against 0.018. The inspector's values, the preview's move, scale and crop handles, and lanes-mode "add key here" (which writes the sampled value) all used the wrong curve.
+- **What changed.** `samplePoints` calls `easeAt(progress, interp, handles)`; the hold early return stays.
+- **Checked.** A copy of the engine under `node --experimental-strip-types` against `property_at` from `backend/app/timing.py` under `python3`: every named mode, hold, a `bezier` with handles and a named mode with handles past the 0 to 1 range, at p 0.1, 0.3, 0.5, 0.7 and 0.9, give identical values to six decimals (60 of 60).
+
 ## 2.15.4 · timecode shows the frame the playhead is on
 
 - **What was wrong.** `formatTimecode` took the frame as `floor(fraction of the second * fps)`, which floors values such as 5.9999999, so 1.2 s at 30 fps read 00:00:01:05 and 4.1 s read :02. Frame steps added `n / fps` to the playhead without snapping, so stepping drifted off the frame grid: 22 of the first 90 frames showed the wrong number.
