@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the system file dialogs take no script text from an extension
+
+- **The hole.** `linking.choose` writes the dialog as AppleScript (macOS) or PowerShell (Windows) source. An extension's `files.open` `accept` list reached the AppleScript `of type {...}` list between plain double quotes, and its `files.save` name reached a single-quoted PowerShell string unescaped, so an extension could close the string and run a command as the person, outside its sandboxed frame. A trailing backslash in a title or name could also end an AppleScript string early.
+- **The fix.** On macOS, types are kept only when they are 1 to 16 ASCII letters or digits, and the title and default name lose backslashes as well as double quotes. On Windows, the default name drops double quotes and doubles every character PowerShell reads as a single quote (`'` and U+2018 to U+201B). `/api/extensions/open` refuses an `accept` entry that is not such an extension with 422.
+- **Checked.** A throwaway script outside the repo replaced `subprocess.run` and `platform.system` and printed the script text for the report's payloads: the injected macOS type is dropped, the save name stays inside its string, and the PowerShell name stays one quoted literal. Not run on macOS or Windows. ruff clean.
+
 ## 2.15.4 · a template's media asset is staged under a fresh name
 
 - **The hole.** `restore` in `app/template_assets.py` named the staged file for a `mediaId` asset from the template's own asset key and `suffix`, both untrusted. A key such as `x/../../folder/notes` made `mkdir` create `template-x` and the `..` steps resolve past it, so `write_bytes` overwrote a file outside the data folder and the `finally` unlink then deleted it.

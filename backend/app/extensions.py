@@ -126,6 +126,8 @@ def _dialogs():
 def open_files(body: OpenBody) -> list[dict]:
     choose = _dialogs()
     accept = [a.lower() if a.startswith(".") else f".{a.lower()}" for a in body.accept if a]
+    if any(not (a[1:].isascii() and a[1:].isalnum() and len(a) <= 17) for a in accept):
+        raise HTTPException(422, "accept names file extensions only")
     paths = choose("open", body.multiple, body.title or "Open", "", [a.lstrip(".") for a in accept] or None)
     if not body.multiple:
         paths = paths[:1]
