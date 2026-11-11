@@ -1308,6 +1308,8 @@ export class ProjectEngine {
       }
       case "media.relink": {
         const map = payload as Record<string, string>;
+        this.settlePending();
+        this.foldKey = null;
         let changed = false;
         for (const timeline of s.timelines) {
           for (const track of timeline.tracks) {

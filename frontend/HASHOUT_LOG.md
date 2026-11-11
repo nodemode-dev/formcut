@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · a relink is not undone with the edit before it
+
+- **What was wrong.** Undo deltas are computed when the next step starts, as a diff of the current document against the copy taken before the step. `media.relink` changed clip media ids without closing the step in flight, so the next Ctrl+Z after (say) a move also put the old, missing media ids back.
+- **What changed.** `media.relink` settles the pending step and clears the fold key before it changes anything. The relink itself stays unrecorded, as before, and no undo reverts it.
+- **Checked.** A copy of the engine run under `node --experimental-strip-types`: move a clip, relink "old" to "new", undo, gives start 0 and media id "new" (before the change: "old").
+
 ## 2.15.4 · a save clears the recovery journal it replaces
 
 - **What was wrong.** The journal is keyed by the project id, or "unsaved" for a new project. Autosave cleared `journalKey(engine)` after the save, by which time `project.saved` had set the new id, so a new project's "unsaved" journal stayed and the home screen offered to recover a project that was saved (Restore then made a duplicate). The manual save cleared no journal at all, so with autosave off every saved project was offered again at an older revision.
