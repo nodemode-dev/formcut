@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · range edits leave locked tracks alone
+
+- **What was wrong.** The dispatch lock guard covers only commands that start with `clip.`. Lift, Extract (`timeline.cut-range`), Insert and Overwrite loop over every track, so a locked track was carved, split or moved by them, from the timeline toolbar, the Pro tab, a key layout or the extension command.
+- **What changed.** Lift, Extract and Insert's ripple skip locked tracks, and Insert and Overwrite do nothing when their target track is locked. Extract therefore leaves a locked track where it is.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`, a locked 10 s clip beside an unlocked one: Lift, Extract and Insert change only the unlocked track, and Insert or Overwrite aimed at the locked track change nothing.
+
 ## 2.15.4 · opening a project starts from a clean slate
 
 - **What was wrong.** `project.load` merged the payload into the state with `Object.assign`, so optional fields the payload did not carry (background, sync folder, output colour) stayed from the previous project, and the engine's marked range (`engine.range`, not part of the document) stayed set: opening B after marking a range in A showed the band on B, and Extract or Lift would cut that span out of B.

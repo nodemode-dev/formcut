@@ -521,7 +521,7 @@ export class ProjectEngine {
           if (end - start <= 0.01) break;
           this.pushHistory();
           tracks.forEach((track, index) => {
-            if (p.tracks && !p.tracks.includes(index)) return;
+            if (track.locked || (p.tracks && !p.tracks.includes(index))) return;
             const { kept, removed } = carveRange(track.clips, start, end);
             track.clips = kept;
             forget(removed);
@@ -533,7 +533,7 @@ export class ProjectEngine {
         }
         const target = tracks[p.trackIndex ?? -1];
         const clip = p.clip;
-        if (!target || !clip || clip.duration <= 0.01) break;
+        if (!target || target.locked || !clip || clip.duration <= 0.01) break;
         this.pushHistory();
         if (command === "edit.overwrite") {
           const { kept, removed } = carveRange(target.clips, clip.start, clip.start + clip.duration);
@@ -543,6 +543,7 @@ export class ProjectEngine {
           const at = clip.start;
           const length = clip.duration;
           for (const track of tracks) {
+            if (track.locked) continue;
             const next: Clip[] = [];
             for (const each of track.clips) {
               const eachEnd = each.start + each.duration;
@@ -598,6 +599,7 @@ export class ProjectEngine {
         const end = start + length;
         this.pushHistory();
         for (const track of s.timelines[s.activeTimeline].tracks) {
+          if (track.locked) continue;
           const kept: Clip[] = [];
           for (const clip of track.clips) {
             const clipEnd = clip.start + clip.duration;
