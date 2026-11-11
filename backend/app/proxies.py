@@ -98,6 +98,9 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
     target = proxy_path(media_id)
     staging = target.with_name(f"{media_id}.part.mp4")
     report(0.05)
+    from .encoders import detect
+
+    encoder = "libx264" if "libx264" in (detect().get("h264") or []) else "mpeg4"
     command = [
         "ffmpeg",
         "-hide_banner",
@@ -119,15 +122,10 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         "-r",
         rate,
         "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-tune",
-        "fastdecode",
+        encoder,
+        *(["-preset", "veryfast", "-tune", "fastdecode", "-crf", "23"] if encoder == "libx264" else ["-q:v", "3"]),
         "-g",
         "1",
-        "-crf",
-        "23",
         "-pix_fmt",
         "yuv420p",
         "-metadata:s:v:0",
@@ -158,7 +156,7 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
                 "width": int(out.get("width") or 0),
                 "height": int(out.get("height") or 0),
                 "fps": rate,
-                "encoder": "libx264",
+                "encoder": encoder,
                 "longSide": long_side,
             }
         ),

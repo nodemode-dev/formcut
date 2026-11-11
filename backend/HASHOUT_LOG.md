@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · reversed copies and proxies are made without libx264
+
+- **What broke.** `media.build_reversed` encoded its half-second pieces with `libx264`, and `proxies.build_proxy` encoded every proxy with it. The shipped ffmpeg is the LGPL build, which has no libx264, so in the desktop app Reverse failed at "Could not segment the source" (and an export holding a reversed clip failed with it), and every proxy build failed.
+- **The fix.** The reversed pieces use `mpeg4 -q:v 2`, the encoder the LGPL bundle check itself encodes with, and the concat step and `.mp4` names are unchanged. A proxy keeps its libx264 settings when `encoders.detect()` found a working libx264 (a source checkout with a full ffmpeg), and otherwise is all-intra `mpeg4 -q:v 3`; the sidecar records which encoder made it.
+- **Checked.** A throwaway script outside the repo with this machine's ffmpeg: a 2 s 24 fps clip with audio reversed into mpeg4 video and AAC audio, and a proxy built with libx264 hidden from `detect` came out mpeg4 at 24/1 with `"encoder": "mpeg4"` in its sidecar. Not run against the LGPL bundle itself. ruff clean.
+
 ## 2.15.4 · the Google Drive and TikTok sign-in callbacks get through LocalOnly
 
 - **What broke.** The provider sends the browser back to `http://127.0.0.1:<port>/api/cloud/google/callback` or `/api/connect/tiktok/callback/` through a cross-site redirect, so the navigation carries no Origin and `Sec-Fetch-Site: cross-site`. `LocalOnly` refuses exactly that, so both sign-ins ended on "Local API request refused" and no account was stored. The tests passed because TestClient sends no Fetch Metadata.
