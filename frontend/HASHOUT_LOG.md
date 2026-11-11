@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · closing Missing media reloads only after a save that worked
+
+- **What was wrong.** Closing the Missing media dialog ran `saveProject` and then `openProject` on the same id without looking at the save's result. When the save failed (a conflict with a newer server copy, or the backend down), the reload replaced the document with the server copy, dropping unsaved edits and the undo history without a word.
+- **What changed.** The project is reopened only when the save returns a record; otherwise the titlebar toast says the action did not work and the document stays as it is.
+- **Checked.** `tsc --noEmit` is clean. Not verified in a browser.
+
 ## 2.15.4 · saves keep the background, sync folder and output colour
 
 - **What was wrong.** `saveProject`, `saveProjectChecked` and the recovery journal sent a fixed field list (title, format, timelines, active timeline, revision). The backend keeps extra fields but replaces the whole record on a save, so a background set in the inspector was lost on the next save, a `syncFolder` or `background` set over RPC was wiped by the next interface save, and the opt-in sync folder never reached the backend from the app.

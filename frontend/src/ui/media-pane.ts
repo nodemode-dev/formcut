@@ -1366,7 +1366,9 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     showMissingMedia(gone, () => void (async () => {
       await bin.load();
       const id = engine.snapshot.projectId;
-      if (id) { await saveProject(engine); await openProject(engine, id); }  // the preview draws the found files
+      if (!id) return;
+      if (await saveProject(engine)) await openProject(engine, id);  // the preview draws the found files
+      else document.dispatchEvent(new CustomEvent("formcut:toast", { detail: { message: t("pro.failed") } }));
     })());
   })());
   relinkFile.addEventListener("change", async () => {
