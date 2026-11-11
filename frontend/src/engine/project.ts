@@ -995,6 +995,10 @@ export class ProjectEngine {
       }
       case "project.load": {
         const p = payload as Partial<ProjectState>;
+        delete (s as unknown as Record<string, unknown>).background;
+        s.syncFolder = undefined;
+        s.outputColour = undefined;
+        this.range = null;
         Object.assign(s, structuredClone(p));
         s.revision = p.revision ?? 0;
         s.activeTimeline = s.timelines[p.activeTimeline ?? 0] ? (p.activeTimeline ?? 0) : 0;

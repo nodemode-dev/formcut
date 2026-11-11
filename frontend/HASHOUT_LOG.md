@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · opening a project starts from a clean slate
+
+- **What was wrong.** `project.load` merged the payload into the state with `Object.assign`, so optional fields the payload did not carry (background, sync folder, output colour) stayed from the previous project, and the engine's marked range (`engine.range`, not part of the document) stayed set: opening B after marking a range in A showed the band on B, and Extract or Lift would cut that span out of B.
+- **What changed.** `project.load` removes `background`, clears `syncFolder`, `outputColour` and the marked range before it applies the payload.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`: after a sync folder, a background and a range in A, loading B gives no background, sync folder undefined and range null.
+
 ## 2.15.4 · a relink is not undone with the edit before it
 
 - **What was wrong.** Undo deltas are computed when the next step starts, as a diff of the current document against the copy taken before the step. `media.relink` changed clip media ids without closing the step in flight, so the next Ctrl+Z after (say) a move also put the old, missing media ids back.
