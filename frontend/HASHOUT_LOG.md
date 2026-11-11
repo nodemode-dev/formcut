@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · Delete on box-selected keyframes deletes only the keyframes
+
+- **What was wrong.** `timeline-pane.ts` and `track-keyframes.ts` both listen for Delete and Backspace on the window in the bubble phase, and the timeline's listener was registered first, so with keyframes box-selected and a clip selected (the usual case) Delete removed the clip and then the keys. The keyframe selection was also never cleared, so a later Delete meant for a clip also stripped stale keys.
+- **What changed.** The keyframe listener runs in the capture phase and stops the event once it has deleted keys; it still returns early when no keys are selected, so the clip Delete is unchanged then. The selection is cleared on "clip-selection" and "timeline" events.
+- **Checked.** `tsc --noEmit` is clean. The timeline pane is built in `main.ts` before `installEditorActions` installs the key layouts, so this listener also runs before a layout that binds Delete or Backspace (the Final Cut Pro layout's ripple delete). Not verified in a browser.
+
 ## 2.15.4 · a left trim stops at the start of the media
 
 - **What was wrong.** Dragging a video or audio clip's left edge had no lower bound from its source, and `clip.trim` clamped the new source in to 0 instead of refusing. A fresh clip (source in 0) dragged 2 s left started 2 s earlier and was 2 s longer, so every frame played 2 s earlier than before and the tail read past the end of the media. The browser demo (`demo/src/timeline.ts`) already bounds this.

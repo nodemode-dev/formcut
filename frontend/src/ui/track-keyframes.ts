@@ -316,7 +316,8 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
     }
     selected.clear();
     event.preventDefault();
-  });
+    event.stopImmediatePropagation();
+  }, true);
   const addPointAt = (block: Block, index: number, event: PointerEvent, timeAt: (x: number) => number) => {
     const [low, high] = rangeOf(block.prop, clipsOn(index));
     const box = block.graph.getBoundingClientRect();
@@ -699,6 +700,7 @@ export function installTrackKeyframes(root: HTMLElement, engine: ProjectEngine, 
   };
 
   engine.subscribe((_state, changed) => {
+    if (changed === "clip-selection" || changed === "timeline") selected.clear();
     if (changed === "clips" || changed === "timeline" || changed === "project") sync();
   });
   new MutationObserver(() => {
