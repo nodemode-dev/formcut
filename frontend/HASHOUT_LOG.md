@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · range edits cut tails the way a split does
+
+- **What was wrong.** Lift, Extract, Overwrite, Insert, `clip.remove-range`, and Roll and Slide on the clip after the edit moved a cut clip's source by timeline seconds (`sourceIn + offset`) and copied its keyframes and speed curve unchanged. `clip.split` and `clip.trim` already use `sourceTime`, `shiftedCurve` and `retimedKeys`. On a clip at speed 2 from 0 to 10 s, Lift 2-4 gave the tail source in 4 (a split at 4 gives 8), so the tail replayed footage the head had shown, and its keyframe at 8 stayed at 8 instead of 4.
+- **What changed.** One helper, `tailOf(clip, offset, duration)`, beside `carveRange`, returns the clip with source in, speed curve and keyframes moved on by `offset` the way `splitOne` does. Every tail and head-trim in those paths uses it; Roll and Slide apply it to the clip after with the delta, and their "source before its start" check uses `sourceDelta` instead of the raw delta.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`, speed-2 clip with a key at 8: Lift 2-4, Extract 2-4 and 0-4, Insert at 4 and remove-range 2-4 all give the tail source in 8 and the key at 4, as `clip.split` at 4 does; with a speed curve from 1 to 3, Lift and split both give source in 5.6. Roll +1 on a speed-2 clip after gives source in 6 and the key at 7, Roll -1 gives 2 and 9, and Roll -1 with only 1 s of source before is refused.
+
 ## 2.15.4 · range edits leave locked tracks alone
 
 - **What was wrong.** The dispatch lock guard covers only commands that start with `clip.`. Lift, Extract (`timeline.cut-range`), Insert and Overwrite loop over every track, so a locked track was carved, split or moved by them, from the timeline toolbar, the Pro tab, a key layout or the extension command.
