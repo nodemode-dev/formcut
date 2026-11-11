@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the fast-path check runs when an export names a rate
+
+- **What was wrong.** `held_to_frame_path` (R25) found the middle frame's instant as `index / float(out_rate)`, but `out_rate` is a ratio string whenever the export names a rate (`"24000/1001"`, and `"30/1"` for a whole rate too). `float` raised, the handler logged "the check failed; keeping the export", and the comparison against the frame path never ran for those exports.
+- **The fix.** The rate is read with `Fraction`, as the bitrate estimate a few lines further on already does. The instant is the same one the code meant (`k / out_rate`, the rate ffmpeg's `-r` writes); only the parse changed. The reviewer's suggestion of `k / project fps` was not taken: with `-r 24000/1001` on a 24 fps graph the two differ by about 30 ms at a minute's middle frame, and which one matches the file's frame k is not settled by reading alone.
+- **Checked.** `float(Fraction(r))` for `24000/1001`, `30/1` and `30`; `float("30/1")` raises as reported. Not run as an export (OpenCV is not installed here). ruff clean.
+
 ## 2.15.4 · a preset with a non-Latin name exports
 
 - **What was wrong.** `presets.export_preset` put the preset's name raw into `Content-Disposition`. `_clean_name` keeps any letters, so a preset named "Заголовок" or "見出し" made Starlette's latin-1 header encoding raise and the download answered 500.

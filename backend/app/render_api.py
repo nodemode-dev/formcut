@@ -650,7 +650,7 @@ def export_media(
                 # the frame path renders frame k at k / rate; the file's frame k is read by index, not by a seek,
                 # and decoded through the file's own colour tags into full-range RGB as the renderer's frame is
                 index = max(0, int(count) // 2)
-                middle = index / float(out_rate)
+                middle = index / float(Fraction(out_rate))
                 probe = subprocess.run(
                     [
                         "ffmpeg",
