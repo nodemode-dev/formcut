@@ -280,6 +280,14 @@ export class ProjectEngine {
       try { creatorCommand(s, command, payload); }
       catch (error) { this.dropPending(true); throw error; }
       if (command === "project.settings" && s.timelines.length === 1) this.baseFormat = { width: s.width, height: s.height, fps: s.fps };
+      if (command === "timeline.remove" || command === "timeline.add" || command === "timeline.import") {
+        const active = s.timelines[s.activeTimeline];
+        s.width = active.width ?? this.baseFormat.width;
+        s.height = active.height ?? this.baseFormat.height;
+        s.fps = active.fps ?? this.baseFormat.fps;
+        s.aspect = `${s.width}:${s.height}`;
+        s.selection = [];
+      }
       s.duration = Math.max(0.1, ...s.timelines[s.activeTimeline].tracks.flatMap(t => t.clips.map(c => c.start + c.duration)));
       this.emit("clips");
       this.emit("timeline");

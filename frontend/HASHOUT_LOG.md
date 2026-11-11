@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.4 · removing or adding a timeline applies the active one's format
+
+- **What was wrong.** With more than one timeline each can keep its own width, height and frame rate. `timeline.activate` applies the active one's format, but `timeline.remove` did not: removing the active 1080x1920 60 fps timeline made timeline 0 active while the preview, exports and timecode kept 1080x1920 at 60 fps. `timeline.add` and `timeline.import` likewise kept the previous timeline's format, and all three kept clip ids from the old timeline in `selection`.
+- **What changed.** After those three creator commands the engine sets width, height, fps and aspect from the new active timeline, falling back to the project's base format, as `timeline.activate` does, and clears `selection`.
+- **Checked.** A copy of the engine under `node --experimental-strip-types`: after activating a 1080x1920 60 fps timeline, adding one gives 1920x1080 30 with an empty selection, and removing the 60 fps one while active gives 1920x1080 30, aspect 1920:1080.
+
 ## 2.15.4 · a tab drag released off the strip ends
 
 - **What was wrong.** The timeline tab drag listened for `pointerup` and `pointercancel` on the strip only, without pointer capture, so a press on a tab released below the strip never ran `release`. The `pointermove` listener stayed, and moving across the tabs afterwards with no button pressed dispatched `timeline.move` and reordered timelines.
