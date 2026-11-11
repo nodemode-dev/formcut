@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the exported mix follows keyed volume
+
+- **What was wrong.** `audio_render.mix_audio` built its own envelope from the fades times the static `volume`, so a clip's `volumeKeys` (accepted by `clip.update`, listed in the RPC capabilities, checked by `validation.py`) never reached the export. `clip_envelope`, the curve `render_api.clip_audio`'s docstring says the export applies, was never called by the export.
+- **The fix.** `mix_audio` multiplies by `clip_envelope(clip, count)`: the same fades, times `volume_at`, which is the static volume when there are no keys, clamped to 0 to 4 as before.
+- **Checked.** A throwaway script outside the repo with a constant-one source: keys 0 at 0 s and 1 at 1 s give 0.0, 0.5, 1.0 and 1.0 at 0, 0.5, 1 and 1.5 s; a static volume of 9 still mixes at 4. No existing test covers `mix_audio`. ruff clean. The interface's live mix still plays the static volume (a frontend matter).
+
 ## 2.15.4 · the heavy RPC methods run off the event loop
 
 - **What was wrong.** `http_rpc` and `websocket_rpc` are `async` and called the synchronous dispatcher on the loop thread for every method but `extensions.*`. `media.qc` (ffmpeg over a whole render), `media.import` (copies and probes a file), `media.scenes`, `media.music`, `media.beats`, `media.ducking` and `speech.range` could hold the loop for minutes, so preview frames, job polling and the extension long-poll all waited and the MCP client's own timeout fired.

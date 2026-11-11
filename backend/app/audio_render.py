@@ -135,10 +135,7 @@ def mix_audio(project: dict, cancelled=lambda: False) -> np.ndarray:
                 continue
             samples = processed_clip_audio(clip, paths[0], cancelled)
         count = min(len(samples), int(duration * RATE))
-        envelope_times = np.linspace(0, duration, max(2, math.ceil(duration * 200)))
-        envelope = np.array([fade_at(clip, t) for t in envelope_times])
-        gain = np.interp(np.arange(count) / RATE, envelope_times, envelope)
-        samples = samples[:count] * gain[:, None] * max(0, min(4, float(clip.get("volume", 1))))
+        samples = samples[:count] * clip_envelope(clip, count)[:, None]
         pan = max(-1, min(1, float(clip.get("pan", 0))))
         samples[:, 0] *= min(1, 1 - pan)
         samples[:, 1] *= min(1, 1 + pan)
