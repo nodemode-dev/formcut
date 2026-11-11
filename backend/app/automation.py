@@ -983,11 +983,14 @@ def rpc(message):
         return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32602, "message": str(exc)}} if "id" in message else None
 
 
+OFF_LOOP = ("extensions.", "media.qc", "media.import", "media.scenes", "media.music", "media.beats", "media.ducking", "speech.range")
+
+
 @router.post("")
 async def http_rpc(request: Request):
     try:
         message = await request.json()
-        if isinstance(message, dict) and str(message.get("method", "")).startswith("extensions."):
+        if isinstance(message, dict) and str(message.get("method", "")).startswith(OFF_LOOP):
             return await run_in_threadpool(rpc, message)
         return rpc(message)
     except (ValueError, UnicodeError):
@@ -1003,7 +1006,7 @@ async def websocket_rpc(socket: WebSocket):
     try:
         while True:
             message = await socket.receive_json()
-            if isinstance(message, dict) and str(message.get("method", "")).startswith("extensions."):
+            if isinstance(message, dict) and str(message.get("method", "")).startswith(OFF_LOOP):
                 response = await run_in_threadpool(rpc, message)
             else:
                 response = rpc(message)

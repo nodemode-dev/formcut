@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · the heavy RPC methods run off the event loop
+
+- **What was wrong.** `http_rpc` and `websocket_rpc` are `async` and called the synchronous dispatcher on the loop thread for every method but `extensions.*`. `media.qc` (ffmpeg over a whole render), `media.import` (copies and probes a file), `media.scenes`, `media.music`, `media.beats`, `media.ducking` and `speech.range` could hold the loop for minutes, so preview frames, job polling and the extension long-poll all waited and the MCP client's own timeout fired.
+- **The fix.** `OFF_LOOP` names the prefixes sent to `run_in_threadpool`: `extensions.` as before, plus those seven methods. They touch no project document, and each calls the same functions the synchronous HTTP routes already run on worker threads. Every other method, the project edits included, keeps running on the loop, so their serial order is unchanged.
+- **Checked.** A throwaway script outside the repo with `dispatch` replaced by a 1 s sleep: a `GET` sent while `media.qc` ran answered after 0.10 s (worker thread), and after 1.00 s while `project.get` ran (loop thread, unchanged). ruff clean.
+
 ## 2.15.4 · the frame check's keep-alive push keeps a clip's other keyframes
 
 - **What was wrong.** When no source shift or speed-up frees a clip of repeated pictures, `cadence.solve_clip` answers with a scale push, and `timeline.frames` with `fix` applies it as `clip.update` with `{"keyframes": push}`, replacing the whole list. A hold carrying posX, opacity or effect keys lost all of them.
