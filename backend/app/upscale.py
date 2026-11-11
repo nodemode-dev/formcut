@@ -126,7 +126,7 @@ def _video(source: Path, out: Path, factor: float, method: str, seconds: float, 
     size = (_even(width * factor), _even(height * factor)) if width else (0, 0)
     command += ["-c:v", encoder, *encoders.tier_flags(encoder, "high", *size, fps), *pixels, "-c:a", "aac", "-b:a", "192k"]
     command += ["-movflags", "+faststart", "-progress", "pipe:1", str(out)]
-    with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+    with tempfile.TemporaryFile("w+") as log, subprocess.Popen(command, stdout=subprocess.PIPE, stderr=log, text=True) as process:
         for line in process.stdout:
             if cancelled():
                 process.kill()
@@ -134,7 +134,9 @@ def _video(source: Path, out: Path, factor: float, method: str, seconds: float, 
             key, _, value = line.strip().partition("=")
             if key == "out_time_us" and value.isdigit() and seconds > 0:
                 report(int(value) / 1e6 / seconds)
-        errors = process.stderr.read()
+        process.wait()
+        log.seek(0)
+        errors = log.read()
     if process.returncode != 0:
         raise RuntimeError(f"ffmpeg could not upscale this clip: {errors.strip()[-400:]}")
 

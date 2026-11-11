@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · proxy builds and video upscales cannot stall on a full stderr pipe
+
+- **What was wrong.** `proxies.build_proxy` ran ffmpeg with `stderr=PIPE` and only polled it, reading stderr after exit; `upscale._video` read stdout (progress) to its end before reading stderr. A source whose decode makes ffmpeg write more than the pipe buffer (64 KB) of errors would block ffmpeg on the write: the single proxy worker would poll for ever, leaving every later proxy queued, and the upscale job would hang.
+- **The fix.** In both, ffmpeg's stderr goes to a temporary file that nothing has to drain; on failure the file is rewound and its tail goes into the error message as before. The upscale waits for the process before reading it.
+- **Checked.** With this machine's ffmpeg in a throwaway script outside the repo: a damaged clip and a text file named .mp4 still fail with ffmpeg's own message in the error, for both the proxy and the upscale. A source that writes over 64 KB to stderr was not produced, so the stall itself was not reproduced; the change removes the pipe it needed. ruff clean.
+
 ## 2.15.4 · device thumbnails follow the model they picture
 
 - **What was wrong.** `devices.thumbnail` names its cached picture `<id>-<first 12 of sha256>.png` so a changed model gets a new one, but `_describe` never copied the manifest's `sha256` into the description, so the name was always `<id>-v1.png` and an updated .glb kept its old picture for good.

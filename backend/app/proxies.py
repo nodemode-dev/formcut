@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -134,17 +135,19 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         "+faststart",
         str(staging),
     ]
-    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-    while process.poll() is None:
-        if cancelled():
-            process.kill()
+    with tempfile.TemporaryFile("w+") as log:
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log, text=True)
+        while process.poll() is None:
+            if cancelled():
+                process.kill()
+                staging.unlink(missing_ok=True)
+                raise InterruptedError("Cancelled")
+            time.sleep(0.2)
+        if process.returncode != 0:
+            log.seek(0)
+            error = log.read()[-300:]
             staging.unlink(missing_ok=True)
-            raise InterruptedError("Cancelled")
-        time.sleep(0.2)
-    if process.returncode != 0:
-        error = (process.stderr.read() if process.stderr else "")[-300:]
-        staging.unlink(missing_ok=True)
-        raise ValueError(f"Could not build a proxy: {error}")
+            raise ValueError(f"Could not build a proxy: {error}")
     staging.replace(target)
     made = _ffprobe(target)
     out = next((s for s in made.get("streams", []) if s.get("codec_type") == "video"), {})
