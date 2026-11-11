@@ -20,7 +20,7 @@ import struct
 import sys
 import threading
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from .agent_connect import server_command
 
@@ -111,8 +111,11 @@ class Session:
 
 
 @router.get("/status")
-def status() -> dict:
+def status(request: Request) -> dict:
     from shutil import which
+
+    if request.scope.get("formcut.remote"):
+        raise HTTPException(403, "the terminal is open to the desktop only")
 
     return {
         "available": True,
@@ -126,6 +129,9 @@ def status() -> dict:
 
 @router.websocket("/ws")
 async def terminal(socket: WebSocket) -> None:
+    if socket.scope.get("formcut.remote"):
+        await socket.close(code=1008)
+        return
     await socket.accept()
     try:
         cols = int(socket.query_params.get("cols", "100"))

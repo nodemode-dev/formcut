@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.4 · a paired device does not get the terminal
+
+- **The hole.** `remote.Marked` marks every request from the network listener with `formcut.remote`, and `LocalOnly` admits a paired device to every route there. `app/terminal.py` never looked at the mark, so a paired phone, or anyone on the LAN who read its cookie from the plain-HTTP traffic on port 8977, could open `/api/terminal/ws` and get a login shell as the desktop user.
+- **The fix.** The terminal socket closes with 1008 before `accept` when the scope carries `formcut.remote`, and `/api/terminal/status` answers 403 there, the way `remote._desktop` already guards device management. Loopback use is unchanged.
+- **Checked.** A throwaway script outside the repo mounted the router behind a marker like `Marked`: the socket closed with 1008 and status answered 403; without the marker status answered 200. ruff clean.
+
 ## 2.15.4 · reversed copies and proxies are made without libx264
 
 - **What broke.** `media.build_reversed` encoded its half-second pieces with `libx264`, and `proxies.build_proxy` encoded every proxy with it. The shipped ffmpeg is the LGPL build, which has no libx264, so in the desktop app Reverse failed at "Could not segment the source" (and an export holding a reversed clip failed with it), and every proxy build failed.
