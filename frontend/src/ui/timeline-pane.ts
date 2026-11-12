@@ -1,5 +1,5 @@
 import { escapeHtml } from "./safe-text";
-import { formatTimecode, type ProjectEngine } from "../engine/project";
+import { formatTimecode, rulerTickTime, type ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import type { Clip } from "../engine/types";
 import { speedAt } from "../engine/timing";
@@ -40,7 +40,7 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     el.dataset.scale = String(PX_PER_SEC);
     rulerEl.style.width = `${currentSpan * PX_PER_SEC}px`;
     for (const lane of lanes) lane.style.width = rulerEl.style.width;
-    [...rulerEl.querySelectorAll<HTMLElement>(".tick")].forEach((tick, index) => { tick.style.left = `${index * 2 * PX_PER_SEC}px`; });
+    [...rulerEl.querySelectorAll<HTMLElement>(".tick")].forEach((tick) => { tick.style.left = `${Number(tick.dataset.t) * PX_PER_SEC}px`; });
     paintMarkers();
     el.dataset.scale = String(PX_PER_SEC);
   reconcile();
@@ -48,10 +48,11 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     scroller.scrollLeft = Math.max(0, engine.snapshot.playhead * PX_PER_SEC - scroller.clientWidth / 2);
     playhead.style.left = `${HEAD_W + engine.snapshot.playhead * PX_PER_SEC}px`;
   };
-  const ruler = Array.from({ length: Math.ceil(spanSec / 2) }, (_, i) => {
-    const t = i * 2;
-    return `<span class="tick" style="left:${t * PX_PER_SEC}px">${formatTimecode(t, s.fps)}</span>`;
-  }).join("");
+  const rulerTick = (index: number, fps: number) => {
+    const t = rulerTickTime(index, fps);
+    return `<span class="tick" data-t="${t}" style="left:${t * PX_PER_SEC}px">${formatTimecode(t, fps)}</span>`;
+  };
+  const ruler = Array.from({ length: Math.ceil(spanSec / 2) }, (_, i) => rulerTick(i, s.fps)).join("");
 
   const el = document.createElement("section");
   el.className = "pane pane-timeline";
@@ -252,12 +253,8 @@ export function buildTimelinePane(engine: ProjectEngine, bin: MediaBin): HTMLEle
     const neededSpan = Math.max(state.duration + 6, 18);
     if (neededSpan > currentSpan) {
       const width = `${neededSpan * PX_PER_SEC}px`;
-      const from = Math.ceil(currentSpan / 2) * 2;
-      for (let t = from; t < neededSpan; t += 2) {
-        rulerEl.insertAdjacentHTML(
-          "beforeend",
-          `<span class="tick" style="left:${t * PX_PER_SEC}px">${formatTimecode(t, state.fps)}</span>`,
-        );
+      for (let i = rulerEl.querySelectorAll(".tick").length; rulerTickTime(i, state.fps) < neededSpan; i++) {
+        rulerEl.insertAdjacentHTML("beforeend", rulerTick(i, state.fps));
       }
       rulerEl.style.width = width;
       for (const lane of lanes) lane.style.width = width;

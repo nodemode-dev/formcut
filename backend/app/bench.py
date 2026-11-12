@@ -46,13 +46,13 @@ def _demo_project() -> dict:
     return (demos or projects)[-1]
 
 
-def _bench_clip(clip, width: int, height: int, seconds: float) -> dict | None:
+def _bench_clip(clip, width: int, height: int, seconds: float, suffix: str = ".mp4") -> dict | None:
     """The bench's PQ clip in the media library: one per size and length, reused run after run. Every run had
     ingested a new one, so the owner's library filled with bench clips; the ones this bench made before (their
     source is "bench") are removed, files and records, and the one that fits is kept."""
     from .media import MEDIA_DIR, _read, _write, ingest_path
 
-    name = f"bench-pq-{width}x{height}-{seconds:g}s.mp4"
+    name = f"bench-pq-{width}x{height}-{seconds:g}s{suffix}"
     items = _read()
     kept, removed = None, 0
     for item in items:
@@ -85,11 +85,22 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
     """A PQ timeline for the HDR scenarios: a ten-bit PQ clip made by ffmpeg once and ingested through the app's
     own media model (a moving gradient with light to full scale), over a lifted title, in a project whose output
     colour is PQ, so the frames run deep, the monitor rolls them off and the export keeps the light."""
+    from .encoders import detect
     from .media import MEDIA_DIR
     from .video_source import _decoder_colours
 
-    clip = MEDIA_DIR / "bench-pq.mp4"
-    record = _bench_clip(None, width, height, seconds)  # the clip of this size and length made before, if any
+    hevc = "libx265" in (detect().get("hevc") or [])
+    suffix = ".mp4" if hevc else ".mov"
+    pq = ["-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc"]
+    if hevc:
+        encode = ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p10le", *pq]
+        encode += ["-x265-params", "log-level=0:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc"]
+        tagged = ""
+    else:
+        encode = ["-c:v", "prores_ks", "-profile:v", "3", "-pix_fmt", "yuv422p10le", *pq]
+        tagged = ",format=yuv422p10le,setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc"
+    clip = MEDIA_DIR / f"bench-pq{suffix}"
+    record = _bench_clip(None, width, height, seconds, suffix)  # the clip of this size and length made before, if any
     if record is None and clip.is_file() and _decoder_colours(clip).get("color_transfer") != "smpte2084":
         clip.unlink()  # an earlier clip without its PQ tags would bench an SDR decode; made again, tagged
     if record is None and not clip.is_file():
@@ -103,27 +114,14 @@ def _hdr_project(width: int = 1920, height: int = 1080, seconds: float = 4.0) ->
                 "-f",
                 "lavfi",
                 "-i",
-                f"color=c=white:s={width}x{height}:r=30:d={seconds},format=rgb48le,geq=r='(X+T*200)/W*65535':g='Y/H*65535':b='65535'",
-                "-c:v",
-                "libx265",
-                "-preset",
-                "ultrafast",
-                "-pix_fmt",
-                "yuv420p10le",
-                "-color_primaries",
-                "bt2020",
-                "-color_trc",
-                "smpte2084",
-                "-colorspace",
-                "bt2020nc",
-                "-x265-params",
-                "log-level=0:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
+                f"color=c=white:s={width}x{height}:r=30:d={seconds},format=rgb48le,geq=r='(X+T*200)/W*65535':g='Y/H*65535':b='65535'{tagged}",
+                *encode,
                 str(clip),
             ],
             check=True,
         )
     if record is None:
-        record = _bench_clip(clip, width, height, seconds)
+        record = _bench_clip(clip, width, height, seconds, suffix)
     base = {
         "scale": 100,
         "posX": 0,
