@@ -30,7 +30,9 @@ export function audioSignature(project: ProjectState): string {
         parts.push([
           clip.id, clip.mediaId ?? "", clip.start, clip.duration, clip.sourceIn ?? 0,
           clip.speed ?? 1, clip.speedCurve ?? null, clip.volume ?? 1, clip.muted ?? false, clip.reversed ?? false,
-          clip.fadeIn ?? 0, clip.fadeOut ?? 0, clip.audioEffects ?? null,
+          clip.fadeIn ?? 0, clip.fadeOut ?? 0, clip.audioEffects ?? null, clip.volumeKeys ?? null,
+          (clip.keyframes ?? []).map((frame) => [frame.t, (frame.props as Record<string, number> | undefined)?.volume, frame.interp ?? "linear", frame.handles ?? null])
+            .filter((point) => point[1] !== undefined),
         ]);
       }
     }

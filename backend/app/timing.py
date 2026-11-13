@@ -179,8 +179,8 @@ def effect_params_at(entry: dict, local: float) -> dict:
 
 
 def volume_at(clip: dict, local: float) -> float:
-    """K4: the clip's volume at a local time, keyed or static."""
-    return keyed_value(clip.get("volumeKeys"), local, float(clip.get("volume", 1)))
+    """K4: the clip's volume at a local time: volumeKeys or the static volume, times any volume keyframes."""
+    return keyed_value(clip.get("volumeKeys"), local, float(clip.get("volume", 1))) * property_at(clip, "volume", local, 1.0)
 
 
 # K6: animation slots. A clip may carry an In, an Out and a Combo animation by

@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.15.6 · a duck or a volume key is heard on the next play
+
+- **What was wrong.** `audioSignature` decides when playback asks the engine for a new mix, and it named neither `volumeKeys` nor the clip's volume keyframes. Pressing Duck (which writes `keyframes[].props.volume` onto the music clip) or editing a volume key left the old mix playing until some other audio field changed.
+- **What changed.** The signature carries `volumeKeys` and, for each keyframe that sets `volume`, its time, value, easing and handles. Keyframes on the picture alone still cost no mix. The engine's mix now applies those keyframes (engine log, 2.15.6), so the window plays what the export writes.
+- **Checked.** `tsc --noEmit` clean and `npm run build` passes; not looked at in a browser.
+
 ## 2.15.5 · ruler ticks sit on frames whose timecode ends in :00
 
 - **What was wrong.** With `formatTimecode` counting frames at the exact rate, the ruler's ticks, placed every 2.000 s of clock time, fell inside the last frame of each labelled second at fractional rates: at 29.97, 23.976 and 59.94 fps they read 00:00:01:29, 00:00:03:29 and so on (00:00:01:23 and 00:00:01:59 at the others).
