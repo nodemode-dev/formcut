@@ -238,6 +238,28 @@ def _restore_assets(assets: dict) -> dict:
 
 def unpack(path: Path) -> dict:
     """Ingest a package's media and assets, rewrite the document, save it as a new project."""
+    document, manifest, replacements, media_index = unpack_document(path)
+    title = str(document.get("title") or manifest.get("title") or "Imported project")
+    record = {
+        "id": uuid.uuid4().hex,
+        "title": title,
+        "width": int(document.get("width", 1080)),
+        "height": int(document.get("height", 1920)),
+        "fps": int(document.get("fps", 30)),
+        "timelines": document.get("timelines") or [],
+        "activeTimeline": int(document.get("activeTimeline", 0)),
+        "revision": 0,
+    }
+    # the project's other settings travel too (its background among them), not only the fields named above
+    record.update({k: v for k, v in document.items() if k not in record and k not in ("id", "revision")})
+    with _lock:
+        saved = store.save_project(record)
+    return {"id": saved["id"], "title": saved.get("title"), "media": len([k for k in replacements if k in media_index])}
+
+
+def unpack_document(path: Path) -> tuple[dict, dict, dict, dict]:
+    """A package's media and assets ingested and its document rewritten to their new ids, saved nowhere: (document,
+    manifest, replacements, media index). unpack saves it as a project; a Form function renders it as it is."""
     try:
         archive = zipfile.ZipFile(path)
     except zipfile.BadZipFile as exc:
@@ -283,6 +305,13 @@ def unpack(path: Path) -> dict:
             finally:
                 staged.unlink(missing_ok=True)
             replacements[old_id] = result["id"]
+    rewrite_references(document, replacements)
+    validate_document({k: v for k, v in document.items() if k != "revision"})
+    return document, manifest, replacements, media_index
+
+
+def rewrite_references(document: dict, replacements: dict) -> None:
+    """Every media, LUT, shader and font id the clips name, replaced where `replacements` maps it (in place)."""
     for clip in _clips(document):
         for holder, field in [(clip, "lutId"), (clip, "shaderId"), (clip, "mediaId"), (clip.get("textStyle") or {}, "fontId")]:
             if holder.get(field) in replacements:
@@ -292,23 +321,6 @@ def unpack(path: Path) -> dict:
         for screen in screens.values():
             if isinstance(screen, dict) and screen.get("mediaId") in replacements:
                 screen["mediaId"] = replacements[screen["mediaId"]]
-    validate_document({k: v for k, v in document.items() if k != "revision"})
-    title = str(document.get("title") or manifest.get("title") or "Imported project")
-    record = {
-        "id": uuid.uuid4().hex,
-        "title": title,
-        "width": int(document.get("width", 1080)),
-        "height": int(document.get("height", 1920)),
-        "fps": int(document.get("fps", 30)),
-        "timelines": document.get("timelines") or [],
-        "activeTimeline": int(document.get("activeTimeline", 0)),
-        "revision": 0,
-    }
-    # the project's other settings travel too (its background among them), not only the fields named above
-    record.update({k: v for k, v in document.items() if k not in record and k not in ("id", "revision")})
-    with _lock:
-        saved = store.save_project(record)
-    return {"id": saved["id"], "title": saved.get("title"), "media": len([k for k in replacements if k in media_index])}
 
 
 @router.post("/import", status_code=201)

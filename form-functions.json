@@ -1,0 +1,129 @@
+{
+  "format": "form-functions",
+  "format_version": 1,
+  "app": "formcut",
+  "app_version": "2.15.2",
+  "functions": [
+    {
+      "id": "transcribe",
+      "title": "Transcribe",
+      "description": "Speech to text with formcut's own Whisper (ONNX Runtime, CPU): segments with start, end, text and word times as JSON, and the same speech as SRT captions.",
+      "entry": "app.functions:transcribe",
+      "inputs": [
+        {
+          "name": "media",
+          "kind": "media",
+          "required": true,
+          "many": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "transcript",
+          "kind": "transcript",
+          "ext": "json"
+        },
+        {
+          "name": "subtitles",
+          "kind": "transcript",
+          "ext": "srt"
+        }
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "enum": [
+              "tiny",
+              "base",
+              "small",
+              "medium",
+              "large"
+            ],
+            "default": "tiny"
+          },
+          "language": {
+            "type": "string",
+            "pattern": "^(auto|[a-z]{2,3})$",
+            "default": "en"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "runs": [
+        "job"
+      ],
+      "cost": "cpu",
+      "timeout_s": 3600
+    },
+    {
+      "id": "render_project",
+      "title": "Render project",
+      "description": "Renders a formcut project (.fc package, or .fmc file with its media beside it) through the engine's own export path, the renderer the preview uses.",
+      "entry": "app.functions:render_project",
+      "inputs": [
+        {
+          "name": "project",
+          "kind": "project.formcut",
+          "required": true,
+          "many": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "video",
+          "kind": "video",
+          "ext": "mp4",
+          "by_param": {
+            "format": {
+              "mp4": {
+                "kind": "video",
+                "ext": "mp4"
+              },
+              "webm": {
+                "kind": "video",
+                "ext": "webm"
+              },
+              "gif": {
+                "kind": "video",
+                "ext": "gif"
+              }
+            }
+          }
+        }
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "mp4",
+              "webm",
+              "gif"
+            ],
+            "default": "mp4"
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "default": "high"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "runs": [
+        "job"
+      ],
+      "cost": "cpu",
+      "timeout_s": 3600
+    }
+  ]
+}

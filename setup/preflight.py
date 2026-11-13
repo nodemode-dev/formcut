@@ -27,7 +27,7 @@ def read(path: Path) -> str:
 
 
 def check_versions() -> str | None:
-    """One version, in all eight places."""
+    """One version, in all nine places."""
     found: dict[str, str] = {}
     package = json.loads(read(ROOT / "frontend/package.json"))
     found["frontend/package.json"] = package["version"]
@@ -44,6 +44,7 @@ def check_versions() -> str | None:
     found["Cargo.lock"] = lockfile.group(1) if lockfile else ""
     readme = re.search(r"(\d+\.\d+\.\d+)", read(ROOT / "README.md"))
     found["README badge"] = readme.group(1) if readme else ""
+    found["form-functions.json"] = json.loads(read(ROOT / "form-functions.json")).get("app_version", "")
     distinct = {v for v in found.values() if v}
     if len(distinct) != 1:
         for where, value in found.items():

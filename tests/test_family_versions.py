@@ -16,6 +16,7 @@ SITES = [
     ("src-tauri/Cargo.toml", r'^version = "([^"]+)"'),
     ("src-tauri/tauri.conf.json", r'^  "version": "([^"]+)"'),
     ("src-tauri/Cargo.lock", r'name = "formcut"\nversion = "([^"]+)"'),
+    ("form-functions.json", r'^  "app_version": "([^"]+)"'),
 ]
 
 
