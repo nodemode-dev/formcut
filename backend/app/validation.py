@@ -142,6 +142,9 @@ def clip_values(clip):
                 from .device_layer import VALUES as DEVICE_VALUES
 
                 device_value = key[len("device.") :] in DEVICE_VALUES
+            if key == "volume":
+                number(value, "volume keyframe", 0, 4)
+                continue
             if key not in ("posX", "posY", "scale", "rotation", "opacity") and not _effect_prop(key, clip) and not device_value:
                 raise ValueError("Unknown animated property")
             number(value, key)
