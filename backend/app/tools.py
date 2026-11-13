@@ -86,8 +86,8 @@ def bundle_dir() -> Path | None:
             # AppImage, .deb and .rpm keep resources, the engine being in usr/bin.
             here / "ffmpeg",
             here.parent / "Resources" / "ffmpeg",
-            here.parent / "lib" / "FormCut" / "ffmpeg",
             here.parent / "lib" / "formcut" / "ffmpeg",
+            here.parent / "lib" / "FormCut" / "ffmpeg",
         ]
     candidates += [user_ffmpeg_dir(), Path(__file__).resolve().parents[2] / "src-tauri" / "binaries"]
     return next((c for c in candidates if _holds_ffmpeg(c)), None)
