@@ -82,10 +82,11 @@ def bundle_dir() -> Path | None:
             here.parent / "Resources" / "binaries",
             # Where an installer puts the bundled ffmpeg resource: beside the
             # engine on Windows (and in a portable folder), in the bundle's
-            # Resources on macOS, and in usr/lib/formcut on Linux, where the
+            # Resources on macOS, and in usr/lib/FormCut on Linux, where the
             # AppImage, .deb and .rpm keep resources, the engine being in usr/bin.
             here / "ffmpeg",
             here.parent / "Resources" / "ffmpeg",
+            here.parent / "lib" / "FormCut" / "ffmpeg",
             here.parent / "lib" / "formcut" / "ffmpeg",
         ]
     candidates += [user_ffmpeg_dir(), Path(__file__).resolve().parents[2] / "src-tauri" / "binaries"]

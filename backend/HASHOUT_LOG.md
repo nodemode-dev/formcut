@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.15.7 · the Linux packages find the ffmpeg they ship
+
+- **What was wrong.** `tools.bundle_dir` looked for the bundled ffmpeg in `usr/lib/formcut/ffmpeg`, but the AppImage, .deb and .rpm keep resources under the product name, `usr/lib/FormCut/ffmpeg`. Linux file systems tell the two apart (macOS and Windows do not, and neither uses this path), so on Linux `bundle_dir` returned nothing and the engine fell back to whatever ffmpeg was on `PATH`. In the 2.15.5 AppImage on Ubuntu 24.04 the probe then came back empty, `VideoSource` raised "This media has no video stream", and the preview showed "Cannot show film-02.mp4" for every clip of the High Country demo, although the timeline and playback ran.
+- **The fix.** `bundle_dir` also tries `here.parent / "lib" / "FormCut" / "ffmpeg"`, ahead of the lower-case path, which stays for a package built under that name.
+- **Checked.** The 2.15.5 AppImage with `FORMCUT_FFMPEG_DIR` pointed at its own `usr/lib/FormCut/ffmpeg` (the folder this change finds): the same demo previews and plays every clip. `bundle_dir` run from this source against a copy of the package layout returns that folder; with `tools.py` from 2.15.6 it returns nothing. Not run: a rebuilt package with this change.
+
 ## 2.15.6 · volume keyframes reach the mix and the export
 
 - **What was wrong.** Volume is written two ways: `volumeKeys` (`{t, value}` points, K4) and `keyframes[].props.volume`, the shape `rhythm.ducking` returns and the inspector's Duck button writes onto the music clip. `timing.volume_at` read only `volumeKeys` and the static `volume`, so a duck never reached `audio_render.clip_envelope`. `validation.clip_values` also refused `volume` as an animated property, so a document carrying the duck failed `validate_document` ("Unknown animated property") before any mix was made.
