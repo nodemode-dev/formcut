@@ -62,7 +62,7 @@ def test_past_the_last_real_frame_the_renderer_holds_it(tmp_path, monkeypatch):
     (tmp_path / "m1.mp4").write_bytes(b"")
     monkeypatch.setattr(renderer, "MEDIA_DIR", tmp_path)
     monkeypatch.setattr(renderer, "_find", lambda media_id: {"width": 32, "height": 18})
-    monkeypatch.setattr(renderer.FrameRenderer, "_cursor", lambda self, media_id, time, path: "c")
+    monkeypatch.setattr(renderer.FrameRenderer, "_cursor", lambda self, media_id, time, path, precise=None: "c")
     worker = renderer.FrameRenderer.__new__(renderer.FrameRenderer)
     worker.sources, worker.frames, worker.frame_numbers = {"c": _ShortCapture()}, {}, {}
     worker.stills, worker.decode_scale, worker.decode_limit, worker.allow_proxy = {}, {}, None, False
