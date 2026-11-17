@@ -106,9 +106,14 @@ def package(triple: str, out: Path) -> Path:
         stage = out / name / "formcut"
         shutil.rmtree(stage.parent, ignore_errors=True)
         stage.mkdir(parents=True)
-        for part in ("formcut.exe", "formcut-engine.exe"):
-            shutil.copy2(require(release / part, part), stage / part)
+        shutil.copy2(require(release / "formcut.exe", "formcut.exe"), stage / "formcut.exe")
+        engine = release / "formcut-engine.exe"
+        sidecar = ROOT / "src-tauri" / "binaries" / f"formcut-engine-{triple}.exe"
+        shutil.copy2(require(engine if engine.exists() or not sidecar.exists() else sidecar, "formcut-engine.exe"),
+                     stage / "formcut-engine.exe")
         ffmpeg = release / "ffmpeg"
+        if not (ffmpeg / "ffmpeg.exe").is_file():
+            ffmpeg = ROOT / "src-tauri" / "ffmpeg"
         if (ffmpeg / "ffmpeg.exe").is_file():
             shutil.copytree(ffmpeg, stage / "ffmpeg")
         else:

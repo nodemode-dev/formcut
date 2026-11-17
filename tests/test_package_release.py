@@ -76,6 +76,29 @@ def test_macos_keeps_the_bundle_and_its_executables(packager):
     assert "FormCut.app/Contents/Info.plist" in modes
 
 
+def test_windows_takes_the_sidecar_and_ffmpeg_tauri_bundles_when_the_release_folder_lacks_them(packager):
+    module, root = packager
+    tauri = root / "src-tauri"
+    _file(tauri / "target" / "x86_64-pc-windows-msvc" / "release" / "formcut.exe", b"app")
+    _file(tauri / "binaries" / "formcut-engine-x86_64-pc-windows-msvc.exe", b"signed engine")
+    _file(tauri / "ffmpeg" / "ffmpeg.exe", b"ffmpeg")
+    archive = module.package("x86_64-pc-windows-msvc", root / "out")
+    with zipfile.ZipFile(archive) as bundle:
+        assert bundle.read("formcut/formcut-engine.exe") == b"signed engine"
+        assert bundle.read("formcut/ffmpeg/ffmpeg.exe") == b"ffmpeg"
+
+
+def test_windows_prefers_the_release_folder_copy_of_the_engine(packager):
+    module, root = packager
+    tauri = root / "src-tauri"
+    release = tauri / "target" / "x86_64-pc-windows-msvc" / "release"
+    _file(release / "formcut.exe")
+    _file(release / "formcut-engine.exe", b"release copy")
+    _file(tauri / "binaries" / "formcut-engine-x86_64-pc-windows-msvc.exe", b"sidecar")
+    with zipfile.ZipFile(module.package("x86_64-pc-windows-msvc", root / "out")) as bundle:
+        assert bundle.read("formcut/formcut-engine.exe") == b"release copy"
+
+
 def test_a_build_missing_its_engine_packages_nothing(packager):
     module, root = packager
     _file(root / "src-tauri" / "target" / "x86_64-pc-windows-msvc" / "release" / "formcut.exe")
