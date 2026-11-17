@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { api, waitJob } from "../engine/api";
+import { rateLabel } from "../engine/rates";
 import { escapeHtml } from "./safe-text";
 import { openViewer } from "./viewer";
 import { buildCreatorPanel } from "./creator-panel";
@@ -32,7 +33,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     <header class="set-head"><strong data-page-title>Project</strong><span class="set-head-actions"><button class="iconbtn" data-full title="${text("Fullscreen")}" aria-label="${text("Fullscreen")}" aria-pressed="false">${icon("fullscreen")}</button><button class="iconbtn" data-close title="Close" aria-label="Close">${icon("close")}</button></span></header>
     <div class="set-body studio-content">
     <section data-view="project" class="set-view">
-      <div class="panel-section"><div class="panel-section-head"><span>Project settings</span></div><div class="panel-rows"><label>Width <input data-width type="number" min="16" max="7680"></label><label>Height <input data-height type="number" min="16" max="7680"></label><label>Frame rate <input data-fps type="number" min="1" max="120"></label><div class="studio-actions"><button class="tool-chip is-primary" data-settings>Apply settings</button></div></div></div>
+      <div class="panel-section"><div class="panel-section-head"><span>Project settings</span></div><div class="panel-rows"><label>Width <input data-width type="number" min="16" max="7680"></label><label>Height <input data-height type="number" min="16" max="7680"></label><label>Frame rate <input data-fps type="number" min="1" max="120" step="any"></label><div class="studio-actions"><button class="tool-chip is-primary" data-settings>Apply settings</button></div></div></div>
       <div class="panel-section"><div class="panel-section-head"><span>Timeline structure</span><small>All settings and structure changes support Undo.</small></div><div class="panel-rows"><label>Name <input data-structure-name value="New track"></label><label>Active timeline <select data-timeline></select></label><div class="studio-actions"><button class="tool-chip" data-track-add>${icon("addTrack")}Add track</button><button class="tool-chip" data-timeline-add>${icon("plus")}Add timeline</button><button class="tool-chip" data-timeline-remove>${icon("trash")}Remove active timeline</button></div></div></div>
     </section>
     ${["image", "video", "audio"].map((kind) => `
@@ -247,7 +248,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
   };
   const structure = () => {
     const s = engine.snapshot;
-    for (const key of ["width", "height", "fps"] as const) if (document.activeElement !== q(key)) q(key).value = String(s[key]);
+    for (const key of ["width", "height", "fps"] as const) if (document.activeElement !== q(key)) q(key).value = key === "fps" ? rateLabel(s.fps) : String(s[key]);
     reconcileOptions(q<HTMLSelectElement>("timeline"), s.timelines.map((t, i) => ({ id: String(i), name: t.name })));
     q<HTMLSelectElement>("timeline").value = String(s.activeTimeline);
   };

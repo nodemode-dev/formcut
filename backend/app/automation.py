@@ -485,7 +485,12 @@ def apply_edit(project: dict, command: dict):
         allowed = {"title", "width", "height", "fps", "activeTimeline"}
         if set(command["patch"]) - allowed:
             raise ValueError("Unknown project setting")
-        project.update(command["patch"])
+        patch = dict(command["patch"])
+        if "fps" in patch:
+            from . import rates
+
+            patch["fps"] = rates.number(rates.exact(patch["fps"]))
+        project.update(patch)
     else:
         raise ValueError("Unknown editing command")
 

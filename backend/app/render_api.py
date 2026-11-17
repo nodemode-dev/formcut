@@ -19,7 +19,7 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import alpha_export, encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
+from . import alpha_export, encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, rates, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
 from .encoders import CONTAINERS, addon_binary_for, estimate_bitrate, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
 from .encoders import choose as choose_encoder
@@ -411,6 +411,9 @@ RATE_PRESETS = {
     "50": (50, 1),
     "59.94": (60000, 1001),
     "60": (60, 1),
+    "100": (100, 1),
+    "119.88": (120000, 1001),
+    "120": (120, 1),
 }
 
 
@@ -535,7 +538,7 @@ def export_media(
         device, upload = hardware_io(encoder or "")
         out_w, out_h = resize_for(project, size)
         num, den = RATE_PRESETS.get(rate or "", (0, 0))
-        out_rate = f"{num}/{den}" if num else str(fps)
+        out_rate = f"{num}/{den}" if num else rates.text(rates.exact(fps))
         # `audio` is already the temporary wav path in this scope, so the audio
         # codec flags need their own name.
         audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
@@ -835,7 +838,7 @@ def export_media(
         program = str(addon_binary_for(encoder) or "ffmpeg")
         # An HDR output needs the frame path: the two graphs feed the file to
         # the encoder untouched and would tag Rec.709 pixels as HLG or PQ.
-        fractional = not float(project["fps"]).is_integer()  # the graph's timebase takes whole rates; the frame path any
+        fractional = rates.exact(project["fps"]).denominator != 1  # the graph's timebase takes whole rates; the frame path any
         frames_only = os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter or fractional
         native = None if frames_only else fast_export.plan(project, count)
         if native is not None:
@@ -864,7 +867,7 @@ def export_media(
             )
         layered = (
             None
-            if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter
+            if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter or fractional
             else fast_layers.plan(project, count)
         )
         if layered is not None and exact and os.environ.get("FORMCUT_EXPORT_PATH") != "layered":

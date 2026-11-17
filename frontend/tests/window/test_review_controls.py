@@ -44,13 +44,16 @@ def window(engine, clip):  # noqa: F811 - the imported fixture
         api.dispose()
 
 
-def test_a_project_made_at_100_fps_previews_at_100(window):
+@pytest.mark.parametrize(("label", "rate"), [("100", "100"), ("29.97", str(30000 / 1001)), ("119.88", str(120000 / 1001))])
+def test_a_project_made_at_a_high_or_ntsc_rate_previews_at_it(window, label, rate):
     page, _, _, errors = window
-    page.click('.format-sheet [data-fps="100"]')
-    assert page.get_attribute('.format-sheet [data-fps="100"]', "class") == "is-active"
+    button = f'.format-sheet [data-fps="{rate}"]'
+    assert page.text_content(button) == label
+    page.click(button)
+    assert page.get_attribute(button, "class") == "is-active"
     page.click('[data-ref="format-create"]')
     page.wait_for_function("() => document.querySelector('.start-overlay').hidden", timeout=TIMEOUT)
-    page.wait_for_function("() => document.querySelector('[data-ref=\"meta\"]').textContent.includes('100 fps')", timeout=TIMEOUT)
+    page.wait_for_function(f"() => document.querySelector('[data-ref=\"meta\"]').textContent.includes('· {label} fps')", timeout=TIMEOUT)
     assert not errors, errors
 
 

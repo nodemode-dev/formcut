@@ -17,7 +17,7 @@ class ProjectIn(BaseModel):
     title: str = "Untitled project"
     width: int = 1080
     height: int = 1920
-    fps: int = 30
+    fps: int | float = 30
     timelines: list[dict] = []
     activeTimeline: int = 0
     revision: int = 0

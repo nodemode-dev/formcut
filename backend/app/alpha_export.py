@@ -16,6 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from . import rates
 from .renderer import FrameRenderer
 
 FORMATS = {
@@ -79,7 +80,7 @@ def export_transparent(project: dict, job_id: str, report, cancelled, fmt: str, 
         if archive is None:
             command = [
                 "ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{width}x{height}",
-                "-r", f"{fps:.6g}", "-i", "-", "-c:v", spec["encoder"], *spec["args"], "-pix_fmt", spec["pix"], str(final),
+                "-r", rates.text(rates.exact(fps)), "-i", "-", "-c:v", spec["encoder"], *spec["args"], "-pix_fmt", spec["pix"], str(final),
             ]  # fmt: skip
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         report(0.02)

@@ -234,7 +234,15 @@ def formcut_create_project(
     title: Annotated[str, Field(description="Project title as it appears in formcut")] = "Untitled project",
     width: Annotated[int, Field(ge=16, le=7680, description="Frame width in pixels")] = 1920,
     height: Annotated[int, Field(ge=16, le=4320, description="Frame height in pixels")] = 1080,
-    fps: Annotated[int, Field(ge=1, le=240, description="Frames per second")] = 30,
+    fps: Annotated[
+        float,
+        Field(
+            ge=1,
+            le=120,
+            description="Frames per second: a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88 "
+            "(kept as 24000/1001, 30000/1001, 60000/1001 and 120000/1001)",
+        ),
+    ] = 30,
 ) -> str:
     ok, project = _rpc("project.create", {"title": title})
     if not ok:
@@ -254,7 +262,7 @@ def formcut_create_project(
         revision = edited.get("revision")
     return (
         f"created project {project_id} titled {title}\n"
-        f"frame {width}x{height} at {fps} fps, revision {revision}\n"
+        f"frame {width}x{height} at {fps:g} fps, revision {revision}\n"
         "pass this id and revision to formcut_add_clip"
     )
 
@@ -428,7 +436,15 @@ def formcut_set_frame(
     revision: Annotated[int, Field(ge=0, description="Revision last seen for this project")],
     width: Annotated[int, Field(ge=16, le=7680, description="Frame width in pixels")],
     height: Annotated[int, Field(ge=16, le=4320, description="Frame height in pixels")],
-    fps: Annotated[int, Field(ge=1, le=240, description="Frames per second")] = 30,
+    fps: Annotated[
+        float,
+        Field(
+            ge=1,
+            le=120,
+            description="Frames per second: a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88 "
+            "(kept as 24000/1001, 30000/1001, 60000/1001 and 120000/1001)",
+        ),
+    ] = 30,
 ) -> str:
     ok, edited = _rpc(
         "project.edit",
@@ -440,7 +456,7 @@ def formcut_set_frame(
     )
     if not ok:
         return f"{edited}\nCall formcut_get_project for the current revision and retry."
-    return f"frame set to {width}x{height} at {fps} fps, revision {edited.get('revision')}"
+    return f"frame set to {width}x{height} at {fps:g} fps, revision {edited.get('revision')}"
 
 
 @mcp.tool(
@@ -449,7 +465,7 @@ def formcut_set_frame(
         "Start rendering a project to a file and return a job id. Rendering takes minutes, so this returns "
         "immediately: poll formcut_render_status with the job id until it reports done, which carries the output "
         "path. Format is mp4, webm or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, "
-        "30, 50, 59.94 or 60; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), "
+        "30, 50, 59.94, 60, 100, 119.88 or 120; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), "
         "audio_bitrate in kbps (192, 256 or 320), and a loudness target in LUFS with a true-peak ceiling in dBTP "
         "(one measured gain on the mix, no compression)."
     ),

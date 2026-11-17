@@ -313,6 +313,10 @@ From the owner's Posh cutdowns, the work that ran outside formcut is now in it:
 - `render_api.py`: the audio bitrate; `measure_loudness` and `loudness_gain` (one gain to a target under a true-peak
   ceiling); a rate more than 0.2% from the project's sampled from the timeline at that rate (rendered at the project's
   rate and padded by the encoder, a 24 fps edit at 30 repeated every fifth frame).
+- `rates.py`: a project rate is a whole number from 1 to 120 or an NTSC ratio (24000/1001, 30000/1001, 60000/1001,
+  120000/1001). The document carries it as a number; ffmpeg, the export and the timeline files take the exact ratio
+  from `rates.exact`. A fractional project exports through the frame path, since the native and layered graphs
+  work on whole-rate timebases.
 - `qc.py`: the delivery check, its perceptual repeats ffmpeg's mpdecimate.
 - `cadence.py`: a source's cadence map (each frame's share of pixels changed by over 4 levels; new above the larger of
   0.15% and 5% of the local new-frame level), formcut's frame choice replayed per clip, the per-clip solver, and an

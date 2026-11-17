@@ -1,5 +1,6 @@
 import type { Clip, ProjectState } from "./types";
 import { motionKeys } from "./motion";
+import { exactRate } from "./rates";
 import { SPEED_PRESETS, speedPoints, sourceTime, shiftedCurve, retimedKeys } from "./timing";
 
 export const CREATOR_COMMANDS = new Set(["timeline.import", "clip.device", "clip.speed-curve", "clip.motion", "clip.creator", "clip.detach", "clip.reattach", "clip.ripple-delete", "clip.rejoin", "clip.freeze-insert", "track.add", "track.insert", "track.remove", "track.update", "timeline.add", "timeline.remove", "project.settings", "marker.add", "marker.remove", "marker.update"]);
@@ -237,9 +238,9 @@ export function creatorCommand(state: ProjectState, command: string, data: unkno
     const own = timeline as { width?: number; height?: number; fps?: number };
     for (const key of ["width", "height", "fps"] as const) {
       if (p[key] === undefined) continue;
-      const value = Number(p[key]);
-      const low = key === "fps" ? 1 : 16, high = key === "fps" ? 120 : 7680;
-      if (!Number.isInteger(value) || value < low || value > high) throw new Error(`Invalid ${key}`);
+      const value = key === "fps" ? exactRate(Number(p[key])) : Number(p[key]);
+      if (key !== "fps" && (!Number.isInteger(value) || value < 16 || value > 7680)) throw new Error(`Invalid ${key}`);
+      if (key === "fps" && Number.isNaN(value)) throw new Error("Invalid fps");
       if (state.timelines.length > 1) own[key] = value;
       else state[key] = value;
       state[key] = value;

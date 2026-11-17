@@ -26,7 +26,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from . import store
+from . import rates, store
 from .assets import ShaderInput, asset_path, upload_lut, upload_shader
 from .fonts import upload_font
 from .media import MEDIA_DIR, _read, ingest_path
@@ -245,7 +245,7 @@ def unpack(path: Path) -> dict:
         "title": title,
         "width": int(document.get("width", 1080)),
         "height": int(document.get("height", 1920)),
-        "fps": int(document.get("fps", 30)),
+        "fps": rates.number(rates.exact(document.get("fps", 30))),
         "timelines": document.get("timelines") or [],
         "activeTimeline": int(document.get("activeTimeline", 0)),
         "revision": 0,

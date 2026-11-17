@@ -2,6 +2,11 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · 23.976, 29.97, 59.94 and 119.88 in the format sheet
+
+- **What changed.** The engine now takes the four NTSC rates as exact ratios (engine log), so the format sheet offers them beside the whole rates: 23.976, 24, 25, 29.97, 30, 50, 59.94, 60, 100, 119.88, 120. Each button carries the nearest number to the ratio (30000 / 1001) and is labelled by `rateLabel` in the new `engine/rates.ts`. `project.settings` in `creator-commands.ts` took only whole rates; it now reads the value through `exactRate`, which turns 29.97 typed in the Settings or Studio frame-rate field into 30000 / 1001 and refuses anything that is neither a whole rate up to 120 nor an NTSC rate. Both fields take decimals (`step="any"`) and show the label, and the preview's header reads "29.97 fps", not the long float. No strings were added: the rates are their own labels.
+- **Checked.** The window test now makes projects at 100, 29.97 and 119.88 from the sheet and waits for the preview's header to read that rate; `tsc --noEmit` clean, `npm run build` passes.
+
 ## Unreleased · Make proxy on a media card, Proxies in Settings, and the proxy badge shows
 
 - **What was missing.** The engine has built proxies since P1 to P4, but a person could neither ask for one nor switch them off: `POST /api/media/{id}/proxy` and `/api/proxies/settings` had no caller in the window. The P9 badge on video cards never showed either: `cardFor` appended it, then set `card.innerHTML`, which removed it, so `paintProxies` found no badge and never asked the engine (a session with a video card and a proxy built made no `GET /api/media/{id}/proxy` at all).
@@ -12,7 +17,7 @@ Reasoning behind interface changes, newest first.
 ## Unreleased · 100 and 120 fps in the format sheet
 
 - **What changed.** The new-project format sheet offers 100 and 120 beside 24, 25, 30, 50 and 60, the rates a high-frame-rate camera records at; the numbers are their own labels, so no strings were added. The Project settings frame-rate field stopped at 240 while the engine refuses anything over 120, so it now stops at 120.
-- **Fractional rates.** 23.976, 29.97 and 59.94 are not offered: the engine refuses a project rate that is not a whole number (engine log).
+- **Fractional rates.** Not in this change; added in "23.976, 29.97, 59.94 and 119.88 in the format sheet" above.
 - **Checked.** `test_a_project_made_at_100_fps_previews_at_100` in the window test picks 100 in the sheet, creates the project and waits for the preview to read 1080 x 1920 · 100 fps. Playback and export at 100 and 120 are checked in the engine's tests.
 
 ## unreleased (after 2.15.8) · input colour and LUT sampling in the Color section

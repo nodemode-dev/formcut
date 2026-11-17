@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageColor, ImageOps
 
-from . import fast_export
+from . import fast_export, rates
 from .media import MEDIA_DIR, needs_colour_work
 from .render_document import flatten
 from .renderer import DEFAULTS
@@ -143,6 +143,8 @@ def _visible(project: dict) -> list[dict]:
 
 def refusal(project: dict) -> str | None:
     """Why this project needs the frame path, or None when it can be layered natively."""
+    if rates.exact(project["fps"]).denominator != 1:
+        return "a fractional frame rate"
     if _background(project) is None:
         return "background"
     visible = _visible(project)

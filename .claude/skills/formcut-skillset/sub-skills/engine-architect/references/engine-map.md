@@ -135,6 +135,7 @@ the automation transports.
 - `prompt_space.py`
 - `proxies.py`
 - `qc.py`
+- `rates.py`
 - `render_document.py`
 - `renderer.py`
 - `rhythm.py`

@@ -10,6 +10,7 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
+import { rateLabel } from "../engine/rates";
 import { buildModePanel } from "./mode-popout";
 import { buildWebhooks } from "./webhooks-settings";
 import { buildTikTokSettings } from "./tiktok-settings";
@@ -102,6 +103,8 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   const width = numberField(engine.snapshot.width, 16, 7680);
   const height = numberField(engine.snapshot.height, 16, 4320);
   const fps = numberField(engine.snapshot.fps, 1, 120);
+  fps.step = "any";
+  fps.value = rateLabel(engine.snapshot.fps);
   row(size, "set.width", width);
   row(size, "set.height", height);
   row(size, "set.fps", fps);
