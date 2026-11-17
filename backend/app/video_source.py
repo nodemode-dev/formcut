@@ -149,11 +149,14 @@ class VideoSource:
         self.own_conversion = False  # the renderer sets it (yuv.wanted)
         if self.deep and self.hdr:
             self.tonemap = ""  # the signal stays in its own transfer; nothing is rolled off
-        rotation = float(stream.get("tags", {}).get("rotate", 0))
+        # The quarter turns the picture is shown at, counter-clockwise, as np.rot90 counts them: the display matrix's
+        # rotation is counter-clockwise degrees (-90 on a phone held upright), the legacy "rotate" tag clockwise.
+        rotation = -float(stream.get("tags", {}).get("rotate", 0))
         for item in stream.get("side_data_list", []):
             if "rotation" in item:
                 rotation = float(item["rotation"])
-        if round(rotation / 90) % 2:
+        self.turns = round(rotation / 90) % 4
+        if self.turns % 2:
             self.width, self.height = self.height, self.width
         if limit and max(self.width, self.height) > limit:
             ratio = limit / max(self.width, self.height)
@@ -348,18 +351,39 @@ class NativeSource(VideoSource):
         self.stream = self.container.streams.video[0]
         self.stream.thread_type = "AUTO"
         base = self.stream.time_base
+        # The stream's first moment, which frame 0 is counted from: an MPEG-TS or an offset file starts well after
+        # zero (1.48 s is common), and counting from zero repeated its first frames and lost as many at the end.
+        if self.stream.start_time is not None:
+            self.origin = float(self.stream.start_time * base)
+        elif self.container.start_time is not None:
+            self.origin = self.container.start_time / 1_000_000
+        else:
+            self.origin = 0.0
         if self.position > 0:
-            self.container.seek(int(self.position / self.fps / float(base)), stream=self.stream, backward=True, any_frame=False)
+            at = self.position / self.fps + self.origin
+            self.container.seek(int(at / float(base)), stream=self.stream, backward=True, any_frame=False)
         self.decoded = self.container.decode(self.stream)
         self.native_index = -1  # the CFR index of the last frame decoded
         self.pending = None  # a decoded frame ahead of the CFR clock, held for duplication
         self.process = None
         self.errors = None
-        # a seek lands on the keyframe before the target: decode forward to the target
+        # a seek lands on the keyframe before the target: decode forward to the target. A container that seeks by
+        # byte position (MPEG-TS) can land past it instead; then the file is read again from its start.
+        first = True
         while True:
             index, frame = self._next()
             if frame is None:
                 break
+            if first and index > self.position and self.position > 0:
+                with contextlib.suppress(Exception):
+                    self.container.close()
+                self.container = av.open(self.path, hwaccel=_hwaccel_for(self))  # opened afresh, at its first frame
+                self.stream = self.container.streams.video[0]
+                self.stream.thread_type = "AUTO"
+                self.decoded = self.container.decode(self.stream)
+                first = False
+                continue
+            first = False
             if index >= self.position:
                 self.pending = (index, frame)
                 break
@@ -397,8 +421,8 @@ class NativeSource(VideoSource):
             return None, None
         except av.error.InvalidDataError:
             return self._next()
-        pts = frame.pts if frame.pts is not None else 0
-        index = round(float(pts * self.stream.time_base) * self.fps)
+        seconds = float(frame.pts * self.stream.time_base) if frame.pts is not None else getattr(self, "origin", 0.0)
+        index = round((seconds - getattr(self, "origin", 0.0)) * self.fps)
         return index, frame
 
     def _pull(self):
@@ -425,19 +449,22 @@ class NativeSource(VideoSource):
     def _as_bgr(self, frame):
         # A planar 4:2:0 frame at its own size is converted by formcut, not swscale: kept as its planes when the
         # renderer sends this clip to the device (which converts it in its first pass), converted here otherwise.
-        if self.own_conversion and frame.width == self.width and frame.height == self.height:
+        turns = getattr(self, "turns", 0)
+        if self.own_conversion and not turns and frame.width == self.width and frame.height == self.height:
             from .yuv import from_av
 
             planes = from_av(frame, self.wide, self.matrix, self.full_range)
             if planes is not None:
                 return planes if self.want_planes else planes.rgba()
+        # scaled at the stored size, then turned upright (the pipe's ffmpeg turns it by the same display matrix)
+        width, height = (self.height, self.width) if turns % 2 else (self.width, self.height)
         if self.wide:
             # RGBA64 straight from swscale: the alpha is full already, so the renderer adds no channel (a 16 MB
             # copy a 1080p frame that the M5 profile showed)
-            picture = frame.reformat(width=self.width, height=self.height, format="rgba64le", interpolation="BICUBIC")
-            return picture.to_ndarray()
-        picture = frame.reformat(width=self.width, height=self.height, format="bgr24", interpolation="BICUBIC")
-        return picture.to_ndarray()
+            picture = frame.reformat(width=width, height=height, format="rgba64le", interpolation="BICUBIC").to_ndarray()
+        else:
+            picture = frame.reformat(width=width, height=height, format="bgr24", interpolation="BICUBIC").to_ndarray()
+        return np.ascontiguousarray(np.rot90(picture, turns)) if turns else picture
 
     def release(self):
         # the read-ahead finishes before the container closes under it

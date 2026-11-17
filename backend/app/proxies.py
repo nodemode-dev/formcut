@@ -30,7 +30,11 @@ FORMAT_VERSION = 1
 
 # The document's rule, kept here so the interface and the engine agree on it.
 AUTO_LONG_SIDE = 1920
-AUTO_CODECS = {"hevc", "h265", "prores", "dnxhd", "dnxhr", "av1", "vp9"}
+# Codecs slow to decode for their size. ProRes and DNxHD/HR are intra-only and decode quickly, so they earn a proxy by
+# size alone; these earn one from 1080p up (below that they decode fast enough to scrub).
+AUTO_CODECS = {"hevc", "h265", "av1", "vp9"}
+# a proxy build stands aside for the editing: two threads, and a lower priority than the window's own work
+BUILD_THREADS = 2
 AUTO_BITRATE = 50_000_000
 DEFAULT_LONG_SIDE = 1280
 ALLOWED_SIZES = (960, 1280, 1920)
@@ -130,6 +134,25 @@ def status(media_id: str, source: Path | None = None) -> dict:
     return {"state": "ready", **{k: record[k] for k in ("width", "height", "fps", "encoder") if k in record}}
 
 
+def _low_priority() -> dict:
+    """Popen arguments that start ffmpeg below normal priority on Windows (elsewhere _lower lowers it once started; a
+    preexec_fn is unsafe in a threaded engine), so a proxy build never slows playback or an edit."""
+    import sys
+
+    if sys.platform.startswith("win"):
+        return {"creationflags": getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)}
+    return {}
+
+
+def _lower(pid: int) -> None:
+    import contextlib
+    import os
+
+    if hasattr(os, "setpriority"):
+        with contextlib.suppress(OSError):
+            os.setpriority(os.PRIO_PROCESS, pid, 10)
+
+
 def wants_proxy(info: dict) -> bool:
     """Whether the document's rule says this media earns a proxy."""
     if info.get("kind") != "video":
@@ -137,7 +160,7 @@ def wants_proxy(info: dict) -> bool:
     long_side = max(int(info.get("width") or 0), int(info.get("height") or 0))
     if long_side > AUTO_LONG_SIDE:
         return True
-    if str(info.get("codec") or "").lower() in AUTO_CODECS:
+    if long_side >= AUTO_LONG_SIDE and str(info.get("codec") or "").lower() in AUTO_CODECS:
         return True
     return int(info.get("bitrate") or 0) > AUTO_BITRATE
 
@@ -164,8 +187,12 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         "-v",
         "error",
         "-y",
+        "-threads",
+        str(BUILD_THREADS),
         "-i",
         str(source),
+        "-threads",
+        str(BUILD_THREADS),
         "-map",
         "0:v:0",
         "-an",
@@ -192,7 +219,8 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         str(staging),
     ]
     with tempfile.TemporaryFile("w+") as log:
-        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log, text=True)
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log, text=True, **_low_priority())
+        _lower(process.pid)
         while process.poll() is None:
             if cancelled():
                 process.kill()

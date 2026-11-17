@@ -15,6 +15,7 @@ against a moving average of themselves) is reported too: below it, the compariso
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -213,9 +214,10 @@ def measure(path: str, frames: int | None = None) -> tuple[list[np.ndarray], lis
     from . import frames as reader
 
     pictures, quads = [], []
-    for frame in reader.each(path, frames):
-        pictures.append(frame)
-        quads.append(green_quad(frame))
+    with contextlib.closing(reader.each(path, frames)) as decoded:
+        for frame in decoded:
+            pictures.append(frame)
+            quads.append(green_quad(frame))
     return pictures, quads
 
 

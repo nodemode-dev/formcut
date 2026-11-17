@@ -15,6 +15,9 @@ and 1% speed-ups so every output frame landed on a distinct source frame, with a
   YUV 4:2:0 plane, hi 768, lo 320, frac 0.33), matching ffmpeg's own decisions frame for frame.
 """
 
+import contextlib
+import os
+import threading
 from pathlib import Path
 
 import cv2
@@ -28,19 +31,23 @@ PUSH_PER_FRAME = 0.10  # percent scale an output frame: enough that no frame of 
 
 
 def changed_shares(path: Path, report=None, cancelled=None) -> np.ndarray:
-    """Each frame's share of pixels changed by over 4 levels from the frame before (the first frame 1.0)."""
+    """Each frame's share of pixels changed by over 4 levels from the frame before (the first frame 1.0).
+
+    Read on the timeline's clock (frames.each with cfr=True): solve_clip indexes the map by time times the source's
+    average rate, the frame the renderer shows at that moment, so a variable-rate source is measured as it plays."""
     from . import frames
 
     total = max(1, frames.count(path))
     previous, shares = None, []
-    for frame in frames.each(path):
-        if cancelled and cancelled():
-            raise InterruptedError
-        small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (480, 270), interpolation=cv2.INTER_AREA).astype(np.int16)
-        shares.append(float((np.abs(small - previous) > 4).mean()) if previous is not None else 1.0)
-        previous = small
-        if report and len(shares) % 60 == 0:
-            report(len(shares) / total, f"frame {len(shares)} of {total}")
+    with contextlib.closing(frames.each(path)) as decoded:
+        for frame in decoded:
+            if cancelled and cancelled():
+                raise InterruptedError
+            small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (480, 270), interpolation=cv2.INTER_AREA).astype(np.int16)
+            shares.append(float((np.abs(small - previous) > 4).mean()) if previous is not None else 1.0)
+            previous = small
+            if report and len(shares) % 60 == 0:
+                report(len(shares) / total, f"frame {len(shares)} of {total}")
     return np.array(shares, np.float32)
 
 
@@ -58,13 +65,24 @@ def new_frames(shares: np.ndarray) -> np.ndarray:
 
 def cadence_map(media_id: str, path: Path, report=None, cancelled=None) -> np.ndarray:
     """The picture number of each source frame (it changes only on a new frame), cached per media."""
+    found = cached(media_id)
+    if found is not None:
+        return found
     CACHE.mkdir(parents=True, exist_ok=True)
-    cached = CACHE / f"{media_id}.npy"
-    if cached.exists():
-        return np.load(cached)
     pictures = np.cumsum(new_frames(changed_shares(path, report, cancelled)))
-    np.save(cached, pictures)
+    # written whole, then renamed into place: a reader never sees half a map
+    staging = CACHE / f"{media_id}.{os.getpid()}.{threading.get_ident()}.part.npy"
+    np.save(staging, pictures)
+    os.replace(staging, CACHE / f"{media_id}.npy")
     return pictures
+
+
+def cached(media_id: str) -> np.ndarray | None:
+    """The media's cadence map when one is kept and reads back whole; None (measure it) otherwise."""
+    try:
+        return np.load(CACHE / f"{media_id}.npy")
+    except (OSError, ValueError, EOFError):
+        return None
 
 
 def summary(pictures: np.ndarray, fps: float) -> dict:

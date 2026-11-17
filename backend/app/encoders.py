@@ -319,9 +319,11 @@ def encoder_formats(encoder: str) -> frozenset[str]:
     with _lock:
         if encoder in _formats:
             return _formats[encoder]
+    # the binary the export runs this encoder with: an installed add-on's own, else the bundled ffmpeg (first on PATH)
+    program = str(addon_binary_for(encoder) or "ffmpeg")
     try:
         out = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-h", f"encoder={encoder}"], capture_output=True, text=True, check=False, timeout=30
+            [program, "-hide_banner", "-h", f"encoder={encoder}"], capture_output=True, text=True, check=False, timeout=30
         ).stdout
     except Exception:
         out = ""
@@ -341,7 +343,11 @@ def ten_bit_format(encoder: str) -> str | None:
     if not wanted:
         return None
     formats = encoder_formats(encoder)
-    return wanted if not formats or wanted in formats else None
+    if not formats:
+        # a hardware encoder may list none (it takes frames in device memory); a software one that lists none, or
+        # whose help could not be read, is not claimed
+        return wanted if is_hardware(encoder) else None
+    return wanted if wanted in formats else None
 
 
 def is_ten_bit(pix: str) -> bool:

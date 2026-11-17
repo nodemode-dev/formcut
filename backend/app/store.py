@@ -61,7 +61,13 @@ def get_project(project_id: str) -> dict | None:
     with _lock:
         found = next((p for p in _read() if p["id"] == project_id), None)
     # a project saved before the RPC wrote one (or from elsewhere without one) reads back with its first timeline active
-    return found if found is None or "activeTimeline" in found else {**found, "activeTimeline": 0}
+    if found is None:
+        return None
+    active = found.get("activeTimeline")
+    timelines = found.get("timelines") or []
+    if isinstance(active, bool) or not isinstance(active, int) or not 0 <= active < max(1, len(timelines)):
+        return {**found, "activeTimeline": 0}  # an index past the timelines (one was removed elsewhere) is the first
+    return found
 
 
 def save_project(project: dict, expected_revision: int | None = None) -> dict:

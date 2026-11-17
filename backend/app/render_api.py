@@ -409,9 +409,11 @@ def _light_of(frame: np.ndarray, transfer: str, stride: int = 2) -> tuple[float,
     return peak, average
 
 
-def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) -> list[bytes]:
-    """Render one contiguous run of frames with a renderer of its own."""
+def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled, keep_sixteen: bool = False) -> list[bytes]:
+    """Render one contiguous run of frames with a renderer of its own, at the depth the encoder's pipe was opened at
+    (a ten-bit SDR export takes sixteen-bit frames, as the main renderer gives them)."""
     worker = FrameRenderer(project)
+    worker.keep_sixteen = keep_sixteen
     try:
         out = []
         for index in range(span[0], span[1]):
@@ -551,6 +553,8 @@ def export_media(
             # every computer. The result says so, and the file is .webm.
             format, wanted, encoder, fell_back = "webm", "vp9", choose_encoder("vp9"), "webm"
             path = final = OUTPUTS / (job_id + ".webm")
+        if format == "mov" and encoder != "prores_ks":
+            raise ValueError("A mov export is ProRes 422, and this ffmpeg has no working prores_ks encoder")
         if not encoder and not gif:
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
@@ -997,6 +1001,7 @@ def export_media(
             # frame order. Each worker keeps its own renderer, so decoders stay
             # sequential inside a chunk; one worker reproduces the old path.
             workers = export_workers()
+            frame_bytes = renderer.width * renderer.height * (8 if renderer.deep or renderer.keep_sixteen else 4)
             # The pool suits the CPU path, where renderers on separate cores add up. On the device path they
             # all queue for one GPU lock and one decoder each seeks into the same clip, and the M5 export read
             # 18 fps against a 41 fps render; there the frame path renders one frame ahead on a thread while
@@ -1012,13 +1017,17 @@ def export_media(
                 chunk = math.ceil(count / workers)
                 spans = [(start, min(count, start + chunk)) for start in range(0, count, chunk)]
                 with ThreadPoolExecutor(max_workers=workers) as pool:
-                    pending = [pool.submit(_render_span, render_project, fps, span, cancelled) for span in spans]
+                    pending = [pool.submit(_render_span, render_project, fps, span, cancelled, renderer.keep_sixteen) for span in spans]
                     done = 0
                     max_cll, max_fall = 0.0, 0.0
                     for future in pending:
                         for payload in future.result():
                             if cancelled():
                                 raise InterruptedError("Cancelled")
+                            # the pipe was opened for one frame size: a frame of another depth would be read as half a
+                            # frame or two, and the file come out scrambled with no error
+                            if len(payload) != frame_bytes:
+                                raise ValueError(f"A rendered frame has {len(payload)} bytes where the encoder takes {frame_bytes}")
                             process.stdin.write(payload)
                             if renderer.deep:
                                 frame_view = np.frombuffer(payload, np.uint16).reshape(renderer.height, renderer.width, 4)
@@ -1038,14 +1047,20 @@ def export_media(
                         if got is not None:
                             return got
                     kept = frames_cache / f"{i:06d}.png"
-                    picture = cv2.imread(str(kept), cv2.IMREAD_UNCHANGED) if kept.exists() else None
+                    # a ten-bit SDR export keeps no resume cache: its sixteen-bit PNGs would double the disk the
+                    # export needs, for a resume that renders the frames again in less time than it reads them
+                    cache = not renderer.keep_sixteen
+                    picture = cv2.imread(str(kept), cv2.IMREAD_UNCHANGED) if cache and kept.exists() else None
                     if picture is None:
                         picture = np.ascontiguousarray(renderer.frame(i / fps))
-                        # written then renamed, so a frame cut off mid-write is never read back
-                        partial = frames_cache / f"{i:06d}.{os.getpid()}.part.png"
-                        cv2.imwrite(str(partial), picture, [cv2.IMWRITE_PNG_COMPRESSION, 1])
-                        partial.replace(kept)
+                        if cache:
+                            # written then renamed, so a frame cut off mid-write is never read back
+                            partial = frames_cache / f"{i:06d}.{os.getpid()}.part.png"
+                            cv2.imwrite(str(partial), picture, [cv2.IMWRITE_PNG_COMPRESSION, 1])
+                            partial.replace(kept)
                     picture = np.ascontiguousarray(picture)
+                    if not planar and picture.nbytes != frame_bytes:
+                        raise ValueError(f"A rendered frame has {picture.nbytes} bytes where the encoder takes {frame_bytes}")
                     if planar:
                         # the device did not pack this frame (nothing on screen, say): converted here as ffmpeg would
                         picture = _to_planes(picture, layout)
@@ -1134,6 +1149,8 @@ def export(body: RenderInput):
         allowed = encoder_status()["containers"].get(body.format, [])
         if body.codec not in allowed:
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
+    if not body.transparent and body.format == "mov" and not choose_encoder("prores"):
+        raise HTTPException(422, "A mov export is ProRes 422, and this ffmpeg has no working prores_ks encoder")
     if (
         body.tenBit
         and not body.transparent

@@ -55,8 +55,17 @@ def at(path: Path | str, seconds: float) -> np.ndarray | None:
         source.release()
 
 
-def each(path: Path | str, limit: int | None = None) -> Iterator[np.ndarray]:
-    """Every frame from the first, in order (at most `limit`)."""
+def each(path: Path | str, limit: int | None = None, cfr: bool = True) -> Iterator[np.ndarray]:
+    """Every frame from the first, in order (at most `limit`). Close it when stopping early, with
+    contextlib.closing(frames.each(...)), so the decoder is released at once.
+
+    cfr=True (the default) gives the frames the timeline shows, on the clock of the file's average rate: frame n is
+    the picture at n / fps, a variable-rate file's frames repeated or dropped as the renderer repeats or drops them.
+    Use it where an index must name a timeline moment (the cadence map). cfr=False gives each decoded frame once, in
+    presentation order, nothing repeated or dropped: for an analysis of the file itself (the delivery check)."""
+    if not cfr:
+        yield from _decoded(path, limit)
+        return
     try:
         source = _source(path)
     except (ValueError, OSError):
@@ -72,3 +81,28 @@ def each(path: Path | str, limit: int | None = None) -> Iterator[np.ndarray]:
             yield np.ascontiguousarray(frame)
     finally:
         source.release()
+
+
+def _decoded(path: Path | str, limit: int | None) -> Iterator[np.ndarray]:
+    """Each decoded frame once, upright, as eight-bit BGR; through PyAV, or the timeline's reader where it is missing."""
+    from .video_source import VideoSource, av
+
+    try:
+        shape = VideoSource(str(path))
+    except (ValueError, OSError):
+        return
+    if av is None:
+        yield from each(path, limit, cfr=True)
+        return
+    turns = getattr(shape, "turns", 0)
+    width, height = (shape.height, shape.width) if turns % 2 else (shape.width, shape.height)
+    read = 0
+    with av.open(str(path)) as container:
+        stream = container.streams.video[0]
+        stream.thread_type = "AUTO"
+        for frame in container.decode(stream):
+            if limit is not None and read >= limit:
+                break
+            picture = frame.reformat(width=width, height=height, format="bgr24").to_ndarray()
+            read += 1
+            yield np.ascontiguousarray(np.rot90(picture, turns)) if turns else picture

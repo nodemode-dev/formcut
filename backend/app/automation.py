@@ -598,9 +598,7 @@ def dispatch(method: str, params: dict):
                 rows.append({"clip": clip["id"], "label": clip.get("label"), "edge": edge, "timeline_time": round(timeline_at, 3), **row})
         return {"cuts": rows, "unsafe": sum(not r["safe"] for r in rows)}
     if method == "timeline.frames":
-        import numpy as np
-
-        from .cadence import CACHE, cadence_map, solve_clip
+        from .cadence import cached, cadence_map, solve_clip
         from .media import MEDIA_DIR, _find
 
         project_id = str(params.get("id") or "")
@@ -610,31 +608,33 @@ def dispatch(method: str, params: dict):
         rate = float(params.get("rate") or project["fps"])
         timeline = project["timelines"][int(project.get("activeTimeline", 0))]
         clips = [c for track in timeline["tracks"] for c in track["clips"] if c.get("kind") == "video" and c.get("mediaId")]
-        missing = sorted({c["mediaId"] for c in clips if not (CACHE / f"{c['mediaId']}.npy").exists()})
+        maps = {m: cached(m) for m in {c["mediaId"] for c in clips}}  # a map that does not read back whole is measured again
+        missing = sorted(m for m, found in maps.items() if found is None)
         if missing:
             sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in missing}
             if None in sources.values():
                 raise ValueError("Media file is missing")
-
-            running = _cadence_job(missing)
-            if running:
-                message = "still measuring the sources' cadence; call again once that job is done"
-                return {"measuring": missing, "job_id": running, "message": message}
 
             def measure(job_id, report, cancelled):
                 for media_id, path in sources.items():
                     cadence_map(media_id, path, report, cancelled)
                 return {"measured": list(sources)}
 
-            job = jobs.submit("cadence", measure)
+            # The lookup, the submit and the record are one step under the engine's lock (taken before jobs' own,
+            # which never calls back here), so two calls at once start one job between them.
             with _lock:
+                running = _cadence_job(missing)
+                if running:
+                    message = "still measuring the sources' cadence; call again once that job is done"
+                    return {"measuring": missing, "job_id": running, "message": message}
+                job = jobs.submit("cadence", measure)
                 for media_id in missing:
                     _cadence_jobs[media_id] = job["job_id"]
             message = "measuring the sources' cadence; call again once that job is done"
             return {"measuring": missing, "job_id": job["job_id"], "message": message}
         rows, commands = [], []
         for clip in clips:
-            solved = solve_clip(clip, rate, float(_find(clip["mediaId"]).get("fps") or rate), np.load(CACHE / f"{clip['mediaId']}.npy"))
+            solved = solve_clip(clip, rate, float(_find(clip["mediaId"]).get("fps") or rate), maps[clip["mediaId"]])
             rows.append({"clip": clip["id"], "label": clip.get("label"), "start": clip["start"], **solved})
             if params.get("fix") and solved["change"]:
                 commands.append({"op": "clip.update", "clipId": clip["id"], "patch": solved["change"]})
