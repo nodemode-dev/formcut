@@ -21,7 +21,7 @@ def clip_signature(clip: dict) -> str:
 
 
 def covering(project: dict, at: float) -> list[dict]:
-    active = project["activeTimeline"]
+    active = project.get("activeTimeline", 0)
     found = []
     for track in project["timelines"][active]["tracks"]:
         for clip in track["clips"]:

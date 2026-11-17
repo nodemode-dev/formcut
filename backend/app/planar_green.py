@@ -210,15 +210,12 @@ def screen_outline(frame: np.ndarray, screen: str = "green", points: int = 480) 
 
 def measure(path: str, frames: int | None = None) -> tuple[list[np.ndarray], list[np.ndarray | None]]:
     """The shot's frames and the green screen's measured corners on each."""
-    capture = cv2.VideoCapture(path)
+    from . import frames as reader
+
     pictures, quads = [], []
-    while frames is None or len(pictures) < frames:
-        ok, frame = capture.read()
-        if not ok:
-            break
+    for frame in reader.each(path, frames):
         pictures.append(frame)
         quads.append(green_quad(frame))
-    capture.release()
     return pictures, quads
 
 

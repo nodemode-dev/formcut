@@ -817,6 +817,8 @@ class FrameRenderer:
     _lift = None
     precise = False
     _precise_frame = False
+    # set by a ten-bit SDR export: frames leave at sixteen bits instead of dithered to bytes
+    keep_sixteen = False
 
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
@@ -2190,7 +2192,7 @@ class FrameRenderer:
                 transfer=self.transfer,
                 yuv=self._want_planes if self._final_flush else False,
                 blank=canvas is getattr(self, "_fresh_canvas", None),
-                as_bytes=self.fine and self._final_flush and not self._precise_frame,
+                as_bytes=self.fine and self._final_flush and not self._precise_frame and not self.keep_sixteen,
             )
             self.pending_layers = []
         return canvas
@@ -2501,6 +2503,9 @@ class FrameRenderer:
             done = self._flush(canvas)
             # a sixteen-bit SDR canvas leaves as bytes (the device packs them itself; otherwise converted here), dithered
             # when the frame carried finer steps than bytes
+            if self.keep_sixteen and not self.deep:
+                # a ten-bit export: the encoder takes the sixteen-bit frame as it is (rgba64le), nothing dithered
+                return done if done.dtype == np.uint16 else done.astype(np.uint16) * 257
             if self.fine and done.dtype == np.uint16:
                 return dither_to_bytes(done) if self._precise_frame else _to_bytes(done)
             return done

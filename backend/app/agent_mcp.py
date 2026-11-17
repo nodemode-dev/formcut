@@ -475,7 +475,7 @@ def formcut_set_frame(
     description=(
         "Start rendering a project to a file and return a job id. Rendering takes minutes, so this returns "
         "immediately: poll formcut_render_status with the job id until it reports done, which carries the output "
-        "path. Format is mp4, webm or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, "
+        "path. Format is mp4, webm, mov (ProRes 422, always ten-bit) or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, "
         "30, 50, 59.94, 60, 100, 119.88 or 120; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), "
         "audio_bitrate in kbps (192, 256 or 320), and a loudness target in LUFS with a true-peak ceiling in dBTP "
         "(one measured gain on the mix, no compression)."
@@ -484,7 +484,7 @@ def formcut_set_frame(
 )
 def formcut_render(
     project_id: Annotated[str, Field(description="Project id to render")],
-    file_format: Annotated[str, Field(description="Output container: mp4, webm or gif")] = "mp4",
+    file_format: Annotated[str, Field(description="Output container: mp4, webm, mov (ProRes 422) or gif")] = "mp4",
     quality: Annotated[str, Field(description="Encoder ladder: low, medium or high")] = "high",
     rate: Annotated[str | None, Field(description="Output frame rate, e.g. 23.976 or 24; the project's when unset")] = None,
     transparent: Annotated[
@@ -492,7 +492,9 @@ def formcut_render(
     ] = False,
     size: Annotated[str | None, Field(description="Output size preset (see formcut_capabilities); the project's when unset")] = None,
     codec: Annotated[str | None, Field(description="Video codec, e.g. h264, hevc, av1, vp9; the container's default when unset")] = None,
-    ten_bit: Annotated[bool, Field(description="Ten-bit video where the codec carries it")] = False,
+    ten_bit: Annotated[
+        bool, Field(description="Ten-bit video; refused for a codec that cannot write it here (see formcut_capabilities)")
+    ] = False,
     exact: Annotated[bool, Field(description="An intra-only master for frame-exact editing elsewhere")] = False,
     audio_bitrate: Annotated[int | None, Field(description="Audio bitrate in kbps, e.g. 192, 256 or 320")] = None,
     loudness: Annotated[float | None, Field(description="Integrated loudness target in LUFS, e.g. -14, -16 or -23")] = None,
@@ -500,8 +502,8 @@ def formcut_render(
 ) -> str:
     if transparent and file_format not in ("mov", "webm", "png"):
         return "a transparent export is mov (ProRes 4444), webm (VP9 with alpha) or png (a zip of frames)"
-    if not transparent and file_format not in ("mp4", "webm", "gif"):
-        return "format must be mp4, webm or gif"
+    if not transparent and file_format not in ("mp4", "webm", "mov", "gif"):
+        return "format must be mp4, webm, mov or gif"
     if quality not in ("low", "medium", "high"):
         return "quality must be low, medium or high"
     options = {

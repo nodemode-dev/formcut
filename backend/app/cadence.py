@@ -29,21 +29,18 @@ PUSH_PER_FRAME = 0.10  # percent scale an output frame: enough that no frame of 
 
 def changed_shares(path: Path, report=None, cancelled=None) -> np.ndarray:
     """Each frame's share of pixels changed by over 4 levels from the frame before (the first frame 1.0)."""
-    capture = cv2.VideoCapture(str(path))
-    total = max(1, int(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
+    from . import frames
+
+    total = max(1, frames.count(path))
     previous, shares = None, []
-    while True:
+    for frame in frames.each(path):
         if cancelled and cancelled():
             raise InterruptedError
-        ok, frame = capture.read()
-        if not ok:
-            break
         small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (480, 270), interpolation=cv2.INTER_AREA).astype(np.int16)
         shares.append(float((np.abs(small - previous) > 4).mean()) if previous is not None else 1.0)
         previous = small
         if report and len(shares) % 60 == 0:
             report(len(shares) / total, f"frame {len(shares)} of {total}")
-    capture.release()
     return np.array(shares, np.float32)
 
 

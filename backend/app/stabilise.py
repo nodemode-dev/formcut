@@ -61,10 +61,9 @@ def _frames(source, fps: float):
     the two disagreed by two pixels, every frame was reshaped off by a row, and
     the motion measured from it was close to noise.
     """
-    size = cv2.VideoCapture(str(source))
-    width = int(size.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-    height = int(size.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
-    size.release()
+    from . import frames
+
+    width, height = frames.size(source)
     if not width or not height:
         return
     out_w = ANALYSIS_WIDTH

@@ -54,17 +54,15 @@ def _spans(log: str, start_key: str, end_key: str) -> list[list[float]]:
 def _pictures(path: Path) -> tuple[list[float], list[float], list[float]]:
     """Per frame, at a quarter of the size: mean brightness, sharpness (variance of the Laplacian), and the mean change
     from the frame before (a cut shows as a large one)."""
-    capture, means, sharp, change, previous = cv2.VideoCapture(str(path)), [], [], [], None
-    while True:
-        ok, frame = capture.read()
-        if not ok:
-            break
+    from . import frames
+
+    means, sharp, change, previous = [], [], [], None
+    for frame in frames.each(path):
         small = cv2.cvtColor(cv2.resize(frame, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
         means.append(float(small.mean()))
         sharp.append(float(cv2.Laplacian(small, cv2.CV_32F).var()))
         change.append(float(cv2.absdiff(small, previous).mean()) if previous is not None else 0.0)
         previous = small
-    capture.release()
     return means, sharp, change
 
 

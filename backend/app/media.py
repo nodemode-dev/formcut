@@ -235,6 +235,23 @@ def _ffprobe(path: Path) -> dict:
         return {}
 
 
+def chroma_of(pix_fmt: str) -> str:
+    """The chroma subsampling a pixel format carries: 4:2:0, 4:2:2, 4:4:4, 4:1:1 or 4:0:0 (grey); '' when unknown."""
+    name = pix_fmt.lower()
+    for marker, chroma in (("420", "4:2:0"), ("422", "4:2:2"), ("444", "4:4:4"), ("411", "4:1:1"), ("440", "4:4:0")):
+        if marker in name:
+            return chroma
+    if name.startswith(("nv12", "nv21", "p010", "p012", "p016")):
+        return "4:2:0"
+    if name.startswith(("nv16", "p210", "p216", "y210", "uyvy", "yuyv")):
+        return "4:2:2"
+    if name.startswith(("rgb", "bgr", "gbr", "argb", "abgr", "rgba", "bgra", "x2rgb", "x2bgr", "y410", "y416", "ayuv")):
+        return "4:4:4"
+    if name.startswith("gray"):
+        return "4:0:0"
+    return ""
+
+
 def _probe(path: Path, kind: str) -> dict:
     info = {"duration": 0.0, "width": 0, "height": 0, "fps": 0.0}
     data = _ffprobe(path)
@@ -260,6 +277,12 @@ def _probe(path: Path, kind: str) -> dict:
             from .video_source import bit_depth
 
             info["bitDepth"] = bit_depth(stream)
+            # what the file is, for the record and the proxy rule (proxies.wants_proxy reads the codec)
+            if stream.get("codec_name"):
+                info["codec"] = str(stream["codec_name"])
+            if stream.get("pix_fmt"):
+                info["pixFmt"] = str(stream["pix_fmt"])
+                info["chroma"] = chroma_of(str(stream["pix_fmt"]))
             suggested = suggest(data, path)
             if suggested:
                 info["inputColourSuggestion"] = suggested
@@ -437,20 +460,15 @@ def get_frame(media_id: str, t: float = 0.0, width: int = 640):
     if item.get("kind") == "image":
         picture = cv2.imread(str(matches[0]), cv2.IMREAD_COLOR)
     else:
-        capture = cv2.VideoCapture(str(matches[0]))
-        try:
-            capture.set(cv2.CAP_PROP_POS_MSEC, max(0.0, float(t)) * 1000)
-            ok, picture = capture.read()
-        finally:
-            capture.release()
-        if not ok:
-            picture = None
+        from . import frames
+
+        picture = frames.at(matches[0], t)
     if picture is None:
         raise HTTPException(status_code=404, detail="no frame at that time")
     wide = max(64, min(int(width), 1280))
     if picture.shape[1] > wide:
         picture = cv2.resize(picture, (wide, round(picture.shape[0] * wide / picture.shape[1])), interpolation=cv2.INTER_AREA)
-    ok, encoded = cv2.imencode(".jpg", picture, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    _, encoded = cv2.imencode(".jpg", picture, [cv2.IMWRITE_JPEG_QUALITY, 85])
     return Response(encoded.tobytes(), media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
 
 

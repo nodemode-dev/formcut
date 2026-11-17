@@ -21,6 +21,7 @@ def validate_document(project: dict) -> dict:
     active = result.get("activeTimeline", 0)
     if not isinstance(timelines, list) or not timelines or not isinstance(active, int) or not 0 <= active < len(timelines):
         raise ValueError("Project needs an active timeline")
+    result["activeTimeline"] = active  # a document without one means the first; say so, for every later reader
     for timeline in timelines:
         if not isinstance(timeline, dict):
             raise ValueError("Every timeline needs a track list")

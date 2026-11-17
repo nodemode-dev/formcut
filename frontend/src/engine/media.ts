@@ -17,6 +17,10 @@ export interface MediaItem {
   colourHandling?: "as decoded" | "tone-mapped to Rec.709" | "converted to Rec.709";
   /** Bits a sample of the video carries; above 8 it decodes to sixteen bits on an SDR timeline. */
   bitDepth?: number;
+  /** The video's codec as ffprobe names it (h264, hevc, prores), its pixel format and chroma subsampling (4:2:2). */
+  codec?: string;
+  pixFmt?: string;
+  chroma?: string;
   /** The camera Log the file names in its metadata, offered in the Color section, never applied unasked. */
   inputColourSuggestion?: InputColour;
 }

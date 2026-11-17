@@ -495,6 +495,30 @@ def apply_edit(project: dict, command: dict):
         raise ValueError("Unknown editing command")
 
 
+_cadence_jobs: dict[str, str] = {}
+
+
+def _cadence_job(media_ids: list[str]) -> str | None:
+    """The cadence job already measuring any of these media, so a repeated call waits on it rather than starting
+    another; a job that failed raises its reason once (the next call measures again)."""
+    with _lock:
+        known = {media_id: _cadence_jobs.get(media_id) for media_id in media_ids}
+    for media_id, job_id in known.items():
+        if not job_id:
+            continue
+        try:
+            state = jobs.status(job_id)
+        except HTTPException:
+            state = {"status": "gone"}
+        if state["status"] in ("queued", "running"):
+            return job_id
+        with _lock:
+            _cadence_jobs.pop(media_id, None)
+        if state["status"] == "error":
+            raise ValueError(f"measuring the cadence failed: {state.get('error') or 'unknown error'}")
+    return None
+
+
 def dispatch(method: str, params: dict):
     # An orchestrator identifies itself once and then passes its session id with
     # each call, so the person in front of the app can see who is driving and
@@ -592,12 +616,20 @@ def dispatch(method: str, params: dict):
             if None in sources.values():
                 raise ValueError("Media file is missing")
 
+            running = _cadence_job(missing)
+            if running:
+                message = "still measuring the sources' cadence; call again once that job is done"
+                return {"measuring": missing, "job_id": running, "message": message}
+
             def measure(job_id, report, cancelled):
                 for media_id, path in sources.items():
                     cadence_map(media_id, path, report, cancelled)
                 return {"measured": list(sources)}
 
             job = jobs.submit("cadence", measure)
+            with _lock:
+                for media_id in missing:
+                    _cadence_jobs[media_id] = job["job_id"]
             message = "measuring the sources' cadence; call again once that job is done"
             return {"measuring": missing, "job_id": job["job_id"], "message": message}
         rows, commands = [], []
@@ -916,6 +948,7 @@ def dispatch(method: str, params: dict):
             "width": 1920,
             "height": 1080,
             "fps": 30,
+            "activeTimeline": 0,
             "timelines": [
                 {"id": uuid.uuid4().hex, "name": "Timeline 1", "tracks": [{"id": uuid.uuid4().hex, "name": "Video", "clips": []}]}
             ],

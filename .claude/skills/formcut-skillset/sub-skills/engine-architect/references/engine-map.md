@@ -110,6 +110,7 @@ the automation transports.
 - `ffmpeg_fetch.py`
 - `formext_host.py`
 - `frame_cache.py`
+- `frames.py`
 - `gif_export.py`
 - `gpu.py`
 - `gpu_effects.py`

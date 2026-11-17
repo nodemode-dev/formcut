@@ -59,7 +59,9 @@ def list_projects() -> list[dict]:
 
 def get_project(project_id: str) -> dict | None:
     with _lock:
-        return next((p for p in _read() if p["id"] == project_id), None)
+        found = next((p for p in _read() if p["id"] == project_id), None)
+    # a project saved before the RPC wrote one (or from elsewhere without one) reads back with its first timeline active
+    return found if found is None or "activeTimeline" in found else {**found, "activeTimeline": 0}
 
 
 def save_project(project: dict, expected_revision: int | None = None) -> dict:
