@@ -360,7 +360,7 @@ def ingest_path(src: Path, name: str, extra: dict | None = None) -> dict:
     }
     # P3: heavy footage earns a proxy as it arrives, so the first scrub is
     # already cheap rather than the first scrub paying for the build.
-    if proxies.wants_proxy(item):
+    if proxies.enabled() and proxies.wants_proxy(item):
         proxies.enqueue(media_id, stored)
     with _lock:
         items = [entry for entry in _read() if entry.get("id") != media_id]
@@ -848,10 +848,11 @@ def proxy_status(media_id: str) -> dict:
 
 
 @router.post("/{media_id}/proxy", status_code=202)
-def build_media_proxy(media_id: str, size: int = proxies.DEFAULT_LONG_SIDE) -> dict:
+def build_media_proxy(media_id: str, size: int | None = None) -> dict:
     record = _find(media_id)
     if record["kind"] != "video":
         raise HTTPException(status_code=400, detail="only video media can have a proxy")
+    size = proxies.chosen_size() if size is None else size
     if size not in proxies.ALLOWED_SIZES:
         raise HTTPException(status_code=422, detail="unknown proxy size")
     matches = list(MEDIA_DIR.glob(f"{media_id}.*"))

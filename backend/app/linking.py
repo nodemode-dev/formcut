@@ -107,7 +107,7 @@ def link_path(path: Path, name: str | None = None, media_id: str | None = None) 
         items = [entry for entry in media._read() if entry.get("id") != media_id]
         items.append(item)
         media._write(items)
-    if proxies.wants_proxy(item):
+    if proxies.enabled() and proxies.wants_proxy(item):
         proxies.enqueue(media_id, place)
     return item
 

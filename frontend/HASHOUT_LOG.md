@@ -2,6 +2,13 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · Make proxy on a media card, Proxies in Settings, and the proxy badge shows
+
+- **What was missing.** The engine has built proxies since P1 to P4, but a person could neither ask for one nor switch them off: `POST /api/media/{id}/proxy` and `/api/proxies/settings` had no caller in the window. The P9 badge on video cards never showed either: `cardFor` appended it, then set `card.innerHTML`, which removed it, so `paintProxies` found no badge and never asked the engine (a session with a video card and a proxy built made no `GET /api/media/{id}/proxy` at all).
+- **What changed.** The badge is appended after the card's markup, starts hidden, and is clipped with an ellipsis so it stops short of the duration chip on a 96 px card. Video cards gain a `bin-proxy` button (the layers icon, under the view button, shown on hover as the others are). Its title is Make proxy, or Rebuild proxy once a proxy is ready, stale or failed; it is disabled while one is queued or building; a click posts to the card's proxy route with no size, so the engine builds at the size chosen in Settings. A refused request marks the badge failed with the engine's message as its title. Settings, Playback gains a Proxies group (the `proxy.title` and `proxy.hint` strings that were already translated): Preview from proxies (a checkbox) and Proxy size (960, 1280 or 1920 px, listed from the engine's `sizes`). Both are read from the engine each time Settings opens and posted on change; a refusal shows its message under them and re-reads the engine's values.
+- **Strings.** `proxy.make`, `proxy.rebuild`, `proxy.use` and `proxy.size` in en, de, es and the four shipped locale files (ar, fa, he, hr), and language-pack rows for the other nine languages, with rows for the Proxies title and hint, which had fallen back to English there.
+- **Checked.** `frontend/tests/window/test_review_controls.py` against the built window and a real engine: Make proxy posts and answers 202, the badge reaches `ready` from the engine's polling, the button then reads Rebuild proxy; unticking the box and choosing 1920 in Settings leave the engine at `{"enabled": false, "size": 1920}`; no console error in either. Looked at in screenshots at 1440x900. `tsc --noEmit` clean, `npm run build` passes, locale key counts match.
+
 ## Unreleased · 100 and 120 fps in the format sheet
 
 - **What changed.** The new-project format sheet offers 100 and 120 beside 24, 25, 30, 50 and 60, the rates a high-frame-rate camera records at; the numbers are their own labels, so no strings were added. The Project settings frame-rate field stopped at 240 while the engine refuses anything over 120, so it now stops at 120.

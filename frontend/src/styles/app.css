@@ -1191,10 +1191,16 @@ input[type="range"], input[type="checkbox"], input[type="radio"], input[type="co
   padding: 1px 6px; border-radius: 999px;
   background: var(--ground); color: var(--ink-soft);
   font-size: 10px; line-height: 16px; pointer-events: none;
+  max-width: calc(100% - 52px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .proxy-badge[data-state="ready"] { color: var(--cue); }
 .proxy-badge[data-state="failed"], .proxy-badge[data-state="stale"] { color: var(--warn, #e0806a); }
 .proxy-badge[hidden] { display: none; }
+.bin-proxy { position: absolute; top: 32px; left: 4px; display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-s); background: var(--veil); color: var(--ink); opacity: 0; cursor: pointer; transition: opacity 0.15s ease; }
+.bin-card:hover .bin-proxy, .bin-proxy:focus-visible { opacity: 1; }
+.bin-proxy:disabled { cursor: default; color: var(--ink-faint); }
+.bin-proxy svg { width: 13px; height: 13px; }
+@media (hover: none) { .bin-proxy { opacity: 1; } }
 
 
 /* Right-to-left support.

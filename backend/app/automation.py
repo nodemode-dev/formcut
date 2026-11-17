@@ -743,11 +743,14 @@ def dispatch(method: str, params: dict):
         _find(media_id)
         matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
         source = matches[0] if matches else None
-        action = str(params.get("action") or "status")
+        action = str(params.get("action") or ("build" if params.get("build") is True else "status"))
         if action == "build":
             if not source:
                 raise ValueError("Media file is missing")
-            return proxy_module.enqueue(media_id, source, int(params.get("size") or proxy_module.DEFAULT_LONG_SIDE))
+            size = int(params.get("size") or proxy_module.chosen_size())
+            if size not in proxy_module.ALLOWED_SIZES:
+                raise ValueError("unknown proxy size")
+            return proxy_module.enqueue(media_id, source, size)
         if action == "delete":
             return {"removed": proxy_module.remove(media_id)}
         return proxy_module.status(media_id, source)

@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt
 
 from .brush import router as brush_router
 from .cloud import router as cloud_router
@@ -306,24 +306,26 @@ def locales() -> dict:
 @app.get("/api/proxies/settings")
 def proxy_settings() -> dict:
     from . import proxies
-    from . import renderer as renderer_module
 
-    return {"enabled": renderer_module.PROXIES_ENABLED, "size": proxies.DEFAULT_LONG_SIDE, "sizes": list(proxies.ALLOWED_SIZES)}
+    return proxies.settings()
+
+
+class ProxySettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: StrictBool | None = None
+    size: StrictInt | None = None
 
 
 @app.post("/api/proxies/settings")
-def set_proxy_settings(body: dict) -> dict:
+def set_proxy_settings(body: ProxySettings) -> dict:
     from . import proxies
-    from . import renderer as renderer_module
 
-    if "enabled" in body:
-        renderer_module.PROXIES_ENABLED = bool(body["enabled"])
-    if "size" in body:
-        size = int(body["size"])
-        if size not in proxies.ALLOWED_SIZES:
-            raise HTTPException(422, "unknown proxy size")
-        proxies.DEFAULT_LONG_SIDE = size
-    return proxy_settings()
+    try:
+        return proxies.configure(body.enabled, body.size)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(500, "Could not save the proxy settings in the data folder") from exc
 
 
 @app.get("/api/packages")

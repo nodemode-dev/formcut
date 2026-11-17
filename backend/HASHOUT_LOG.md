@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · proxy settings are kept and obeyed, and the agent tool's build flag builds
+
+- **What was wrong.** `/api/proxies/settings` kept its two values in module globals (`renderer.PROXIES_ENABLED`, `proxies.DEFAULT_LONG_SIDE`), so both were lost when the engine restarted. A size set there reached no build that did not name one: `build_media_proxy` and `enqueue` took `DEFAULT_LONG_SIDE` as a default argument, which Python binds when the module loads, so Make proxy and every import still built at 1280. With proxies switched off, an import still queued a build. The POST took any JSON object and read `bool(body["enabled"])`, so `"false"` switched proxies on. And `formcut_media_proxy` sends `{"id", "build": true}` while `media.proxy` in `automation.py` read only `action`, so the tool answered "has been queued" and nothing was.
+- **The fix.** `proxies.settings()` and `proxies.configure()` own both values and keep them in `<data>/proxies/settings.json` (a damaged or unknown value there falls back to the default). `enabled()` and `chosen_size()` are read at call time by the renderer, by the two import paths (`media.ingest_path`, `linking.link_path`, which now queue nothing while proxies are off), by `POST /api/media/{id}/proxy` with no `size`, and by `enqueue` with none. The POST body is a pydantic model with strict types and no extra fields; an unknown size is still 422. `media.proxy` takes `build: true` as `action: "build"` and refuses an unknown size as the HTTP route does. `renderer.PROXIES_ENABLED` is gone; nothing else read it.
+- **Checked.** On 108107c, with `enqueue` recorded: size 960 set in settings, then Make proxy built at 1280; `{"enabled": "false"}` left proxies on; `media.proxy` with `build: true` queued nothing. `tests/test_proxy_controls.py`, 16 tests, covers each of those plus persistence across a reset of the cached settings, refusal of five bad bodies, a rebuild over a ready proxy, and imports with proxies on and off; all pass here. The window side is in the interface log.
+
 ## Unreleased · 10-bit 4:2:2 camera clips decode frame for frame
 
 - **Why.** A reviewer is bringing mirrorless-camera footage: H.264 High 4:2:2 and HEVC Main 4:2:2 10, `yuv422p10le`, at 25 and 100 fps. The only 4:2:2 the suite made was ProRes, and `yuv.py` converts only 4:2:0 itself, so 4:2:2 goes through swscale to BGR in `VideoSource._as_bgr`. Nothing in the decode was changed; this adds the proof.

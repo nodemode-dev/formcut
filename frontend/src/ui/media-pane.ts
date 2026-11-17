@@ -1178,14 +1178,6 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
     card.tabIndex = 0;
     card.setAttribute("aria-label", item.name);
     card.title = item.name;
-    // P9: video cards carry their proxy's state, so a person can see what is
-    // queued, building or ready without opening anything.
-    if (item.kind === "video") {
-      const badge = document.createElement("span");
-      badge.className = "proxy-badge";
-      badge.dataset.proxy = item.id;
-      card.append(badge);
-    }
     card.addEventListener("click", () => {
       // Touch layouts have no HTML5 drag and drop; a tap appends the media
       // at the playhead on the matching lane instead.
@@ -1216,11 +1208,22 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         ${item.thumb ? `<img src="${thumbUrl(item)}" alt="" loading="lazy" draggable="false" />` : `<span class="bin-glyph">${icon(item.kind === "audio" ? "speaker" : "pip")}</span>`}
         <span class="dur-chip">${mm}:${ss}</span>
         ${upscalable ? `<button type="button" class="bin-view" title="${escapeHtml(t("view.open"))}" aria-label="${escapeHtml(t("view.open"))}">${icon("eye")}</button>` : ""}
+        ${item.kind === "video" ? `<button type="button" class="bin-proxy" data-proxy-action="${item.id}" title="${escapeHtml(t("proxy.make"))}" aria-label="${escapeHtml(t("proxy.make"))}">${icon("layers")}</button>` : ""}
         ${upscalable ? `<button type="button" class="bin-upscale" title="${escapeHtml(t("upscale.action"))}" aria-label="${escapeHtml(t("upscale.action"))}">${icon("fullscreen")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-post" title="${escapeHtml(t("tiktok.action"))}" aria-label="${escapeHtml(t("tiktok.action"))}">${icon("export")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-ig" title="${escapeHtml(t("instagram.action"))}" aria-label="${escapeHtml(t("instagram.action"))}">${icon("pip")}</button>` : ""}
       </div>
       <div class="effect-name">${escapeHtml(item.name)}</div>${item.colourHandling && item.colourHandling !== "as decoded" ? `<div class="bin-colour" title="${escapeHtml(item.colourHandling)}">${escapeHtml(item.colour ?? "")} · ${escapeHtml(item.colourHandling)}</div>` : ""}`;
+    // P9: video cards carry their proxy's state, so a person can see what is
+    // queued, building or ready without opening anything. Added after the
+    // markup above, which replaced a badge appended before it.
+    if (item.kind === "video") {
+      const badge = document.createElement("span");
+      badge.className = "proxy-badge";
+      badge.dataset.proxy = item.id;
+      badge.hidden = true;
+      card.append(badge);
+    }
     // View: the picture or video full screen, on its own (viewer.ts); Space on a focused card does the same
     const viewCard = () => {
       const cards = [...(card.parentElement?.querySelectorAll<HTMLElement>("[data-media]") ?? [])];
@@ -1236,6 +1239,10 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
       // The card's own click adds it to the timeline on touch layouts.
       ev.stopPropagation();
       openUpscale(item, bin);
+    });
+    card.querySelector(".bin-proxy")?.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      void makeProxy(item.id);
     });
     card.querySelector(".bin-post")?.addEventListener("click", (ev) => {
       ev.stopPropagation();
@@ -1282,8 +1289,34 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         badge.textContent = label[state.state] ?? "";
         badge.dataset.state = state.state;
         badge.hidden = !badge.textContent;
+        paintProxyAction(badge.dataset.proxy!, state.state);
       } catch { badge.hidden = true; }
     }
+  };
+  const paintProxyAction = (mediaId: string, state: string) => {
+    const button = el.querySelector<HTMLButtonElement>(`[data-proxy-action="${mediaId}"]`);
+    if (!button) return;
+    const label = t(state === "ready" || state === "stale" || state === "failed" ? "proxy.rebuild" : "proxy.make");
+    if (button.title !== label) { button.title = label; button.setAttribute("aria-label", label); }
+    button.disabled = state === "queued" || state === "building";
+    button.dataset.state = state;
+  };
+  const makeProxy = async (mediaId: string) => {
+    paintProxyAction(mediaId, "queued");
+    try {
+      await api(`/api/media/${mediaId}/proxy`, {});
+    } catch (error) {
+      const badge = el.querySelector<HTMLElement>(`[data-proxy="${mediaId}"]`);
+      if (badge) {
+        badge.textContent = t("proxy.failed");
+        badge.title = error instanceof Error ? error.message : String(error);
+        badge.dataset.state = "failed";
+        badge.hidden = false;
+      }
+      paintProxyAction(mediaId, "failed");
+      return;
+    }
+    await paintProxies();
   };
   window.setInterval(() => void paintProxies(), 4000);
   bin.subscribe((items, added) => {

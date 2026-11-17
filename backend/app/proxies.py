@@ -34,6 +34,54 @@ AUTO_CODECS = {"hevc", "h265", "prores", "dnxhd", "dnxhr", "av1", "vp9"}
 AUTO_BITRATE = 50_000_000
 DEFAULT_LONG_SIDE = 1280
 ALLOWED_SIZES = (960, 1280, 1920)
+SETTINGS_PATH = PROXY_DIR / "settings.json"
+_settings: dict | None = None
+
+
+def _load_settings() -> dict:
+    chosen = {"enabled": True, "size": DEFAULT_LONG_SIDE}
+    try:
+        saved = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return chosen
+    if isinstance(saved, dict):
+        if isinstance(saved.get("enabled"), bool):
+            chosen["enabled"] = saved["enabled"]
+        if saved.get("size") in ALLOWED_SIZES:
+            chosen["size"] = saved["size"]
+    return chosen
+
+
+def settings() -> dict:
+    """Whether previews read proxies and the long side new proxies are built at, as saved in the data folder."""
+    global _settings
+    with _lock:
+        if _settings is None:
+            _settings = _load_settings()
+        return {**_settings, "sizes": list(ALLOWED_SIZES)}
+
+
+def configure(enabled: bool | None = None, size: int | None = None) -> dict:
+    global _settings
+    if size is not None and size not in ALLOWED_SIZES:
+        raise ValueError("unknown proxy size")
+    with _lock:
+        current = {key: value for key, value in settings().items() if key != "sizes"}
+        chosen = {**current, **({} if enabled is None else {"enabled": enabled}), **({} if size is None else {"size": size})}
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        staging = SETTINGS_PATH.with_name(SETTINGS_PATH.name + ".part")
+        staging.write_text(json.dumps(chosen), encoding="utf-8")
+        staging.replace(SETTINGS_PATH)
+        _settings = chosen
+    return settings()
+
+
+def enabled() -> bool:
+    return bool(settings()["enabled"])
+
+
+def chosen_size() -> int:
+    return int(settings()["size"])
 
 
 def proxy_path(media_id: str) -> Path:
@@ -187,7 +235,8 @@ def exports_finished() -> None:
     _export_running.clear()
 
 
-def enqueue(media_id: str, source: Path, long_side: int = DEFAULT_LONG_SIDE) -> dict:
+def enqueue(media_id: str, source: Path, long_side: int | None = None) -> dict:
+    long_side = long_side or chosen_size()
     with _lock:
         _failed.pop(media_id, None)
         if media_id in _building or media_id in _queued:

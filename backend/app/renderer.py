@@ -12,24 +12,20 @@ import numpy as np
 from fastapi import HTTPException
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 
-from . import gpu, gpu_effects
+from . import device_layer, gpu, gpu_effects
 from .assets import apply_lut, asset_path, load_cube
 from .catalogue import GRADES, scale_pixel_params
 from .color_grade import apply as apply_color_grade
 from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
-from .proxies import usable as proxy_for
-from .stabilise import apply as stabilise_frame
-from .video_source import acquire, recycle
-
-# Proxies may be switched off wholesale; the switch lives here so one import
-# covers both the preview path and the reverse builder.
-PROXIES_ENABLED = True
-from . import device_layer
 from .pixel_effects import apply_colour_panel, apply_effects
+from .proxies import enabled as proxies_enabled
+from .proxies import usable as proxy_for
 from .render_document import flatten, nested_project, validate_document
+from .stabilise import apply as stabilise_frame
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
+from .video_source import acquire, recycle
 
 LEGACY = {
     "fc.gaussian-blur": "gaussian",
@@ -1078,7 +1074,7 @@ class FrameRenderer:
             paths = list(known[1])
             # P5: a preview may read a proxy; an export never does, because it
             # builds a renderer with no decode limit and this returns None.
-            if paths and PROXIES_ENABLED and self.allow_proxy:
+            if paths and self.allow_proxy and proxies_enabled():
                 stand_in = proxy_for(media_id, paths[0], self.decode_limit)
                 if stand_in is not None:
                     paths = [stand_in]
