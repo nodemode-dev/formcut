@@ -326,7 +326,8 @@ def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
                 f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={layer.frames}",
             ]
         if number in cubes:
-            steps.append(f"lut3d=file={filter_path(cubes[number])}:interp=trilinear")
+            interp = "tetrahedral" if (layer.grade or {}).get("lutInterpolation") == "tetrahedral" else "trilinear"
+            steps.append(f"lut3d=file={filter_path(cubes[number])}:interp={interp}")
         if (layer.w, layer.h) != (layer.width, layer.height):
             steps.append(f"scale={layer.w}:{layer.h}:flags=bilinear")
         if layer.flip_h:

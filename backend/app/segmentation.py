@@ -170,7 +170,17 @@ def _infer(model: str, image: np.ndarray, options: dict) -> np.ndarray:
     return _sam(image, points, box)
 
 
+def as_model_bytes(image: np.ndarray) -> np.ndarray:
+    """The picture as the models read it, bytes. A frame decoded on the sixteen-bit path (a source of more than eight
+    bits on an SDR timeline) is brought down to bytes here: every model divides by 255, and sixteen-bit values read
+    that way made a garbage matte, which was then cached."""
+    if image.dtype == np.uint16:
+        return ((image.astype(np.uint32) * 255 + 32767) // 65535).astype(np.uint8)
+    return image
+
+
 def cutout_alpha(image: np.ndarray, options: dict) -> np.ndarray:
+    image = as_model_bytes(image)
     model = options.get("model", "object-cutout")
     if model not in CUTOUT_MODELS or not cutout_ready(model):
         raise ValueError("Download the selected cutout model in Local models first")

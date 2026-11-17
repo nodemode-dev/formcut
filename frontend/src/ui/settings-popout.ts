@@ -617,7 +617,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     if (page === "project") {
       const state = engine.snapshot;
       for (const [field, value] of [[width, state.width], [height, state.height], [fps, state.fps]] as const) {
-        if (document.activeElement !== field) field.value = String(value);
+        if (document.activeElement !== field) field.value = field === fps ? rateLabel(value) : String(value);
       }
     }
     if (page === "providers") void refreshProviders();

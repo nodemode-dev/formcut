@@ -2,6 +2,10 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · review fixes in the window
+
+- The Project page of Settings refilled its frame-rate field with the raw number each time it was shown (29.97002997002997); it now shows the rate's label, as the field does when Settings is built. The card's `data-proxy-action` attribute is escaped like every other value put into the card's markup.
+
 ## Unreleased · 23.976, 29.97, 59.94 and 119.88 in the format sheet
 
 - **What changed.** The engine now takes the four NTSC rates as exact ratios (engine log), so the format sheet offers them beside the whole rates: 23.976, 24, 25, 29.97, 30, 50, 59.94, 60, 100, 119.88, 120. Each button carries the nearest number to the ratio (30000 / 1001) and is labelled by `rateLabel` in the new `engine/rates.ts`. `project.settings` in `creator-commands.ts` took only whole rates; it now reads the value through `exactRate`, which turns 29.97 typed in the Settings or Studio frame-rate field into 30000 / 1001 and refuses anything that is neither a whole rate up to 120 nor an NTSC rate. Both fields take decimals (`step="any"`) and show the label, and the preview's header reads "29.97 fps", not the long float. No strings were added: the rates are their own labels.

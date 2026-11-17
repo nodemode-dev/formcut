@@ -1208,7 +1208,7 @@ export function buildMediaPane(bin: MediaBin, engine: ProjectEngine): HTMLElemen
         ${item.thumb ? `<img src="${thumbUrl(item)}" alt="" loading="lazy" draggable="false" />` : `<span class="bin-glyph">${icon(item.kind === "audio" ? "speaker" : "pip")}</span>`}
         <span class="dur-chip">${mm}:${ss}</span>
         ${upscalable ? `<button type="button" class="bin-view" title="${escapeHtml(t("view.open"))}" aria-label="${escapeHtml(t("view.open"))}">${icon("eye")}</button>` : ""}
-        ${item.kind === "video" ? `<button type="button" class="bin-proxy" data-proxy-action="${item.id}" title="${escapeHtml(t("proxy.make"))}" aria-label="${escapeHtml(t("proxy.make"))}">${icon("layers")}</button>` : ""}
+        ${item.kind === "video" ? `<button type="button" class="bin-proxy" data-proxy-action="${escapeHtml(item.id)}" title="${escapeHtml(t("proxy.make"))}" aria-label="${escapeHtml(t("proxy.make"))}">${icon("layers")}</button>` : ""}
         ${upscalable ? `<button type="button" class="bin-upscale" title="${escapeHtml(t("upscale.action"))}" aria-label="${escapeHtml(t("upscale.action"))}">${icon("fullscreen")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-post" title="${escapeHtml(t("tiktok.action"))}" aria-label="${escapeHtml(t("tiktok.action"))}">${icon("export")}</button>` : ""}
         ${item.kind === "video" ? `<button type="button" class="bin-ig" title="${escapeHtml(t("instagram.action"))}" aria-label="${escapeHtml(t("instagram.action"))}">${icon("pip")}</button>` : ""}

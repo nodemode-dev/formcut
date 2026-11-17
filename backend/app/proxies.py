@@ -34,12 +34,20 @@ AUTO_CODECS = {"hevc", "h265", "prores", "dnxhd", "dnxhr", "av1", "vp9"}
 AUTO_BITRATE = 50_000_000
 DEFAULT_LONG_SIDE = 1280
 ALLOWED_SIZES = (960, 1280, 1920)
-SETTINGS_PATH = PROXY_DIR / "settings.json"
+# Beside the data folder's other settings, not in proxies/, which is a cache anyone may empty to rebuild.
+SETTINGS_PATH = DATA_DIR / "proxy-settings.json"
+EARLIER_SETTINGS_PATH = PROXY_DIR / "settings.json"
 _settings: dict | None = None
 
 
 def _load_settings() -> dict:
     chosen = {"enabled": True, "size": DEFAULT_LONG_SIDE}
+    if not SETTINGS_PATH.exists() and EARLIER_SETTINGS_PATH.is_file():
+        try:
+            SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            EARLIER_SETTINGS_PATH.replace(SETTINGS_PATH)
+        except OSError:
+            pass
     try:
         saved = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError):

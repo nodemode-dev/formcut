@@ -27,6 +27,13 @@ from .stabilise import apply as stabilise_frame
 from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
 from .video_source import acquire, recycle
 
+
+def wants_precision(clip: dict) -> bool:
+    """Whether a preview decodes this clip at sixteen bits: only when something works on its steps (a colour panel, a
+    grade, a LUT or a camera Log input). An export always does; an ungraded preview reads bytes, which is cheaper."""
+    return bool(clip.get("colour") or clip.get("colorGrade") or clip.get("lutId") or clip.get("inputColour"))
+
+
 LEGACY = {
     "fc.gaussian-blur": "gaussian",
     "fc.box-blur": "box",
@@ -932,7 +939,7 @@ class FrameRenderer:
 
     CURSORS = 4
 
-    def _cursor(self, media_id: str, time: float, path) -> tuple[str, int]:
+    def _cursor(self, media_id: str, time: float, path, precise: bool | None = None) -> tuple[str, int]:
         """The read position of this media that reaches `time` by reading forward.
 
         One decoder per media meant two clips of one file at different moments,
@@ -944,7 +951,9 @@ class FrameRenderer:
         reading forward within the decoder's two-second window, opens a new one
         when none can, and past the limit restarts the least recently used.
         """
-        cursors = self.cursors.setdefault(media_id, [])
+        precise = self.precise if precise is None else precise
+        key = f"{media_id}:16" if precise else media_id  # an eight-bit and a sixteen-bit reader of one file stay apart
+        cursors = self.cursors.setdefault(key, [])
         chosen = None
         if cursors:
             fps = self.sources[cursors[0]].fps
@@ -956,8 +965,8 @@ class FrameRenderer:
             elif len(cursors) >= self.CURSORS:
                 chosen = min(cursors, key=lambda cursor: self.cursor_used.get(cursor, 0))
         if chosen is None:
-            chosen = (media_id, len(cursors))
-            self.sources[chosen] = acquire(path, self.decode_limit, time, deep=self.deep, precise=self.precise)
+            chosen = (key, len(cursors))
+            self.sources[chosen] = acquire(path, self.decode_limit, time, deep=self.deep, precise=precise)
             cursors.append(chosen)
         self.uses += 1
         self.cursor_used[chosen] = self.uses
@@ -1167,7 +1176,7 @@ class FrameRenderer:
                 self.decode_scale[media_id] = max(still.shape[0], still.shape[1]) / native
             return apply_crop(still.copy(), clip)
         try:
-            cursor = self._cursor(media_id, time, paths[0])
+            cursor = self._cursor(media_id, time, paths[0], self.precise and (self.decode_limit is None or wants_precision(clip)))
         except (ValueError, OSError) as exc:  # a file that is not a video (damaged, or another file under its name)
             raise MediaUnreadable(record.get("name") or media_id, f"the decoder could not open it ({exc})") from exc
         capture = self.sources[cursor]

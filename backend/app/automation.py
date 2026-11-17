@@ -752,8 +752,8 @@ def dispatch(method: str, params: dict):
         if action == "build":
             if not source:
                 raise ValueError("Media file is missing")
-            size = int(params.get("size") or proxy_module.chosen_size())
-            if size not in proxy_module.ALLOWED_SIZES:
+            size = params.get("size") or proxy_module.chosen_size()
+            if isinstance(size, bool) or not isinstance(size, int) or size not in proxy_module.ALLOWED_SIZES:
                 raise ValueError("unknown proxy size")
             return proxy_module.enqueue(media_id, source, size)
         if action == "delete":

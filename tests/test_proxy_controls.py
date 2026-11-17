@@ -22,6 +22,7 @@ needs_ffmpeg = pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmp
 @pytest.fixture(autouse=True)
 def own_settings(tmp_path, monkeypatch):
     monkeypatch.setattr(proxies, "SETTINGS_PATH", tmp_path / "proxy-settings.json")
+    monkeypatch.setattr(proxies, "EARLIER_SETTINGS_PATH", tmp_path / "proxies" / "settings.json")
     monkeypatch.setattr(proxies, "_settings", None)
     return tmp_path / "proxy-settings.json"
 

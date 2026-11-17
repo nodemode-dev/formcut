@@ -10,6 +10,7 @@ ffmpeg, an encoder or a timeline file takes it from `exact` here, never from a r
 from __future__ import annotations
 
 import math
+import numbers
 import re
 from fractions import Fraction
 
@@ -63,12 +64,12 @@ def exact(value) -> Fraction:
         number = _from_text(value)
     elif isinstance(value, (dict, list, tuple)):
         number = _from_pair(value)
-    elif isinstance(value, int):
-        if not LOW <= value <= HIGH:
+    elif isinstance(value, numbers.Integral):
+        if not LOW <= int(value) <= HIGH:
             raise ValueError("Invalid frame rate")
-        return Fraction(value)
-    elif isinstance(value, float):
-        number = value
+        return Fraction(int(value))
+    elif isinstance(value, numbers.Real) and not isinstance(value, Fraction):
+        number = float(value)
     elif isinstance(value, Fraction):
         if not 0 < value.denominator < 10**6 or not 0 < value.numerator < 10**9:
             raise ValueError("Invalid frame rate")

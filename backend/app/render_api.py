@@ -932,7 +932,7 @@ def export_media(
             "-s",
             f"{renderer.width}x{renderer.height}",
             "-r",
-            str(fps),
+            rates.text(rates.exact(fps)),
             "-i",
             "pipe:0",
             "-filter_threads",

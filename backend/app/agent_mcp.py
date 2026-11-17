@@ -44,6 +44,8 @@ import httpx
 from mcp.server.mcpserver import Image, MCPServer
 from pydantic import Field
 
+from . import rates
+
 SOURCE_RUN = "http://127.0.0.1:8040"
 
 
@@ -58,6 +60,7 @@ def _engine() -> str:
 
 
 SESSION_NAME = os.environ.get("FORMCUT_MCP_SESSION", "mcp")
+RATE_REFUSED = "fps must be a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88; nothing was changed"
 TIMEOUT = float(os.environ.get("FORMCUT_MCP_TIMEOUT", "120"))
 HEADERS = {"x-formcut-local": "1"}
 
@@ -244,6 +247,10 @@ def formcut_create_project(
         ),
     ] = 30,
 ) -> str:
+    try:
+        fps = rates.number(rates.exact(fps))
+    except ValueError:
+        return RATE_REFUSED
     ok, project = _rpc("project.create", {"title": title})
     if not ok:
         return project
@@ -446,6 +453,10 @@ def formcut_set_frame(
         ),
     ] = 30,
 ) -> str:
+    try:
+        fps = rates.number(rates.exact(fps))
+    except ValueError:
+        return RATE_REFUSED
     ok, edited = _rpc(
         "project.edit",
         {
