@@ -109,8 +109,9 @@ def package(triple: str, out: Path) -> Path:
         shutil.copy2(require(release / "formcut.exe", "formcut.exe"), stage / "formcut.exe")
         engine = release / "formcut-engine.exe"
         sidecar = ROOT / "src-tauri" / "binaries" / f"formcut-engine-{triple}.exe"
-        shutil.copy2(require(engine if engine.exists() or not sidecar.exists() else sidecar, "formcut-engine.exe"),
-                     stage / "formcut-engine.exe")
+        shutil.copy2(
+            require(engine if engine.exists() or not sidecar.exists() else sidecar, "formcut-engine.exe"), stage / "formcut-engine.exe"
+        )
         ffmpeg = release / "ffmpeg"
         if not (ffmpeg / "ffmpeg.exe").is_file():
             ffmpeg = ROOT / "src-tauri" / "ffmpeg"
