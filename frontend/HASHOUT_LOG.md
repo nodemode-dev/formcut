@@ -2,6 +2,12 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · 100 and 120 fps in the format sheet
+
+- **What changed.** The new-project format sheet offers 100 and 120 beside 24, 25, 30, 50 and 60, the rates a high-frame-rate camera records at; the numbers are their own labels, so no strings were added. The Project settings frame-rate field stopped at 240 while the engine refuses anything over 120, so it now stops at 120.
+- **Fractional rates.** 23.976, 29.97 and 59.94 are not offered: the engine refuses a project rate that is not a whole number (engine log).
+- **Checked.** `test_a_project_made_at_100_fps_previews_at_100` in the window test picks 100 in the sheet, creates the project and waits for the preview to read 1080 x 1920 · 100 fps. Playback and export at 100 and 120 are checked in the engine's tests.
+
 ## 2.15.6 · a duck or a volume key is heard on the next play
 
 - **What was wrong.** `audioSignature` decides when playback asks the engine for a new mix, and it named neither `volumeKeys` nor the clip's volume keyframes. Pressing Duck (which writes `keyframes[].props.volume` onto the music clip) or editing a volume key left the old mix playing until some other audio field changed.

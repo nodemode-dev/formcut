@@ -101,7 +101,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   const size = group(project, "set.frame", "set.frame.hint");
   const width = numberField(engine.snapshot.width, 16, 7680);
   const height = numberField(engine.snapshot.height, 16, 4320);
-  const fps = numberField(engine.snapshot.fps, 1, 240);
+  const fps = numberField(engine.snapshot.fps, 1, 120);
   row(size, "set.width", width);
   row(size, "set.height", height);
   row(size, "set.fps", fps);

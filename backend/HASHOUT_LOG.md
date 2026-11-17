@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · 100 and 120 fps projects
+
+- **What the engine already did.** `render_document.validate_document` takes whole rates from 1 to 120, the stream sends frames at the lesser of the rate asked for and the project's, and an export with no rate preset writes at the project's rate. Nothing in the engine changed for the two new choices in the format sheet (interface log).
+- **Fractional rates are not offered.** 23.976, 29.97 and 59.94 were asked for as well, but `validate_document` refuses any rate that is not a whole number ("Invalid project fps"), so a project cannot be made at them. The same check breaks the export rate presets that differ by more than 0.2 % from the project: `export_media(..., rate="23.976")` on a 30 fps project rewrites the project's fps to 23.976 and the `FrameRenderer` refuses it, while 29.97 from 30 is within 0.2 % and keeps 30 (run here: 23.976 failed, 29.97 and 60 exported). Left for the owner; it touches the timebase of every path.
+- **Checked.** `tests/test_high_frame_rates.py`, 6 tests: the document keeps 100 and 120; the stream at 100 and 120 sends at least ten frames in order, each on the project's grid and not all on 60's; an export of half a second reads back as `100/1` with 50 frames and `120/1` with 60.
+
 ## 2.15.7 · the Linux packages find the ffmpeg they ship
 
 - **What was wrong.** `tools.bundle_dir` looked for the bundled ffmpeg in `usr/lib/formcut/ffmpeg`, but the AppImage, .deb and .rpm keep resources under the product name, `usr/lib/FormCut/ffmpeg`. Linux file systems tell the two apart (macOS and Windows do not, and neither uses this path), so on Linux `bundle_dir` returned nothing and the engine fell back to whatever ffmpeg was on `PATH`. In the 2.15.5 AppImage on Ubuntu 24.04 the probe then came back empty, `VideoSource` raised "This media has no video stream", and the preview showed "Cannot show film-02.mp4" for every clip of the High Country demo, although the timeline and playback ran.
