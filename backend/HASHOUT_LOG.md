@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · 10-bit 4:2:2 camera clips decode frame for frame
+
+- **Why.** A reviewer is bringing mirrorless-camera footage: H.264 High 4:2:2 and HEVC Main 4:2:2 10, `yuv422p10le`, at 25 and 100 fps. The only 4:2:2 the suite made was ProRes, and `yuv.py` converts only 4:2:0 itself, so 4:2:2 goes through swscale to BGR in `VideoSource._as_bgr`. Nothing in the decode was changed; this adds the proof.
+- **What the tests make.** `tests/test_r5_style_decode.py` encodes four one-second 384x216 clips at test time: H.264 intra-only (as an ALL-I recording) and HEVC with a 50-frame GOP (as IPB), each at 25 and 100 fps, tagged BT.709 limited range. A bright bar three pixels wide steps three pixels a frame, so the column it lands in names the frame; the chroma carries a pattern across and down. libx264 and libx265 are GPL and absent from the shipped LGPL ffmpeg, so a machine whose ffmpeg cannot write them skips with that reason, and one whose encoder refuses 10-bit 4:2:2 skips with ffmpeg's own message. The CI runners install Ubuntu's apt ffmpeg, Homebrew's and Chocolatey's, all GPL builds expected to carry both; that they write these streams was run here only for Homebrew's.
+- **What they check.** ffprobe reads the codec, profile ("High 4:2:2 Intra" and "Rext", ffprobe's name for every HEVC range extensions profile), pixel format, rate and frame count back; the engine's probe reads size, rate, duration and pixel format with ffprobe and, as the LGPL bundle runs, with ffmpeg alone; reading from frame 0 through both decoders (PyAV in the engine and the ffmpeg pipe, hardware decode off) gives exactly 25 or 100 frames, each the bar's own frame in order, with the first and last within a mean of 3 levels of ffmpeg's own BGR decode; seeking straight to the last frame gives frame 24 or 99; and a 100 fps project renders source frame n at n / 100 for all 100 frames. 30 tests; all pass here with Homebrew ffmpeg 9.0.2, and all 30 skip with libx264 and libx265 hidden from it.
+
 ## Unreleased · 100 and 120 fps projects
 
 - **What the engine already did.** `render_document.validate_document` takes whole rates from 1 to 120, the stream sends frames at the lesser of the rate asked for and the project's, and an export with no rate preset writes at the project's rate. Nothing in the engine changed for the two new choices in the format sheet (interface log).
