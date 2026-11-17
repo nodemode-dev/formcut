@@ -485,9 +485,38 @@ def apply_edit(project: dict, command: dict):
         allowed = {"title", "width", "height", "fps", "activeTimeline"}
         if set(command["patch"]) - allowed:
             raise ValueError("Unknown project setting")
-        project.update(command["patch"])
+        patch = dict(command["patch"])
+        if "fps" in patch:
+            from . import rates
+
+            patch["fps"] = rates.number(rates.exact(patch["fps"]))
+        project.update(patch)
     else:
         raise ValueError("Unknown editing command")
+
+
+_cadence_jobs: dict[str, str] = {}
+
+
+def _cadence_job(media_ids: list[str]) -> str | None:
+    """The cadence job already measuring any of these media, so a repeated call waits on it rather than starting
+    another; a job that failed raises its reason once (the next call measures again)."""
+    with _lock:
+        known = {media_id: _cadence_jobs.get(media_id) for media_id in media_ids}
+    for media_id, job_id in known.items():
+        if not job_id:
+            continue
+        try:
+            state = jobs.status(job_id)
+        except HTTPException:
+            state = {"status": "gone"}
+        if state["status"] in ("queued", "running"):
+            return job_id
+        with _lock:
+            _cadence_jobs.pop(media_id, None)
+        if state["status"] == "error":
+            raise ValueError(f"measuring the cadence failed: {state.get('error') or 'unknown error'}")
+    return None
 
 
 def dispatch(method: str, params: dict):
@@ -569,9 +598,7 @@ def dispatch(method: str, params: dict):
                 rows.append({"clip": clip["id"], "label": clip.get("label"), "edge": edge, "timeline_time": round(timeline_at, 3), **row})
         return {"cuts": rows, "unsafe": sum(not r["safe"] for r in rows)}
     if method == "timeline.frames":
-        import numpy as np
-
-        from .cadence import CACHE, cadence_map, solve_clip
+        from .cadence import cached, cadence_map, solve_clip
         from .media import MEDIA_DIR, _find
 
         project_id = str(params.get("id") or "")
@@ -581,7 +608,8 @@ def dispatch(method: str, params: dict):
         rate = float(params.get("rate") or project["fps"])
         timeline = project["timelines"][int(project.get("activeTimeline", 0))]
         clips = [c for track in timeline["tracks"] for c in track["clips"] if c.get("kind") == "video" and c.get("mediaId")]
-        missing = sorted({c["mediaId"] for c in clips if not (CACHE / f"{c['mediaId']}.npy").exists()})
+        maps = {m: cached(m) for m in {c["mediaId"] for c in clips}}  # a map that does not read back whole is measured again
+        missing = sorted(m for m, found in maps.items() if found is None)
         if missing:
             sources = {m: next(iter(MEDIA_DIR.glob(f"{m}.*")), None) for m in missing}
             if None in sources.values():
@@ -592,12 +620,21 @@ def dispatch(method: str, params: dict):
                     cadence_map(media_id, path, report, cancelled)
                 return {"measured": list(sources)}
 
-            job = jobs.submit("cadence", measure)
+            # The lookup, the submit and the record are one step under the engine's lock (taken before jobs' own,
+            # which never calls back here), so two calls at once start one job between them.
+            with _lock:
+                running = _cadence_job(missing)
+                if running:
+                    message = "still measuring the sources' cadence; call again once that job is done"
+                    return {"measuring": missing, "job_id": running, "message": message}
+                job = jobs.submit("cadence", measure)
+                for media_id in missing:
+                    _cadence_jobs[media_id] = job["job_id"]
             message = "measuring the sources' cadence; call again once that job is done"
             return {"measuring": missing, "job_id": job["job_id"], "message": message}
         rows, commands = [], []
         for clip in clips:
-            solved = solve_clip(clip, rate, float(_find(clip["mediaId"]).get("fps") or rate), np.load(CACHE / f"{clip['mediaId']}.npy"))
+            solved = solve_clip(clip, rate, float(_find(clip["mediaId"]).get("fps") or rate), maps[clip["mediaId"]])
             rows.append({"clip": clip["id"], "label": clip.get("label"), "start": clip["start"], **solved})
             if params.get("fix") and solved["change"]:
                 commands.append({"op": "clip.update", "clipId": clip["id"], "patch": solved["change"]})
@@ -743,11 +780,14 @@ def dispatch(method: str, params: dict):
         _find(media_id)
         matches = list(MEDIA_DIR.glob(f"{media_id}.*"))
         source = matches[0] if matches else None
-        action = str(params.get("action") or "status")
+        action = str(params.get("action") or ("build" if params.get("build") is True else "status"))
         if action == "build":
             if not source:
                 raise ValueError("Media file is missing")
-            return proxy_module.enqueue(media_id, source, int(params.get("size") or proxy_module.DEFAULT_LONG_SIDE))
+            size = params.get("size") or proxy_module.chosen_size()
+            if isinstance(size, bool) or not isinstance(size, int) or size not in proxy_module.ALLOWED_SIZES:
+                raise ValueError("unknown proxy size")
+            return proxy_module.enqueue(media_id, source, size)
         if action == "delete":
             return {"removed": proxy_module.remove(media_id)}
         return proxy_module.status(media_id, source)
@@ -850,6 +890,8 @@ def dispatch(method: str, params: dict):
                 "animations",
                 "volumeKeys",
                 "lutIntensity",
+                "lutInterpolation",
+                "inputColour",
                 "pitchFollowsSpeed",
                 "audioStream",
                 "angle",
@@ -906,6 +948,7 @@ def dispatch(method: str, params: dict):
             "width": 1920,
             "height": 1080,
             "fps": 30,
+            "activeTimeline": 0,
             "timelines": [
                 {"id": uuid.uuid4().hex, "name": "Timeline 1", "tracks": [{"id": uuid.uuid4().hex, "name": "Video", "clips": []}]}
             ],

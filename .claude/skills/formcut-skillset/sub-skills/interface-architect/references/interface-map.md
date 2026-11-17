@@ -36,6 +36,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/motion.ts`
 - `engine/persistence.ts`
 - `engine/project.ts`
+- `engine/rates.ts`
 - `engine/seed.ts`
 - `engine/timing.ts`
 - `engine/types.ts`

@@ -12,24 +12,27 @@ import numpy as np
 from fastapi import HTTPException
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageOps
 
-from . import gpu, gpu_effects
+from . import camera_log, device_layer, gpu, gpu_effects
 from .assets import apply_lut, asset_path, load_cube
 from .catalogue import GRADES, scale_pixel_params
 from .color_grade import apply as apply_color_grade
 from .expressions import evaluate
 from .fonts import title_font
 from .media import MEDIA_DIR, _find, reversed_path
+from .pixel_effects import apply_colour_panel, apply_effects
+from .proxies import enabled as proxies_enabled
 from .proxies import usable as proxy_for
+from .render_document import flatten, nested_project, validate_document
 from .stabilise import apply as stabilise_frame
+from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
 from .video_source import acquire, recycle
 
-# Proxies may be switched off wholesale; the switch lives here so one import
-# covers both the preview path and the reverse builder.
-PROXIES_ENABLED = True
-from . import device_layer
-from .pixel_effects import apply_colour_panel, apply_effects
-from .render_document import flatten, nested_project, validate_document
-from .timing import animation_at, effect_params_at, fade_at, property_at, source_time
+
+def wants_precision(clip: dict) -> bool:
+    """Whether a preview decodes this clip at sixteen bits: only when something works on its steps (a colour panel, a
+    grade, a LUT or a camera Log input). An export always does; an ungraded preview reads bytes, which is cheaper."""
+    return bool(clip.get("colour") or clip.get("colorGrade") or clip.get("lutId") or clip.get("inputColour"))
+
 
 LEGACY = {
     "fc.gaussian-blur": "gaussian",
@@ -679,6 +682,42 @@ def _to_bytes(frame: np.ndarray) -> np.ndarray:
     return cv2.convertScaleAbs(frame, alpha=1.0 / 257.0)
 
 
+def _bayer(size: int = 8) -> np.ndarray:
+    """The ordered-dither index matrix (0 to size * size - 1), built by doubling from 2 x 2."""
+    matrix = np.zeros((1, 1), np.int64)
+    while matrix.shape[0] < size:
+        matrix = np.block([[4 * matrix, 4 * matrix + 2], [4 * matrix + 3, 4 * matrix + 1]])
+    return matrix
+
+
+_DITHER: dict = {}
+
+
+def dither_to_bytes(frame: np.ndarray) -> np.ndarray:
+    """A sixteen-bit SDR frame to bytes with an 8 x 8 ordered dither: floor(v / 257 + t), t = (2k + 1) / 128 for the
+    pixel's Bayer index k, in integers. A value that is already a byte (v = 257 n) stays n, so a frame with nothing
+    finer than bytes in it comes out as _to_bytes makes it; finer steps become a fixed pattern of neighbouring bytes
+    instead of bands. Alpha is rounded as _to_bytes rounds it."""
+    h, w = frame.shape[:2]
+    tile = _DITHER.get((h, w))
+    if tile is None:
+        index = np.tile(_bayer(), ((h + 7) // 8, (w + 7) // 8))[:h, :w]
+        tile = (257 * (2 * index + 1)).astype(np.uint32)[:, :, None]
+        _DITHER.clear()
+        _DITHER[(h, w)] = tile
+    out = np.empty(frame.shape, np.uint8)
+    out[:, :, :3] = (frame[:, :, :3].astype(np.uint32) * 128 + tile) // (257 * 128)
+    if frame.shape[2] == 4:
+        out[:, :, 3] = _to_bytes(np.ascontiguousarray(frame[:, :, 3]))
+    return out
+
+
+def _grey(frame: np.ndarray) -> np.ndarray:
+    """A decoded frame (BGR bytes, or RGBA from formcut's conversion or a wide decode) as eight-bit grey for the flow."""
+    grey = cv2.cvtColor(frame, cv2.COLOR_RGBA2GRAY if frame.shape[2] == 4 else cv2.COLOR_BGR2GRAY)
+    return (grey >> 8).astype(np.uint8) if grey.dtype == np.uint16 else grey
+
+
 def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
     """A deep frame for an SDR monitor: the transfer decoded to light, rolled off above SDR white with a
     soft knee (BT.2390's shape at a 1000-nit source), encoded through sRGB to bytes. A byte frame passes."""
@@ -704,6 +743,11 @@ def rolloff_for_display(frame: np.ndarray, transfer: str) -> np.ndarray:
     out[:, :, :3] = np.round(np.clip(srgb, 0, 1) * 255).astype(np.uint8)
     out[:, :, 3] = (frame[:, :, 3] // 257).astype(np.uint8)
     return out
+
+
+def _interpolation(clip: dict) -> str:
+    """How the clip's 3D LUT is sampled between its lattice points: trilinear unless it asks for tetrahedral."""
+    return "tetrahedral" if clip.get("lutInterpolation") == "tetrahedral" else "trilinear"
 
 
 class MediaUnreadable(ValueError):
@@ -771,6 +815,10 @@ class FrameRenderer:
     deep = False
     transfer = "bt709"
     _lift = None
+    precise = False
+    _precise_frame = False
+    # set by a ten-bit SDR export: frames leave at sixteen bits instead of dithered to bytes
+    keep_sixteen = False
 
     def __init__(self, project: dict, width: int | None = None):
         self.project = validate_document(project)
@@ -787,6 +835,11 @@ class FrameRenderer:
         # An SDR project keeps its canvas at sixteen bits between blends, as an HDR one does, and rounds to bytes
         # once when the frame is done: rounded after every blend, a stack of soft layers built bands.
         self.fine = not self.deep and os.environ.get("FORMCUT_SDR_FINE", "1") != "0"
+        # Sources of more than eight bits decode to sixteen bits on an SDR timeline with the fine canvas, and a frame
+        # that carried one (or a clip through a camera Log transform) is dithered to bytes once at the end.
+        self.precise = self.fine and os.environ.get("FORMCUT_PRECISE", "1") != "0"
+        self._precise_frame = False
+        self._full_range: dict[str, bool] = {}
         self._lift = _lift_table(self.transfer) if self.deep else None
         self.prepared = {}
         self.nested: dict[str, FrameRenderer] = {}
@@ -888,7 +941,7 @@ class FrameRenderer:
 
     CURSORS = 4
 
-    def _cursor(self, media_id: str, time: float, path) -> tuple[str, int]:
+    def _cursor(self, media_id: str, time: float, path, precise: bool | None = None) -> tuple[str, int]:
         """The read position of this media that reaches `time` by reading forward.
 
         One decoder per media meant two clips of one file at different moments,
@@ -900,7 +953,9 @@ class FrameRenderer:
         reading forward within the decoder's two-second window, opens a new one
         when none can, and past the limit restarts the least recently used.
         """
-        cursors = self.cursors.setdefault(media_id, [])
+        precise = self.precise if precise is None else precise
+        key = f"{media_id}:16" if precise else media_id  # an eight-bit and a sixteen-bit reader of one file stay apart
+        cursors = self.cursors.setdefault(key, [])
         chosen = None
         if cursors:
             fps = self.sources[cursors[0]].fps
@@ -912,8 +967,8 @@ class FrameRenderer:
             elif len(cursors) >= self.CURSORS:
                 chosen = min(cursors, key=lambda cursor: self.cursor_used.get(cursor, 0))
         if chosen is None:
-            chosen = (media_id, len(cursors))
-            self.sources[chosen] = acquire(path, self.decode_limit, time, deep=self.deep)
+            chosen = (key, len(cursors))
+            self.sources[chosen] = acquire(path, self.decode_limit, time, deep=self.deep, precise=precise)
             cursors.append(chosen)
         self.uses += 1
         self.cursor_used[chosen] = self.uses
@@ -935,8 +990,7 @@ class FrameRenderer:
                 return None
             self.frame_numbers[cursor] = wanted + 1
             self.frames[cursor] = second
-            grey_a = cv2.cvtColor(first, cv2.COLOR_BGR2GRAY)
-            grey_b = cv2.cvtColor(second, cv2.COLOR_BGR2GRAY)
+            grey_a, grey_b = _grey(first), _grey(second)
             flow = cv2.calcOpticalFlowFarneback(grey_a, grey_b, None, 0.5, 3, 21, 3, 5, 1.2, 0)
             self.tween_pairs = {key: (first, second, flow)}
             pair = self.tween_pairs[key]
@@ -950,6 +1004,8 @@ class FrameRenderer:
         warped_first = cv2.remap(first, forward_x, forward_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         warped_second = cv2.remap(second, back_x, back_y, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         mixed = cv2.addWeighted(warped_first, 1 - blend, warped_second, blend, 0)
+        if mixed.shape[2] == 4:
+            return self._noted(mixed)
         return cv2.cvtColor(mixed, cv2.COLOR_BGR2RGBA)
 
     def nested_frame(self, clip: dict, time: float) -> np.ndarray | None:
@@ -964,6 +1020,7 @@ class FrameRenderer:
             if document is None:
                 return None
             renderer = self.nested[key] = FrameRenderer(document, self.width)
+            renderer.precise = self.precise
         return renderer.frame(max(0.0, min(time, renderer.project["duration"])))
 
     def frame_planes(self, time: float, layout: str = "yuv420p10le"):
@@ -1034,6 +1091,21 @@ class FrameRenderer:
         # and the CPU path lifts it at the blend, so no full-frame lift runs on the CPU per frame
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
 
+    def _noted(self, image):
+        """A media picture on its way into the frame: a sixteen-bit one on an SDR timeline marks the frame for the
+        dither at the end."""
+        if not self.deep and np.dtype(image.dtype) == np.uint16:
+            self._precise_frame = True
+        return image
+
+    def _look(self, image: np.ndarray, clip: dict) -> np.ndarray:
+        """A clip's own colour: its camera Log taken to Rec.709 (inputColour), then the colour panel and the grade."""
+        name = clip.get("inputColour")
+        if name in camera_log.TRANSFORMS and clip.get("kind") in ("video", "image"):
+            full = getattr(self, "_full_range", {}).get(str(clip.get("mediaId")), clip.get("kind") == "image")
+            image = self._noted(camera_log.apply(image, name, full, deep=self.deep))
+        return apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
+
     def lift(self, rgba: np.ndarray) -> np.ndarray:
         """A byte RGBA picture into the deep working space at SDR white, alpha scaled with it; unchanged when the project is bytes."""
         if not self.deep or rgba.dtype != np.uint8:
@@ -1078,7 +1150,7 @@ class FrameRenderer:
             paths = list(known[1])
             # P5: a preview may read a proxy; an export never does, because it
             # builds a renderer with no decode limit and this returns None.
-            if paths and PROXIES_ENABLED and self.allow_proxy:
+            if paths and self.allow_proxy and proxies_enabled():
                 stand_in = proxy_for(media_id, paths[0], self.decode_limit)
                 if stand_in is not None:
                     paths = [stand_in]
@@ -1106,10 +1178,13 @@ class FrameRenderer:
                 self.decode_scale[media_id] = max(still.shape[0], still.shape[1]) / native
             return apply_crop(still.copy(), clip)
         try:
-            cursor = self._cursor(media_id, time, paths[0])
+            cursor = self._cursor(media_id, time, paths[0], self.precise and (self.decode_limit is None or wants_precision(clip)))
         except (ValueError, OSError) as exc:  # a file that is not a video (damaged, or another file under its name)
             raise MediaUnreadable(record.get("name") or media_id, f"the decoder could not open it ({exc})") from exc
         capture = self.sources[cursor]
+        if not hasattr(self, "_full_range"):
+            self._full_range = {}
+        self._full_range[media_id] = bool(getattr(capture, "full_range", False))
         from . import yuv
 
         capture.own_conversion = yuv.wanted(gpu.stack_active()) and media_id not in self._cpu_only
@@ -1137,8 +1212,8 @@ class FrameRenderer:
             # converts it afresh, so what a caller receives is its own to change,
             # without copying every frame to protect the cache.
             if keep_planes and hasattr(self.frames[cursor], "aux"):
-                return self.frames[cursor]
-            return apply_crop(self.as_working(self.frames[cursor]), clip)
+                return self._noted(self.frames[cursor])
+            return self._noted(apply_crop(self.as_working(self.frames[cursor]), clip))
         if wanted != current + 1:
             capture.seek(wanted)
         ok, frame = capture.read()
@@ -1172,7 +1247,7 @@ class FrameRenderer:
         self.frames[cursor] = frame
         if native:
             self.decode_scale[media_id] = max(result.shape[0], result.shape[1]) / native
-        return result if result is frame else apply_crop(result, clip)
+        return self._noted(result if result is frame else apply_crop(result, clip))
 
     def scaled_effects(self, effects: list[dict], clip: dict) -> list[dict]:
         """Pixel-measured parameters follow the resolution actually decoded.
@@ -2117,12 +2192,13 @@ class FrameRenderer:
                 transfer=self.transfer,
                 yuv=self._want_planes if self._final_flush else False,
                 blank=canvas is getattr(self, "_fresh_canvas", None),
-                as_bytes=self.fine and self._final_flush,
+                as_bytes=self.fine and self._final_flush and not self._precise_frame and not self.keep_sixteen,
             )
             self.pending_layers = []
         return canvas
 
     def frame(self, time: float) -> np.ndarray:
+        self._precise_frame = False
         if self.project.get("background"):
             canvas = np.zeros((self.height, self.width, 4), np.uint16 if self.deep or self.fine else np.uint8)
             canvas[:, :, 3] = 65535 if self.fine else 255
@@ -2171,16 +2247,18 @@ class FrameRenderer:
             if clip["kind"] == "filter":
                 canvas = self._flush(canvas)
                 self.decode_scale.setdefault("canvas", self.width / self.project["width"])
-                fine_canvas = self.fine and canvas.dtype == np.uint16
+                # an adjustment clip grades bytes, as it always has, unless the frame so far carries finer steps than
+                # bytes (a source of more than eight bits): then it grades the sixteen-bit canvas
+                fine_canvas = self.fine and canvas.dtype == np.uint16 and not self._precise_frame
                 if fine_canvas:
-                    canvas = _to_bytes(canvas)  # an adjustment clip grades bytes, as it always has
+                    canvas = _to_bytes(canvas)
                 canvas = apply_color_grade(apply_colour_panel(canvas, clip.get("colour")), clip.get("colorGrade"))
                 if effects:
                     scaled = self.scaled_effects(effects, {"mediaId": "canvas"})
                     on_device = gpu_effects.apply_effects(canvas, scaled, local)
                     canvas = on_device if on_device is not None else apply_effects(canvas, scaled, local)
                 if clip.get("lutId"):
-                    canvas = apply_lut(canvas, clip["lutId"], float(clip.get("lutIntensity", 1)))
+                    canvas = apply_lut(canvas, clip["lutId"], float(clip.get("lutIntensity", 1)), _interpolation(clip))
                 if fine_canvas:
                     canvas = canvas.astype(np.uint16) * np.uint16(257)
                 continue
@@ -2193,14 +2271,17 @@ class FrameRenderer:
                     crop_box(clip),
                     repr(clip.get("colour")),
                     repr(clip.get("colorGrade")),
+                    clip.get("inputColour"),
+                    clip.get("lutInterpolation"),
                 )
                 if key not in self.prepared:
                     still = self.media_frame(clip, 0)
-                    still = apply_color_grade(apply_colour_panel(still, clip.get("colour")), clip.get("colorGrade"))
+                    still = self._look(still, clip)
                     scaled = self.scaled_effects(effects, clip)
                     still = apply_effects(still, scaled, 0) if scaled else still
-                    self.prepared[key] = apply_lut(still, clip["lutId"], float(clip.get("lutIntensity", 1))) if clip.get("lutId") else still
-                image = self.prepared[key].copy()
+                    lut_id, amount = clip.get("lutId"), float(clip.get("lutIntensity", 1))
+                    self.prepared[key] = apply_lut(still, lut_id, amount, _interpolation(clip)) if lut_id else still
+                image = self._noted(self.prepared[key].copy())
                 if gpu.stack_active() and self._device_resident(clip, [], local):
                     transform = transform_at(clip, local)
                     self.matte_time = source_time(clip, local)
@@ -2244,6 +2325,7 @@ class FrameRenderer:
                         and gpu.stack_active()
                         and not clip.get("colour")
                         and not clip.get("colorGrade")
+                        and not clip.get("inputColour")
                         and not clip.get("stabilise")
                         and not clip.get("smoothSlow")
                         and (not early or gpu_effects.supported(early))
@@ -2265,7 +2347,7 @@ class FrameRenderer:
                 if hasattr(image, "aux"):
                     pass  # planes for the device: no colour, grade or stabilisation to apply on this side
                 else:
-                    image = apply_color_grade(apply_colour_panel(image, clip.get("colour")), clip.get("colorGrade"))
+                    image = self._look(image, clip)
                 # Stabilisation needs the clip's place in time, which an effect
                 # never sees, so it is applied here from the measured path.
                 steady = clip.get("stabilise")
@@ -2287,7 +2369,7 @@ class FrameRenderer:
                     lut = None
                     if clip.get("lutId"):
                         table, low, high = load_cube(clip["lutId"])
-                        lut = (table, low, high, float(clip.get("lutIntensity", 1)))
+                        lut = (table, low, high, float(clip.get("lutIntensity", 1)), _interpolation(clip))
                     self.matte_time = source_time(clip, local)
                     fields = self._layer_fields(clip, image)
                     placed, alpha = self._matrix(image, transform), self._alpha(clip, local, transform)
@@ -2324,7 +2406,7 @@ class FrameRenderer:
                     on_device = gpu_effects.apply_effects(image, scaled, local)
                     image = on_device if on_device is not None else apply_effects(image, scaled, local)
                 if clip.get("lutId"):
-                    image = apply_lut(image, clip["lutId"], float(clip.get("lutIntensity", 1)))
+                    image = apply_lut(image, clip["lutId"], float(clip.get("lutIntensity", 1)), _interpolation(clip))
             if clip.get("shaderId"):
                 image = gpu.custom(image, asset_path(clip["shaderId"], ".wgsl").read_text(), local)
             self.matte_time = source_time(clip, local)
@@ -2419,7 +2501,13 @@ class FrameRenderer:
         self._final_flush = True
         try:
             done = self._flush(canvas)
-            # a sixteen-bit SDR canvas leaves as bytes (the device packs them itself; otherwise converted here)
-            return _to_bytes(done) if self.fine and done.dtype == np.uint16 else done
+            # a sixteen-bit SDR canvas leaves as bytes (the device packs them itself; otherwise converted here), dithered
+            # when the frame carried finer steps than bytes
+            if self.keep_sixteen and not self.deep:
+                # a ten-bit export: the encoder takes the sixteen-bit frame as it is (rgba64le), nothing dithered
+                return done if done.dtype == np.uint16 else done.astype(np.uint16) * 257
+            if self.fine and done.dtype == np.uint16:
+                return dither_to_bytes(done) if self._precise_frame else _to_bytes(done)
+            return done
         finally:
             self._final_flush = False

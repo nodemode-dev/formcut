@@ -15,6 +15,7 @@ import { loadDemoProject } from "../engine/demo";
 import { REPO_DEMOS, openRepoDemo } from "../demos";
 import { listProjects, newProject, openProject, listJournals, restoreJournal, clearJournal } from "../engine/persistence";
 import { api } from "../engine/api";
+import { NTSC_RATES, rateLabel } from "../engine/rates";
 import { icon } from "./icons";
 import { reconcile } from "./keyed-list";
 import { activeProfile } from "./interface-mode";
@@ -158,14 +159,14 @@ export function buildStartScreen(engine: ProjectEngine, bin: MediaBin): HTMLElem
 
   const ASPECTS: Array<[string, number, number, string]> = [["9:16", 1080, 1920, "format.vertical"], ["16:9", 1920, 1080, "format.wide"], ["1:1", 1080, 1080, "format.square"], ["4:5", 1080, 1350, "format.portrait"],
     ["1290×2796", 1290, 2796, "format.storephone"], ["2064×2752", 2064, 2752, "format.storetablet"], ["2880×1800", 2880, 1800, "format.storelaptop"]];
-  const RATES = [24, 25, 30, 50, 60];
+  const RATES = [NTSC_RATES[0], 24, 25, NTSC_RATES[1], 30, 50, NTSC_RATES[2], 60, 100, NTSC_RATES[3], 120];
   let format = { width: 1080, height: 1920, fps: 30 };
   const sheet = document.createElement("div");
   sheet.className = "mode-ask format-sheet";
   sheet.hidden = true;
   sheet.innerHTML = `<div class="mode-ask-card"><strong>${t("format.title")}</strong>
     <div class="mode-cards format-cards" data-ref="aspects">${ASPECTS.map(([ratio, w, h, key]) => `<button class="mode-card format-card${w === 1080 && h === 1920 ? " is-active" : ""}" data-w="${w}" data-h="${h}"><i class="format-shape" style="aspect-ratio:${w}/${h}"></i><strong>${ratio}</strong><span>${t(key)} · ${w}x${h}</span></button>`).join("")}</div>
-    <div class="format-rates"><span>${t("format.rate")}</span><div class="seg" data-ref="rates">${RATES.map((rate) => `<button data-fps="${rate}"${rate === 30 ? ' class="is-active"' : ""}>${rate}</button>`).join("")}</div></div>
+    <div class="format-rates"><span>${t("format.rate")}</span><div class="seg" data-ref="rates">${RATES.map((rate) => `<button data-fps="${rate}"${rate === 30 ? ' class="is-active"' : ""}>${rateLabel(rate)}</button>`).join("")}</div></div>
     <div class="mode-actions format-actions"><button class="tool-chip" data-ref="format-cancel">${t("export.cancel")}</button><button class="tool-chip is-primary" data-ref="format-create">${icon("plus")}${t("start.new")}</button></div></div>`;
   el.append(sheet);
   sheet.querySelector('[data-ref="aspects"]')!.addEventListener("click", (event) => {

@@ -90,6 +90,7 @@ the automation transports.
 - `audio_render.py`
 - `bench.py`
 - `cadence.py`
+- `camera_log.py`
 - `cli.py`
 - `color_grade.py`
 - `content_filter.py`
@@ -109,6 +110,7 @@ the automation transports.
 - `ffmpeg_fetch.py`
 - `formext_host.py`
 - `frame_cache.py`
+- `frames.py`
 - `gif_export.py`
 - `gpu.py`
 - `gpu_effects.py`
@@ -134,6 +136,7 @@ the automation transports.
 - `prompt_space.py`
 - `proxies.py`
 - `qc.py`
+- `rates.py`
 - `render_document.py`
 - `renderer.py`
 - `rhythm.py`

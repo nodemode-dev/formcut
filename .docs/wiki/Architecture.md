@@ -82,7 +82,7 @@ come back. Recovery never deletes a file.
 
 Where the device path runs, formcut converts decoded frames to RGB itself
 (`backend/app/yuv.py`) rather than through swscale. A planar 4:2:0 frame at its
-own size (8-bit, full-range 8-bit, or 10-bit) goes up to the device as its
+own size (8-bit, full-range 8-bit, 10-bit or 12-bit) goes up to the device as its
 planes when its layer goes straight there, and the first pass converts it; in
 a fused chain, the conversion is the chain kernel's head, so a layer's upload,
 conversion, effects and first blend are one dispatch. A frame this side needs
@@ -95,6 +95,16 @@ swscale converts as before, so the frame path's exports stay the pictures of the
 native-cuts and layered paths, which convert with swscale too. `FORMCUT_YUV=0`
 turns formcut's conversion off; `=1` turns it on everywhere, as the bench does
 so that it compares the two paths like with like.
+
+On an SDR timeline a source of more than eight bits (10-bit or 12-bit, 4:2:0,
+4:2:2 or 4:4:4) decodes to sixteen-bit RGBA, and its colour panel, grade, LUT and
+camera Log transform (a clip's `inputColour`) work on those steps in float. The
+frame is rounded to bytes once, at the end, with an 8 x 8 ordered dither; a
+frame with nothing finer than bytes in it comes out exactly as before. An 8-bit
+source keeps the byte path. Playback, the paused frame and the export take the
+same path. `FORMCUT_PRECISE=0` turns the sixteen-bit decode off. A graded source of more
+than eight bits is exported by the frame path, since the layered graph reads
+bytes before its LUT.
 
 ## Secrets and environment
 
@@ -303,6 +313,10 @@ From the owner's Posh cutdowns, the work that ran outside formcut is now in it:
 - `render_api.py`: the audio bitrate; `measure_loudness` and `loudness_gain` (one gain to a target under a true-peak
   ceiling); a rate more than 0.2% from the project's sampled from the timeline at that rate (rendered at the project's
   rate and padded by the encoder, a 24 fps edit at 30 repeated every fifth frame).
+- `rates.py`: a project rate is a whole number from 1 to 120 or an NTSC ratio (24000/1001, 30000/1001, 60000/1001,
+  120000/1001). The document carries it as a number; ffmpeg, the export and the timeline files take the exact ratio
+  from `rates.exact`. A fractional project exports through the frame path, since the native and layered graphs
+  work on whole-rate timebases.
 - `qc.py`: the delivery check, its perceptual repeats ffmpeg's mpdecimate.
 - `cadence.py`: a source's cadence map (each frame's share of pixels changed by over 4 levels; new above the larger of
   0.15% and 5% of the local new-frame level), formcut's frame choice replayed per clip, the per-clip solver, and an

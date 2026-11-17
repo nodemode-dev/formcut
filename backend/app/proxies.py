@@ -30,10 +30,70 @@ FORMAT_VERSION = 1
 
 # The document's rule, kept here so the interface and the engine agree on it.
 AUTO_LONG_SIDE = 1920
-AUTO_CODECS = {"hevc", "h265", "prores", "dnxhd", "dnxhr", "av1", "vp9"}
+# Codecs slow to decode for their size. ProRes and DNxHD/HR are intra-only and decode quickly, so they earn a proxy by
+# size alone; these earn one from 1080p up (below that they decode fast enough to scrub).
+AUTO_CODECS = {"hevc", "h265", "av1", "vp9"}
+# a proxy build stands aside for the editing: two threads, and a lower priority than the window's own work
+BUILD_THREADS = 2
 AUTO_BITRATE = 50_000_000
 DEFAULT_LONG_SIDE = 1280
 ALLOWED_SIZES = (960, 1280, 1920)
+# Beside the data folder's other settings, not in proxies/, which is a cache anyone may empty to rebuild.
+SETTINGS_PATH = DATA_DIR / "proxy-settings.json"
+EARLIER_SETTINGS_PATH = PROXY_DIR / "settings.json"
+_settings: dict | None = None
+
+
+def _load_settings() -> dict:
+    chosen = {"enabled": True, "size": DEFAULT_LONG_SIDE}
+    if not SETTINGS_PATH.exists() and EARLIER_SETTINGS_PATH.is_file():
+        try:
+            SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            EARLIER_SETTINGS_PATH.replace(SETTINGS_PATH)
+        except OSError:
+            pass
+    try:
+        saved = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return chosen
+    if isinstance(saved, dict):
+        if isinstance(saved.get("enabled"), bool):
+            chosen["enabled"] = saved["enabled"]
+        if saved.get("size") in ALLOWED_SIZES:
+            chosen["size"] = saved["size"]
+    return chosen
+
+
+def settings() -> dict:
+    """Whether previews read proxies and the long side new proxies are built at, as saved in the data folder."""
+    global _settings
+    with _lock:
+        if _settings is None:
+            _settings = _load_settings()
+        return {**_settings, "sizes": list(ALLOWED_SIZES)}
+
+
+def configure(enabled: bool | None = None, size: int | None = None) -> dict:
+    global _settings
+    if size is not None and size not in ALLOWED_SIZES:
+        raise ValueError("unknown proxy size")
+    with _lock:
+        current = {key: value for key, value in settings().items() if key != "sizes"}
+        chosen = {**current, **({} if enabled is None else {"enabled": enabled}), **({} if size is None else {"size": size})}
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        staging = SETTINGS_PATH.with_name(SETTINGS_PATH.name + ".part")
+        staging.write_text(json.dumps(chosen), encoding="utf-8")
+        staging.replace(SETTINGS_PATH)
+        _settings = chosen
+    return settings()
+
+
+def enabled() -> bool:
+    return bool(settings()["enabled"])
+
+
+def chosen_size() -> int:
+    return int(settings()["size"])
 
 
 def proxy_path(media_id: str) -> Path:
@@ -74,6 +134,25 @@ def status(media_id: str, source: Path | None = None) -> dict:
     return {"state": "ready", **{k: record[k] for k in ("width", "height", "fps", "encoder") if k in record}}
 
 
+def _low_priority() -> dict:
+    """Popen arguments that start ffmpeg below normal priority on Windows (elsewhere _lower lowers it once started; a
+    preexec_fn is unsafe in a threaded engine), so a proxy build never slows playback or an edit."""
+    import sys
+
+    if sys.platform.startswith("win"):
+        return {"creationflags": getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)}
+    return {}
+
+
+def _lower(pid: int) -> None:
+    import contextlib
+    import os
+
+    if hasattr(os, "setpriority"):
+        with contextlib.suppress(OSError):
+            os.setpriority(os.PRIO_PROCESS, pid, 10)
+
+
 def wants_proxy(info: dict) -> bool:
     """Whether the document's rule says this media earns a proxy."""
     if info.get("kind") != "video":
@@ -81,7 +160,7 @@ def wants_proxy(info: dict) -> bool:
     long_side = max(int(info.get("width") or 0), int(info.get("height") or 0))
     if long_side > AUTO_LONG_SIDE:
         return True
-    if str(info.get("codec") or "").lower() in AUTO_CODECS:
+    if long_side >= AUTO_LONG_SIDE and str(info.get("codec") or "").lower() in AUTO_CODECS:
         return True
     return int(info.get("bitrate") or 0) > AUTO_BITRATE
 
@@ -108,8 +187,12 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         "-v",
         "error",
         "-y",
+        "-threads",
+        str(BUILD_THREADS),
         "-i",
         str(source),
+        "-threads",
+        str(BUILD_THREADS),
         "-map",
         "0:v:0",
         "-an",
@@ -136,7 +219,8 @@ def build_proxy(media_id: str, source: Path, report, cancelled, long_side: int =
         str(staging),
     ]
     with tempfile.TemporaryFile("w+") as log:
-        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log, text=True)
+        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log, text=True, **_low_priority())
+        _lower(process.pid)
         while process.poll() is None:
             if cancelled():
                 process.kill()
@@ -187,7 +271,8 @@ def exports_finished() -> None:
     _export_running.clear()
 
 
-def enqueue(media_id: str, source: Path, long_side: int = DEFAULT_LONG_SIDE) -> dict:
+def enqueue(media_id: str, source: Path, long_side: int | None = None) -> dict:
+    long_side = long_side or chosen_size()
     with _lock:
         _failed.pop(media_id, None)
         if media_id in _building or media_id in _queued:

@@ -43,7 +43,29 @@ def selfcheck() -> int:
     return 1 if any(str(value).startswith("missing:") for value in info.values()) or (getattr(sys, "frozen", False) and not info["dist_bundled"]) else 0
 
 
+USAGE = """usage: formcut-engine [option]
+
+Starts the formcut engine on 127.0.0.1 (the port is FORMCUT_PORT, or any free one) and serves the window.
+
+options:
+  --help, -h     print this and exit
+  --version      print the engine's version and exit
+  --selfcheck    report the bundled libraries as JSON and exit (1 when one is missing)
+  --headless     run a command-line framing of the engine's API (see --headless --help)
+  --bench        measure the frame rate of the CPU and device paths on this machine
+  --mcp          serve formcut's MCP tools over stdio to an MCP client
+"""
+
+
 def main() -> int:
+    if sys.argv[1:2] in (["--help"], ["-h"]):
+        print(USAGE, end="")
+        return 0
+    if sys.argv[1:2] == ["--version"]:
+        from app.main import APP_VERSION
+
+        print(f"formcut-engine {APP_VERSION}")
+        return 0
     if "--headless" in sys.argv:
         sys.argv.remove("--headless")
         from app.cli import main as headless

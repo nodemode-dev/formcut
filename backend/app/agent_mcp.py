@@ -44,6 +44,8 @@ import httpx
 from mcp.server.mcpserver import Image, MCPServer
 from pydantic import Field
 
+from . import rates
+
 SOURCE_RUN = "http://127.0.0.1:8040"
 
 
@@ -58,6 +60,7 @@ def _engine() -> str:
 
 
 SESSION_NAME = os.environ.get("FORMCUT_MCP_SESSION", "mcp")
+RATE_REFUSED = "fps must be a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88; nothing was changed"
 TIMEOUT = float(os.environ.get("FORMCUT_MCP_TIMEOUT", "120"))
 HEADERS = {"x-formcut-local": "1"}
 
@@ -234,8 +237,20 @@ def formcut_create_project(
     title: Annotated[str, Field(description="Project title as it appears in formcut")] = "Untitled project",
     width: Annotated[int, Field(ge=16, le=7680, description="Frame width in pixels")] = 1920,
     height: Annotated[int, Field(ge=16, le=4320, description="Frame height in pixels")] = 1080,
-    fps: Annotated[int, Field(ge=1, le=240, description="Frames per second")] = 30,
+    fps: Annotated[
+        float,
+        Field(
+            ge=1,
+            le=120,
+            description="Frames per second: a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88 "
+            "(kept as 24000/1001, 30000/1001, 60000/1001 and 120000/1001)",
+        ),
+    ] = 30,
 ) -> str:
+    try:
+        fps = rates.number(rates.exact(fps))
+    except ValueError:
+        return RATE_REFUSED
     ok, project = _rpc("project.create", {"title": title})
     if not ok:
         return project
@@ -254,7 +269,7 @@ def formcut_create_project(
         revision = edited.get("revision")
     return (
         f"created project {project_id} titled {title}\n"
-        f"frame {width}x{height} at {fps} fps, revision {revision}\n"
+        f"frame {width}x{height} at {fps:g} fps, revision {revision}\n"
         "pass this id and revision to formcut_add_clip"
     )
 
@@ -428,8 +443,20 @@ def formcut_set_frame(
     revision: Annotated[int, Field(ge=0, description="Revision last seen for this project")],
     width: Annotated[int, Field(ge=16, le=7680, description="Frame width in pixels")],
     height: Annotated[int, Field(ge=16, le=4320, description="Frame height in pixels")],
-    fps: Annotated[int, Field(ge=1, le=240, description="Frames per second")] = 30,
+    fps: Annotated[
+        float,
+        Field(
+            ge=1,
+            le=120,
+            description="Frames per second: a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88 "
+            "(kept as 24000/1001, 30000/1001, 60000/1001 and 120000/1001)",
+        ),
+    ] = 30,
 ) -> str:
+    try:
+        fps = rates.number(rates.exact(fps))
+    except ValueError:
+        return RATE_REFUSED
     ok, edited = _rpc(
         "project.edit",
         {
@@ -440,7 +467,7 @@ def formcut_set_frame(
     )
     if not ok:
         return f"{edited}\nCall formcut_get_project for the current revision and retry."
-    return f"frame set to {width}x{height} at {fps} fps, revision {edited.get('revision')}"
+    return f"frame set to {width}x{height} at {fps:g} fps, revision {edited.get('revision')}"
 
 
 @mcp.tool(
@@ -448,8 +475,8 @@ def formcut_set_frame(
     description=(
         "Start rendering a project to a file and return a job id. Rendering takes minutes, so this returns "
         "immediately: poll formcut_render_status with the job id until it reports done, which carries the output "
-        "path. Format is mp4, webm or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, "
-        "30, 50, 59.94 or 60; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), "
+        "path. Format is mp4, webm, mov (ProRes 422, always ten-bit) or gif; quality is low, medium or high. Optional: rate (23.976, 24, 25, 29.97, "
+        "30, 50, 59.94, 60, 100, 119.88 or 120; the project's own when unset), size, codec, ten_bit, exact (an intra-only master), "
         "audio_bitrate in kbps (192, 256 or 320), and a loudness target in LUFS with a true-peak ceiling in dBTP "
         "(one measured gain on the mix, no compression)."
     ),
@@ -457,7 +484,7 @@ def formcut_set_frame(
 )
 def formcut_render(
     project_id: Annotated[str, Field(description="Project id to render")],
-    file_format: Annotated[str, Field(description="Output container: mp4, webm or gif")] = "mp4",
+    file_format: Annotated[str, Field(description="Output container: mp4, webm, mov (ProRes 422) or gif")] = "mp4",
     quality: Annotated[str, Field(description="Encoder ladder: low, medium or high")] = "high",
     rate: Annotated[str | None, Field(description="Output frame rate, e.g. 23.976 or 24; the project's when unset")] = None,
     transparent: Annotated[
@@ -465,7 +492,9 @@ def formcut_render(
     ] = False,
     size: Annotated[str | None, Field(description="Output size preset (see formcut_capabilities); the project's when unset")] = None,
     codec: Annotated[str | None, Field(description="Video codec, e.g. h264, hevc, av1, vp9; the container's default when unset")] = None,
-    ten_bit: Annotated[bool, Field(description="Ten-bit video where the codec carries it")] = False,
+    ten_bit: Annotated[
+        bool, Field(description="Ten-bit video; refused for a codec that cannot write it here (see formcut_capabilities)")
+    ] = False,
     exact: Annotated[bool, Field(description="An intra-only master for frame-exact editing elsewhere")] = False,
     audio_bitrate: Annotated[int | None, Field(description="Audio bitrate in kbps, e.g. 192, 256 or 320")] = None,
     loudness: Annotated[float | None, Field(description="Integrated loudness target in LUFS, e.g. -14, -16 or -23")] = None,
@@ -473,8 +502,8 @@ def formcut_render(
 ) -> str:
     if transparent and file_format not in ("mov", "webm", "png"):
         return "a transparent export is mov (ProRes 4444), webm (VP9 with alpha) or png (a zip of frames)"
-    if not transparent and file_format not in ("mp4", "webm", "gif"):
-        return "format must be mp4, webm or gif"
+    if not transparent and file_format not in ("mp4", "webm", "mov", "gif"):
+        return "format must be mp4, webm, mov or gif"
     if quality not in ("low", "medium", "high"):
         return "quality must be low, medium or high"
     options = {

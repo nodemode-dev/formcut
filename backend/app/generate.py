@@ -279,11 +279,10 @@ def _source_image(spec: dict, into: Path) -> Path:
         if item.get("kind") == "video":
             import cv2
 
-            capture = cv2.VideoCapture(str(matches[0]))
-            capture.set(cv2.CAP_PROP_POS_MSEC, max(0.0, float(spec.get("time") or 0)) * 1000)
-            ok, frame = capture.read()
-            capture.release()
-            if not ok:
+            from . import frames
+
+            frame = frames.at(matches[0], float(spec.get("time") or 0))
+            if frame is None:
                 raise HTTPException(400, "could not read that video at that time")
             Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).save(out)
             return out

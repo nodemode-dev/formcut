@@ -1,6 +1,7 @@
 import { text } from "../i18n/text";
 import { previewManipulation } from "./preview-manipulation";
 import type { ProjectEngine } from "../engine/project";
+import { rateLabel } from "../engine/rates";
 import { formatTimecode } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { api, waitJob } from "../engine/api";
@@ -178,7 +179,7 @@ export function buildPreviewPane(engine: ProjectEngine, bin: MediaBin): HTMLElem
     const s = engine.snapshot;
     stage.style.aspectRatio = `${s.width}/${s.height}`;
     stage.style.width = "auto";
-    const text = `${s.width} x ${s.height} · ${s.fps} fps`;
+    const text = `${s.width} x ${s.height} · ${rateLabel(s.fps)} fps`;
     if (meta.textContent !== text) meta.textContent = text;
     window.clearTimeout(debounce);
     debounce = window.setTimeout(() => { if (engine.snapshot.playing) { void stream(engine.snapshot.playhead); void prepareAudio(); } else { wanted = true; void draw(); } }, 120);

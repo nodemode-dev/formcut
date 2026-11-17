@@ -2,9 +2,9 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
-from . import store
+from . import rates, store
 from .paths import DATA_DIR
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -17,10 +17,17 @@ class ProjectIn(BaseModel):
     title: str = "Untitled project"
     width: int = 1080
     height: int = 1920
-    fps: int = 30
+    fps: int | float = 30
     timelines: list[dict] = []
     activeTimeline: int = 0
     revision: int = 0
+
+    @field_validator("fps", mode="before")
+    @classmethod
+    def _rate(cls, value):
+        """A whole rate from 1 to 120 or an NTSC ratio (rates.py); NaN, 24.5 or 1000 would be stored and refuse
+        every render."""
+        return rates.number(rates.exact(value))
 
 
 class Project(ProjectIn):

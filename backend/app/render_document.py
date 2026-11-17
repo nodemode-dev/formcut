@@ -1,13 +1,18 @@
 import copy
 import math
 
+from . import rates
 from .catalogue import TRANSITIONS
 from .validation import clip_values
 
 
 def validate_document(project: dict) -> dict:
     result = copy.deepcopy(project)
-    for field, low, high, default in [("width", 16, 7680, 1920), ("height", 16, 7680, 1080), ("fps", 1, 120, 30)]:
+    try:
+        result["fps"] = rates.number(rates.exact(result.get("fps", 30)))
+    except ValueError as exc:
+        raise ValueError("Invalid project fps") from exc
+    for field, low, high, default in [("width", 16, 7680, 1920), ("height", 16, 7680, 1080)]:
         value = result.get(field, default)
         if not isinstance(value, (int, float)) or not math.isfinite(value) or int(value) != value or not low <= value <= high:
             raise ValueError(f"Invalid project {field}")
@@ -16,10 +21,16 @@ def validate_document(project: dict) -> dict:
     active = result.get("activeTimeline", 0)
     if not isinstance(timelines, list) or not timelines or not isinstance(active, int) or not 0 <= active < len(timelines):
         raise ValueError("Project needs an active timeline")
+    result["activeTimeline"] = active  # a document without one means the first; say so, for every later reader
     for timeline in timelines:
         if not isinstance(timeline, dict):
             raise ValueError("Every timeline needs a track list")
-        for field, low, high in [("width", 16, 7680), ("height", 16, 7680), ("fps", 1, 120)]:
+        if timeline.get("fps") is not None:
+            try:
+                timeline["fps"] = rates.number(rates.exact(timeline["fps"]))
+            except ValueError as exc:
+                raise ValueError("Invalid timeline fps") from exc
+        for field, low, high in [("width", 16, 7680), ("height", 16, 7680)]:
             value = timeline.get(field)
             if value is None:
                 continue
@@ -30,7 +41,7 @@ def validate_document(project: dict) -> dict:
     for field in ("width", "height", "fps"):
         override = timelines[active].get(field)
         if override:
-            result[field] = int(override)
+            result[field] = override if field == "fps" else int(override)
     all_tracks = []
     for timeline in timelines:
         if not isinstance(timeline, dict) or not isinstance(timeline.get("tracks"), list):

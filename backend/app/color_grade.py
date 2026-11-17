@@ -184,6 +184,8 @@ def apply(image: np.ndarray, grade) -> np.ndarray:
         return image
     import json
 
+    if image.dtype == np.uint16:
+        return _apply_deep(image, json.dumps(grade, sort_keys=True))
     flat = _lattice(json.dumps(grade, sort_keys=True))
     scaled = image[..., :3].astype(np.float32) * ((LATTICE - 1) / 255.0)
     red, green, blue = scaled[..., 0], scaled[..., 1], scaled[..., 2]
@@ -194,6 +196,47 @@ def apply(image: np.ndarray, grade) -> np.ndarray:
     above = cv2.remap(flat, x + LATTICE, green, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
     out = image.copy()
     out[..., :3] = np.round(np.clip(below + (above - below) * along, 0, 1) * 255.0).astype(np.uint8)
+    return out
+
+
+def separable(grade: dict) -> bool:
+    """True when every active step maps each channel on its own (wheels, contrast, the master and channel curves),
+    so the grade is three one-dimensional curves."""
+    if abs(float(grade.get("boost", 0))) > 1e-9 or abs(float(grade.get("hue", 0))) > 1e-9:
+        return False
+    return not any(_curve_active(grade.get(k), n) for k, (_, _, n) in HUE_CURVES.items())
+
+
+@functools.lru_cache(maxsize=8)
+def _channel_tables(key: str) -> np.ndarray:
+    """A separable grade at every sixteen-bit level, per channel, rounded to sixteen bits (3 x 65536)."""
+    import json
+
+    levels = np.linspace(0, 1, 65536, dtype=np.float32)
+    graded = apply_float(np.repeat(levels[None, :, None], 3, axis=2), json.loads(key))[0]
+    tables = np.ascontiguousarray(np.round(np.clip(graded, 0, 1) * 65535).astype(np.uint16).T)
+    tables.flags.writeable = False
+    return tables
+
+
+def _apply_deep(image: np.ndarray, key: str) -> np.ndarray:
+    """The grade over a sixteen-bit picture: each channel's own curve at every level when the grade is separable,
+    else the lattice sampled trilinearly in float32 (exact weights, where cv2.remap's are in 32nds)."""
+    import json
+
+    from .assets import sample_3d
+
+    out = image.copy()
+    if separable(json.loads(key)):
+        tables = _channel_tables(key)
+        for channel in range(3):
+            out[..., channel] = tables[channel][image[..., channel]]
+        return out
+    flat = _lattice(key)
+    table = flat.reshape(LATTICE, LATTICE, LATTICE, 3).transpose(1, 0, 2, 3)
+    coords = image[..., :3].astype(np.float32) * np.float32((LATTICE - 1) / 65535.0)
+    graded = np.clip(sample_3d(table, coords), 0, 1)
+    out[..., :3] = np.round(graded * np.float32(65535)).astype(np.uint16)
     return out
 
 

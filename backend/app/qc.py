@@ -8,6 +8,7 @@ frames are against the rest; loudness and true peak; and clicks at audio edit po
 reasons whenever a rule fails.
 """
 
+import contextlib
 import json
 import subprocess
 from pathlib import Path
@@ -54,17 +55,17 @@ def _spans(log: str, start_key: str, end_key: str) -> list[list[float]]:
 def _pictures(path: Path) -> tuple[list[float], list[float], list[float]]:
     """Per frame, at a quarter of the size: mean brightness, sharpness (variance of the Laplacian), and the mean change
     from the frame before (a cut shows as a large one)."""
-    capture, means, sharp, change, previous = cv2.VideoCapture(str(path)), [], [], [], None
-    while True:
-        ok, frame = capture.read()
-        if not ok:
-            break
-        small = cv2.cvtColor(cv2.resize(frame, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
-        means.append(float(small.mean()))
-        sharp.append(float(cv2.Laplacian(small, cv2.CV_32F).var()))
-        change.append(float(cv2.absdiff(small, previous).mean()) if previous is not None else 0.0)
-        previous = small
-    capture.release()
+    from . import frames
+
+    means, sharp, change, previous = [], [], [], None
+    # each decoded frame once (cfr=False): the check reads the file as written, not on a timeline's clock
+    with contextlib.closing(frames.each(path, cfr=False)) as decoded:
+        for frame in decoded:
+            small = cv2.cvtColor(cv2.resize(frame, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+            means.append(float(small.mean()))
+            sharp.append(float(cv2.Laplacian(small, cv2.CV_32F).var()))
+            change.append(float(cv2.absdiff(small, previous).mean()) if previous is not None else 0.0)
+            previous = small
     return means, sharp, change
 
 

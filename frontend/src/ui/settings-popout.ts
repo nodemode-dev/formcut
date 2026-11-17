@@ -10,6 +10,7 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
+import { rateLabel } from "../engine/rates";
 import { buildModePanel } from "./mode-popout";
 import { buildWebhooks } from "./webhooks-settings";
 import { buildTikTokSettings } from "./tiktok-settings";
@@ -101,7 +102,9 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   const size = group(project, "set.frame", "set.frame.hint");
   const width = numberField(engine.snapshot.width, 16, 7680);
   const height = numberField(engine.snapshot.height, 16, 4320);
-  const fps = numberField(engine.snapshot.fps, 1, 240);
+  const fps = numberField(engine.snapshot.fps, 1, 120);
+  fps.step = "any";
+  fps.value = rateLabel(engine.snapshot.fps);
   row(size, "set.width", width);
   row(size, "set.height", height);
   row(size, "set.fps", fps);
@@ -138,6 +141,40 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   previewNote.className = "set-note";
   previewNote.textContent = text("Quarter, half or full size: the control sits beside the picture");
   row(preview, "set.previewsize", previewNote);
+  const proxyRows = group(playback, "proxy.title", "proxy.hint");
+  const proxyBox = document.createElement("input");
+  proxyBox.type = "checkbox";
+  proxyBox.dataset.proxyEnabled = "";
+  const proxySize = document.createElement("select");
+  proxySize.dataset.proxySize = "";
+  row(proxyRows, "proxy.use", proxyBox);
+  row(proxyRows, "proxy.size", proxySize);
+  const proxyNote = document.createElement("span");
+  proxyNote.className = "set-note";
+  proxyNote.hidden = true;
+  proxyRows.append(proxyNote);
+  type ProxySettings = { enabled: boolean; size: number; sizes: number[] };
+  const showProxySettings = (settings: ProxySettings) => {
+    proxyBox.checked = settings.enabled;
+    const wanted = settings.sizes.map(String).join(",");
+    if ([...proxySize.options].map((option) => option.value).join(",") !== wanted) {
+      proxySize.replaceChildren(...settings.sizes.map((value) => new Option(`${value} px`, String(value))));
+    }
+    proxySize.value = String(settings.size);
+    proxyNote.hidden = true;
+  };
+  const proxyFailed = (error: unknown) => {
+    proxyNote.textContent = error instanceof Error ? error.message : String(error);
+    proxyNote.hidden = false;
+  };
+  const sendProxySettings = (patch: Partial<ProxySettings>) =>
+    api<ProxySettings>("/api/proxies/settings", patch).then(showProxySettings, (error) => {
+      proxyFailed(error);
+      return api<ProxySettings>("/api/proxies/settings").then(showProxySettings, () => {});
+    });
+  proxyBox.addEventListener("change", () => void sendProxySettings({ enabled: proxyBox.checked }));
+  proxySize.addEventListener("change", () => void sendProxySettings({ size: Number(proxySize.value) }));
+  const loadProxySettings = () => void api<ProxySettings>("/api/proxies/settings").then(showProxySettings, proxyFailed);
 
   // --- appearance ------------------------------------------------------------
   const appearance = view("appearance");
@@ -580,7 +617,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     if (page === "project") {
       const state = engine.snapshot;
       for (const [field, value] of [[width, state.width], [height, state.height], [fps, state.fps]] as const) {
-        if (document.activeElement !== field) field.value = String(value);
+        if (document.activeElement !== field) field.value = field === fps ? rateLabel(value) : String(value);
       }
     }
     if (page === "providers") void refreshProviders();
@@ -612,6 +649,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
   opener.addEventListener("click", () => {
     scrim.hidden = false;
     showPage();
+    loadProxySettings();
     q("close").focus();
   });
   // Other dialogs send people here with the page and the section to show, so
@@ -621,6 +659,7 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
     if (wanted.page && PAGES.some(([id]) => id === wanted.page)) page = wanted.page;
     scrim.hidden = false;
     showPage();
+    loadProxySettings();
     q("close").focus();
     if (wanted.section) {
       const heading = [...scrim.querySelectorAll<HTMLElement>(".panel-section-head > span")].find((span) => span.textContent === wanted.section);

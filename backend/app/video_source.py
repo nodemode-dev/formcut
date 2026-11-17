@@ -2,6 +2,7 @@ import atexit
 import contextlib
 import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -36,10 +37,26 @@ def _once(text: str, _said: set = set()) -> None:  # noqa: B006 - said once per 
             print(f"formcut: {text}", file=sys.__stderr__)
 
 
-def conversion_for(stream: dict) -> str:
+def bit_depth(stream: dict) -> int:
+    """The bits a sample of the stream's pixel format carries (8 when the probe does not say)."""
+    name = str(stream.get("pix_fmt") or "")
+    if av is not None and name:
+        try:
+            return max(component.bits for component in av.VideoFormat(name).components)
+        except (ValueError, TypeError):
+            pass
+    found = re.search(r"p(9|10|12|14|16)(le|be)?$|^p0(10|12|16)", name)
+    if found:
+        return int(found.group(1) or found.group(3))
+    raw = str(stream.get("bits_per_raw_sample") or "")
+    return int(raw) if raw.isdigit() and int(raw) > 8 else 8
+
+
+def conversion_for(stream: dict, wide: bool = False) -> str:
     """The step to BT.709 an SDR stream needs, or nothing when its primaries already are: zscale where ffmpeg has it,
     else ffmpeg's own colorspace filter (built into every ffmpeg, no library needed), which converts the same
-    primaries, matrix and transfer; with neither, swscale's rule, as for an untagged source."""
+    primaries, matrix and transfer; with neither, swscale's rule, as for an untagged source. `wide` keeps the
+    converted picture at sixteen (zscale) or twelve (colorspace) bits, 4:4:4, for a source decoded wide."""
     from .tools import has_filter
 
     primaries = str(stream.get("color_primaries") or "")
@@ -50,27 +67,31 @@ def conversion_for(stream: dict) -> str:
     source_matrix = matrix if matrix in MATRICES else ("bt2020nc" if primaries == "bt2020" else "smpte170m")
     source_transfer = transfer if transfer in TRANSFERS else "bt709"
     if has_filter("zscale"):
-        return f"zscale=pin={primaries}:min={source_matrix}:tin={source_transfer}:p=bt709:m=bt709:t=bt709:r=tv,format=yuv420p,"
+        layout = "yuv444p16le" if wide else "yuv420p"
+        return f"zscale=pin={primaries}:min={source_matrix}:tin={source_transfer}:p=bt709:m=bt709:t=bt709:r=tv,format={layout},"
     if has_filter("colorspace"):
         _once("this ffmpeg has no zscale (it needs libzimg): wide-gamut clips are converted with its colorspace filter instead")
         space = "bt2020nc" if source_matrix == "bt2020c" else source_matrix
         source_range = "pc" if stream.get("color_range") == "pc" else "tv"
-        return f"colorspace=iprimaries={primaries}:ispace={space}:itrc={source_transfer}:irange={source_range}:all=bt709:range=tv:format=yuv420p,"
+        layout = "yuv444p12" if wide else "yuv420p"
+        return f"colorspace=iprimaries={primaries}:ispace={space}:itrc={source_transfer}:irange={source_range}:all=bt709:range=tv:format={layout},"
     _once("this ffmpeg has neither zscale nor colorspace: wide-gamut clips are shown with swscale's matrix only")
     return ""
 
 
-def tonemap_for(stream: dict) -> str:
+def tonemap_for(stream: dict, wide: bool = False) -> str:
     """PQ and HLG to BT.709: linearised through zscale and tone-mapped with hable. An ffmpeg without zscale cannot do
-    that; the clip is then converted by matrix alone (it shows, flatter than it should), and the terminal says so."""
+    that; the clip is then converted by matrix alone (it shows, flatter than it should), and the terminal says so.
+    `wide` keeps the result at sixteen bits, 4:4:4."""
     from .tools import has_filter
 
+    layout = "yuv444p16le" if wide else "yuv420p"
     if has_filter("zscale") and has_filter("tonemap"):
-        return "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,"
+        return f"zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format={layout},"
     _once(
         "this ffmpeg has no zscale (it needs libzimg): HDR clips are shown without tone mapping; an ffmpeg built with libzimg restores it"
     )
-    return "scale=in_color_matrix=bt2020:out_color_matrix=bt709,format=yuv420p,"
+    return f"scale=in_color_matrix=bt2020:out_color_matrix=bt709,format={layout},"
 
 
 def colour_of(stream: dict) -> dict:
@@ -89,8 +110,11 @@ def colour_of(stream: dict) -> dict:
 
 
 class VideoSource:
-    def __init__(self, path, limit=None, deep: bool = False):
+    def __init__(self, path, limit=None, deep: bool = False, precise: bool = False):
         self.path = str(path)
+        # `precise`: an SDR timeline asks a source of more than eight bits (ten or twelve, 4:2:0, 4:2:2 or 4:4:4)
+        # for sixteen-bit RGBA in its own signal, so a grade or a LUT works on its steps rather than on bytes.
+        self.precise = bool(precise) and not deep
         # HDR working space, step 1: a deep source. With `deep`, a PQ or HLG stream is
         # delivered as sixteen-bit RGB in its own transfer, no tone-map, so the light
         # above white the camera recorded reaches the working space intact; an SDR
@@ -111,8 +135,12 @@ class VideoSource:
         # chain linearises through zscale, tone-maps with hable, and lands on
         # BT.709, the same recipe for preview and export because every decode
         # comes through this pipe.
-        self.tonemap = tonemap_for(stream) if stream.get("color_transfer") in ("smpte2084", "arib-std-b67") else conversion_for(stream)
         self.hdr = stream.get("color_transfer") in ("smpte2084", "arib-std-b67")
+        self.bits = bit_depth(stream)
+        # sixteen-bit RGBA comes out of the decoder: a deep HDR source in its own transfer, or a precise SDR one
+        self.wide = (self.deep and self.hdr) or (self.precise and self.bits > 8)
+        sdr_wide = self.wide and not self.deep
+        self.tonemap = tonemap_for(stream, sdr_wide) if self.hdr else conversion_for(stream, sdr_wide)
         self.transfer = str(stream.get("color_transfer") or "")
         # what formcut's own conversion (yuv.py) needs of the stream, and whether the renderer takes planes from it
         self.matrix = str(stream.get("color_space") or "")
@@ -121,11 +149,14 @@ class VideoSource:
         self.own_conversion = False  # the renderer sets it (yuv.wanted)
         if self.deep and self.hdr:
             self.tonemap = ""  # the signal stays in its own transfer; nothing is rolled off
-        rotation = float(stream.get("tags", {}).get("rotate", 0))
+        # The quarter turns the picture is shown at, counter-clockwise, as np.rot90 counts them: the display matrix's
+        # rotation is counter-clockwise degrees (-90 on a phone held upright), the legacy "rotate" tag clockwise.
+        rotation = -float(stream.get("tags", {}).get("rotate", 0))
         for item in stream.get("side_data_list", []):
             if "rotation" in item:
                 rotation = float(item["rotation"])
-        if round(rotation / 90) % 2:
+        self.turns = round(rotation / 90) % 4
+        if self.turns % 2:
             self.width, self.height = self.height, self.width
         if limit and max(self.width, self.height) > limit:
             ratio = limit / max(self.width, self.height)
@@ -142,7 +173,7 @@ class VideoSource:
         self.requested = 0
         self.process = None
         self.errors = None
-        self.key = (self.path, limit, self.deep)
+        self.key = (self.path, limit, self.deep, self.precise)
         self.last = None
         # R8: one frame read ahead on a thread while the caller renders.
         self.ahead = None
@@ -181,7 +212,7 @@ class VideoSource:
                 "-threads",
                 "1",
                 "-pix_fmt",
-                "rgba64le" if self.deep and self.hdr else "bgr24",
+                "rgba64le" if self.wide else "bgr24",
                 "-f",
                 "rawvideo",
                 "pipe:1",
@@ -195,7 +226,7 @@ class VideoSource:
 
     def _pull(self):
         """One frame off the pipe into a fresh buffer, or None when the pipe ends."""
-        deep = self.deep and self.hdr
+        deep = self.wide
         # a deep frame arrives as RGBA64 with its alpha already full, so nothing on this side adds a channel
         size = self.width * self.height * (8 if deep else 3)
         pieces = bytearray(size)
@@ -320,21 +351,58 @@ class NativeSource(VideoSource):
         self.stream = self.container.streams.video[0]
         self.stream.thread_type = "AUTO"
         base = self.stream.time_base
-        if self.position > 0:
-            self.container.seek(int(self.position / self.fps / float(base)), stream=self.stream, backward=True, any_frame=False)
-        self.decoded = self.container.decode(self.stream)
+        # The stream's first moment, which frame 0 is counted from: an MPEG-TS or an offset file starts well after
+        # zero (1.48 s is common), and counting from zero repeated its first frames and lost as many at the end.
+        if self.stream.start_time is not None:
+            self.origin = float(self.stream.start_time * base)
+        elif self.container.start_time is not None:
+            self.origin = self.container.start_time / 1_000_000
+        else:
+            self.origin = 0.0
         self.native_index = -1  # the CFR index of the last frame decoded
         self.pending = None  # a decoded frame ahead of the CFR clock, held for duplication
         self.process = None
         self.errors = None
-        # a seek lands on the keyframe before the target: decode forward to the target
-        while True:
+        self.seek_decoded = 0  # frames this start decoded to reach its target (bounded; the tests read it)
+        if self.position <= 0:
+            self.decoded = self.container.decode(self.stream)
             index, frame = self._next()
-            if frame is None:
-                break
-            if index >= self.position:
+            while frame is not None and index < 0:  # a frame stamped before the stream's start is not shown
+                index, frame = self._next()
+            if frame is not None:
                 self.pending = (index, frame)
-                break
+            return
+        # A seek lands on the keyframe before the target, and the frames after it are decoded up to the target. A
+        # container that seeks by byte position (MPEG-TS, .MTS) estimates where the target lies and can land past
+        # it, or at the end of the file with nothing left to decode: the seek then steps back 2, 4 and 8 seconds,
+        # and only after those reads the file from its start, so a scrub near the end of a long recording decodes
+        # seconds, not the whole file.
+        target = self.position / self.fps + self.origin
+        for back in (0.0, 2.0, 4.0, 8.0, None):
+            if back is None:
+                self._reopen()
+            else:
+                at = max(self.origin, target - back)
+                self.container.seek(int(at / float(base)), stream=self.stream, backward=True, any_frame=False)
+            self.decoded = self.container.decode(self.stream)
+            index, frame = self._next()
+            self.seek_decoded += frame is not None
+            if frame is None or index > self.position:
+                continue  # landed at the end, or past the target
+            while frame is not None and index < self.position:
+                index, frame = self._next()
+                self.seek_decoded += frame is not None
+            if frame is not None:
+                self.pending = (index, frame)
+            return
+
+    def _reopen(self):
+        """The file opened afresh, at its first frame: the last resort when every seek landed past the target."""
+        with contextlib.suppress(Exception):
+            self.container.close()
+        self.container = av.open(self.path, hwaccel=_hwaccel_for(self))
+        self.stream = self.container.streams.video[0]
+        self.stream.thread_type = "AUTO"
 
     def _active(self) -> bool:
         return getattr(self, "container", None) is not None
@@ -369,8 +437,8 @@ class NativeSource(VideoSource):
             return None, None
         except av.error.InvalidDataError:
             return self._next()
-        pts = frame.pts if frame.pts is not None else 0
-        index = round(float(pts * self.stream.time_base) * self.fps)
+        seconds = float(frame.pts * self.stream.time_base) if frame.pts is not None else getattr(self, "origin", 0.0)
+        index = round((seconds - getattr(self, "origin", 0.0)) * self.fps)
         return index, frame
 
     def _pull(self):
@@ -397,19 +465,22 @@ class NativeSource(VideoSource):
     def _as_bgr(self, frame):
         # A planar 4:2:0 frame at its own size is converted by formcut, not swscale: kept as its planes when the
         # renderer sends this clip to the device (which converts it in its first pass), converted here otherwise.
-        if self.own_conversion and frame.width == self.width and frame.height == self.height:
+        turns = getattr(self, "turns", 0)
+        if self.own_conversion and not turns and frame.width == self.width and frame.height == self.height:
             from .yuv import from_av
 
-            planes = from_av(frame, self.deep and self.hdr, self.matrix, self.full_range)
+            planes = from_av(frame, self.wide, self.matrix, self.full_range)
             if planes is not None:
                 return planes if self.want_planes else planes.rgba()
-        if self.deep and self.hdr:
+        # scaled at the stored size, then turned upright (the pipe's ffmpeg turns it by the same display matrix)
+        width, height = (self.height, self.width) if turns % 2 else (self.width, self.height)
+        if self.wide:
             # RGBA64 straight from swscale: the alpha is full already, so the renderer adds no channel (a 16 MB
             # copy a 1080p frame that the M5 profile showed)
-            picture = frame.reformat(width=self.width, height=self.height, format="rgba64le", interpolation="BICUBIC")
-            return picture.to_ndarray()
-        picture = frame.reformat(width=self.width, height=self.height, format="bgr24", interpolation="BICUBIC")
-        return picture.to_ndarray()
+            picture = frame.reformat(width=width, height=height, format="rgba64le", interpolation="BICUBIC").to_ndarray()
+        else:
+            picture = frame.reformat(width=width, height=height, format="bgr24", interpolation="BICUBIC").to_ndarray()
+        return np.ascontiguousarray(np.rot90(picture, turns)) if turns else picture
 
     def release(self):
         # the read-ahead finishes before the container closes under it
@@ -448,7 +519,7 @@ def _hwaccel_for(source: VideoSource):
         return None
     # the race runs the conversion the engine will run on this source: sixteen-bit RGBA for a deep HDR source,
     # eight-bit BGR otherwise; a chip that wins on BGR can lose once the frame has to come back at sixteen bits
-    conversion = "rgba64le" if source.deep and source.hdr else "bgr24"
+    conversion = "rgba64le" if getattr(source, "wide", source.deep and source.hdr) else "bgr24"
     key = (source.codec, source.width, source.height, device, conversion)
     with _hw_lock:
         if key in _hw_choice:
@@ -523,17 +594,17 @@ def _decoder_colours(path) -> dict:
     return {key: value for key, value in found.items() if value} | {"decoder_colours": True}
 
 
-def _open(path, limit=None, deep: bool = False) -> VideoSource:
+def _open(path, limit=None, deep: bool = False, precise: bool = False) -> VideoSource:
     """The decoder for this stream: in the engine when PyAV is here and the stream needs no tone-map (an SDR
     stream, or an HDR stream taken deep); the pipe otherwise, and always when FORMCUT_DECODE=pipe."""
     if av is not None and os.environ.get("FORMCUT_DECODE", "native") != "pipe":
-        probe = VideoSource(path, limit, deep=deep)
+        probe = VideoSource(path, limit, deep=deep, precise=precise)
         if not probe.tonemap:
             native = NativeSource.__new__(NativeSource)
             native.__dict__.update(probe.__dict__)
             return native
         return probe
-    return VideoSource(path, limit, deep=deep)
+    return VideoSource(path, limit, deep=deep, precise=precise)
 
 
 _pool_lock = threading.Lock()
@@ -609,8 +680,8 @@ def hwaccel_flags() -> list[str]:
     return _HWACCEL
 
 
-def acquire(path, limit=None, at=None, deep: bool = False) -> VideoSource:
-    key = (str(path), limit, deep)
+def acquire(path, limit=None, at=None, deep: bool = False, precise: bool = False) -> VideoSource:
+    key = (str(path), limit, deep, bool(precise) and not deep)
     now = time.monotonic()
     with _pool_lock:
         stale = [entry for entry in _idle if now - entry[0] > IDLE_SECONDS]
@@ -623,7 +694,7 @@ def acquire(path, limit=None, at=None, deep: bool = False) -> VideoSource:
             _idle.remove(match)
     for _, source in stale:
         source.release()
-    return match[1] if match else _open(path, limit, deep=deep)
+    return match[1] if match else _open(path, limit, deep=deep, precise=precise)
 
 
 def recycle(source: VideoSource) -> None:

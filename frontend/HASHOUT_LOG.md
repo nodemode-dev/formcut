@@ -2,6 +2,35 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · review fixes in the window
+
+- The Project page of Settings refilled its frame-rate field with the raw number each time it was shown (29.97002997002997); it now shows the rate's label, as the field does when Settings is built. The card's `data-proxy-action` attribute is escaped like every other value put into the card's markup.
+
+## Unreleased · 23.976, 29.97, 59.94 and 119.88 in the format sheet
+
+- **What changed.** The engine now takes the four NTSC rates as exact ratios (engine log), so the format sheet offers them beside the whole rates: 23.976, 24, 25, 29.97, 30, 50, 59.94, 60, 100, 119.88, 120. Each button carries the nearest number to the ratio (30000 / 1001) and is labelled by `rateLabel` in the new `engine/rates.ts`. `project.settings` in `creator-commands.ts` took only whole rates; it now reads the value through `exactRate`, which turns 29.97 typed in the Settings or Studio frame-rate field into 30000 / 1001 and refuses anything that is neither a whole rate up to 120 nor an NTSC rate. Both fields take decimals (`step="any"`) and show the label, and the preview's header reads "29.97 fps", not the long float. No strings were added: the rates are their own labels.
+- **Checked.** The window test now makes projects at 100, 29.97 and 119.88 from the sheet and waits for the preview's header to read that rate; `tsc --noEmit` clean, `npm run build` passes.
+
+## Unreleased · Make proxy on a media card, Proxies in Settings, and the proxy badge shows
+
+- **What was missing.** The engine has built proxies since P1 to P4, but a person could neither ask for one nor switch them off: `POST /api/media/{id}/proxy` and `/api/proxies/settings` had no caller in the window. The P9 badge on video cards never showed either: `cardFor` appended it, then set `card.innerHTML`, which removed it, so `paintProxies` found no badge and never asked the engine (a session with a video card and a proxy built made no `GET /api/media/{id}/proxy` at all).
+- **What changed.** The badge is appended after the card's markup, starts hidden, and is clipped with an ellipsis so it stops short of the duration chip on a 96 px card. Video cards gain a `bin-proxy` button (the layers icon, under the view button, shown on hover as the others are). Its title is Make proxy, or Rebuild proxy once a proxy is ready, stale or failed; it is disabled while one is queued or building; a click posts to the card's proxy route with no size, so the engine builds at the size chosen in Settings. A refused request marks the badge failed with the engine's message as its title. Settings, Playback gains a Proxies group (the `proxy.title` and `proxy.hint` strings that were already translated): Preview from proxies (a checkbox) and Proxy size (960, 1280 or 1920 px, listed from the engine's `sizes`). Both are read from the engine each time Settings opens and posted on change; a refusal shows its message under them and re-reads the engine's values.
+- **Strings.** `proxy.make`, `proxy.rebuild`, `proxy.use` and `proxy.size` in en, de, es and the four shipped locale files (ar, fa, he, hr), and language-pack rows for the other nine languages, with rows for the Proxies title and hint, which had fallen back to English there.
+- **Checked.** `frontend/tests/window/test_review_controls.py` against the built window and a real engine: Make proxy posts and answers 202, the badge reaches `ready` from the engine's polling, the button then reads Rebuild proxy; unticking the box and choosing 1920 in Settings leave the engine at `{"enabled": false, "size": 1920}`; no console error in either. Looked at in screenshots at 1440x900. `tsc --noEmit` clean, `npm run build` passes, locale key counts match.
+
+## Unreleased · 100 and 120 fps in the format sheet
+
+- **What changed.** The new-project format sheet offers 100 and 120 beside 24, 25, 30, 50 and 60, the rates a high-frame-rate camera records at; the numbers are their own labels, so no strings were added. The Project settings frame-rate field stopped at 240 while the engine refuses anything over 120, so it now stops at 120.
+- **Fractional rates.** Not in this change; added in "23.976, 29.97, 59.94 and 119.88 in the format sheet" above.
+- **Checked.** `test_a_project_made_at_100_fps_previews_at_100` in the window test picks 100 in the sheet, creates the project and waits for the preview to read 1080 x 1920 · 100 fps. Playback and export at 100 and 120 are checked in the engine's tests.
+
+## unreleased (after 2.15.8) · input colour and LUT sampling in the Color section
+
+- **What changed.** The Color section opens with "Input color": a "Shot in" list (Rec.709 as decoded, then Canon Log 3 and Canon Log 2 with Cinema Gamut, S-Log3 with S-Gamut3.Cine, V-Log with V-Gamut, LogC3 with ALEXA Wide Gamut) that sets the clip's `inputColour` through `clip.creator`. When the media record carries `inputColourSuggestion` (the engine read a Log name in the file's metadata) and the clip is not already set to it, a line says "The file says it was shot in ..." with a "Use it" button; nothing is applied until it is pressed, because none of the camera makers documents those tags and a wrong guess would grade every frame. A "LUT interpolation" row (trilinear, tetrahedral) shows when the clip has a LUT and sets `lutInterpolation`; trilinear stays the default, so existing projects render as before.
+- **Strings.** Thirteen keys under `color.input*` and `color.lut*` in en, es and de and in the four shipped locale files, and eight rows in the language pack for the other nine; the five camera names are the same in every locale (they name recording formats; NOTICE lists the marks).
+- **Mounted DOM.** The new rows are part of the section's one `innerHTML` at build; `refill` sets their values and `hidden` in place, and the section also refills when the media bin changes, so a suggestion that arrives with the bin shows without reselecting the clip.
+- **Checked.** `tsc --noEmit` clean, `npm run build` passes, en/es/de key counts 1523 each, the language pack has no row of the wrong width, `tests/test_runtime_locales.py` passes. Not looked at in a browser.
+
 ## 2.15.6 · a duck or a volume key is heard on the next play
 
 - **What was wrong.** `audioSignature` decides when playback asks the engine for a new mix, and it named neither `volumeKeys` nor the clip's volume keyframes. Pressing Duck (which writes `keyframes[].props.volume` onto the music clip) or editing a volume key left the old mix playing until some other audio field changed.

@@ -27,11 +27,15 @@ CANDIDATES: dict[str, tuple[str, ...]] = {
     # included. An MP4 export uses it only when asked for by name: with no H.264
     # encoder, render_api uses Cisco's OpenH264 (openh264.py), then WebM.
     "mpeg4": ("mpeg4",),
+    # ProRes 422 through ffmpeg's own encoder (LGPL, in every build): always ten bits, the master for a ten-bit
+    # source when no ten-bit H.264 or HEVC encoder is here.
+    "prores": ("prores_ks",),
 }
 
 CONTAINERS: dict[str, tuple[str, ...]] = {
     "mp4": ("h264", "hevc", "av1", "mpeg4"),
     "webm": ("vp9", "av1"),
+    "mov": ("prores",),
 }
 
 # Quality tiers per encoder family, so one tier means the same thing to a user
@@ -43,6 +47,8 @@ TIERS: dict[str, dict[str, list[str]]] = {
     "libsvtav1": {"high": ["-crf", "26"], "medium": ["-crf", "34"], "low": ["-crf", "45"]},
     "libaom-av1": {"high": ["-crf", "26", "-b:v", "0"], "medium": ["-crf", "34", "-b:v", "0"], "low": ["-crf", "45", "-b:v", "0"]},
     "libvpx-vp9": {"high": ["-crf", "24", "-b:v", "0"], "medium": ["-crf", "33", "-b:v", "0"], "low": ["-crf", "40", "-b:v", "0"]},
+    # ProRes profiles: 422 HQ, 422 and 422 LT
+    "prores_ks": {"high": ["-profile:v", "3"], "medium": ["-profile:v", "2"], "low": ["-profile:v", "1"]},
     "_nvenc": {"high": ["-cq", "21"], "medium": ["-cq", "28"], "low": ["-cq", "35"]},
     "_qsv": {"high": ["-global_quality", "21"], "medium": ["-global_quality", "28"], "low": ["-global_quality", "35"]},
     # AMF takes constant quantisers per frame type; -q:v means nothing to it.
@@ -161,7 +167,8 @@ def detect(refresh: bool = False) -> dict[str, list[str]]:
         if not refresh:
             try:
                 kept = json.loads(record.read_text(encoding="utf-8"))
-                if kept.get("identity") == identity and isinstance(kept.get("found"), dict):
+                fresh = isinstance(kept.get("found"), dict) and set(kept["found"]) >= set(CANDIDATES)
+                if kept.get("identity") == identity and fresh:
                     _detected = {codec: list(names) for codec, names in kept["found"].items()}
                     return _detected
             except (OSError, ValueError):
@@ -298,19 +305,69 @@ TEN_BIT = {
     "hevc_qsv": "p010le",
     "av1_nvenc": "p010le",
     "av1_qsv": "p010le",
+    "prores_ks": "yuv422p10le",
 }
+# encoders that write only their ten-bit format, whatever is asked
+ALWAYS_TEN_BIT = {"prores_ks"}
+_formats: dict[str, frozenset[str]] = {}
+
+
+def encoder_formats(encoder: str) -> frozenset[str]:
+    """The pixel formats this ffmpeg's encoder takes, from its own help. An encoder given one it lacks converts to the
+    nearest it has without failing, which is how a ten-bit VP9 export from a libvpx built without high bit depth came
+    out Profile 0 yuv420p: the list is read before a ten-bit format is chosen."""
+    with _lock:
+        if encoder in _formats:
+            return _formats[encoder]
+    # the binary the export runs this encoder with: an installed add-on's own, else the bundled ffmpeg (first on PATH)
+    program = str(addon_binary_for(encoder) or "ffmpeg")
+    try:
+        out = subprocess.run(
+            [program, "-hide_banner", "-h", f"encoder={encoder}"], capture_output=True, text=True, check=False, timeout=30
+        ).stdout
+    except Exception:
+        out = ""
+    found: frozenset[str] = frozenset()
+    for line in out.splitlines():
+        if "Supported pixel formats:" in line:
+            found = frozenset(line.split(":", 1)[1].split())
+    with _lock:
+        _formats[encoder] = found
+    return found
+
+
+def ten_bit_format(encoder: str) -> str | None:
+    """The ten-bit format this encoder writes here, or None: listed in TEN_BIT and in the encoder's own formats (an
+    encoder whose help lists none, a hardware one, is taken at TEN_BIT's word)."""
+    wanted = TEN_BIT.get(encoder)
+    if not wanted:
+        return None
+    formats = encoder_formats(encoder)
+    if not formats:
+        # a hardware encoder may list none (it takes frames in device memory); a software one that lists none, or
+        # whose help could not be read, is not claimed
+        return wanted if is_hardware(encoder) else None
+    return wanted if wanted in formats else None
+
+
+def is_ten_bit(pix: str) -> bool:
+    return pix in ("p010le", "yuv420p10le", "yuv422p10le", "yuv444p10le", "yuv420p12le", "yuv422p12le")
 
 
 def pixel_format(encoder: str, ten_bit: bool) -> str:
-    """The pixel format to encode with; falls back to 8-bit where unsupported."""
-    if ten_bit and encoder in TEN_BIT:
-        return TEN_BIT[encoder]
+    """The pixel format to encode with: the encoder's ten-bit format when asked for and it has one here (and always
+    for an encoder that writes nothing else); else 8-bit 4:2:0. The caller refuses a ten-bit request this answers
+    8-bit to, rather than writing 8-bit silently."""
+    if ten_bit or encoder in ALWAYS_TEN_BIT:
+        found = ten_bit_format(encoder)
+        if found:
+            return found
     return "yuv420p"
 
 
 def supports_ten_bit(codec: str) -> bool:
     chosen = choose(codec)
-    return bool(chosen and chosen in TEN_BIT)
+    return bool(chosen and ten_bit_format(chosen))
 
 
 # X5: a size estimate for the export sheet. The shape is a power law in pixels
@@ -327,7 +384,7 @@ def supports_ten_bit(codec: str) -> bool:
 # this model's own error, so the estimate is a guide, not a promise.
 BITRATE_K = 0.00095  # kbit/s at one unit of (pixels per second) ** EXPONENT
 EXPONENT = 0.85
-CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921, "mpeg4": 1.6, "gif": 31.6}
+CODEC_FACTOR = {"h264": 1.0, "hevc": 0.683, "av1": 0.759, "vp9": 0.921, "mpeg4": 1.6, "gif": 31.6, "prores": 25.0}
 # Quality factors are per codec, not shared: each encoder's tiers sit at
 # different crf values, so AV1's high tier is 1.58x its medium where H.264's is
 # 2.19x. Fitting one shared curve put an HEVC low-tier estimate 130 percent out.
@@ -341,6 +398,9 @@ QUALITY_FACTOR = {
     # magnitude (a flat title card measured 2 percent of this fit): the GIF
     # estimate is the roughest of the guides here.
     "gif": {"high": 1.19, "medium": 1.0, "low": 0.79},
+    # ProRes is intra-only at a near-fixed rate per profile (Apple's figures: HQ about 1.45x 422, LT about 0.7x); not
+    # fitted from exports here, so the guide is rougher than the others
+    "prores": {"high": 1.45, "medium": 1.0, "low": 0.7},
 }
 AUDIO_KBPS = 128.0
 

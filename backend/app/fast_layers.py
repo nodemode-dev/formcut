@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageColor, ImageOps
 
-from . import fast_export
+from . import fast_export, rates
 from .media import MEDIA_DIR, needs_colour_work
 from .render_document import flatten
 from .renderer import DEFAULTS
@@ -143,6 +143,8 @@ def _visible(project: dict) -> list[dict]:
 
 def refusal(project: dict) -> str | None:
     """Why this project needs the frame path, or None when it can be layered natively."""
+    if rates.exact(project["fps"]).denominator != 1:
+        return "a fractional frame rate"
     if _background(project) is None:
         return "background"
     visible = _visible(project)
@@ -166,6 +168,7 @@ def _grade(clip: dict) -> dict | None:
         "colorGrade": clip.get("colorGrade"),
         "lutId": clip.get("lutId"),
         "lutIntensity": clip.get("lutIntensity", 1),
+        "lutInterpolation": clip.get("lutInterpolation"),
     }
 
 
@@ -204,6 +207,10 @@ def plan(project: dict, count: int) -> Plan | None:
             if needs_colour_work(str(clip["mediaId"])):
                 return None
             source = VideoSource(paths[0])
+            if source.bits > 8 and _grade(clip):
+                # the graph reads bytes (bgr24) before its cube: a graded source of more than eight bits would band,
+                # so it takes the frame path, which grades its sixteen-bit decode
+                return None
             rate, source_w, source_h = source.fps, source.width, source.height
             start = source_time(clip, lead)
             index = max(0, int(start * rate + 1e-7))
@@ -264,7 +271,8 @@ def bake(grade: dict, path: Path) -> Path:
 
     graded = apply_color_grade(apply_colour_panel(image, grade.get("colour")), grade.get("colorGrade"))
     if grade.get("lutId"):
-        graded = apply_lut(graded, str(grade["lutId"]), float(grade.get("lutIntensity", 1)))
+        interpolation = "tetrahedral" if grade.get("lutInterpolation") == "tetrahedral" else "trilinear"
+        graded = apply_lut(graded, str(grade["lutId"]), float(grade.get("lutIntensity", 1)), interpolation)
     values = graded[:, :, :3].reshape(-1, 3).astype(np.float64) / 255
     path.write_text(f"LUT_3D_SIZE {CUBE}\n" + "".join(f"{r:.6f} {g:.6f} {b:.6f}\n" for r, g, b in values), encoding="ascii")
     return path
@@ -318,7 +326,8 @@ def graph(plan: Plan, cubes: dict[int, Path], out_w: int, out_h: int) -> str:
                 f"fps={plan.fps}:round=up,trim=start=0,setpts=PTS-STARTPTS,trim=end_frame={layer.frames}",
             ]
         if number in cubes:
-            steps.append(f"lut3d=file={filter_path(cubes[number])}:interp=trilinear")
+            interp = "tetrahedral" if (layer.grade or {}).get("lutInterpolation") == "tetrahedral" else "trilinear"
+            steps.append(f"lut3d=file={filter_path(cubes[number])}:interp={interp}")
         if (layer.w, layer.h) != (layer.width, layer.height):
             steps.append(f"scale={layer.w}:{layer.h}:flags=bilinear")
         if layer.flip_h:

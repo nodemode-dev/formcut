@@ -15,6 +15,7 @@ against a moving average of themselves) is reported too: below it, the compariso
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -210,15 +211,13 @@ def screen_outline(frame: np.ndarray, screen: str = "green", points: int = 480) 
 
 def measure(path: str, frames: int | None = None) -> tuple[list[np.ndarray], list[np.ndarray | None]]:
     """The shot's frames and the green screen's measured corners on each."""
-    capture = cv2.VideoCapture(path)
+    from . import frames as reader
+
     pictures, quads = [], []
-    while frames is None or len(pictures) < frames:
-        ok, frame = capture.read()
-        if not ok:
-            break
-        pictures.append(frame)
-        quads.append(green_quad(frame))
-    capture.release()
+    with contextlib.closing(reader.each(path, frames)) as decoded:
+        for frame in decoded:
+            pictures.append(frame)
+            quads.append(green_quad(frame))
     return pictures, quads
 
 

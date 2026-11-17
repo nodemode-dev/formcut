@@ -106,8 +106,11 @@ Form Extension Contract kit, Apache-2.0, nodemode. backend/app/formext_host.py a
 
 Trademarks. Adobe, After Effects and Premiere are either registered trademarks or trademarks of Adobe in the
 United States and/or other countries. Apple and Final Cut Pro are trademarks of Apple Inc. CapCut is a trademark of
-its owner. Cisco is a trademark of Cisco Systems, Inc. formcut is not affiliated with or endorsed by
-any of them; the names describe file formats, key sets and compatibility only.
+its owner. Cisco is a trademark of Cisco Systems, Inc. Canon, Canon Log and Cinema Gamut are trademarks of
+Canon Inc. S-Log and S-Gamut are trademarks of Sony Group Corporation. V-Log and V-Gamut are trademarks of
+Panasonic Holdings Corporation. ARRI, ALEXA and LogC are trademarks of Arnold & Richter Cine Technik GmbH & Co.
+Betriebs KG. formcut is not affiliated with or endorsed by any of them; the names describe file formats, key
+sets, camera recording formats and compatibility only.
 
 Demo media
 ----------

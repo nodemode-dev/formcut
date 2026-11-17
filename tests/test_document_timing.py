@@ -39,9 +39,13 @@ def test_a_width_above_8k_is_refused():
         validate_document(make_project(width=7681))
 
 
-def test_a_fractional_frame_rate_is_refused():
+def test_a_fractional_frame_rate_other_than_ntsc_is_refused():
     with pytest.raises(ValueError, match="Invalid project fps"):
-        validate_document(make_project(fps=29.97))
+        validate_document(make_project(fps=29.5))
+
+
+def test_an_ntsc_frame_rate_is_kept_as_its_exact_ratio():
+    assert validate_document(make_project(fps=29.97))["fps"] == 30000 / 1001
 
 
 def test_a_zero_frame_rate_is_refused():

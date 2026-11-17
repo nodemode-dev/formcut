@@ -19,9 +19,19 @@ from fastapi.responses import Response
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from . import alpha_export, encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, webhooks
+from . import alpha_export, encoders, fast_export, fast_layers, gif_export, gpu, jobs, openh264, rates, webhooks
 from .audio_render import RATE, processed_clip_audio, render_audio
-from .encoders import CONTAINERS, addon_binary_for, estimate_bitrate, estimate_size, hardware_io, pixel_format, supports_ten_bit, tier_flags
+from .encoders import (
+    CONTAINERS,
+    addon_binary_for,
+    estimate_bitrate,
+    estimate_size,
+    hardware_io,
+    is_ten_bit,
+    pixel_format,
+    supports_ten_bit,
+    tier_flags,
+)
 from .encoders import choose as choose_encoder
 from .encoders import status as encoder_status
 from .frame_cache import FrameCache, ReadAhead
@@ -39,6 +49,17 @@ _lock = threading.RLock()
 _sessions = {}
 CLIP_AUDIO = DATA_DIR / "clip-audio"
 OUTPUTS = DATA_DIR / "renders"
+
+
+MEDIA_TYPES = {"mp4": "video/mp4", "webm": "video/webm", "mov": "video/quicktime"}
+
+
+def ten_bit_refusal(codec: str, encoder: str | None) -> str:
+    """Why a ten-bit export of this codec is refused, and what would give ten bits here."""
+    offered = [name for name in ("vp9", "prores", "hevc", "av1") if supports_ten_bit(name)]
+    where = {"vp9": "VP9 (webm)", "prores": "ProRes (mov)", "hevc": "HEVC (mp4)", "av1": "AV1 (mp4)"}
+    instead = ", ".join(where[name] for name in offered) or "no codec on this machine"
+    return f"Ten-bit {codec} is not available here ({encoder or 'no encoder'} writes eight bits); ten bits: {instead}"
 
 
 class RenderInput(BaseModel):
@@ -72,10 +93,12 @@ def capabilities():
     return {
         "compositor": gpu.status(),
         "shared_preview_export": True,
-        "formats": ["mp4", "webm", "gif"],
+        "formats": ["mp4", "webm", "mov", "gif"],
         "frame_format": "png",
         "encoders": encoders,
-        "tenBit": {codec: supports_ten_bit(codec) for codec in ("h264", "hevc", "av1", "vp9")},
+        # what this ffmpeg's encoders actually write at ten bits, per codec (a codec offered here and asked for at ten
+        # bits is refused when its encoder would write eight)
+        "tenBit": {codec: supports_ten_bit(codec) for codec in ("h264", "hevc", "av1", "vp9", "prores")},
         "sizes": list(SIZE_PRESETS),
         "rates": list(RATE_PRESETS),
         "codecs": encoders["containers"],
@@ -386,9 +409,11 @@ def _light_of(frame: np.ndarray, transfer: str, stride: int = 2) -> tuple[float,
     return peak, average
 
 
-def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled) -> list[bytes]:
-    """Render one contiguous run of frames with a renderer of its own."""
+def _render_span(project: dict, fps: float, span: tuple[int, int], cancelled, keep_sixteen: bool = False) -> list[bytes]:
+    """Render one contiguous run of frames with a renderer of its own, at the depth the encoder's pipe was opened at
+    (a ten-bit SDR export takes sixteen-bit frames, as the main renderer gives them)."""
     worker = FrameRenderer(project)
+    worker.keep_sixteen = keep_sixteen
     try:
         out = []
         for index in range(span[0], span[1]):
@@ -411,6 +436,9 @@ RATE_PRESETS = {
     "50": (50, 1),
     "59.94": (60000, 1001),
     "60": (60, 1),
+    "100": (100, 1),
+    "119.88": (120000, 1001),
+    "120": (120, 1),
 }
 
 
@@ -505,7 +533,7 @@ def export_media(
         gif = format == "gif"
         # X2: choose the codec the caller asked for when this build can encode
         # it, else the container's default; hardware is preferred inside choose.
-        wanted = "gif" if gif else codec_name or ("h264" if format == "mp4" else "vp9")
+        wanted = "gif" if gif else codec_name or {"mp4": "h264", "mov": "prores"}.get(format, "vp9")
         encoder = None if gif else choose_encoder(wanted)
         # H.264 with no encoder on this computer: Cisco's OpenH264, fetched the
         # first time an export needs it, unless it is turned off (openh264.py).
@@ -525,6 +553,8 @@ def export_media(
             # every computer. The result says so, and the file is .webm.
             format, wanted, encoder, fell_back = "webm", "vp9", choose_encoder("vp9"), "webm"
             path = final = OUTPUTS / (job_id + ".webm")
+        if format == "mov" and encoder != "prores_ks":
+            raise ValueError("A mov export is ProRes 422, and this ffmpeg has no working prores_ks encoder")
         if not encoder and not gif:
             raise ValueError("This build has no working video encoder")
         speed = ["-preset", "veryfast"] if encoder in ("libx264", "libx265") else (["-cpu-used", "5"] if encoder == "libvpx-vp9" else [])
@@ -535,10 +565,10 @@ def export_media(
         device, upload = hardware_io(encoder or "")
         out_w, out_h = resize_for(project, size)
         num, den = RATE_PRESETS.get(rate or "", (0, 0))
-        out_rate = f"{num}/{den}" if num else str(fps)
+        out_rate = f"{num}/{den}" if num else rates.text(rates.exact(fps))
         # `audio` is already the temporary wav path in this scope, so the audio
         # codec flags need their own name.
-        audio_flags = ["-c:a", "aac"] if format == "mp4" else ["-c:a", "libopus"]
+        audio_flags = {"mp4": ["-c:a", "aac"], "mov": ["-c:a", "pcm_s16le"]}.get(format, ["-c:a", "libopus"])
         if audio_kbps:
             audio_flags += ["-b:a", f"{int(audio_kbps)}k"]
         if loudness is not None:
@@ -578,6 +608,11 @@ def export_media(
             hdr_filter = "scale=out_color_matrix=bt2020nc:out_range=tv,format=yuv420p10le"
             colour_tags = ["-color_primaries", "bt2020", "-color_trc", transfer, "-colorspace", "bt2020nc", "-color_range", "tv"]
             pix = pixel_format(encoder or "", True)
+        # Ten bits on an SDR timeline: the encoder's own ten-bit format or a refusal, never eight bits written
+        # silently, and the renderer's sixteen-bit frames reach it undithered (the frame path, below).
+        ten_sdr = bool(encoder) and not gif and not hdr_filter and is_ten_bit(pix)
+        if ten_bit and not hdr_filter and not gif and not ten_sdr:
+            raise ValueError(ten_bit_refusal(wanted, encoder))
         codec = ["-c:v", encoder, *speed, *tier_flags(encoder, quality, out_w, out_h, fps), *colour_tags, *audio_flags] if encoder else []
         if encoder and encoder.endswith("_videotoolbox") and not hdr_filter:
             # VideoToolbox writes the matrix into the stream but not the primaries or the transfer (the owner's
@@ -592,6 +627,7 @@ def export_media(
         if render_project is not project:
             renderer.close()
             renderer = FrameRenderer(render_project)
+        renderer.keep_sixteen = ten_sdr
         count = math.ceil(project["duration"] * fps)
         # An HDR export writes a lossless sixteen-bit intermediate first: MaxCLL and MaxFALL are measured
         # while the frames are rendered and the encoder needs them before it starts, so the final
@@ -835,8 +871,8 @@ def export_media(
         program = str(addon_binary_for(encoder) or "ffmpeg")
         # An HDR output needs the frame path: the two graphs feed the file to
         # the encoder untouched and would tag Rec.709 pixels as HLG or PQ.
-        fractional = not float(project["fps"]).is_integer()  # the graph's timebase takes whole rates; the frame path any
-        frames_only = os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter or fractional
+        fractional = rates.exact(project["fps"]).denominator != 1  # the graph's timebase takes whole rates; the frame path any
+        frames_only = os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter or fractional or ten_sdr
         native = None if frames_only else fast_export.plan(project, count)
         if native is not None:
             fast_export.run(
@@ -851,7 +887,7 @@ def export_media(
                 {
                     "file": str(path),
                     "name": "formcut-export." + format,
-                    "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                    "media_type": MEDIA_TYPES.get(format, "video/webm"),
                     "frames": count,
                     "width": out_w,
                     "height": out_h,
@@ -864,7 +900,7 @@ def export_media(
             )
         layered = (
             None
-            if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter
+            if native is not None or os.environ.get("FORMCUT_EXPORT_PATH") == "frames" or upload or hdr_filter or fractional or ten_sdr
             else fast_layers.plan(project, count)
         )
         if layered is not None and exact and os.environ.get("FORMCUT_EXPORT_PATH") != "layered":
@@ -896,7 +932,7 @@ def export_media(
                 {
                     "file": str(path),
                     "name": "formcut-export." + format,
-                    "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                    "media_type": MEDIA_TYPES.get(format, "video/webm"),
                     "frames": count,
                     "width": out_w,
                     "height": out_h,
@@ -925,11 +961,11 @@ def export_media(
             "-f",
             "rawvideo",
             "-pix_fmt",
-            (layout if planar else "rgba64le") if renderer.deep else "rgba",
+            (layout if planar else "rgba64le") if renderer.deep else ("rgba64le" if renderer.keep_sixteen else "rgba"),
             "-s",
             f"{renderer.width}x{renderer.height}",
             "-r",
-            str(fps),
+            rates.text(rates.exact(fps)),
             "-i",
             "pipe:0",
             "-filter_threads",
@@ -965,6 +1001,7 @@ def export_media(
             # frame order. Each worker keeps its own renderer, so decoders stay
             # sequential inside a chunk; one worker reproduces the old path.
             workers = export_workers()
+            frame_bytes = renderer.width * renderer.height * (8 if renderer.deep or renderer.keep_sixteen else 4)
             # The pool suits the CPU path, where renderers on separate cores add up. On the device path they
             # all queue for one GPU lock and one decoder each seeks into the same clip, and the M5 export read
             # 18 fps against a 41 fps render; there the frame path renders one frame ahead on a thread while
@@ -980,13 +1017,17 @@ def export_media(
                 chunk = math.ceil(count / workers)
                 spans = [(start, min(count, start + chunk)) for start in range(0, count, chunk)]
                 with ThreadPoolExecutor(max_workers=workers) as pool:
-                    pending = [pool.submit(_render_span, render_project, fps, span, cancelled) for span in spans]
+                    pending = [pool.submit(_render_span, render_project, fps, span, cancelled, renderer.keep_sixteen) for span in spans]
                     done = 0
                     max_cll, max_fall = 0.0, 0.0
                     for future in pending:
                         for payload in future.result():
                             if cancelled():
                                 raise InterruptedError("Cancelled")
+                            # the pipe was opened for one frame size: a frame of another depth would be read as half a
+                            # frame or two, and the file come out scrambled with no error
+                            if len(payload) != frame_bytes:
+                                raise ValueError(f"A rendered frame has {len(payload)} bytes where the encoder takes {frame_bytes}")
                             process.stdin.write(payload)
                             if renderer.deep:
                                 frame_view = np.frombuffer(payload, np.uint16).reshape(renderer.height, renderer.width, 4)
@@ -1006,14 +1047,20 @@ def export_media(
                         if got is not None:
                             return got
                     kept = frames_cache / f"{i:06d}.png"
-                    picture = cv2.imread(str(kept), cv2.IMREAD_UNCHANGED) if kept.exists() else None
+                    # a ten-bit SDR export keeps no resume cache: its sixteen-bit PNGs would double the disk the
+                    # export needs, for a resume that renders the frames again in less time than it reads them
+                    cache = not renderer.keep_sixteen
+                    picture = cv2.imread(str(kept), cv2.IMREAD_UNCHANGED) if cache and kept.exists() else None
                     if picture is None:
                         picture = np.ascontiguousarray(renderer.frame(i / fps))
-                        # written then renamed, so a frame cut off mid-write is never read back
-                        partial = frames_cache / f"{i:06d}.{os.getpid()}.part.png"
-                        cv2.imwrite(str(partial), picture, [cv2.IMWRITE_PNG_COMPRESSION, 1])
-                        partial.replace(kept)
+                        if cache:
+                            # written then renamed, so a frame cut off mid-write is never read back
+                            partial = frames_cache / f"{i:06d}.{os.getpid()}.part.png"
+                            cv2.imwrite(str(partial), picture, [cv2.IMWRITE_PNG_COMPRESSION, 1])
+                            partial.replace(kept)
                     picture = np.ascontiguousarray(picture)
+                    if not planar and picture.nbytes != frame_bytes:
+                        raise ValueError(f"A rendered frame has {picture.nbytes} bytes where the encoder takes {frame_bytes}")
                     if planar:
                         # the device did not pack this frame (nothing on screen, say): converted here as ffmpeg would
                         picture = _to_planes(picture, layout)
@@ -1056,7 +1103,7 @@ def export_media(
             {
                 "file": str(path),
                 "name": "formcut-export." + format,
-                "media_type": "video/mp4" if format == "mp4" else "video/webm",
+                "media_type": MEDIA_TYPES.get(format, "video/webm"),
                 "frames": count,
                 "width": out_w,
                 "height": out_h,
@@ -1092,7 +1139,7 @@ def export(body: RenderInput):
     if body.transparent:
         if body.format not in alpha_export.FORMATS:
             raise HTTPException(422, "A transparent export is mov (ProRes 4444), webm (VP9 with alpha) or png (a zip of frames)")
-    elif body.format not in ("mp4", "webm", "gif") or body.quality not in ("high", "medium", "low"):
+    elif body.format not in ("mp4", "webm", "mov", "gif") or body.quality not in ("high", "medium", "low"):
         raise HTTPException(422, "Unknown export format or quality")
     if body.size is not None and body.size not in SIZE_PRESETS:
         raise HTTPException(422, "Unknown export size")
@@ -1102,6 +1149,17 @@ def export(body: RenderInput):
         allowed = encoder_status()["containers"].get(body.format, [])
         if body.codec not in allowed:
             raise HTTPException(422, f"{body.codec} is not available for {body.format} on this machine")
+    if not body.transparent and body.format == "mov" and not choose_encoder("prores"):
+        raise HTTPException(422, "A mov export is ProRes 422, and this ffmpeg has no working prores_ks encoder")
+    if (
+        body.tenBit
+        and not body.transparent
+        and body.format != "gif"
+        and str(project.get("outputColour") or "bt709").lower() not in ("hlg", "pq")
+    ):
+        wanted = body.codec or {"mp4": "h264", "mov": "prores"}.get(body.format, "vp9")
+        if not supports_ten_bit(wanted):
+            raise HTTPException(422, ten_bit_refusal(wanted, choose_encoder(wanted)))
 
     return jobs.submit("export", _export_operation(body, project), recipe=body.model_dump())
 
@@ -1255,6 +1313,7 @@ def build_mattes(body: MatteInput):
                 ],
             }
         )
+        renderer.precise = False  # the models read bytes
         from .model_manager import ready as model_ready
         from .sam_video import VideoTracker
 
@@ -1350,7 +1409,7 @@ def estimate(body: EstimateInput):
         for track in timeline["tracks"]
         for clip in track["clips"]
     )
-    codec = body.codec or ("h264" if body.format == "mp4" else "gif" if body.format == "gif" else "vp9")
+    codec = body.codec or {"mp4": "h264", "gif": "gif", "mov": "prores"}.get(body.format, "vp9")
     if body.format == "gif":
         audible = False
     return {

@@ -25,6 +25,7 @@ from pathlib import Path
 
 from PIL import ImageColor
 
+from . import rates
 from .media import MEDIA_DIR, needs_colour_work
 from .render_document import flatten
 from .renderer import DEFAULTS
@@ -51,6 +52,7 @@ ABSENT = (
     "stabilise",
     "colour",
     "colorGrade",
+    "inputColour",  # a camera Log taken to Rec.709: the frame renderer's (camera_log.py)
     "crop",
     "smoothSlow",
     "reversed",
@@ -154,6 +156,8 @@ def _span(clip: dict, fps: int, count: int) -> tuple[int, int]:
 
 def refusal(project: dict, count: int | None = None) -> str | None:
     """Why this project needs the frame path, or None when the native path can export it."""
+    if rates.exact(project["fps"]).denominator != 1:
+        return "a fractional frame rate"
     reason = _background(project)
     if reason:
         return reason
