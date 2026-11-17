@@ -359,34 +359,50 @@ class NativeSource(VideoSource):
             self.origin = self.container.start_time / 1_000_000
         else:
             self.origin = 0.0
-        if self.position > 0:
-            at = self.position / self.fps + self.origin
-            self.container.seek(int(at / float(base)), stream=self.stream, backward=True, any_frame=False)
-        self.decoded = self.container.decode(self.stream)
         self.native_index = -1  # the CFR index of the last frame decoded
         self.pending = None  # a decoded frame ahead of the CFR clock, held for duplication
         self.process = None
         self.errors = None
-        # a seek lands on the keyframe before the target: decode forward to the target. A container that seeks by
-        # byte position (MPEG-TS) can land past it instead; then the file is read again from its start.
-        first = True
-        while True:
+        self.seek_decoded = 0  # frames this start decoded to reach its target (bounded; the tests read it)
+        if self.position <= 0:
+            self.decoded = self.container.decode(self.stream)
             index, frame = self._next()
-            if frame is None:
-                break
-            if first and index > self.position and self.position > 0:
-                with contextlib.suppress(Exception):
-                    self.container.close()
-                self.container = av.open(self.path, hwaccel=_hwaccel_for(self))  # opened afresh, at its first frame
-                self.stream = self.container.streams.video[0]
-                self.stream.thread_type = "AUTO"
-                self.decoded = self.container.decode(self.stream)
-                first = False
-                continue
-            first = False
-            if index >= self.position:
+            while frame is not None and index < 0:  # a frame stamped before the stream's start is not shown
+                index, frame = self._next()
+            if frame is not None:
                 self.pending = (index, frame)
-                break
+            return
+        # A seek lands on the keyframe before the target, and the frames after it are decoded up to the target. A
+        # container that seeks by byte position (MPEG-TS, .MTS) estimates where the target lies and can land past
+        # it, or at the end of the file with nothing left to decode: the seek then steps back 2, 4 and 8 seconds,
+        # and only after those reads the file from its start, so a scrub near the end of a long recording decodes
+        # seconds, not the whole file.
+        target = self.position / self.fps + self.origin
+        for back in (0.0, 2.0, 4.0, 8.0, None):
+            if back is None:
+                self._reopen()
+            else:
+                at = max(self.origin, target - back)
+                self.container.seek(int(at / float(base)), stream=self.stream, backward=True, any_frame=False)
+            self.decoded = self.container.decode(self.stream)
+            index, frame = self._next()
+            self.seek_decoded += frame is not None
+            if frame is None or index > self.position:
+                continue  # landed at the end, or past the target
+            while frame is not None and index < self.position:
+                index, frame = self._next()
+                self.seek_decoded += frame is not None
+            if frame is not None:
+                self.pending = (index, frame)
+            return
+
+    def _reopen(self):
+        """The file opened afresh, at its first frame: the last resort when every seek landed past the target."""
+        with contextlib.suppress(Exception):
+            self.container.close()
+        self.container = av.open(self.path, hwaccel=_hwaccel_for(self))
+        self.stream = self.container.streams.video[0]
+        self.stream.thread_type = "AUTO"
 
     def _active(self) -> bool:
         return getattr(self, "container", None) is not None

@@ -327,3 +327,60 @@ def test_an_active_timeline_past_the_timelines_reads_as_the_first():
     document = {**make_project(), "id": "past-" + uuid.uuid4().hex, "activeTimeline": 5}
     store.save_project(document)
     assert store.get_project(document["id"])["activeTimeline"] == 0
+
+
+# ------------------------------------------------------------------------------------------------ seeks in long TS
+
+TS_SECONDS = 60
+
+
+def _numbered(rate: int = 25, seconds: int = TS_SECONDS) -> str:
+    """Each frame writes its own number in twelve 16-pixel blocks of light and dark, one bit a block."""
+    bits = "if(bitand(N\\,pow(2\\,floor(X/16)))\\,235\\,16)"
+    return f"nullsrc=size=192x32:rate={rate}:duration={seconds},format=yuv420p,geq=lum='{bits}':cb=128:cr=128"
+
+
+def _number(frame) -> int:
+    row = np.asarray(frame, np.float64)[16, :, :3].mean(axis=1)
+    return sum(1 << block for block in range(12) if row[block * 16 + 4 : block * 16 + 12].mean() > 128)
+
+
+@pytest.fixture(scope="module")
+def long_ts(tmp_path_factory):
+    """A minute of MPEG-TS starting at 1.48 s with a 2 s GOP, as a camera's .MTS is laid out."""
+    path = tmp_path_factory.mktemp("long-ts") / "long.ts"
+    extra = ["-c:v", "mpeg2video", "-q:v", "2", "-g", "50", "-output_ts_offset", "1.48", "-f", "mpegts"]
+    return _make(path, _numbered(), extra)
+
+
+def test_the_numbered_frames_read_back_in_order(long_ts):
+    from app import frames
+
+    with contextlib.closing(frames.each(long_ts, limit=60)) as decoded:
+        assert [_number(frame) for frame in decoded] == list(range(60))
+
+
+@pytest.mark.parametrize("seconds", [10.0, 30.04, 45.2, 57.9, 58.0, 59.0, 59.5, 59.96])
+def test_a_seek_anywhere_in_a_long_ts_lands_on_ffmpegs_frame(long_ts, seconds, monkeypatch):
+    from app import frames
+
+    monkeypatch.setenv("FORMCUT_DECODE", "native")
+    monkeypatch.setenv("FORMCUT_HWDEC", "off")
+    frame = frames.at(long_ts, seconds)
+    assert frame is not None, f"no frame at {seconds} s"
+    assert _number(frame) == int(seconds * 25 + 1e-7)
+
+
+def test_a_seek_near_the_end_of_a_long_ts_decodes_seconds_not_the_file(long_ts, monkeypatch):
+    from app import video_source
+
+    monkeypatch.setenv("FORMCUT_DECODE", "native")
+    monkeypatch.setenv("FORMCUT_HWDEC", "off")
+    source = video_source._open(str(long_ts))
+    try:
+        source.seek(TS_SECONDS * 25 - 10)
+        ok, frame = source.read()
+        assert ok and _number(frame) == TS_SECONDS * 25 - 10
+        assert source.seek_decoded <= 25 * 10, source.seek_decoded  # at most the 8 s step back and a GOP
+    finally:
+        source.release()

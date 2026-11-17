@@ -84,7 +84,10 @@ def each(path: Path | str, limit: int | None = None, cfr: bool = True) -> Iterat
 
 
 def _decoded(path: Path | str, limit: int | None) -> Iterator[np.ndarray]:
-    """Each decoded frame once, upright, as eight-bit BGR; through PyAV, or the timeline's reader where it is missing."""
+    """Each decoded frame once, upright, as eight-bit BGR; through PyAV, or the timeline's reader where it is missing.
+
+    Converted by swscale alone: a PQ or HLG source is not tone-mapped and a wide-gamut one not converted as the
+    timeline does, so a measure of brightness on such a file reads its signal, not the picture the timeline shows."""
     from .video_source import VideoSource, av
 
     try:
