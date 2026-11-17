@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import time
 import typing
 import uuid
 from fractions import Fraction
@@ -68,6 +69,68 @@ def test_a_rate_is_read_as_its_exact_ratio(given, wanted):
 def test_a_rate_a_project_cannot_have_is_refused(given):
     with pytest.raises(ValueError):
         rates.exact(given)
+
+
+HOSTILE = [
+    "1e999999999",
+    "1E9",
+    "30e0",
+    "9" * 5000,
+    "9" * 5000 + "/1",
+    "1/" + "9" * 5000,
+    "-30",
+    "+30",
+    "0",
+    "0/0",
+    "30/0",
+    "inf",
+    "-inf",
+    "nan",
+    "121",
+    "120.5",
+    "1000000/1",
+    " 30 / 1 ",
+    "30.0000001",
+    10**5000,
+    -30,
+    float("inf"),
+    float("-inf"),
+    Fraction(10**5000, 1),
+    {"num": 10**5000, "den": 1},
+    {"num": 30000, "den": 0},
+    [30000],
+    [True, 1],
+    {"num": "30000", "den": 1001},
+]
+
+
+@pytest.mark.parametrize("given", HOSTILE, ids=range(len(HOSTILE)))
+def test_hostile_rates_are_refused_at_once(given):
+    began = time.perf_counter()
+    with pytest.raises(ValueError, match="Invalid frame rate"):
+        rates.exact(given)
+    assert time.perf_counter() - began < 0.05
+
+
+@pytest.mark.parametrize(
+    ("given", "wanted"),
+    [
+        ("24000/1001", Fraction(24000, 1001)),
+        ("120000/1001", Fraction(120000, 1001)),
+        (" 25 ", Fraction(25)),
+        ("59.94", Fraction(60000, 1001)),
+        ({"num": 30000, "den": 1001}, Fraction(30000, 1001)),
+        ([60, 1], Fraction(60)),
+        (Fraction(30000, 1001), Fraction(30000, 1001)),
+    ],
+)
+def test_valid_rates_in_every_form_still_parse_exactly(given, wanted):
+    assert rates.exact(given) == wanted
+
+
+def test_a_hostile_rate_in_a_document_is_refused_by_validation():
+    with pytest.raises(ValueError, match="Invalid project fps"):
+        validate_document(make_project(fps="1e999999999"))
 
 
 @pytest.mark.parametrize("label", list(NTSC))

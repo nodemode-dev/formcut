@@ -10,6 +10,7 @@ ffmpeg, an encoder or a timeline file takes it from `exact` here, never from a r
 from __future__ import annotations
 
 import math
+import re
 from fractions import Fraction
 
 LOW, HIGH = 1, 120
@@ -17,17 +18,61 @@ NTSC = tuple(Fraction(base * 1000, 1001) for base in (24, 30, 60, 120))
 TOLERANCE = 0.01
 
 
+RATIO = re.compile(r"(\d{1,6})(?:/(\d{1,6}))?")
+DECIMAL = re.compile(r"\d{1,3}\.\d{1,6}")
+MAX_TEXT = 13
+
+
+def _from_text(value: str) -> float:
+    """A rate written as text: digits, a ratio of digits or a short decimal; no sign, exponent, inf or nan, so text
+    from a document, the API or an agent can never make Fraction build an enormous number."""
+    text = value.strip()
+    if len(text) > MAX_TEXT:
+        raise ValueError("Invalid frame rate")
+    ratio = RATIO.fullmatch(text)
+    if ratio:
+        numerator, denominator = int(ratio.group(1)), int(ratio.group(2) or 1)
+        if denominator == 0:
+            raise ValueError("Invalid frame rate")
+        return numerator / denominator
+    if DECIMAL.fullmatch(text):
+        return float(text)
+    raise ValueError("Invalid frame rate")
+
+
+def _from_pair(value) -> float:
+    """A rate carried as a num/den pair: {"num": 30000, "den": 1001} or [30000, 1001]."""
+    pair = (value.get("num"), value.get("den")) if isinstance(value, dict) else tuple(value)
+    if len(pair) != 2 or not all(isinstance(part, int) and not isinstance(part, bool) for part in pair):
+        raise ValueError("Invalid frame rate")
+    numerator, denominator = pair
+    if not 0 < numerator < 10**6 or not 0 < denominator < 10**6:
+        raise ValueError("Invalid frame rate")
+    return numerator / denominator
+
+
 def exact(value) -> Fraction:
-    """The project rate `value` stands for, or ValueError when it is not one a project can have."""
-    if isinstance(value, bool):
+    """The project rate `value` stands for, or ValueError when it is not one a project can have.
+
+    Every input is bounded before any arithmetic: text by its pattern, an int by its range, a float by being finite.
+    The result is snapped to a whole rate from 1 to 120 or one of the four NTSC ratios; nothing else is a project rate.
+    """
+    if isinstance(value, bool) or value is None:
         raise ValueError("Invalid frame rate")
     if isinstance(value, str):
-        try:
-            value = Fraction(value.strip())
-        except (ValueError, ZeroDivisionError) as exc:
-            raise ValueError("Invalid frame rate") from exc
-    if isinstance(value, (Fraction, int, float)):
-        number = float(value)
+        number = _from_text(value)
+    elif isinstance(value, (dict, list, tuple)):
+        number = _from_pair(value)
+    elif isinstance(value, int):
+        if not LOW <= value <= HIGH:
+            raise ValueError("Invalid frame rate")
+        return Fraction(value)
+    elif isinstance(value, float):
+        number = value
+    elif isinstance(value, Fraction):
+        if not 0 < value.denominator < 10**6 or not 0 < value.numerator < 10**9:
+            raise ValueError("Invalid frame rate")
+        number = value.numerator / value.denominator
     else:
         raise ValueError("Invalid frame rate")
     if not math.isfinite(number) or not LOW <= number <= HIGH + TOLERANCE:
