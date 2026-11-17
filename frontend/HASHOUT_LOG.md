@@ -15,6 +15,13 @@ Reasoning behind interface changes, newest first.
 - **Fractional rates.** 23.976, 29.97 and 59.94 are not offered: the engine refuses a project rate that is not a whole number (engine log).
 - **Checked.** `test_a_project_made_at_100_fps_previews_at_100` in the window test picks 100 in the sheet, creates the project and waits for the preview to read 1080 x 1920 · 100 fps. Playback and export at 100 and 120 are checked in the engine's tests.
 
+## unreleased (after 2.15.8) · input colour and LUT sampling in the Color section
+
+- **What changed.** The Color section opens with "Input color": a "Shot in" list (Rec.709 as decoded, then Canon Log 3 and Canon Log 2 with Cinema Gamut, S-Log3 with S-Gamut3.Cine, V-Log with V-Gamut, LogC3 with ALEXA Wide Gamut) that sets the clip's `inputColour` through `clip.creator`. When the media record carries `inputColourSuggestion` (the engine read a Log name in the file's metadata) and the clip is not already set to it, a line says "The file says it was shot in ..." with a "Use it" button; nothing is applied until it is pressed, because none of the camera makers documents those tags and a wrong guess would grade every frame. A "LUT interpolation" row (trilinear, tetrahedral) shows when the clip has a LUT and sets `lutInterpolation`; trilinear stays the default, so existing projects render as before.
+- **Strings.** Thirteen keys under `color.input*` and `color.lut*` in en, es and de and in the four shipped locale files, and eight rows in the language pack for the other nine; the five camera names are the same in every locale (they name recording formats; NOTICE lists the marks).
+- **Mounted DOM.** The new rows are part of the section's one `innerHTML` at build; `refill` sets their values and `hidden` in place, and the section also refills when the media bin changes, so a suggestion that arrives with the bin shows without reselecting the clip.
+- **Checked.** `tsc --noEmit` clean, `npm run build` passes, en/es/de key counts 1523 each, the language pack has no row of the wrong width, `tests/test_runtime_locales.py` passes. Not looked at in a browser.
+
 ## 2.15.6 · a duck or a volume key is heard on the next play
 
 - **What was wrong.** `audioSignature` decides when playback asks the engine for a new mix, and it named neither `volumeKeys` nor the clip's volume keyframes. Pressing Duck (which writes `keyframes[].props.volume` onto the music clip) or editing a volume key left the old mix playing until some other audio field changed.

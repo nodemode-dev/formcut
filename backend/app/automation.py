@@ -853,6 +853,8 @@ def dispatch(method: str, params: dict):
                 "animations",
                 "volumeKeys",
                 "lutIntensity",
+                "lutInterpolation",
+                "inputColour",
                 "pitchFollowsSpeed",
                 "audioStream",
                 "angle",

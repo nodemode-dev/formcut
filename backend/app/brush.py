@@ -92,6 +92,7 @@ def smart_brush(body: BrushInput):
 
     at = source_time(clip, max(0.0, body.time - clip["start"]))
     renderer = FrameRenderer(project, 640)
+    renderer.precise = False  # the model reads bytes
     try:
         frame = renderer.media_frame(clip, at)
     finally:

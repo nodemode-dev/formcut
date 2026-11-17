@@ -955,11 +955,17 @@ def _native_colour():
 
 
 def apply_colour_panel(image: np.ndarray, panel) -> np.ndarray:
-    """RGBA uint8 in, RGBA uint8 out; alpha untouched."""
+    """RGBA in, RGBA out at the same depth (bytes or sixteen bits); alpha untouched."""
     if not colour_active(panel):
         return image
     native = _native_colour()
-    if native is not None and float(panel.get("sharpen", 0.0)) == 0.0 and image.ndim == 3 and image.shape[2] == 4:
+    if (
+        native is not None
+        and image.dtype == np.uint8
+        and float(panel.get("sharpen", 0.0)) == 0.0
+        and image.ndim == 3
+        and image.shape[2] == 4
+    ):
         out = np.array(image, dtype=np.uint8, order="C", copy=True)
         native(out, [float(panel.get(key, COLOUR_PANEL[key])) for key in NATIVE_COLOUR])
         return out
@@ -967,7 +973,13 @@ def apply_colour_panel(image: np.ndarray, panel) -> np.ndarray:
 
 
 def python_colour_panel(image: np.ndarray, panel) -> np.ndarray:
-    """The colour panel in NumPy: the reference the Rust kernel reproduces to the bit."""
+    """The colour panel in NumPy: the reference the Rust kernel reproduces to the bit. Sixteen bits in, sixteen
+    bits out, rounded once."""
+    if image.dtype == np.uint16:
+        graded = colour_panel(image[:, :, :3].astype(np.float32) / 65535.0, panel)
+        out = image.copy()
+        out[:, :, :3] = np.round(np.clip(graded, 0, 1) * 65535.0).astype(np.uint16)
+        return out
     rgb = image[:, :, :3].astype(np.float32) / 255.0
     graded = colour_panel(rgb, panel)
     out = image.copy()

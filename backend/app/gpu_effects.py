@@ -516,7 +516,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let y = i32(id.y);
     if (x >= w || y >= h) { return; }
     let i = y * w + x;
-    dst[i] = round(src[i] * 255.0) / 255.0;
+    dst[i] = round(src[i] * p[2]) / p[2];
 }
 """
 
@@ -1953,7 +1953,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 """
 
 # A .cube LUT in aux as flat rgb triplets indexed [b][g][r] on an n-lattice,
-# sampled trilinearly, mixed by intensity and rounded, as apply_lut does it.
+# sampled trilinearly (p[11] 0) or tetrahedrally (p[11] 1), mixed by intensity
+# and rounded to the layer's grid (p[10], 255 or 65535), as apply_cube does it.
 # p[2] n, p[3..5] the domain's low rgb, p[6..8] its high rgb, p[9] intensity.
 LUT_CODE = """
 fn lut(r: i32, g: i32, b: i32) -> vec3<f32> {
@@ -1977,13 +1978,70 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let lo = vec3<i32>(floor(c));
     let hi = min(vec3<i32>(n - 1), lo + vec3<i32>(1));
     let f = c - vec3<f32>(lo);
-    let c00 = mix(lut(lo.x, lo.y, lo.z), lut(hi.x, lo.y, lo.z), f.x);
-    let c10 = mix(lut(lo.x, hi.y, lo.z), lut(hi.x, hi.y, lo.z), f.x);
-    let c01 = mix(lut(lo.x, lo.y, hi.z), lut(hi.x, lo.y, hi.z), f.x);
-    let c11 = mix(lut(lo.x, hi.y, hi.z), lut(hi.x, hi.y, hi.z), f.x);
-    let graded = clamp(mix(mix(c00, c10, f.y), mix(c01, c11, f.y), f.z), vec3<f32>(0.0), vec3<f32>(1.0));
+    var sampled: vec3<f32>;
+    if (p[11] > 0.5) {
+        // tetrahedral: from the cell's low corner along the largest fraction's axis, then the middle one, to its high
+        // corner; the cell is the one below the top edge, as on the CPU, so a coordinate of n - 1 has fraction 1
+        let base = min(lo, vec3<i32>(n - 2));
+        let t = c - vec3<f32>(base);
+        var a = vec3<i32>(1, 0, 0);
+        var b = vec3<i32>(0, 1, 0);
+        var big = t.x;
+        var mid = t.y;
+        var small = t.z;
+        let f = t;
+        if (f.x >= f.y) {
+            if (f.y >= f.z) { a = vec3<i32>(1, 0, 0); b = vec3<i32>(0, 1, 0); big = f.x; mid = f.y; small = f.z; }
+            else if (f.x >= f.z) { a = vec3<i32>(1, 0, 0); b = vec3<i32>(0, 0, 1); big = f.x; mid = f.z; small = f.y; }
+            else { a = vec3<i32>(0, 0, 1); b = vec3<i32>(1, 0, 0); big = f.z; mid = f.x; small = f.y; }
+        } else {
+            if (f.x >= f.z) { a = vec3<i32>(0, 1, 0); b = vec3<i32>(1, 0, 0); big = f.y; mid = f.x; small = f.z; }
+            else if (f.y >= f.z) { a = vec3<i32>(0, 1, 0); b = vec3<i32>(0, 0, 1); big = f.y; mid = f.z; small = f.x; }
+            else { a = vec3<i32>(0, 0, 1); b = vec3<i32>(0, 1, 0); big = f.z; mid = f.y; small = f.x; }
+        }
+        let one = base + a;
+        let two = one + b;
+        sampled = lut(base.x, base.y, base.z) * (1.0 - big) + lut(one.x, one.y, one.z) * (big - mid)
+            + lut(two.x, two.y, two.z) * (mid - small) + lut(base.x + 1, base.y + 1, base.z + 1) * small;
+    } else {
+        let c00 = mix(lut(lo.x, lo.y, lo.z), lut(hi.x, lo.y, lo.z), f.x);
+        let c10 = mix(lut(lo.x, hi.y, lo.z), lut(hi.x, hi.y, lo.z), f.x);
+        let c01 = mix(lut(lo.x, lo.y, hi.z), lut(hi.x, lo.y, hi.z), f.x);
+        let c11 = mix(lut(lo.x, hi.y, hi.z), lut(hi.x, hi.y, hi.z), f.x);
+        sampled = mix(mix(c00, c10, f.y), mix(c01, c11, f.y), f.z);
+    }
+    let graded = clamp(sampled, vec3<f32>(0.0), vec3<f32>(1.0));
     let mixed = mix(s.rgb, graded, p[9]);
-    dst[i] = vec4<f32>(round(mixed * 255.0) / 255.0, s.a);
+    dst[i] = vec4<f32>(round(mixed * p[10]) / p[10], s.a);
+}
+"""
+
+# A 1D .cube LUT in aux as n rgb triplets, each channel read linearly between its
+# two entries, mixed by intensity and rounded to the layer's grid, as apply_cube does it.
+# p[2] n, p[3..5] the domain's low rgb, p[6..8] its high rgb, p[9] intensity, p[10] the grid.
+LUT1D_CODE = """
+fn entry(k: i32, channel: i32) -> f32 {
+    return aux[k * 3 + channel];
+}
+fn curve(v: f32, low: f32, high: f32, channel: i32) -> f32 {
+    let n = i32(p[2]);
+    let c = clamp((v - low) / (high - low), 0.0, 1.0) * f32(n - 1);
+    let k = min(i32(floor(c)), n - 2);
+    let f = c - f32(k);
+    return clamp(entry(k, channel) * (1.0 - f) + entry(k + 1, channel) * f, 0.0, 1.0);
+}
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = i32(p[0]);
+    let h = i32(p[1]);
+    let x = i32(id.x);
+    let y = i32(id.y);
+    if (x >= w || y >= h) { return; }
+    let i = y * w + x;
+    let s = src[i];
+    let graded = vec3<f32>(curve(s.r, p[3], p[6], 0), curve(s.g, p[4], p[7], 1), curve(s.b, p[5], p[8], 2));
+    let mixed = mix(s.rgb, graded, p[9]);
+    dst[i] = vec4<f32>(round(mixed * p[10]) / p[10], s.a);
 }
 """
 _contexts: dict = {}
@@ -2162,6 +2220,7 @@ class _Chain:
         self.c = context
         self.h, self.w = height, width
         self.current = 0
+        self.grid = 255.0  # what the passes round to: bytes, or 65535 for a sixteen-bit layer
 
     def _pass(self, code: str, params: list, aux=None, source: int | None = None, target: int | None = None):
         src = self.c.buffers[self.current if source is None else source]
@@ -2205,7 +2264,7 @@ class _Chain:
         step.end()
         device.queue.submit([encoder.finish()])
         self.current = (self.current + 1) % 2
-        self._pass(QUANTISE_CODE, [])
+        self._pass(QUANTISE_CODE, [self.grid])
 
     def _blur(self, taps: np.ndarray, anchor: int | None = None):
         anchor = len(taps) // 2 if anchor is None else anchor
@@ -2954,6 +3013,19 @@ def _run_chain(chain: _Chain, effects: list[dict], local: float) -> None:
         chain._pass(COMBINE_CODE, [4, amount] if amount < 1 else [5])
 
 
+def _grid(image) -> float:
+    """The grid a layer's passes round to: 65535 for a sixteen-bit picture (or planes decoded wide), else bytes."""
+    return 65535.0 if np.dtype(image.dtype) == np.uint16 else 255.0
+
+
+def _back(data: np.ndarray, image, lift: str | None = None) -> np.ndarray:
+    """A downloaded layer at its picture's own depth: sixteen bits for a sixteen-bit picture, else bytes (a byte
+    layer lifted into an HDR transfer on the device comes back as bytes, as it always has)."""
+    if _grid(image) > 255 and not lift:
+        return np.round(np.clip(data, 0, 1) * 65535).astype(np.uint16)
+    return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+
+
 def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.ndarray | None:
     """The chain on the device, bytes back; None when the chain or the device cannot take it."""
     if not effects or not supported(effects) or not active():
@@ -2963,10 +3035,11 @@ def apply_effects(image: np.ndarray, effects: list[dict], local: float) -> np.nd
             h, w = image.shape[:2]
             context = _context(h, w)
             chain = _Chain(context, h, w)
+            chain.grid = _grid(image)
             context.upload(context.buffers[0], image)
             _run_chain(chain, effects, local)
             data = context.download(context.buffers[chain.current], h, w)
-        return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+        return _back(data, image)
     except Exception:
         return None
 
@@ -3007,6 +3080,7 @@ def effects_and_warp(
                 if hit is not None:
                     return hit
             chain = _Chain(context, h, w)
+            chain.grid = _grid(image)
             # on an executor that can, a layer with effects has its upload unpacked inside the chain's fused kernel
             # The frame's first layer over a canvas nothing has painted, full-frame and unmoved, with nothing
             # between its chain and the blend: its kernel blends it over the blank canvas itself and its
@@ -3039,7 +3113,7 @@ def effects_and_warp(
                     if effects:
                         _run_chain(chain, effects, local)
                         # The CPU rounds to uint8 here; so does the device.
-                        chain._pass(QUANTISE_CODE, [])
+                        chain._pass(QUANTISE_CODE, [chain.grid])
                     if as_base:
                         chain._pass(blend_over_blank(base[1], bool(base[2]) if len(base) > 2 else base[1] > 0), [base[0]])
 
@@ -3047,14 +3121,19 @@ def effects_and_warp(
             if as_base:
                 return context.stage_base(context.buffers[chain.current], frame_h, frame_w)
             if lut is not None:
-                table, low, high, intensity = lut
+                table, low, high, intensity = lut[:4]
+                tetrahedral = len(lut) > 4 and lut[4] == "tetrahedral"
                 n = len(table)
-                if n * n * n * 3 * 4 > context.aux_size:
+                if table.size * 4 > context.aux_size:
                     return None
                 amount = float(max(0.0, min(1.0, intensity)))
                 lows = [float(v) for v in np.broadcast_to(np.asarray(low, np.float32), (3,))]
                 highs = [float(v) for v in np.broadcast_to(np.asarray(high, np.float32), (3,))]
-                chain._pass(LUT_CODE, [n, *lows, *highs, amount], np.ascontiguousarray(table.reshape(-1)))
+                flat = np.ascontiguousarray(table, np.float32).reshape(-1)
+                if table.ndim == 2:
+                    chain._pass(LUT1D_CODE, [n, *lows, *highs, amount, chain.grid], flat)
+                else:
+                    chain._pass(LUT_CODE, [n, *lows, *highs, amount, chain.grid, 1.0 if tetrahedral else 0.0], flat)
             if shader is not None:
                 chain.custom(shader[0], shader[1], shader[2])
             if key is not None:
@@ -3103,10 +3182,9 @@ def effects_and_warp(
                         return kept
                 staged = stage_layer(DeviceLayer(result, frame_h, frame_w), frame_h, frame_w)
                 if staged is None:
-                    data = context.download(result, frame_h, frame_w)
-                    return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+                    return _back(context.download(result, frame_h, frame_w), image, lift)
                 return staged
             data = context.download(result, frame_h, frame_w)
-        return np.round(np.clip(data, 0, 1) * 255).astype(np.uint8)
+        return _back(data, image, lift)
     except Exception:
         return None

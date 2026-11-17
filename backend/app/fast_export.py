@@ -51,6 +51,7 @@ ABSENT = (
     "stabilise",
     "colour",
     "colorGrade",
+    "inputColour",  # a camera Log taken to Rec.709: the frame renderer's (camera_log.py)
     "crop",
     "smoothSlow",
     "reversed",

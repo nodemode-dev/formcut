@@ -100,9 +100,15 @@ def clip_values(clip):
         ]:
             if panel.get(name) is not None:
                 number(panel[name], "colour " + name, low, high)
+    from .assets import INTERPOLATIONS
+    from .camera_log import TRANSFORMS
     from .color_grade import check as check_grade
 
     check_grade(clip.get("colorGrade"))
+    if clip.get("inputColour") is not None and clip["inputColour"] not in TRANSFORMS:
+        raise ValueError("inputColour must be one of " + ", ".join(TRANSFORMS))
+    if clip.get("lutInterpolation") is not None and clip["lutInterpolation"] not in INTERPOLATIONS:
+        raise ValueError("lutInterpolation must be trilinear or tetrahedral")
     style = clip.get("textStyle") or {}
     for name, low, high in [
         ("weight", 100, 900),

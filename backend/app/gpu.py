@@ -690,7 +690,8 @@ def custom_values(values: np.ndarray, source: str, time: float, params: list | N
 
 
 def custom(image: np.ndarray, source: str, time: float) -> np.ndarray:
-    return np.round(custom_values(image.astype(np.float32) / 255, source, time) * 255).astype(np.uint8)
+    top = 65535.0 if image.dtype == np.uint16 else 255.0
+    return np.round(custom_values(image.astype(np.float32) / top, source, time) * top).astype(image.dtype)
 
 
 def trial(source: str, params: list | None = None) -> str | None:

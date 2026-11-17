@@ -90,6 +90,7 @@ the automation transports.
 - `audio_render.py`
 - `bench.py`
 - `cadence.py`
+- `camera_log.py`
 - `cli.py`
 - `color_grade.py`
 - `content_filter.py`

@@ -1,6 +1,7 @@
 import { t } from "../i18n";
+import type { MediaBin } from "../engine/media";
 import type { ProjectEngine } from "../engine/project";
-import { COLOUR_NEUTRAL, type Clip, type ColorGrade, type ColourPanel, type WheelLevels } from "../engine/types";
+import { COLOUR_NEUTRAL, INPUT_COLOURS, type Clip, type ColorGrade, type ColourPanel, type InputColour, type WheelLevels } from "../engine/types";
 import { icon } from "./icons";
 
 /**
@@ -93,7 +94,7 @@ function defaultPoints(curve: Curve): number[][] {
   ];
 }
 
-export function buildColorSection(engine: ProjectEngine): HTMLElement {
+export function buildColorSection(engine: ProjectEngine, bin?: MediaBin): HTMLElement {
   const section = document.createElement("div");
   section.className = "section color-section";
   section.dataset.section = "color";
@@ -102,6 +103,10 @@ export function buildColorSection(engine: ProjectEngine): HTMLElement {
     <div class="section-head">${t("sec.color")} ${icon("chevD")}</div>
     <p class="color-hint" data-ref="empty">${t("color.noClip")}</p>
     <div data-ref="tools">
+      <div class="color-sub">${t("color.input")}</div>
+      <div class="prop-row"><span>${t("color.inputShot")}</span><select class="mini-select" data-ref="input-colour"><option value="">${t("color.input.none")}</option>${INPUT_COLOURS.map((k) => `<option value="${k}">${t(`color.input.${k}`)}</option>`).join("")}</select></div>
+      <div class="color-actions" data-ref="input-suggestion" hidden><p class="color-hint" data-ref="input-hint"></p><button type="button" class="tool-chip" data-ref="input-use">${t("color.input.use")}</button></div>
+      <div class="prop-row" data-ref="lut-row" hidden><span>${t("color.lutInterpolation")}</span><select class="mini-select" data-ref="lut-interpolation"><option value="trilinear">${t("color.lut.trilinear")}</option><option value="tetrahedral">${t("color.lut.tetrahedral")}</option></select></div>
       <div class="color-sub">${t("color.scopes")}</div>
       <div class="color-scope-wrap">
         <select class="mini-select" data-ref="scope-mode">${SCOPES.map((s) => `<option value="${s}">${t(`color.${s}`)}</option>`).join("")}</select>
@@ -378,6 +383,34 @@ export function buildColorSection(engine: ProjectEngine): HTMLElement {
     });
   }
 
+  // Input colour and LUT sampling ---------------------------------------------
+  const setInput = (value: InputColour | undefined) => {
+    const target = clip();
+    if (target) engine.dispatch("clip.creator", { clipId: target.id, patch: { inputColour: value } });
+  };
+  ref<HTMLSelectElement>("input-colour").addEventListener("change", (ev) => {
+    setInput(((ev.target as HTMLSelectElement).value || undefined) as InputColour | undefined);
+  });
+  ref<HTMLButtonElement>("input-use").addEventListener("click", () => {
+    const target = clip();
+    const suggested = target?.mediaId ? bin?.find(target.mediaId)?.inputColourSuggestion : undefined;
+    if (suggested) setInput(suggested);
+  });
+  ref<HTMLSelectElement>("lut-interpolation").addEventListener("change", (ev) => {
+    const target = clip();
+    const value = (ev.target as HTMLSelectElement).value === "tetrahedral" ? "tetrahedral" : undefined;
+    if (target) engine.dispatch("clip.creator", { clipId: target.id, patch: { lutInterpolation: value } });
+  });
+  const refillInput = (target: Clip) => {
+    ref<HTMLSelectElement>("input-colour").value = target.inputColour ?? "";
+    const suggested = target.mediaId ? bin?.find(target.mediaId)?.inputColourSuggestion : undefined;
+    const offer = Boolean(suggested) && target.inputColour !== suggested;
+    ref<HTMLElement>("input-suggestion").hidden = !offer;
+    if (offer && suggested) ref<HTMLElement>("input-hint").textContent = t("color.input.suggested").replace("{name}", t(`color.input.${suggested}`));
+    ref<HTMLElement>("lut-row").hidden = !target.lutId;
+    ref<HTMLSelectElement>("lut-interpolation").value = target.lutInterpolation ?? "trilinear";
+  };
+
   // Actions ------------------------------------------------------------------
   ref<HTMLButtonElement>("reset").addEventListener("click", () => {
     const target = clip();
@@ -487,6 +520,7 @@ export function buildColorSection(engine: ProjectEngine): HTMLElement {
     empty.hidden = Boolean(target);
     if (!target || dragging) return;
     grade = structuredClone(target.colorGrade ?? {});
+    refillInput(target);
     for (const w of WHEELS) drawWheel(w);
     for (const [key, , , , neutral] of PRIMARIES) {
       const input = section.querySelector<HTMLInputElement>(`[data-primary="${key}"]`)!;
@@ -504,6 +538,7 @@ export function buildColorSection(engine: ProjectEngine): HTMLElement {
   engine.subscribe((_state, changed) => {
     if (changed === "clip-selection" || changed === "clips") refill();
   });
+  bin?.subscribe(() => refill());
   requestAnimationFrame(refill);
   return section;
 }
