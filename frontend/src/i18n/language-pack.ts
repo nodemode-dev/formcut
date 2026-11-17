@@ -1574,7 +1574,15 @@ Help|Aide|Aiuto|ヘルプ|도움말|Ajuda|Справка|Yardım|帮助|說明
 Demos|Démos|Demo|デモ|데모|Demos|Демо|Demolar|演示|示範
 Cutting: eight clips, titles, captions and transitions|Montage : huit plans, titres, sous-titres et transitions|Montaggio: otto clip, titoli, sottotitoli e transizioni|カット：8 本のクリップ、タイトル、字幕、トランジション|편집: 클립 8개, 제목, 자막, 전환|Edição: oito clipes, títulos, legendas e transições|Монтаж: восемь клипов, титры, субтитры и переходы|Kurgu: sekiz klip, başlıklar, altyazılar ve geçişler|剪辑：八个片段、标题、字幕和转场|剪輯：八個片段、標題、字幕和轉場
 Colour: looks, wheels, curves, masks and a speed ramp|Couleur : looks, roues, courbes, masques et rampe de vitesse|Colore: look, ruote, curve, maschere e rampa di velocità|カラー：ルック、ホイール、カーブ、マスク、速度ランプ|색상: 룩, 휠, 커브, 마스크, 속도 램프|Cor: looks, rodas, curvas, máscaras e rampa de velocidade|Цвет: образы, круги, кривые, маски и изменение скорости|Renk: görünümler, tekerlekler, eğriler, maskeler ve hız rampası|调色：风格、色轮、曲线、蒙版和变速|調色：風格、色輪、曲線、遮罩和變速
-Delivery: captions, ducked music, chapters and a vertical cut|Livraison : sous-titres, musique atténuée, chapitres et version verticale|Consegna: sottotitoli, musica attenuata, capitoli e versione verticale|書き出し：字幕、ダッキングした音楽、チャプター、縦長版|출력: 자막, 덕킹된 음악, 챕터, 세로 버전|Entrega: legendas, música atenuada, capítulos e versão vertical|Выпуск: субтитры, приглушённая музыка, главы и вертикальная версия|Teslim: altyazılar, kısılmış müzik, bölümler ve dikey sürüm|交付：字幕、闪避音乐、章节和竖版|交付：字幕、閃避音樂、章節和直式版本`;
+Delivery: captions, ducked music, chapters and a vertical cut|Livraison : sous-titres, musique atténuée, chapitres et version verticale|Consegna: sottotitoli, musica attenuata, capitoli e versione verticale|書き出し：字幕、ダッキングした音楽、チャプター、縦長版|출력: 자막, 덕킹된 음악, 챕터, 세로 버전|Entrega: legendas, música atenuada, capítulos e versão vertical|Выпуск: субтитры, приглушённая музыка, главы и вертикальная версия|Teslim: altyazılar, kısılmış müzik, bölümler ve dikey sürüm|交付：字幕、闪避音乐、章节和竖版|交付：字幕、閃避音樂、章節和直式版本
+Input color|Couleur d'entrée|Colore di ingresso|入力カラー|입력 색상|Cor de entrada|Входной цвет|Giriş rengi|输入色彩|輸入色彩
+Shot in|Filmé en|Ripreso in|撮影時の形式|촬영 형식|Gravado em|Снято в|Çekim biçimi|拍摄格式|拍攝格式
+Rec.709, as decoded|Rec.709, tel que décodé|Rec.709, come decodificato|Rec.709（デコードのまま）|Rec.709, 디코딩된 그대로|Rec.709, como decodificado|Rec.709, как декодировано|Rec.709, çözüldüğü gibi|Rec.709（按解码原样）|Rec.709（依解碼原樣）
+The file says it was shot in {name}.|Le fichier indique un tournage en {name}.|Il file indica che è stato ripreso in {name}.|ファイルには {name} で撮影と記録されています。|파일에 {name}(으)로 촬영되었다고 기록되어 있습니다.|O arquivo diz que foi gravado em {name}.|В файле указано, что снято в {name}.|Dosyaya göre {name} ile çekilmiş.|文件显示以 {name} 拍摄。|檔案顯示以 {name} 拍攝。
+Use it|L'utiliser|Usalo|使用する|사용|Usar|Использовать|Kullan|使用|使用
+LUT interpolation|Interpolation de la LUT|Interpolazione LUT|LUT 補間|LUT 보간|Interpolação de LUT|Интерполяция LUT|LUT enterpolasyonu|LUT 插值|LUT 插值
+Trilinear|Trilinéaire|Trilineare|トライリニア|삼선형|Trilinear|Трилинейная|Üç doğrusal|三线性|三線性
+Tetrahedral|Tétraédrique|Tetraedrica|テトラヘドラル|사면체|Tetraédrica|Тетраэдрическая|Dört yüzlü|四面体|四面體`;
 export const PHRASES: Record<string, Record<string, string>> = Object.fromEntries(codes.map(c => [c, {}]));
 for (const row of rows.split("\n")) {
   const [source, ...values] = row.split("|");

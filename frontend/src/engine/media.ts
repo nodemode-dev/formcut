@@ -1,4 +1,4 @@
-import type { MediaKind } from "./types";
+import type { InputColour, MediaKind } from "./types";
 
 export interface MediaItem {
   id: string;
@@ -15,6 +15,10 @@ export interface MediaItem {
   /** The colour-managed pipeline: the source's space (Rec.709, HLG, PQ (HDR10), BT.2020 SDR) and what the decode does with it. */
   colour?: string;
   colourHandling?: "as decoded" | "tone-mapped to Rec.709" | "converted to Rec.709";
+  /** Bits a sample of the video carries; above 8 it decodes to sixteen bits on an SDR timeline. */
+  bitDepth?: number;
+  /** The camera Log the file names in its metadata, offered in the Color section, never applied unasked. */
+  inputColourSuggestion?: InputColour;
 }
 
 type BinListener = (items: MediaItem[], added?: MediaItem) => void;

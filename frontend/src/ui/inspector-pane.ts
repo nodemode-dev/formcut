@@ -468,7 +468,7 @@ export function buildInspectorPane(engine: ProjectEngine, bin: MediaBin): HTMLEl
   const groupSeg = el.querySelector<HTMLElement>('[data-ref="group"]')!;
   const subtabSeg = el.querySelector<HTMLElement>('[data-ref="subtabs"]')!;
   const inspectorBody = el.querySelector<HTMLElement>(".inspector-body")!;
-  inspectorBody.appendChild(buildColorSection(engine));
+  inspectorBody.appendChild(buildColorSection(engine, bin));
   let activeGroup = "video";
   let activeSubtab = "basic";
   let showAll = false;

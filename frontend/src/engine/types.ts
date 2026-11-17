@@ -1,3 +1,6 @@
+export type InputColour = "canon-log3" | "canon-log2" | "slog3" | "vlog" | "logc3";
+export const INPUT_COLOURS: InputColour[] = ["canon-log3", "canon-log2", "slog3", "vlog", "logc3"];
+
 export type MediaKind = "video" | "audio" | "image" | "text" | "filter" | "timeline" | "device";
 
 export interface TextStyle {
@@ -184,6 +187,10 @@ export interface Clip {
   /** Which of the media's audio streams this clip plays (X8); 0, the default stream, when absent. */
   audioStream?: number;
   lutIntensity?: number;
+  /** How the 3D LUT is sampled between its lattice points; trilinear when absent. */
+  lutInterpolation?: "trilinear" | "tetrahedral";
+  /** The camera Log and gamut the clip was shot in, taken to Rec.709 before the grade (backend/app/camera_log.py). */
+  inputColour?: InputColour;
   volumeKeys?: ValueKey[];
   animations?: ClipAnimations;
   reversed?: boolean;
