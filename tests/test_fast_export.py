@@ -349,6 +349,7 @@ def test_every_clip_key_the_renderer_reads_is_known_to_the_native_path():
         "keyframes",
         "expressions",
         "lutIntensity",
+        "lutInterpolation",  # how lutId (refused above) is sampled; nothing without it
         "textStyle",
         "volume",
         "volumeKeys",

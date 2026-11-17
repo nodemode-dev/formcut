@@ -8,7 +8,7 @@ so the two paths agree as they always have.
 The map: chroma upsampled bilinearly to luma resolution as cv2.resize computes it (centre-aligned, the edge samples
 held); the code values taken from their range (limited or full) and bit depth through the matrix the stream declares
 (BT.709, BT.601, BT.2020 non-constant, SMPTE 240M; an undeclared one BT.709 at 720 lines and up, BT.601 below) onto the
-grid of the picture it becomes (bytes, or sixteen bits for an HDR source decoded deep), as one 3 x 4 affine map;
+grid of the picture it becomes (bytes, or sixteen bits for a source of more than eight bits decoded wide), as one 3 x 4 affine map;
 clipped; rounded half up. The CPU runs it through cv2 (resize, merge, transform); the device runs it in yuv_at.
 Against swscale, which formcut used before, the difference is its chroma filter: about a byte count on average, at
 chroma edges.
@@ -26,7 +26,7 @@ MATRICES = {
     "bt2020nc": (0.2627, 0.0593),
     "smpte240m": (0.212, 0.087),
 }
-FORMATS = {"yuv420p": (8, False), "yuvj420p": (8, True), "yuv420p10le": (10, False)}
+FORMATS = {"yuv420p": (8, False), "yuvj420p": (8, True), "yuv420p10le": (10, False), "yuv420p12le": (12, False)}
 
 
 def wanted(stack_active: bool) -> bool:
@@ -205,7 +205,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
 
 def from_av(frame, deep: bool, matrix_name: str, full_range: bool) -> PlaneFrame | None:
-    """A PyAV frame as a PlaneFrame when it is planar 4:2:0 at eight or ten bits; None otherwise (swscale then)."""
+    """A PyAV frame as a PlaneFrame when it is planar 4:2:0 at eight, ten or twelve bits; None otherwise (swscale then)."""
     name = frame.format.name
     if name not in FORMATS:
         return None

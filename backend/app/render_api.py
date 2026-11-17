@@ -1255,6 +1255,7 @@ def build_mattes(body: MatteInput):
                 ],
             }
         )
+        renderer.precise = False  # the models read bytes
         from .model_manager import ready as model_ready
         from .sam_video import VideoTracker
 

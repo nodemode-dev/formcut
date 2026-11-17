@@ -256,6 +256,13 @@ def _probe(path: Path, kind: str) -> dict:
             info.update(colour_of(stream))
             if conversion_for(stream):
                 info["primaries"] = stream.get("color_primaries")
+            from .camera_log import suggest
+            from .video_source import bit_depth
+
+            info["bitDepth"] = bit_depth(stream)
+            suggested = suggest(data, path)
+            if suggested:
+                info["inputColourSuggestion"] = suggested
             rate = stream.get("avg_frame_rate") or "0/1"
             try:
                 num, den = rate.split("/")
