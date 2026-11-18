@@ -75,6 +75,29 @@ def test_a_file_that_differs_fails_the_build_and_stages_nothing(staged):
     assert _names(stage) == {"README.md", ".gitignore"}
 
 
+def test_the_old_release_address_is_tried_when_the_new_one_has_nothing(staged, monkeypatch, tmp_path, capsys):
+    module, stage, _ = staged
+    monkeypatch.delenv("FORMCUT_FFMPEG_RELEASE")
+    old = tmp_path / "old" / "ffmpeg-7.1.5-2"
+    old.mkdir(parents=True)
+    _archive(old, FILES)
+    monkeypatch.setattr(ffmpeg_fetch, "RELEASES", ((tmp_path / "new").as_uri(), (tmp_path / "old").as_uri()))
+    assert module.main() == 0
+    out = capsys.readouterr().out
+    assert "new/ffmpeg-7.1.5-2" in out and "is not published" in out and f"from {old.as_uri()}/" in out
+    assert (stage / "ffmpeg").read_bytes() == b"ffmpeg"
+
+
+def test_no_release_address_with_the_build_stages_nothing(staged, monkeypatch, tmp_path, capsys):
+    module, stage, _ = staged
+    monkeypatch.delenv("FORMCUT_FFMPEG_RELEASE")
+    monkeypatch.setattr(ffmpeg_fetch, "RELEASES", ((tmp_path / "new").as_uri(), (tmp_path / "old").as_uri()))
+    assert module.main() == 0
+    out = capsys.readouterr().out
+    assert out.count("is not published") == 2 and "fetches ffmpeg on first run" in out
+    assert _names(stage) == {"README.md", ".gitignore"}
+
+
 def test_a_target_with_no_build_stages_nothing(staged, monkeypatch, capsys):
     module, stage, _ = staged
     monkeypatch.setattr("sys.argv", ["bundle_ffmpeg.py", "--target", "riscv64gc-unknown-linux-gnu"])

@@ -1,7 +1,8 @@
 """Fetch formcut's own LGPL ffmpeg on first run, when no ffmpeg is found.
 
-The builds are published one archive per target on the formcut-binaries
-release. Nothing in an archive is trusted: every file ffmpeg-licence.json
+The builds are published one archive per target on the formai-binaries
+release, tried first, and at its older name, formcut-binaries, second, so a
+build made before the rename keeps working. Nothing in an archive is trusted: every file ffmpeg-licence.json
 records for this machine, a record formcut carries, has to be in the archive
 with that SHA-256 before any of it is placed in the per-person folder, and one
 that is missing or different stops the fetch with nothing installed. An ffmpeg
@@ -21,7 +22,10 @@ from pathlib import Path
 
 from . import jobs, tools
 
-RELEASE = "https://github.com/nodemode-dev/formcut-binaries/releases/download"
+RELEASES = (
+    "https://github.com/nodemode-dev/formai-binaries/releases/download",
+    "https://github.com/nodemode-dev/formcut-binaries/releases/download",
+)
 DOCUMENTS = ("LGPL-2.1.txt", "THIRD-PARTY-NOTICES.txt", "README.md")
 
 
@@ -50,10 +54,12 @@ def release(data: dict) -> str:
     return data.get("release") or ((data.get("source") or {}).get("ffmpeg") or {}).get("version", "")
 
 
-def source(data: dict, triple: str) -> str:
+def source(data: dict, triple: str) -> list[str]:
+    """The addresses to try, in order; FORMCUT_FFMPEG_RELEASE, when set, is the only one."""
     name = release(data)
-    base = os.environ.get("FORMCUT_FFMPEG_RELEASE") or f"{RELEASE}/ffmpeg-{name}"
-    return f"{base.rstrip('/')}/ffmpeg-lgpl-{name}-{triple}.tar.gz"
+    mirror = os.environ.get("FORMCUT_FFMPEG_RELEASE")
+    bases = [mirror] if mirror else [f"{base}/ffmpeg-{name}" for base in RELEASES]
+    return [f"{base.rstrip('/')}/ffmpeg-lgpl-{name}-{triple}.tar.gz" for base in bases]
 
 
 def outdated() -> bool:
@@ -93,6 +99,23 @@ def _download(url: str, path: Path, report, cancelled) -> None:
                 done += len(chunk)
                 if total:
                     report(0.8 * done / total)
+
+
+def _download_first(urls: list[str], path: Path, report, cancelled) -> str:
+    """Download from the first address that answers and return it; each failure moves on to the next."""
+    import httpx
+
+    failures = []
+    for url in urls:
+        try:
+            _download(url, path, report, cancelled)
+        except InterruptedError:
+            raise
+        except (httpx.HTTPError, OSError) as error:
+            failures.append(f"{url} ({error})")
+        else:
+            return url
+    raise OSError("ffmpeg could not be downloaded from " + "; ".join(failures))
 
 
 def _digest(path: Path) -> str:
@@ -146,10 +169,10 @@ def fetch(report, cancelled) -> dict:
     files = pins(data, triple)
     if not files:
         raise ValueError(f"no ffmpeg build is recorded for {triple}")
-    url, folder = source(data, triple), tools.user_ffmpeg_dir()
+    urls, folder = source(data, triple), tools.user_ffmpeg_dir()
     with tempfile.TemporaryDirectory() as scratch:
         archive = Path(scratch) / "ffmpeg.tar.gz"
-        _download(url, archive, report, cancelled)
+        url = _download_first(urls, archive, report, cancelled)
         count = install(archive, files, folder)
     (folder / "ffmpeg-licence.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
     getattr(tools.have, "cache_clear", lambda: None)()

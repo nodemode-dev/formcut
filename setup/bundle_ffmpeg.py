@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Stage formcut's verified LGPL ffmpeg in src-tauri/ffmpeg, where the app bundles it.
 
-The macOS and Windows apps carry ffmpeg from the formcut-binaries release, every
-file checked against src-tauri/binaries/ffmpeg-licence.json by the same code the
+The macOS and Windows apps carry ffmpeg from the formai-binaries release (tried
+first, then its older name, formcut-binaries, for builds made before the
+rename), every file checked against src-tauri/binaries/ffmpeg-licence.json by the same code the
 app's first-run fetch uses; a file that differs fails the build. The programs are
 staged under their plain names, so an installed app, which cannot be written to,
 needs no links. A target with no published build, or a release that cannot be
@@ -24,6 +25,7 @@ import argparse
 import shutil
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -56,13 +58,17 @@ def main() -> int:
     if not files:
         print(f"::notice::no ffmpeg build is recorded for {triple}; this app fetches it on first run")
         return 0
-    url = ffmpeg_fetch.source(record, triple)
     with tempfile.TemporaryDirectory() as scratch:
         archive = Path(scratch) / "ffmpeg.tar.gz"
-        try:
-            urllib.request.urlretrieve(url, archive)  # noqa: S310 - the record's own release address
-        except OSError as error:
-            print(f"::notice::{url} is not published ({error}); this app fetches ffmpeg on first run")
+        for url in ffmpeg_fetch.source(record, triple):
+            try:
+                urllib.request.urlretrieve(url, archive)  # noqa: S310 - the record's own release address
+            except (urllib.error.HTTPError, OSError) as error:
+                print(f"::notice::{url} is not published ({error})")
+            else:
+                break
+        else:
+            print("::notice::no release address has this build; this app fetches ffmpeg on first run")
             return 0
         count = ffmpeg_fetch.install(archive, files, STAGE)
     suffix = ".exe" if triple.endswith("windows-msvc") else ""
