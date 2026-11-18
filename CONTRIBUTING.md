@@ -54,8 +54,9 @@ python -m pytest tests -q
   twelve in `frontend/src/i18n`, and Arabic, Persian, Hebrew and Croatian in
   `frontend/public/locales` (see the Translation page of the wiki).
 - ffmpeg stays LGPL. Nothing that would make formcut's builds GPL (such as libx264)
-  can be bundled; formcut's own ffmpeg builds live in the formcut-binaries
-  repository.
+  can be bundled; formcut's own ffmpeg builds live in the formai-binaries
+  repository (formcut-binaries before it was renamed; builds made before the
+  rename ask for that name, which keeps working).
 
 ## How changes land
 

@@ -125,7 +125,9 @@ ffmpeg as a **separate program** rather than linking against it. The two meet at
 a process boundary, and neither licence reaches across it.
 
 The builds are **LGPL-2.1** (`--disable-gpl --disable-nonfree`), published one
-archive per target on the formcut-binaries release. The macOS, Windows and
+archive per target on the formai-binaries release (builds of formcut made
+before the repository was renamed ask for its older name, formcut-binaries,
+which keeps working). The macOS, Windows and
 Linux release zips carry the build for their platform, checked file by file
 against the SHA-256 recorded in `ffmpeg-licence.json` when the release is made
 (`setup/bundle_ffmpeg.py`). Any machine where no ffmpeg is found, such as a run
