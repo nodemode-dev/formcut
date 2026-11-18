@@ -52,7 +52,7 @@ Anything outside the interface drives formcut through `POST /api/rpc`: 21
 methods, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
 engine's MCP server (`backend/app/agent_mcp.py`, run as `formcut-engine --mcp`,
-or from a checkout as `./formcut mcp`) is that surface packaged as 32 MCP tools
+or from a checkout as `./formcut mcp`) is that surface packaged as 34 MCP tools
 over stdio. ANA
 connecting in will use this surface, so extend it rather than adding a second
 path.

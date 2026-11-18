@@ -24,7 +24,7 @@ ANA connecting in is the intended direction and is deferred: the surface above i
 
 For connecting the server, driving formcut through it, or changing its tools, load the formcut-mcp pack at `.claude/skills/formcut-mcp/`: it carries the workflows, the recovery steps and a tool reference generated from the server. This section is the architectural summary.
 
-`backend/app/agent_mcp.py` is a stdio MCP server built on mcp 2.2 (`MCPServer`), answering the 2025-11-25 protocol and the stateless 2026-07-28 revision. It is part of the engine, so the installed app runs it as `formcut-engine --mcp`. Twenty-one tools, workflow shaped rather than endpoint shaped, returning explicit handles and putting failures in the result text with the recovery action.
+`backend/app/agent_mcp.py` is a stdio MCP server built on mcp 2.2 (`MCPServer`), answering the 2025-11-25 protocol and the stateless 2026-07-28 revision. It is part of the engine, so the installed app runs it as `formcut-engine --mcp`. Thirty-four tools, workflow shaped rather than endpoint shaped, returning explicit handles and putting failures in the result text with the recovery action.
 
 Settings, Connections, AI agents gives each client the exact command or config (`app/agent_connect.py`). The server finds the running engine through `engine.json` (`app/discovery.py`); `FORMCUT_ENGINE` overrides it. It identifies itself to the engine with `session.hello`, so a person watching the app sees the agent driving.
 
