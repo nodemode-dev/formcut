@@ -20,15 +20,18 @@ The server gives access; it does not give judgment about order, preconditions or
 
 ## Routing
 
-Start with `sub-skills/mcp-director/SUB-SKILL.md` for anything broad; it decides which of the four below applies. Load one directly for a narrow question.
+Start with `sub-skills/mcp-director/SUB-SKILL.md` for anything broad; it checks the engine and the connection, then decides which of the five specialists below it applies. Load one directly for a narrow question.
 
 | The request is about | Load |
 | --- | --- |
+| Anything broad or unclear, or the first formcut call of a session: check the engine and the connection, then route to one of the rows below | `sub-skills/mcp-director/SUB-SKILL.md` |
 | Installing the server, registering it with a host, environment variables, the tools not appearing, the engine not answering | `sub-skills/mcp-setup/SUB-SKILL.md` |
 | Doing work: importing media, building a timeline, raw edits, scene detection, rendering and collecting the file, recovering a half-finished job | `sub-skills/mcp-workflows/SUB-SKILL.md` |
 | Changing the server: a new tool, a renamed or removed tool, a changed parameter, the SDK version, keeping docs and counts in sync | `sub-skills/mcp-development/SUB-SKILL.md` |
 | Cutting shorter spots (:15, :30) from a master: scripts, bar-aligned joins, speech-safe cuts, frame and loudness QC | `sub-skills/cutdown/SUB-SKILL.md` |
 | Removing what someone says: cut a sentence, line or filler out of the footage by its transcript, speech edges from the audio | `sub-skills/remove-speech/SUB-SKILL.md` |
+
+Use `.claude/skills/formcut-skillset/SKILL.md` instead when the job is changing formcut's own code (the engine, the interface, the Tauri shell, the RPC or the render path) rather than driving formcut through its tools; adding or changing an MCP tool stays here, under `mcp-development`.
 
 ## Evaluations
 
