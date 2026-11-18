@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · Connect Claude Code follows the app when it moves
+
+- **What was wrong.** `POST /api/agents/install` for `claude-code` ran `claude mcp add formcut --scope user -- <command>` and took Claude Code's "already exists" as success without looking at what was saved. After the app moved (a new install folder, a copy run from Downloads), the button said "Already connected" while Claude Code still started the engine at the old path, which no longer exists.
+- **The fix.** On "already exists" the route reads the saved entry with `claude mcp get formcut` and compares its `Command:` and `Args:` lines with this copy's `server_command()`. When they match it still answers `present: true`; when they differ, or the output cannot be read, it runs `claude mcp remove formcut --scope user` and adds the entry again, answering `present: false` (the window then says "Connected"). A re-add that fails is a 502 with Claude Code's message, as a first add was.
+- **Checked.** With a stand-in `claude` on PATH that keeps its servers in a file, through the route on `app.main` (TestClient): before the fix, a connect from `/Users/me/Downloads/...` after one from `/Applications/...` answered `present: true` and the saved command stayed at `/Applications/...`; after it, the saved command is the new path, a second connect from the same place answers `present: true`, and the calls are add, get, remove, add. Not run against the real Claude Code CLI; the `get` output format is Claude Code's, and an unreadable one only costs a remove and add.
+
 ## Unreleased · the ffmpeg download tries formai-binaries, then formcut-binaries
 
 - **Why.** The binaries repository is being renamed from `nodemode-dev/formcut-binaries` to `nodemode-dev/formai-binaries`. Until the rename the new address does not exist; after it, the old one redirects. Installed copies have the address compiled in, so both must work in either order of events.

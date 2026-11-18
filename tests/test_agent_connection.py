@@ -113,3 +113,71 @@ def test_an_agent_drives_the_running_engine(tmp_path):
         engine.wait(timeout=30)
     if sys.platform != "win32":
         assert not (tmp_path / "engine.json").exists(), "a stopped engine withdraws its address"
+
+
+FAKE_CLAUDE = """
+import json, os, sys
+state = os.environ["FAKE_CLAUDE_STATE"]
+servers = json.load(open(state)) if os.path.exists(state) else {}
+words = sys.argv[1:]
+with open(state + ".log", "a") as log:
+    log.write(" ".join(words[:3]) + "\\n")
+if words[:2] == ["mcp", "add"]:
+    if words[2] in servers:
+        sys.exit(print(f"MCP server {words[2]} already exists in user config", file=sys.stderr) or 1)
+    rest = words[words.index("--") + 1:]
+    if os.environ.get("FAKE_CLAUDE_REFUSE") and os.path.exists(state):
+        sys.exit(print("refused", file=sys.stderr) or 1)
+    servers[words[2]] = {"command": rest[0], "args": rest[1:]}
+elif words[:2] == ["mcp", "get"]:
+    entry = servers[words[2]]
+    print(f"{words[2]}:\\n  Scope: User config\\n  Type: stdio\\n  Command: {entry['command']}\\n  Args: {' '.join(entry['args'])}\\n")
+elif words[:2] == ["mcp", "remove"]:
+    del servers[words[2]]
+json.dump(servers, open(state, "w"))
+"""
+
+
+@pytest.fixture
+def claude(tmp_path, monkeypatch):
+    """A stand-in `claude` on PATH that keeps its MCP servers in a file, as Claude Code keeps them in its user config."""
+    if sys.platform == "win32":
+        pytest.skip("the stand-in is a POSIX script")
+    folder = tmp_path / "bin"
+    folder.mkdir()
+    script = folder / "claude"
+    script.write_text(f"#!{sys.executable}\n{FAKE_CLAUDE}", encoding="utf-8")
+    script.chmod(0o755)
+    state = tmp_path / "claude.json"
+    monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("FAKE_CLAUDE_STATE", str(state))
+
+    def connect(where: str) -> dict:
+        monkeypatch.setattr(agent_connect, "server_command", lambda: (f"/{where}/formcut.app/Contents/MacOS/formcut-engine", ["--mcp"]))
+        return agent_connect.install(agent_connect.InstallBody(client="claude-code"))
+
+    return connect, state
+
+
+def test_connecting_claude_code_again_from_the_same_place_is_already_connected(claude):
+    connect, state = claude
+    assert connect("Applications")["present"] is False
+    assert connect("Applications")["present"] is True
+    assert (state.parent / "claude.json.log").read_text().splitlines()[-1] == "mcp get formcut"
+
+
+def test_connecting_claude_code_after_the_app_moved_points_it_at_the_new_place(claude):
+    connect, state = claude
+    connect("Applications")
+    assert connect("Users/me/My Apps")["present"] is False
+    moved = "/Users/me/My Apps/formcut.app/Contents/MacOS/formcut-engine"
+    assert json.loads(state.read_text())["formcut"] == {"command": moved, "args": ["--mcp"]}
+
+
+def test_a_failed_reconnect_is_reported(claude, monkeypatch):
+    connect, _ = claude
+    connect("Applications")
+    monkeypatch.setenv("FAKE_CLAUDE_REFUSE", "1")
+    with pytest.raises(agent_connect.HTTPException) as raised:
+        connect("Volumes/formcut")
+    assert raised.value.status_code == 502 and "refused" in raised.value.detail

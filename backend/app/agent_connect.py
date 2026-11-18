@@ -98,6 +98,20 @@ class InstallBody(BaseModel):
     client: str
 
 
+def _run(words: list[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(words, capture_output=True, text=True, timeout=60, check=False)
+
+
+def _claude_runs(claude: str, command: str, args: list[str]) -> bool:
+    """Whether Claude Code's saved formcut entry starts this copy's command with these arguments."""
+    fields = {}
+    for line in _run([claude, "mcp", "get", "formcut"]).stdout.splitlines():
+        key, sep, value = line.strip().partition(":")
+        if sep:
+            fields[key] = value.strip()
+    return fields.get("Command") == command and fields.get("Args", "") == " ".join(args)
+
+
 @router.post("/install")
 def install(body: InstallBody) -> dict:
     """Register formcut's MCP server with a client in one click, so the embedded terminal's agent finds it."""
@@ -106,20 +120,21 @@ def install(body: InstallBody) -> dict:
         claude = shutil.which("claude")
         if not claude:
             raise HTTPException(409, "claude is not on this machine's PATH; install Claude Code first")
-        run = subprocess.run(
-            [claude, "mcp", "add", "formcut", "--scope", "user", "--", command, *args],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
+        add = [claude, "mcp", "add", "formcut", "--scope", "user", "--", command, *args]
+        run = _run(add)
         text = (run.stdout + run.stderr).strip()
-        if run.returncode and "already exists" not in text:
+        present = "already exists" in text
+        if present and not _claude_runs(claude, command, args):
+            _run([claude, "mcp", "remove", "formcut", "--scope", "user"])
+            run = _run(add)
+            text = (run.stdout + run.stderr).strip()
+            present = False
+        if run.returncode and not present:
             raise HTTPException(502, f"claude mcp add failed: {text[-400:]}")
         return {
             "client": "claude-code",
             "written": "claude mcp add formcut --scope user",
-            "present": "already exists" in text,
+            "present": present,
             "detail": text[-400:],
         }
     if body.client == "codex":
