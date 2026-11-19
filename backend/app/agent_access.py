@@ -8,7 +8,8 @@ up to two minutes, refusing at once when no window is open. A pass is sent as
 the x-formcut-agent-pass header on the writes of that one tool call; it never
 opens a terminal, answers a prompt or changes the choice, which take the
 window key. The Agent terminal's shell carries its own tab token in its
-environment; a request with a live tab token gets a pass without a question.
+environment; a request with a live tab token gets a pass without a question,
+except under blocked, which refuses every agent, formcut's own tabs included.
 
 The choice lives in agent-access.json in formcut's data folder, sealed with a
 key in the system keychain (seal.py). A choice edited outside the app reads as
@@ -121,12 +122,10 @@ def tab_live(value) -> bool:
 
 def decide(tool: str, agent: str, tab: str | None = None) -> str:
     """A pass for one tool call, or ValueError with the sentence to show the agent."""
-    if tab_live(tab):
-        return _grant()
     current = state()
     if current["choice"] == "blocked":
         raise ValueError("Outside agents are blocked in formcut's Settings, so nothing was changed")
-    if current["choice"] == "allowed":
+    if tab_live(tab) or current["choice"] == "allowed":
         return _grant()
     from .extensions import WindowAbsentError, ask_window
 

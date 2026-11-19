@@ -192,11 +192,18 @@ def test_blocked_refuses_and_only_the_window_changes_the_choice(bare, window, st
 
 
 def test_a_live_agent_terminal_tab_is_not_asked(bare, stored_choice, keychain, window):
-    window.put("/api/agent-access", json={"choice": "blocked"})
     tab = agent_access.open_tab()
     assert ask(bare, **{agent_access.TAB_HEADER: tab}).status_code == 200
     agent_access.close_tab(tab)
     assert ask(bare, **{agent_access.TAB_HEADER: tab}).status_code == 403
+
+
+def test_blocked_refuses_a_live_agent_terminal_tab_too(bare, stored_choice, keychain, window):
+    window.put("/api/agent-access", json={"choice": "blocked"})
+    tab = agent_access.open_tab()
+    r = ask(bare, **{agent_access.TAB_HEADER: tab})
+    agent_access.close_tab(tab)
+    assert r.status_code == 403 and "blocked" in r.json()["detail"]
 
 
 def test_a_hand_edit_reads_as_ask_and_says_so(bare, window, stored_choice, keychain):

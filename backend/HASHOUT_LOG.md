@@ -2,6 +2,14 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · Blocked refuses formcut's own agent tabs too
+
+- **Why.** The family's dock contract (clause 15) says Blocked refuses every agent at once, the app's own Chat and agent tabs included. formcut gave a live tab token a pass under every choice, so a person who chose Blocked still had an agent in the Agent terminal changing the project without a question.
+- **What (agent_access.py `decide`).** The stored choice is read first; blocked refuses before the tab token is looked at. Under ask and allowed a live tab token still gets its pass with no question, as before. The shell itself still opens under Blocked: the choice gates tool calls, not the terminal.
+- **The test that changed.** `test_a_live_agent_terminal_tab_is_not_asked` stored blocked before it asked with a tab token and expected a pass; it now runs under the default (ask, no window, which would refuse an outside agent at once) and a new case holds the blocked refusal.
+- **Checked.** Engine from source on 127.0.0.1:30260 with a stand-in keyring: with blocked stored, `POST /api/agent-access/request` carrying a live tab token answered 403 with the blocked sentence; with ask stored the same token got a pass; the terminal socket still opened a shell under blocked.
+- **Left.** The Settings hint in the page still ends "The Agent terminal is not asked."; it needs "unless Outside agents is Blocked" when the page is ported to the shared dock.
+
 ## Unreleased · every write needs the window key; outside agents ask in the window
 
 - **Why.** The rest of the family already lets only the person's own window change things without asking, and asks the person before an outside agent changes anything. formcut now follows the family: a per-launch window key, and consent for outside agents.
