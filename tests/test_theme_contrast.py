@@ -35,7 +35,7 @@ BLOCKS = dict(_blocks())
 
 
 def test_every_profile_is_read():
-    assert len(BLOCKS) == 29
+    assert len(BLOCKS) == 30
 
 
 @pytest.mark.parametrize("theme", sorted(BLOCKS))

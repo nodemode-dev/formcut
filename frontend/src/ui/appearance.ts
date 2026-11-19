@@ -1,4 +1,4 @@
-// Appearance: 31 profiles and a free accent, applied by writing custom
+// Appearance: 32 profiles and a free accent, applied by writing custom
 // properties on the root element. Nothing re-renders, so a theme change cannot
 // flash, rebuild a container or lose focus. The palettes live in themes.css as
 // [data-theme] blocks; this module owns the choice, its persistence and the two
@@ -8,6 +8,7 @@ export interface Profile {
   id: string;
   label: string;
   light?: boolean;
+  oled?: boolean;
   behaviour?: "click" | "cycle";
 }
 
@@ -15,6 +16,7 @@ export const PROFILES: Profile[] = [
   { id: "studio", label: "Studio" },
   { id: "formcut-dark", label: "formcut Dark" },
   { id: "high-contrast", label: "High Contrast" },
+  { id: "amoled", label: "AMOLED Black", oled: true },
   { id: "obsidian", label: "Obsidian" },
   { id: "graphite", label: "Graphite" },
   { id: "mono-ink", label: "Mono Ink" },
@@ -150,7 +152,10 @@ function stopCycle(): void {
 }
 
 function paint(themeId: string): void {
-  if (document.documentElement.dataset.theme !== themeId) document.documentElement.dataset.theme = themeId;
+  const root = document.documentElement;
+  if (root.dataset.theme !== themeId) root.dataset.theme = themeId;
+  const oled = PROFILES.some((entry) => entry.id === themeId && entry.oled);
+  if (oled !== root.hasAttribute("data-oled")) root.toggleAttribute("data-oled", oled);
 }
 
 function paintAccent(accent: string | null, derived: Record<string, string> | null): void {

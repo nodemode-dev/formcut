@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate frontend/src/styles/themes.css: the appearance profiles.
 
-One ladder table drives every profile but the fixed Studio one, so all 29 palettes keep the same
+One ladder table drives every profile but the fixed Studio and AMOLED Black ones, so all 30 palettes keep the same
 contrast relationships between page, panel, field and text. Edit the table and
 regenerate; do not hand-tune a single value in the output.
 
@@ -23,6 +23,7 @@ DARK = [
     ("studio", "Studio", 0, 0, "studio", "#f97316"),
     ("formcut-dark", "formcut Dark", 188, 12, "dark", "#ffae2b"),
     ("high-contrast", "High Contrast", 0, 0, "hard", "#ffffff"),
+    ("amoled", "AMOLED Black", 0, 0, "amoled", "#f97316"),
     ("obsidian", "Obsidian", 220, 8, "deep", "#7dd3fc"),
     ("graphite", "Graphite", 210, 6, "dark", "#67e8f9"),
     ("mono-ink", "Mono Ink", 0, 0, "dark", "#e5e5e5"),
@@ -89,6 +90,28 @@ FIXED = {
         lane="#141414",
         lane_alt="#161616",
         ruler="#0d0d0d",
+        stage="#000000",
+        scrim="rgb(0 0 0 / 0.6)",
+        on_accent="#271407",
+    ),
+    "amoled": dict(
+        light=False,
+        page="#000000",
+        well="#000000",
+        panel="#000000",
+        raised="#141414",
+        field="#141414",
+        hover="#1f1f1f",
+        active="#2a2a2a",
+        fg="#ededed",
+        muted="#a6a6a6",
+        dim="#858585",
+        accent_hover="#fb8f4e",
+        line="#262626",
+        strong="#3a3a3a",
+        lane="#000000",
+        lane_alt="#000000",
+        ruler="#141414",
         stage="#000000",
         scrim="rgb(0 0 0 / 0.6)",
         on_accent="#271407",

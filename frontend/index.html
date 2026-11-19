@@ -8,6 +8,7 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <style>html[data-oled] { background: #000000; }</style>
     <script>
       // Pre-paint appearance. Runs before the first paint and before any module
       // loads, so a stored profile or accent is never visible as a change. The
@@ -37,6 +38,7 @@
               theme = dark ? (moved(saved.dark) || "studio") : (saved.light || "light");
             }
             document.documentElement.dataset.theme = theme;
+            if ({ "amoled": 1 }[theme]) document.documentElement.setAttribute("data-oled", "");
           }
           if (saved && saved.derived) {
             for (var name in saved.derived) document.documentElement.style.setProperty(name, saved.derived[name]);

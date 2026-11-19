@@ -80,6 +80,31 @@
   --veil: rgb(0 0 0 / 0.55);
 }
 
+:root[data-theme="amoled"] {
+  color-scheme: dark;
+  --ground: #000000;
+  --inset: #000000;
+  --pane: #000000;
+  --float: #141414;
+  --control: #141414;
+  --control-hover: #1f1f1f;
+  --control-press: #2a2a2a;
+  --edge: #262626;
+  --edge-strong: #3a3a3a;
+  --ink: #ededed;
+  --ink-soft: #a6a6a6;
+  --ink-faint: #858585;
+  --cue: #f97316;
+  --cue-hover: #fb8f4e;
+  --cue-wash: rgb(249 115 22 / 0.22);
+  --on-cue: #271407;
+  --track-bed: #000000;
+  --track-bed-alt: #000000;
+  --timescale: #141414;
+  --screen: #000000;
+  --veil: rgb(0 0 0 / 0.6);
+}
+
 :root[data-theme="obsidian"] {
   color-scheme: dark;
   --ground: #0e0f11;
@@ -747,6 +772,11 @@
 .theme-swatch[data-theme-preview="high-contrast"] i { background: #ffffff; }
 .theme-swatch[data-theme-preview="high-contrast"] i:nth-child(2) { background: #c7c7c7; }
 .theme-swatch[data-theme-preview="high-contrast"] i:nth-child(3) { background: #ffffff; }
+
+.theme-swatch[data-theme-preview="amoled"] { background: #000000; }
+.theme-swatch[data-theme-preview="amoled"] i { background: #ededed; }
+.theme-swatch[data-theme-preview="amoled"] i:nth-child(2) { background: #a6a6a6; }
+.theme-swatch[data-theme-preview="amoled"] i:nth-child(3) { background: #f97316; }
 
 .theme-swatch[data-theme-preview="obsidian"] { background: #0e0f11; }
 .theme-swatch[data-theme-preview="obsidian"] i { background: #f1f2f3; }
