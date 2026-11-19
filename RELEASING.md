@@ -1,9 +1,9 @@
 # Releasing formcut
 
 A release is a version, and only the maintainer makes one. formcut builds
-nothing in its own repository: nodemode-ai/formcompiler builds every form* app
-and opens a draft release on its own release page
-(https://github.com/nodemode-ai/formcompiler/releases), which the maintainer
+nothing in its own repository: nodemode-dev/formcompiler builds every form* app
+and opens a draft release on this repository's Releases page
+(https://github.com/nodemode-dev/formcut/releases), which the maintainer
 reviews and publishes. This repository supplies the build scripts
 (`setup/build_release`, `setup/build_phone`, `setup/release_assets`).
 

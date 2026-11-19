@@ -34,7 +34,7 @@ involving minors will not be accepted.
 ## Reporting
 
 Report anything that breaks this code by opening an
-[issue](https://github.com/nodemode-ai/formcut/issues), or by reaching the
+[issue](https://github.com/nodemode-dev/formcut/issues), or by reaching the
 maintainers on GitHub at [@nodemode-ai](https://github.com/nodemode-ai).
 
 ## What happens next

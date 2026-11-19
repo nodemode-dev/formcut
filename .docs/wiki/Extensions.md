@@ -1,6 +1,6 @@
 # Extensions
 
-formcut loads extensions under the Form Extension Contract, API 1, the same contract every Form app follows. FormPortal installs them, form.ext makes them and formai.studio lists them; none is bundled with formcut. The API an extension programs against (the document snapshot, the commands, the events) is in [`docs/EXTENSIONS.md`](https://github.com/nodemode-ai/formcut/blob/main/docs/EXTENSIONS.md).
+formcut loads extensions under the Form Extension Contract, API 1, the same contract every Form app follows. FormPortal installs them, form.ext makes them and formai.studio lists them; none is bundled with formcut. The API an extension programs against (the document snapshot, the commands, the events) is in [`docs/EXTENSIONS.md`](https://github.com/nodemode-dev/formcut/blob/main/docs/EXTENSIONS.md).
 
 ## Using them
 
