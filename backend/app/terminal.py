@@ -27,6 +27,7 @@ from .agent_connect import server_command
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
+DOCK_CONTRACT = "2.0.1"
 
 
 def _environment(tab: str = "") -> dict:
@@ -54,7 +55,9 @@ def _shell() -> list[str]:
 class Session:
     """One shell on one socket."""
 
-    def __init__(self, cols: int, rows: int, tab: str = ""):
+    def __init__(self, cols: int, rows: int, tab: str = "", argv: list[str] | None = None, env: dict | None = None):
+        argv = argv or _shell()
+        env = _environment(tab) if env is None else env
         self.cols, self.rows = max(20, min(400, cols)), max(5, min(200, rows))
         self.pid = None
         self.fd = None
@@ -65,18 +68,18 @@ class Session:
             pid, fd = pty.fork()
             if pid == 0:
                 os.chdir(os.path.expanduser("~"))
-                os.execvpe(_shell()[0], _shell(), _environment(tab))  # noqa: S606 the shell is the feature
+                os.execvpe(argv[0], argv, env)  # noqa: S606 the shell is the feature
             self.pid, self.fd = pid, fd
             self.resize(self.cols, self.rows)
         else:
             import subprocess
 
             self.process = subprocess.Popen(
-                _shell(),
+                argv,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                env=_environment(tab),
+                env=env,
                 cwd=os.path.expanduser("~"),
             )
 
@@ -132,6 +135,7 @@ def status(request: Request) -> dict:
         "claude": which("claude") is not None,
         "codex": which("codex") is not None,
         "mcp": _environment()["FORMCUT_MCP"],
+        "contract": DOCK_CONTRACT,
     }
 
 

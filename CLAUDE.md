@@ -59,7 +59,10 @@ fixed `x-formcut-local` header alone is not enough. Outside agents (the MCP
 server, any local program) ask `POST /api/agent-access/request` before a
 tool that changes something, and the window asks the person (Deny, Allow
 once, Always allow) by the sealed choice in Settings; the Agent terminal's
-own shell is not asked. A new write route must need the key or be named in
+own shell is not asked, and Blocked refuses it like any other agent. Terminal
+tabs by id for the shared dock live in `backend/app/dock_tabs.py`: a plain
+shell tab has no tab token, each Claude Code, Codex or Cursor tab has its own.
+A new write route must need the key or be named in
 `security.OPEN`; tests/test_window_key.py fails otherwise. ANA
 connecting in will use this surface, so extend it rather than adding a second
 path.

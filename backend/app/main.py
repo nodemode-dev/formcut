@@ -127,6 +127,7 @@ from .planar_api import router as planar_router
 from .project_files import router as project_files_router
 from .project_packages import router as project_packages_router
 from .subtitles import router as subtitles_router
+from .dock_tabs import router as dock_tabs_router
 from .terminal import router as terminal_router
 from .transcribe import router as transcribe_router
 
@@ -137,6 +138,7 @@ app.include_router(codecs_router)
 app.include_router(project_packages_router)
 app.include_router(subtitles_router)
 app.include_router(terminal_router)
+app.include_router(dock_tabs_router)
 app.include_router(krea2_router)
 app.include_router(klein_router)
 app.include_router(loras_router)

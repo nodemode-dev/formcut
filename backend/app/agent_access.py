@@ -45,6 +45,35 @@ NO_WINDOW = "formcut asks before an outside agent changes anything, and no formc
 _lock = threading.Lock()
 _passes: dict[str, float] = {}
 _tabs: set[str] = set()
+EVENTS_KEPT = 200
+_news = threading.Condition()
+_events: list[dict] = []
+_seq = {"last": 0}
+
+
+def _withdraw(rid: str, reason: str) -> None:
+    """Every window learns that a question is over: answered, expired, or never shown."""
+    with _news:
+        _seq["last"] += 1
+        _events.append({"seq": _seq["last"], "type": "withdrawn", "id": rid, "reason": reason, "at": int(time.time() * 1000)})
+        del _events[:-EVENTS_KEPT]
+        _news.notify_all()
+
+
+def _consent(tool: str, agent: str, client: str, notice: str) -> dict:
+    """The question as the window gets it; tool, agent and notice are what the page has always read."""
+    return {
+        "tool": tool,
+        "agent": agent,
+        "notice": notice,
+        "client": client,
+        "what": f"run {tool}",
+        "offers": ["deny", "once", "always"] if seal.available() else ["deny", "once"],
+        "always": "all",
+        "expires": int((time.time() + ASK_SECONDS) * 1000),
+        "escape": "deny",
+        "notes": [notice] if notice else [],
+    }
 
 
 def _stored() -> dict:
@@ -120,17 +149,19 @@ def tab_live(value) -> bool:
         return any(hmac.compare_digest(t.encode(), value.encode()) for t in _tabs)
 
 
-def decide(tool: str, agent: str, tab: str | None = None) -> str:
+def decide(tool: str, agent: str, tab: str | None = None, client: str = "") -> str:
     """A pass for one tool call, or ValueError with the sentence to show the agent."""
     current = state()
     if current["choice"] == "blocked":
         raise ValueError("Outside agents are blocked in formcut's Settings, so nothing was changed")
     if tab_live(tab) or current["choice"] == "allowed":
         return _grant()
-    from .extensions import WindowAbsentError, ask_window
+    from .extensions import ENDED, WindowAbsentError, ask_window
+
+    ENDED["consent"] = _withdraw
 
     try:
-        answer = ask_window("consent", {"tool": tool, "agent": agent, "notice": current["notice"]}, ASK_SECONDS)
+        answer = ask_window("consent", _consent(tool, agent, client, current["notice"]), ASK_SECONDS)
     except WindowAbsentError as exc:
         if "did not answer" in str(exc):
             raise ValueError(f"Nobody answered in the formcut window within {ASK_SECONDS:.0f} s, so nothing was changed") from exc
@@ -150,6 +181,7 @@ class Choice(BaseModel):
 class AgentRequest(BaseModel):
     tool: str = ""
     agent: str = ""
+    client: str = ""
 
 
 @router.get("")
@@ -172,10 +204,37 @@ def request_pass(body: AgentRequest, request: Request) -> dict:
     if request.scope.get("formcut.remote"):
         raise HTTPException(403, "Outside agents are served on this computer only")
     try:
-        value = decide(body.tool[:120] or "a tool", body.agent[:120] or "an outside agent", request.headers.get(TAB_HEADER))
+        value = decide(
+            body.tool[:120] or "a tool", body.agent[:120] or "an outside agent", request.headers.get(TAB_HEADER), body.client[:120]
+        )
     except ValueError as exc:
         raise HTTPException(403, str(exc)) from exc
     return {"pass": value, "header": PASS_HEADER, "seconds": PASS_LIFE}
+
+
+@router.get("/waiting")
+def waiting_requests(request: Request) -> dict:
+    if request.scope.get("formcut.remote"):
+        raise HTTPException(403, "Outside agents are answered on this computer only")
+    from .extensions import waiting
+
+    with _news:
+        seq = _seq["last"]
+    return {"seq": seq, "requests": waiting("consent")}
+
+
+@router.get("/events")
+def events(request: Request, after: int = -1, wait: float = 25.0) -> dict:
+    if request.scope.get("formcut.remote"):
+        raise HTTPException(403, "Outside agents are answered on this computer only")
+    deadline = time.monotonic() + max(0.0, min(wait, 30.0))
+    with _news:
+        while after >= 0 and _seq["last"] <= after:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                break
+            _news.wait(left)
+        return {"seq": _seq["last"], "events": [dict(e) for e in _events if after >= 0 and e["seq"] > after]}
 
 
 @router.delete("/pass")

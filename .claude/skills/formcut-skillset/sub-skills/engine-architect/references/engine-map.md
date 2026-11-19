@@ -22,7 +22,7 @@ The rest is written by hand.
 | Module | Prefix | Routes |
 | --- | --- | --- |
 | addons.py | /api/addons | 3 |
-| agent_access.py | /api/agent-access | 4 |
+| agent_access.py | /api/agent-access | 6 |
 | agent_connect.py | /api/agents | 2 |
 | assets.py | /api/assets | 3 |
 | automation.py | /api/rpc | 3 |
@@ -35,6 +35,7 @@ The rest is written by hand.
 | demo.py | /api/demo | 3 |
 | device_templates.py | /api/devices | 2 |
 | devices.py | /api/devices | 3 |
+| dock_tabs.py | /api/terminal | 6 |
 | effect_previews.py | /api/catalogue/preview | 1 |
 | engine_report.py | /api/engine | 1 |
 | extensions.py | /api/extensions | 9 |

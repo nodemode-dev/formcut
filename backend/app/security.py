@@ -55,7 +55,13 @@ OPEN = ("/api/window/key", "/api/agent-access/request", "/api/agent-access/pass"
 # Neither an agent pass nor a paired device reaches these: only the window.
 WINDOW_ONLY = ("/api/agent-access", "/api/window/", "/api/extensions/agent/", "/api/terminal/", "/api/agents/", "/api/remote")
 # Reads that hand out the window's pending requests.
-KEYED_READS = ("/api/extensions/agent/next",)
+KEYED_READS = (
+    "/api/extensions/agent/next",
+    "/api/agent-access/waiting",
+    "/api/agent-access/events",
+    "/api/terminal/tabs",
+    "/api/terminal/agents",
+)
 
 
 def _without_key(scope, headers: dict, through_network: bool) -> bool:
