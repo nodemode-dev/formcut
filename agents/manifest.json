@@ -1,0 +1,99 @@
+{
+  "format": "form-agent-manifest",
+  "version": 1,
+  "app": "formcut",
+  "mcp": {
+    "tools": [
+      "formcut_status",
+      "formcut_list_media",
+      "formcut_import_media",
+      "formcut_create_project",
+      "formcut_get_project",
+      "formcut_media_proxy",
+      "formcut_find_scenes",
+      "formcut_list_projects",
+      "formcut_add_clip",
+      "formcut_set_frame",
+      "formcut_render",
+      "formcut_render_status",
+      "formcut_plan_cutdown",
+      "formcut_music",
+      "formcut_transcribe",
+      "formcut_speech_range",
+      "formcut_speech_check",
+      "formcut_devices",
+      "formcut_device",
+      "formcut_focus_motion",
+      "formcut_frame_check",
+      "formcut_qc",
+      "formcut_render_audio",
+      "formcut_cancel_render",
+      "formcut_catalogue",
+      "formcut_edit",
+      "formcut_package_guide",
+      "formcut_add_package",
+      "formcut_preview_package",
+      "formcut_list_packages",
+      "formcut_remove_package",
+      "formcut_capabilities",
+      "formcut_extensions_list",
+      "formcut_extension_command"
+    ],
+    "read_only": [
+      "formcut_status",
+      "formcut_list_media",
+      "formcut_get_project",
+      "formcut_find_scenes",
+      "formcut_list_projects",
+      "formcut_render_status",
+      "formcut_plan_cutdown",
+      "formcut_music",
+      "formcut_speech_range",
+      "formcut_speech_check",
+      "formcut_devices",
+      "formcut_qc",
+      "formcut_catalogue",
+      "formcut_package_guide",
+      "formcut_preview_package",
+      "formcut_list_packages",
+      "formcut_capabilities",
+      "formcut_extensions_list"
+    ],
+    "approval_gated": [],
+    "transports": [
+      "stdio"
+    ]
+  },
+  "skills": [
+    {
+      "name": "formcut-mcp",
+      "sub_skills": [
+        "cutdown",
+        "mcp-development",
+        "mcp-director",
+        "mcp-setup",
+        "mcp-workflows",
+        "remove-speech"
+      ]
+    },
+    {
+      "name": "formcut-skillset",
+      "sub_skills": [
+        "build-discipline",
+        "engine-architect",
+        "formcut-director",
+        "interface-architect",
+        "orchestration-and-mcp",
+        "timeline-and-render"
+      ]
+    }
+  ],
+  "dock": {
+    "present": false,
+    "positions": [],
+    "tabs": []
+  },
+  "extensions": {
+    "host_api": "1"
+  }
+}

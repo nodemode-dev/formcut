@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """./formcut agents: Claude Code, Codex and Cursor driving formcut.
 
-  sync [--check]    regenerate the formcut-mcp skill's tool reference from the MCP server and mirror
-                    .claude/skills/formcut-mcp to .agents/skills; --check exits 1 when anything drifted
+  sync [--check]    regenerate the formcut-mcp skill's tool reference from the MCP server, write
+                    agents/manifest.json (what formcut offers agents) and mirror .claude/skills/formcut-mcp
+                    to .agents/skills; --check exits 1 when anything drifted
   install [--dry-run] [claude|codex|cursor ...]
                     set the clients up for this user account: the MCP server (./formcut mcp from this checkout)
                     and the formcut-mcp skill; all three by default
@@ -13,7 +14,9 @@ Standard library only, so it runs before anything is installed.
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -25,10 +28,65 @@ MIRROR = ROOT / ".agents" / "skills" / "formcut-mcp"
 LAUNCHER = ROOT / "formcut"
 HOME = Path.home()
 CLIENTS = ("claude", "codex", "cursor")
+MANIFEST = ROOT / "agents" / "manifest.json"
+APP = "formcut"
+SERVER = ROOT / "backend" / "app" / "agent_mcp.py"
+HOST = ROOT / "backend" / "app" / "formext_host.py"
+DOCK = {"present": False, "positions": [], "tabs": []}
+APPROVAL_GATED: tuple[str, ...] = ()
 
 
 def _files(folder: Path) -> dict:
     return {str(p.relative_to(folder)): p.read_bytes() for p in sorted(folder.rglob("*")) if p.is_file()}
+
+
+def _declared_tools() -> list[dict]:
+    spec = importlib.util.spec_from_file_location("mcp_tool_reference", ROOT / "setup" / "mcp_tool_reference.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.tools()
+
+
+def _skill_entries() -> list[dict]:
+    base = ROOT / ".claude" / "skills"
+    found = []
+    for folder in sorted(p for p in base.iterdir() if (p / "SKILL.md").is_file()) if base.is_dir() else []:
+        subs = folder / "sub-skills"
+        names = sorted(p.name for p in subs.iterdir() if (p / "SUB-SKILL.md").is_file()) if subs.is_dir() else []
+        found.append({"name": folder.name, "sub_skills": names})
+    return found
+
+
+def _serves_http() -> bool:
+    route = re.compile(r"""\.(?:get|post|put|api_route|route|add_api_route)\(\s*["']/mcp["']|add_route\(\s*["']/mcp["']""")
+    return any(route.search(p.read_text(encoding="utf-8")) for p in (ROOT / "backend" / "app").rglob("*.py"))
+
+
+def manifest_text() -> str:
+    listed = _declared_tools()
+    tools = [t["name"] for t in listed]
+    gated = [n for n in tools if n in APPROVAL_GATED]
+    if len(gated) != len(APPROVAL_GATED):
+        raise SystemExit("agents: APPROVAL_GATED names a tool the MCP server does not declare")
+    transports = (["stdio"] if re.search(r"""\.run\(\s*transport\s*=\s*["']stdio["']""", SERVER.read_text(encoding="utf-8")) else []) + (
+        ["http"] if _serves_http() else []
+    )
+    api = re.search(r"""^API\s*=\s*["']([^"']+)["']""", HOST.read_text(encoding="utf-8"), re.MULTILINE) if HOST.is_file() else None
+    body = {
+        "format": "form-agent-manifest",
+        "version": 1,
+        "app": APP,
+        "mcp": {
+            "tools": tools,
+            "read_only": [t["name"] for t in listed if t["effect"] == "read only"],
+            "approval_gated": gated,
+            "transports": transports,
+        },
+        "skills": _skill_entries(),
+        "dock": DOCK,
+        "extensions": {"host_api": api.group(1)} if api else None,
+    }
+    return json.dumps(body, indent=2) + "\n"
 
 
 def sync(check: bool) -> int:
@@ -37,6 +95,12 @@ def sync(check: bool) -> int:
     run = subprocess.run(reference, capture_output=True, text=True, check=False)
     if run.returncode:
         drift.append(".claude/skills/formcut-mcp/sub-skills/mcp-workflows/references/tools.md")
+    wanted = manifest_text()
+    if not MANIFEST.is_file() or MANIFEST.read_text(encoding="utf-8") != wanted:
+        drift.append(str(MANIFEST.relative_to(ROOT)))
+        if not check:
+            MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+            MANIFEST.write_text(wanted, encoding="utf-8")
     if not MIRROR.exists() or _files(MIRROR) != _files(SKILL):
         drift.append(str(MIRROR.relative_to(ROOT)))
         if not check:
