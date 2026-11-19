@@ -33,7 +33,9 @@ LOCAL = {"x-formcut-local": "1"}
 
 @pytest.fixture(scope="module")
 def client():
-    return TestClient(app, base_url=OWN)
+    from conftest import bare
+
+    return bare(TestClient(app, base_url=OWN))
 
 
 def test_foreign_origins_are_not_in_the_apps_own_list():
@@ -55,9 +57,12 @@ def test_foreign_origin_cannot_write(client, origin):
     assert client.post("/api/rpc", headers={"origin": origin, **LOCAL}, json={}).status_code == 403
 
 
-def test_a_write_needs_the_local_header_even_from_the_own_origin(client):
+def test_a_write_needs_the_local_header_and_the_window_key_even_from_the_own_origin(client):
+    from conftest import window_headers
+
     assert client.post("/api/rpc", headers={"origin": OWN}, json={}).status_code == 403
-    assert client.post("/api/rpc", headers={"origin": OWN, **LOCAL}, json={}).status_code != 403
+    assert client.post("/api/rpc", headers={"origin": OWN, **LOCAL}, json={}).status_code == 403
+    assert client.post("/api/rpc", headers={"origin": OWN, **window_headers()}, json={}).status_code != 403
 
 
 def test_cross_site_request_without_origin_is_refused(client):
@@ -114,6 +119,9 @@ def test_foreign_websocket_is_closed_1008(client, headers):
 
 
 def test_websocket_from_the_own_origin_is_accepted(client):
-    with client.websocket_connect(WS, headers={"host": f"127.0.0.1:{PORT}", "origin": OWN}) as ws:
+    from conftest import window_headers
+
+    ticket = client.post("/api/window/ticket", headers=window_headers()).json()["ticket"]
+    with client.websocket_connect(f"{WS}?ticket={ticket}", headers={"host": f"127.0.0.1:{PORT}", "origin": OWN}) as ws:
         ws.send_json({"jsonrpc": "2.0", "id": 1, "method": "no.such.method"})
         assert ws.receive_json()["id"] == 1

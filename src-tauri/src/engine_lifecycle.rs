@@ -31,81 +31,111 @@ pub async fn supervise(
     let deadline = Instant::now() + Duration::from_secs(40);
     let pattern = regex::Regex::new(r"http://127\.0\.0\.1:(\d+)").expect("static port pattern");
     let mut ready = false;
+    let key_pattern = regex::Regex::new(r"formcut-window-key: ([A-Za-z0-9_-]{32,})\r?\n")
+        .expect("static key pattern");
+    let mut key: Option<String> = None;
+    let mut address: Option<(u16, Instant)> = None;
     let mut pending = String::new();
+    let mut stdout_pending = String::new();
     let mut failure = String::from("The local engine did not become ready within 40 seconds.");
     loop {
         let event = if ready {
             rx.recv().await
         } else {
-            let remaining = deadline.saturating_duration_since(Instant::now());
+            let until = match address {
+                Some((_, at)) => at + Duration::from_secs(10),
+                None => deadline,
+            };
+            let remaining = until.saturating_duration_since(Instant::now());
             match tokio::time::timeout(remaining, rx.recv()).await {
                 Ok(event) => event,
-                Err(_) => break,
+                Err(_) => {
+                    if address.is_some() {
+                        failure = String::from(
+                            "The local engine started but did not hand the window its key.",
+                        );
+                    }
+                    break;
+                }
             }
         };
         let Some(event) = event else {
             break;
         };
+        let from_stdout = matches!(&event, CommandEvent::Stdout(_));
         match event {
             CommandEvent::Stdout(bytes) | CommandEvent::Stderr(bytes) => {
                 if ready {
                     continue;
                 }
+                if from_stdout && key.is_none() {
+                    stdout_pending.push_str(&String::from_utf8_lossy(&bytes));
+                    key = key_pattern
+                        .captures(&stdout_pending)
+                        .map(|found| found[1].to_string());
+                    if stdout_pending.len() > 8192 {
+                        stdout_pending.clear();
+                    }
+                }
                 pending.push_str(&String::from_utf8_lossy(&bytes));
-                if let Some(captures) = pattern.captures(&pending) {
-                    if let Ok(port) = captures[1].parse::<u16>() {
-                        let ok = tauri::async_runtime::spawn_blocking(move || healthy(port))
-                            .await
-                            .unwrap_or(false);
-                        if ok {
-                            let url = format!("http://127.0.0.1:{port}")
-                                .parse()
-                                .expect("loopback URL");
-                            let (width, height) = handle
-                                .primary_monitor()
-                                .ok()
-                                .flatten()
-                                .map(|monitor| {
-                                    let size = monitor.size();
-                                    let scale = monitor.scale_factor();
-                                    (
-                                        f64::min(
-                                            1600.0,
-                                            size.width as f64 / scale * crate::SCREEN_FRACTION,
-                                        ),
-                                        f64::min(
-                                            1100.0,
-                                            size.height as f64 / scale * crate::SCREEN_FRACTION,
-                                        ),
-                                    )
-                                })
-                                .unwrap_or(crate::FALLBACK_LOGICAL);
-                            match WebviewWindowBuilder::new(
-                                &handle,
-                                "main",
-                                WebviewUrl::External(url),
-                            )
-                            .title("FormCut")
-                            .visible(crate::reveal::BUILD_VISIBLE)
-                            .background_color(crate::reveal::BACKGROUND)
-                            .inner_size(width, height)
-                            .min_inner_size(
-                                crate::MIN_LOGICAL.0.min(width),
-                                crate::MIN_LOGICAL.1.min(height),
-                            )
-                            .center()
-                            .build()
-                            {
-                                Ok(window) => {
-                                    crate::reveal::conceal(&window);
-                                    ready = true;
-                                    pending.clear();
-                                }
-                                Err(error) => {
-                                    failure = format!("The editor window could not open: {error}");
-                                    break;
-                                }
+                if address.is_none() {
+                    if let Some(captures) = pattern.captures(&pending) {
+                        if let Ok(port) = captures[1].parse::<u16>() {
+                            let ok = tauri::async_runtime::spawn_blocking(move || healthy(port))
+                                .await
+                                .unwrap_or(false);
+                            if ok {
+                                address = Some((port, Instant::now()));
                             }
+                        }
+                    }
+                }
+                if let (Some((port, _)), Some(value)) = (address, key.as_ref()) {
+                    let origin = format!("http://127.0.0.1:{port}");
+                    let url = origin.parse().expect("loopback URL");
+                    let (width, height) = handle
+                        .primary_monitor()
+                        .ok()
+                        .flatten()
+                        .map(|monitor| {
+                            let size = monitor.size();
+                            let scale = monitor.scale_factor();
+                            (
+                                f64::min(
+                                    1600.0,
+                                    size.width as f64 / scale * crate::SCREEN_FRACTION,
+                                ),
+                                f64::min(
+                                    1100.0,
+                                    size.height as f64 / scale * crate::SCREEN_FRACTION,
+                                ),
+                            )
+                        })
+                        .unwrap_or(crate::FALLBACK_LOGICAL);
+                    match WebviewWindowBuilder::new(&handle, "main", WebviewUrl::External(url))
+                        .title("FormCut")
+                        .visible(crate::reveal::BUILD_VISIBLE)
+                        .background_color(crate::reveal::BACKGROUND)
+                        .inner_size(width, height)
+                        .min_inner_size(
+                            crate::MIN_LOGICAL.0.min(width),
+                            crate::MIN_LOGICAL.1.min(height),
+                        )
+                        .center()
+                        .initialization_script(format!(
+                            "if (window.location.origin === {origin:?}) {{ window.__FORMCUT_WINDOW_KEY = {value:?}; }}"
+                        ))
+                        .build()
+                    {
+                        Ok(window) => {
+                            crate::reveal::conceal(&window);
+                            ready = true;
+                            pending.clear();
+                            stdout_pending.clear();
+                        }
+                        Err(error) => {
+                            failure = format!("The editor window could not open: {error}");
+                            break;
                         }
                     }
                 }

@@ -59,7 +59,24 @@
       "formcut_capabilities",
       "formcut_extensions_list"
     ],
-    "approval_gated": [],
+    "approval_gated": [
+      "formcut_import_media",
+      "formcut_create_project",
+      "formcut_media_proxy",
+      "formcut_add_clip",
+      "formcut_set_frame",
+      "formcut_render",
+      "formcut_transcribe",
+      "formcut_device",
+      "formcut_focus_motion",
+      "formcut_frame_check",
+      "formcut_render_audio",
+      "formcut_cancel_render",
+      "formcut_edit",
+      "formcut_add_package",
+      "formcut_remove_package",
+      "formcut_extension_command"
+    ],
     "transports": [
       "stdio"
     ]

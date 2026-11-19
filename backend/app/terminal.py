@@ -22,19 +22,23 @@ import threading
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
+from . import agent_access
 from .agent_connect import server_command
 
 router = APIRouter(prefix="/api/terminal", tags=["terminal"])
 POSIX = os.name == "posix"
 
 
-def _environment() -> dict:
+def _environment(tab: str = "") -> dict:
     command, args = server_command()
     env = dict(os.environ)
     env["FORMCUT_URL"] = os.environ.get("FORMCUT_URL", "http://127.0.0.1:8040")
     env["FORMCUT_MCP_COMMAND"] = command
     env["FORMCUT_MCP_ARGS"] = " ".join(shlex.quote(a) for a in args)
     env["FORMCUT_MCP"] = " ".join(shlex.quote(a) for a in [command, *args])
+    env.pop(agent_access.TAB_ENV, None)
+    if tab:
+        env[agent_access.TAB_ENV] = tab
     env.setdefault("TERM", "xterm-256color")
     env["COLORTERM"] = "truecolor"
     return env
@@ -50,7 +54,7 @@ def _shell() -> list[str]:
 class Session:
     """One shell on one socket."""
 
-    def __init__(self, cols: int, rows: int):
+    def __init__(self, cols: int, rows: int, tab: str = ""):
         self.cols, self.rows = max(20, min(400, cols)), max(5, min(200, rows))
         self.pid = None
         self.fd = None
@@ -61,7 +65,7 @@ class Session:
             pid, fd = pty.fork()
             if pid == 0:
                 os.chdir(os.path.expanduser("~"))
-                os.execvpe(_shell()[0], _shell(), _environment())  # noqa: S606 the shell is the feature
+                os.execvpe(_shell()[0], _shell(), _environment(tab))  # noqa: S606 the shell is the feature
             self.pid, self.fd = pid, fd
             self.resize(self.cols, self.rows)
         else:
@@ -72,7 +76,7 @@ class Session:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                env=_environment(),
+                env=_environment(tab),
                 cwd=os.path.expanduser("~"),
             )
 
@@ -142,7 +146,12 @@ async def terminal(socket: WebSocket) -> None:
         rows = int(socket.query_params.get("rows", "30"))
     except ValueError:
         cols, rows = 100, 30
-    session = Session(cols, rows)
+    tab = agent_access.open_tab()
+    try:
+        session = Session(cols, rows, tab)
+    except OSError:
+        agent_access.close_tab(tab)
+        raise
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()
     stop = threading.Event()
@@ -190,6 +199,7 @@ async def terminal(socket: WebSocket) -> None:
         pass
     finally:
         stop.set()
+        agent_access.close_tab(tab)
         session.close()
         sender.cancel()
         if sys.platform != "win32":

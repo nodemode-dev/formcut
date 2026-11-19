@@ -29,13 +29,17 @@ def window(engine, clip):  # noqa: F811 - the imported fixture
 
     errors = []
     with sync_playwright() as p:
-        api = p.request.new_context(base_url=engine, extra_http_headers={"x-formcut-local": "1"})
+        claim = p.request.new_context(base_url=engine, extra_http_headers={"x-formcut-local": "1"})
+        key = claim.post("/api/window/key").json()["key"]
+        claim.dispose()
+        api = p.request.new_context(base_url=engine, extra_http_headers={"x-formcut-local": "1", "x-formcut-window-key": key})
         uploaded = api.post("/api/media", multipart={"file": {"name": "clip.mp4", "mimeType": "video/mp4", "buffer": clip.read_bytes()}})
         assert uploaded.ok, uploaded.text()
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        page.add_init_script(f"sessionStorage.setItem('formcut-window-key', {key!r})")
         page.goto(engine + "/", wait_until="load", timeout=120_000)
         page.click(".mode-ask [data-later]", timeout=TIMEOUT)
         page.click('[data-act="new"]', timeout=TIMEOUT)

@@ -15,6 +15,7 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 | 3d-mock-models device library v0.10.0 | CC0-1.0 | ten device models in backend/app/device_library (generated in code by the owner's 3d-mock-models; LICENSE beside them) | ship |
 | Inter glyphs in the device key legends | OFL-1.1 | drawn into the laptop and 2-in-1 models' legend textures by the generator; images only, no font file | ship |
 | httpx | BSD-3-Clause | Pexels API and media fetch | ship |
+| keyring | MIT | keeps the key that seals the outside agents choice in the system keychain (backend/app/seal.py) | ship |
 | yt-dlp | Unlicense (public domain) | URL media import, invoked as a module subprocess | ship |
 | @huggingface/transformers | Apache-2.0 | in-browser Whisper transcription | ship |
 | onnxruntime-web 1.31.0-dev.20260914 (with onnxruntime-common 1.30.0 and flatbuffers) | MIT; flatbuffers Apache-2.0 | the runtime transformers.js uses for Whisper in the window, including its WebAssembly files | ship |

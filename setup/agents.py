@@ -33,7 +33,6 @@ APP = "formcut"
 SERVER = ROOT / "backend" / "app" / "agent_mcp.py"
 HOST = ROOT / "backend" / "app" / "formext_host.py"
 DOCK = {"present": False, "positions": [], "tabs": []}
-APPROVAL_GATED: tuple[str, ...] = ()
 
 
 def _files(folder: Path) -> dict:
@@ -65,9 +64,9 @@ def _serves_http() -> bool:
 def manifest_text() -> str:
     listed = _declared_tools()
     tools = [t["name"] for t in listed]
-    gated = [n for n in tools if n in APPROVAL_GATED]
-    if len(gated) != len(APPROVAL_GATED):
-        raise SystemExit("agents: APPROVAL_GATED names a tool the MCP server does not declare")
+    # The server's gate (agent_mcp._gated_tool) asks the window before every tool that is not read-only.
+    gate = re.search(r"^mcp\.tool\s*=\s*_gated_tool\s*$", SERVER.read_text(encoding="utf-8"), re.MULTILINE)
+    gated = [t["name"] for t in listed if t["effect"] != "read only"] if gate else []
     transports = (["stdio"] if re.search(r"""\.run\(\s*transport\s*=\s*["']stdio["']""", SERVER.read_text(encoding="utf-8")) else []) + (
         ["http"] if _serves_http() else []
     )

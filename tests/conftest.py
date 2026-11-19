@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import types
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,44 @@ _OWN_DATA_DIR = None if "FORMCUT_DATA_DIR" in os.environ else tempfile.mkdtemp(p
 os.environ.setdefault("FORMCUT_NO_WARM", "1")
 if _OWN_DATA_DIR:
     os.environ["FORMCUT_DATA_DIR"] = _OWN_DATA_DIR
+
+
+def window_headers() -> dict:
+    """The window's headers: the fixed one and this launch's window key."""
+    from app import window_key
+
+    return {"x-formcut-local": "1", window_key.HEADER: window_key.KEY}
+
+
+def _as_the_window(headers):
+    if headers and dict(headers).get("x-formcut-local") == "1":
+        return {**dict(headers), **window_headers()}
+    return headers
+
+
+def _clients_made_as_the_window_carry_the_key() -> None:
+    """A test client made with, or a request sent with, the window's fixed header stands for the window, so it carries the key as well."""
+    from fastapi.testclient import TestClient
+
+    made, sent = TestClient.__init__, TestClient.request
+
+    def init(self, *args, headers=None, **kwargs):
+        made(self, *args, headers=_as_the_window(headers), **kwargs)
+
+    def request(self, *args, headers=None, **kwargs):
+        return sent(self, *args, headers=_as_the_window(headers), **kwargs)
+
+    TestClient.__init__, TestClient.request = init, request
+    TestClient.bare_request = sent
+
+
+def bare(client):
+    """The client as any local program: what it sends is exactly what the test gives it."""
+    client.request = types.MethodType(type(client).bare_request, client)
+    return client
+
+
+_clients_made_as_the_window_carry_the_key()
 
 
 def pytest_sessionfinish(session, exitstatus):

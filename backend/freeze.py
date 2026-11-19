@@ -52,6 +52,7 @@ arguments = [
     '--collect-submodules', 'app', '--hidden-import', 'PIL.ImageFont',
     '--hidden-import', 'PIL.ImageDraw', '--hidden-import', 'PIL.ImageFilter',
     '--hidden-import', 'cv2', '--hidden-import', 'grpc',
+    '--hidden-import', 'keyring', '--collect-submodules', 'keyring.backends', '--copy-metadata', 'keyring',
     '--exclude-module', 'kokoro_onnx', '--exclude-module', 'phonemizer',
     '--exclude-module', 'espeakng_loader', '--exclude-module', 'torch',
     str(root / 'desktop_entry.py'),

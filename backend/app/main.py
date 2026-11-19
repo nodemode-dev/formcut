@@ -107,7 +107,9 @@ async def _warm_library() -> None:
 
 
 app.add_middleware(LocalOnly)
+from .agent_access import router as agent_access_router
 from .agent_connect import router as agents_router
+from .window_key import router as window_key_router
 from .checkpoints import router as checkpoints_router
 from .codecs_api import router as codecs_router
 from .device_templates import router as device_templates_router
@@ -129,6 +131,8 @@ from .terminal import router as terminal_router
 from .transcribe import router as transcribe_router
 
 app.include_router(agents_router)
+app.include_router(window_key_router)
+app.include_router(agent_access_router)
 app.include_router(codecs_router)
 app.include_router(project_packages_router)
 app.include_router(subtitles_router)

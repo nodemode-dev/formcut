@@ -3,6 +3,7 @@ import { t } from "../i18n";
 import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { api, waitJob } from "../engine/api";
+import { socketTicket } from "../engine/window-key";
 import { rateLabel } from "../engine/rates";
 import { escapeHtml } from "./safe-text";
 import { openViewer } from "./viewer";
@@ -680,7 +681,8 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     }
     fit?.fit();
     const protocol = location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(`${protocol}://${location.host}/api/terminal/ws?cols=${term.cols}&rows=${term.rows}`);
+    const ticket = await socketTicket();
+    const socket = new WebSocket(`${protocol}://${location.host}/api/terminal/ws?cols=${term.cols}&rows=${term.rows}&ticket=${encodeURIComponent(ticket)}`);
     termSocket = socket;
     socket.onopen = () => { termNote(""); q<HTMLButtonElement>("term-close").hidden = false; q<HTMLButtonElement>("term-open").hidden = true; term?.focus(); };
     socket.onmessage = (event) => { term?.write(String(event.data)); };

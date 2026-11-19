@@ -40,6 +40,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `engine/seed.ts`
 - `engine/timing.ts`
 - `engine/types.ts`
+- `engine/window-key.ts`
 - `extensions/catalogue.ts`
 - `extensions/host-bridge.ts`
 - `i18n/index.ts`
@@ -48,6 +49,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `main.ts`
 - `types/assets.d.ts`
 - `ui/accordion.ts`
+- `ui/agent-access.ts`
 - `ui/appearance.ts`
 - `ui/browser-view.ts`
 - `ui/category-icons.ts`

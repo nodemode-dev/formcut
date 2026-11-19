@@ -10,6 +10,8 @@ python-multipart==0.0.*
 # The Pro tab's interchange parses FCP XML files from elsewhere without entity expansion (app/interchange.py).
 defusedxml==0.7.*
 httpx==0.28.*
+# The seal on the outside agents choice keeps its key in the system keychain (app/seal.py, imported lazily).
+keyring==25.*
 yt-dlp==2026.*
 opencv-python-headless==4.12.0.88
 Pillow==11.*

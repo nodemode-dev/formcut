@@ -22,9 +22,10 @@ The rest is written by hand.
 | Module | Prefix | Routes |
 | --- | --- | --- |
 | addons.py | /api/addons | 3 |
+| agent_access.py | /api/agent-access | 4 |
 | agent_connect.py | /api/agents | 2 |
 | assets.py | /api/assets | 3 |
-| automation.py | /api/rpc | 2 |
+| automation.py | /api/rpc | 3 |
 | brush.py | /api/render | 2 |
 | catalogue.py | /api/catalogue | 1 |
 | checkpoints.py | /api/checkpoints | 1 |
@@ -77,6 +78,7 @@ The rest is written by hand.
 | tts.py | /api/tts | 3 |
 | upscale.py | /api/media | 2 |
 | webhooks.py | /api/webhooks | 5 |
+| window_key.py | /api/window | 3 |
 
 ## Modules with no routes of their own
 
@@ -137,11 +139,13 @@ the automation transports.
 - `proxies.py`
 - `qc.py`
 - `rates.py`
+- `read_methods.py`
 - `render_document.py`
 - `renderer.py`
 - `rhythm.py`
 - `sam_video.py`
 - `scenes.py`
+- `seal.py`
 - `security.py`
 - `segmentation.py`
 - `speech.py`

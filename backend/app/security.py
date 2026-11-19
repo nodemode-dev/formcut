@@ -1,10 +1,11 @@
+import hmac
 import ipaddress
 import os
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from starlette.responses import PlainTextResponse, RedirectResponse
 
-from . import remote
+from . import agent_access, remote, window_key
 
 
 def loopback(value: str) -> bool:
@@ -45,6 +46,35 @@ def window_origin(origin: str, host: str) -> bool:
         return True
     own = _origin_key(f"{key[0]}://{host}")
     return key[0] == "http" and own is not None and own == key
+
+
+READS = ("GET", "HEAD", "OPTIONS")
+# Writes that answer without the window key: the development bootstrap, and the
+# outside-agent door, which asks the person (agent_access.py) before it gives a pass.
+OPEN = ("/api/window/key", "/api/agent-access/request", "/api/agent-access/pass", "/api/rpc/read")
+# Neither an agent pass nor a paired device reaches these: only the window.
+WINDOW_ONLY = ("/api/agent-access", "/api/window/", "/api/extensions/agent/", "/api/terminal/", "/api/agents/", "/api/remote")
+# Reads that hand out the window's pending requests.
+KEYED_READS = ("/api/extensions/agent/next",)
+
+
+def _without_key(scope, headers: dict, through_network: bool) -> bool:
+    """Whether a request that carries no window key may still go on."""
+    path = scope.get("path", "")
+    if scope["type"] == "websocket":
+        ticket = parse_qs(scope.get("query_string", b"").decode("latin-1")).get("ticket", [""])[0]
+        return window_key.spend(ticket)
+    if path in KEYED_READS:
+        return False
+    if scope.get("method") in READS or path in OPEN:
+        return True
+    if through_network and path == "/api/remote/pair":
+        return True
+    if path.startswith(WINDOW_ONLY):
+        return False
+    if through_network or (remote_token() and hmac.compare_digest(headers.get("x-formcut-token", "").encode(), remote_token().encode())):
+        return True
+    return agent_access.pass_valid(headers.get(agent_access.PASS_HEADER))
 
 
 def remote_token() -> str:
@@ -96,12 +126,16 @@ class LocalOnly:
             and scope.get("path", "").startswith("/api/")
         ):
             allowed = allowed and headers.get("x-formcut-local") == "1"
+        keyless = False
+        if allowed and not window_key.valid(headers.get(window_key.HEADER)) and not _without_key(scope, headers, through_network):
+            allowed, keyless = False, True
         if not allowed:
             if scope["type"] == "websocket":
                 return await send({"type": "websocket.close", "code": 1008})
             if through_network and scope.get("method") == "GET" and not scope.get("path", "").startswith("/api/"):
                 return await RedirectResponse("/pair", status_code=303)(scope, receive, send)
-            return await PlainTextResponse("Local API request refused", status_code=403)(scope, receive, send)
+            reason = window_key.REFUSED if keyless else "Local API request refused"
+            return await PlainTextResponse(reason, status_code=403)(scope, receive, send)
 
         async def safe_send(message):
             if message["type"] == "http.response.start":

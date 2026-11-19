@@ -13,6 +13,7 @@ from . import jobs, store
 from .catalogue import catalogue
 from .media import ingest_path, list_media
 from .orchestration import SessionInput, note_operation, open_session
+from .read_methods import READ_METHODS
 from .render_api import RenderInput, export
 from .render_document import validate_document
 from .timing import source_time, speed_at
@@ -1049,6 +1050,21 @@ async def http_rpc(request: Request):
         return rpc(message)
     except (ValueError, UnicodeError):
         return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Invalid JSON"}}
+
+
+@router.post("/read")
+async def http_rpc_read(request: Request):
+    """The JSON-RPC methods that change nothing, for callers without the window key."""
+    try:
+        message = await request.json()
+    except (ValueError, UnicodeError):
+        return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Invalid JSON"}}
+    if not isinstance(message, dict) or message.get("method") not in READ_METHODS:
+        request_id = message.get("id") if isinstance(message, dict) else None
+        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": "not a read method: ask with POST /api/agent-access/request first and use POST /api/rpc"}}
+    if str(message.get("method", "")).startswith(OFF_LOOP):
+        return await run_in_threadpool(rpc, message)
+    return rpc(message)
 
 
 @router.websocket("/ws")
