@@ -1,6 +1,6 @@
 # Automation
 
-Use the running desktop engine's loopback URL, or the development engine at `http://127.0.0.1:8040`. The desktop port is assigned by the OS and appears in the engine startup log. POST JSON-RPC 2.0 to `/api/rpc` with `Content-Type: application/json` and `x-formcut-local: 1`.
+Use the running desktop engine's loopback URL, or the development engine at `http://127.0.0.1:8040`. The desktop port is assigned by the OS and appears in the engine startup log. POST JSON-RPC 2.0 with `Content-Type: application/json` and `x-formcut-local: 1`. Methods that change nothing answer at `/api/rpc/read` for any local program. Everything else at `/api/rpc` and every other write needs the per-launch window key, which only the formcut window holds; the header alone is not enough. A program outside the window asks first: `POST /api/agent-access/request` with `{"tool": "...", "agent": "..."}` follows the choice in Settings, Connections, Outside agents (Ask each time, the default, puts Deny, Allow once and Always allow in the window and waits up to two minutes, refusing at once when no window is open; Allowed answers at once; Blocked refuses) and answers with a pass for that task, sent as `x-formcut-agent-pass` and ended with `DELETE /api/agent-access/pass`. A pass cannot change that choice, answer the window's questions or open a terminal. The MCP server does all of this for each tool that is not read-only. The `/api/rpc/ws` websocket is the window's.
 
 ```json
 {"jsonrpc":"2.0","id":1,"method":"capabilities"}

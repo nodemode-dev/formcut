@@ -53,7 +53,14 @@ methods, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
 engine's MCP server (`backend/app/agent_mcp.py`, run as `formcut-engine --mcp`,
 or from a checkout as `./formcut mcp`) is that surface packaged as 34 MCP tools
-over stdio. ANA
+over stdio. Every write needs the per-launch window key, which only the
+window holds (`backend/app/window_key.py`, checked in `security.py`); the
+fixed `x-formcut-local` header alone is not enough. Outside agents (the MCP
+server, any local program) ask `POST /api/agent-access/request` before a
+tool that changes something, and the window asks the person (Deny, Allow
+once, Always allow) by the sealed choice in Settings; the Agent terminal's
+own shell is not asked. A new write route must need the key or be named in
+`security.OPEN`; tests/test_window_key.py fails otherwise. ANA
 connecting in will use this surface, so extend it rather than adding a second
 path.
 

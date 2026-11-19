@@ -13,6 +13,7 @@ The server gives access; it does not give judgment about order, preconditions or
 ## Facts every sub-skill relies on
 
 - The server is stateless. Every call returns the handles the next one needs (project id, media id, job id, revision); nothing is remembered between calls, so a dropped connection loses no state.
+- The person is asked before a change. The 18 read-only tools run at once; the first write of any other tool asks in the formcut window (Deny, Allow once, Always allow), following Settings, Connections, Outside agents (Ask each time by default, or Allowed, or Blocked). A refusal comes back as a sentence: no window open means ask the person to open formcut; "said no" or "blocked" means stop and ask the person, never retry in a loop. Only the window can change that choice. Claude Code started in formcut's own Agent terminal is not asked.
 - Edits use optimistic concurrency. Every edit carries the revision the agent last saw and returns the new one. A stale revision is refused with the current revision, and the fix is to re-read the project and retry, never to guess a number.
 - Errors are results, not exceptions. A failed call returns text naming the recovery step. Read it and act on it.
 - The server finds the formcut that is running on every call: `FORMCUT_ENGINE` if set, else the address the app publishes in `engine.json` in its data folder, else `http://127.0.0.1:8040`, where `./formcut` starts a source run. Installed or from source, an agent drives the app a person sees.

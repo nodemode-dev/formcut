@@ -93,7 +93,7 @@
 
 ## Built for agents
 
-FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
+FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project. Tools that only read run at once; before any other tool FormCut asks in its window (Deny, Allow once, Always allow), and Settings, Connections, Outside agents can make that Allowed or Blocked. Only the FormCut window can change that choice or make other changes without asking.
 
 ```sh
 ./formcut mcp            # MCP server on stdio, starts the engine if nothing answers
