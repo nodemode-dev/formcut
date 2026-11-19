@@ -10,7 +10,7 @@ How anything outside the interface drives formcut. Load `references/automation-s
 
 ## The automation surface
 
-`POST /api/rpc` is JSON-RPC 2.0, also reachable over websocket, stdin, TCP and gRPC-shaped framing from `cli.py`. Fifteen methods: capabilities, catalogue, session.hello, media.list, media.import, project.list, project.create, project.get, project.edit, project.undo, project.redo, project.export, job.result, job.status, job.cancel. Batch requests answer only the messages carrying an id.
+`POST /api/rpc` is JSON-RPC 2.0, also reachable over websocket, stdin, TCP and gRPC-shaped framing from `cli.py`. The methods are the ones `capabilities` returns (`references/automation-surface.md` groups them). Methods that change nothing answer at `POST /api/rpc/read` for any local program; every other method needs the window key and, for an outside agent, the person's Allow in the window first. Batch requests answer only the messages carrying an id.
 
 Edits carry optimistic concurrency: `project.edit` takes the revision the caller last saw and refuses a stale one by naming the current revision. `project.export` answers with `job_id`, and the job methods accept that id under either `id` or `job_id`, because a client following the reply it was just given should not have to translate.
 

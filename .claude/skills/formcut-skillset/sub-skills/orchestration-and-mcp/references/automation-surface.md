@@ -2,27 +2,26 @@
 
 ## JSON-RPC methods
 
-- capabilities
-- catalogue
-- session.hello
-- media.list
-- media.import
-- media.proxy
-- media.scenes
-- media.beats
-- media.ducking
-- captions.import (SRT or WebVTT text in, cues out)
-- captions.export (a project's track out as SRT or WebVTT)
-- project.list
-- project.create
-- project.get
-- project.edit
-- project.undo
-- project.redo
-- project.export
+`capabilities` returns the authoritative list (`backend/app/automation.py`); this is
+how it groups. Methods that change nothing answer at `POST /api/rpc/read` for any
+local program (`backend/app/read_methods.py`):
+
+- capabilities, catalogue, devices.list, extensions.list
+- media.list, media.scenes, media.music, media.qc, media.cutdowns
+- project.get, project.list
 - job.result
-- job.status
-- job.cancel
+- speech.range, timeline.cuts
+
+Every other method is a write at `POST /api/rpc`: it needs the window key and, for an
+outside agent, the person's Allow in the window first.
+
+- session.hello
+- media.import, media.proxy, media.beats, media.transcribe, media.ducking
+- captions.import (SRT or WebVTT text in, cues out), captions.export (a project's track out as SRT or WebVTT)
+- project.create, project.edit, project.undo, project.redo, project.export, project.export_audio
+- job.status, job.cancel
+- timeline.frames
+- extensions.command
 
 ## Edit operations
 

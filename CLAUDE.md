@@ -48,8 +48,8 @@ Two invariants worth repeating here, because breaking them is silent:
 - Routers are mounted from the single tuple in `backend/app/features.py`. An
   include written inside that loop mounts once per module in it.
 
-Anything outside the interface drives formcut through `POST /api/rpc`: 21
-methods, optimistic concurrency on edits, jobs as handles. An external
+Anything outside the interface drives formcut through `POST /api/rpc`: the
+methods `capabilities` lists, optimistic concurrency on edits, jobs as handles. An external
 orchestrator registers a session and watches `/api/orchestration/events`; the
 engine's MCP server (`backend/app/agent_mcp.py`, run as `formcut-engine --mcp`,
 or from a checkout as `./formcut mcp`) is that surface packaged as 34 MCP tools
@@ -71,12 +71,14 @@ path.
 Claude Code, and `.agents/skills/formcut-mcp` mirrors the skill for them.
 `./formcut agents install` sets all three clients up for the user account from
 any folder, and `./formcut agents status` says what it found. After changing the
-MCP tools, run `./formcut agents sync` so the tool reference and the mirror
-follow; `./formcut agents sync --check` fails while they drift, and
+MCP tools, run `./formcut agents sync` so the tool reference, the mirror and
+`agents/manifest.json` (what formcut offers agents: its tools, which only read,
+which ask first, and its skills; the family's spec reads it) follow;
+`./formcut agents sync --check` fails while they drift, and
 `setup/preflight.py` runs it before a release.
 
 The reasoning behind a change belongs in its commit message, and releases, with
-their notes, are on formcompiler's release page (github.com/nodemode-ai/formcompiler/releases). The repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
+their notes, are on this repository's Releases page (github.com/nodemode-dev/formcut/releases), where nodemode-dev/formcompiler opens each draft. The repository carries the readme, this guide, the wiki source under `.docs/wiki/`,
 the project skills under `.claude/skills/` and code. Licences for assets and
 dependencies are in `.docs/wiki/Licences.md`.
 

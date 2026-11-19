@@ -13,7 +13,7 @@ Run for every added, renamed, removed or changed tool.
 - [ ] `README.md`, the MCP server section: the tool count and the list of names.
 - [ ] `../../mcp-workflows/references/tools.md` in this pack: regenerate it with `python setup/mcp_tool_reference.py`, never by hand, so names, limits and defaults match exactly.
 - [ ] The workflows in `../../mcp-workflows/SUB-SKILL.md`, if a tool they use changed.
-- [ ] formcut.studio: `mcp_tools` in its `frontend/src/site/facts.json`, the count the site shows.
+- [ ] `agents/manifest.json`: written by `./formcut agents sync` (run it after the tools change, with the mirror of this pack); the family spec reads the tool count from it, so nothing about the count is edited by hand on the site.
 
 **Checks**
 
