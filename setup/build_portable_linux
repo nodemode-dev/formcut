@@ -2,7 +2,7 @@
 # Builds a self-contained portable formcut folder for Linux: PyInstaller
 # onedir engine + built frontend + a launcher that parses the engine's bound
 # port and opens the browser. ffmpeg is checked for, never bundled: it comes
-# from the formai-binaries release (formcut-binaries before the rename) or from PATH.
+# from the formai-binaries release or from PATH.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=formcut-portable

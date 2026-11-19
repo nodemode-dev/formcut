@@ -2,6 +2,11 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · comments in the build scripts name the release without history
+
+- **What was wrong.** Earlier on this branch `setup/build_release` and `setup/build_portable_linux` gained comment text saying that formcut-binaries is the older name of formai-binaries. The two comments are back to the shape they had on main with only the new name in them.
+- **Where it is said instead.** Builds made before the rename use `formcut-binaries`, which keeps working; the docstrings of `ffmpeg_fetch.py` and `setup/bundle_ffmpeg.py`, `.docs/wiki/Packaging.md` and `src-tauri/ffmpeg/README.md` say so, and the entries below record why.
+
 ## Unreleased · the ffmpeg download moves on from an address whose bytes do not match the record
 
 - **What was wrong.** The fallback below moved to the second address only when the first did not answer. An address that answered with bytes the SHA-256 record refuses (a changed file, a page where the archive should be, a truncated tarball) stopped the fetch with the first address's error, and the second address was never asked. FormDAM's fetch already tried the second address in that case; formcut now does the same.
