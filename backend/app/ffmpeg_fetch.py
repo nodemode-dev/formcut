@@ -5,7 +5,8 @@ release, tried first, and at its older name, formcut-binaries, second, so a
 build made before the rename keeps working. Nothing in an archive is trusted: every file ffmpeg-licence.json
 records for this machine, a record formcut carries, has to be in the archive
 with that SHA-256 before any of it is placed in the per-person folder, and one
-that is missing or different stops the fetch with nothing installed. An ffmpeg
+that is missing or different sends the fetch to the next address with nothing
+installed, and when no address has a matching archive it stops. An ffmpeg
 a person already has, on PATH or placed by hand, is never replaced.
 """
 
@@ -101,8 +102,13 @@ def _download(url: str, path: Path, report, cancelled) -> None:
                     report(0.8 * done / total)
 
 
-def _download_first(urls: list[str], path: Path, report, cancelled) -> str:
-    """Download from the first address that answers and return it; each failure moves on to the next."""
+def _fetch_first(urls: list[str], path: Path, report, cancelled, place) -> tuple[str, int]:
+    """Download and place from the first address whose archive matches the record; return it and the file count.
+
+    An address that does not answer, or answers with bytes the record refuses,
+    moves on to the next with nothing installed; when none works the error names
+    each address and why it failed.
+    """
     import httpx
 
     failures = []
@@ -113,8 +119,11 @@ def _download_first(urls: list[str], path: Path, report, cancelled) -> str:
             raise
         except (httpx.HTTPError, OSError) as error:
             failures.append(f"{url} ({error})")
-        else:
-            return url
+            continue
+        try:
+            return url, place(path)
+        except (ValueError, tarfile.TarError) as error:
+            failures.append(f"{url} ({error})")
     raise OSError("ffmpeg could not be downloaded from " + "; ".join(failures))
 
 
@@ -172,8 +181,7 @@ def fetch(report, cancelled) -> dict:
     urls, folder = source(data, triple), tools.user_ffmpeg_dir()
     with tempfile.TemporaryDirectory() as scratch:
         archive = Path(scratch) / "ffmpeg.tar.gz"
-        url = _download_first(urls, archive, report, cancelled)
-        count = install(archive, files, folder)
+        url, count = _fetch_first(urls, archive, report, cancelled, lambda path: install(path, files, folder))
     (folder / "ffmpeg-licence.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
     getattr(tools.have, "cache_clear", lambda: None)()
     adopted = tools.prefer_bundled()

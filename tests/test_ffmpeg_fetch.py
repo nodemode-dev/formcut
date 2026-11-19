@@ -244,9 +244,12 @@ def releases(monkeypatch, tmp_path):
     monkeypatch.setattr(tools, "user_ffmpeg_dir", lambda: folder)
     monkeypatch.setattr(tools, "prefer_bundled", lambda: folder)
 
-    def publish(where: str, files: dict[str, bytes]) -> None:
+    def publish(where: str, files: dict[str, bytes] | bytes) -> None:
         release = served / where / "ffmpeg-7.1.5-2"
         release.mkdir(parents=True)
+        if isinstance(files, bytes):
+            (release / f"ffmpeg-lgpl-7.1.5-2-{TRIPLE}.tar.gz").write_bytes(files)
+            return
         archive(release, files).rename(release / f"ffmpeg-lgpl-7.1.5-2-{TRIPLE}.tar.gz")
 
     yield publish, folder, base, asked
@@ -273,11 +276,56 @@ def test_the_new_address_is_used_when_it_answers(releases):
     assert not [path for path in asked if path.startswith("/old/")]
 
 
-def test_a_changed_file_from_the_old_address_is_still_refused(releases):
-    publish, folder, _, _ = releases
-    publish("old", {**FILES, f"ffmpeg-{TRIPLE}": b"something else"})
-    with pytest.raises(ValueError, match="does not match"):
+CHANGED = {**FILES, f"ffmpeg-{TRIPLE}": b"something else"}
+
+
+def test_a_changed_file_from_the_only_address_that_answers_is_still_refused(releases):
+    publish, folder, base, _ = releases
+    publish("old", CHANGED)
+    with pytest.raises(OSError, match="does not match") as raised:
         _fetch()
+    assert f"{base}/new/" in str(raised.value) and f"{base}/old/" in str(raised.value)
+    assert not folder.exists()
+
+
+def test_the_old_address_is_used_when_the_new_one_answers_with_a_changed_file(releases):
+    publish, folder, base, asked = releases
+    publish("new", CHANGED)
+    publish("old", FILES)
+    result = _fetch()
+    assert result["source"].startswith(f"{base}/old/") and result["files"] == 3
+    assert [path.split("/")[1] for path in asked] == ["new", "old"]
+    assert all((folder / name).read_bytes() == data for name, data in FILES.items())
+
+
+def test_the_old_address_is_used_when_the_new_one_answers_with_something_that_is_no_archive(releases):
+    publish, folder, base, _ = releases
+    publish("new", b"<html>moved</html>")
+    publish("old", FILES)
+    assert _fetch()["source"].startswith(f"{base}/old/")
+    assert (folder / f"ffmpeg-{TRIPLE}").read_bytes() == FILES[f"ffmpeg-{TRIPLE}"]
+
+
+def test_two_changed_archives_install_nothing_and_name_both_with_the_reason(releases):
+    publish, folder, base, _ = releases
+    publish("new", CHANGED)
+    publish("old", {**FILES, f"ffprobe-{TRIPLE}": b"another change"})
+    with pytest.raises(OSError, match="could not be downloaded") as raised:
+        _fetch()
+    message = str(raised.value)
+    assert f"{base}/new/" in message and f"{base}/old/" in message
+    assert message.count("does not match formcut's record") == 2
+    assert not folder.exists()
+
+
+def test_a_changed_file_at_the_first_address_does_not_stop_a_missing_one_at_the_second(releases):
+    publish, folder, base, _ = releases
+    publish("new", CHANGED)
+    with pytest.raises(OSError) as raised:
+        _fetch()
+    message = str(raised.value)
+    assert "does not match" in message and "404" in message
+    assert f"{base}/new/" in message and f"{base}/old/" in message
     assert not folder.exists()
 
 
@@ -298,6 +346,26 @@ def test_a_named_mirror_stays_the_only_source(releases, monkeypatch):
     assert asked and all(path.startswith("/mirror/") for path in asked)
 
 
+def test_a_named_mirror_with_a_changed_file_does_not_fall_back_to_the_release_addresses(releases, monkeypatch):
+    publish, folder, base, asked = releases
+    publish("mirror", CHANGED)
+    publish("new", FILES)
+    publish("old", FILES)
+    monkeypatch.setenv("FORMCUT_FFMPEG_RELEASE", f"{base}/mirror/ffmpeg-7.1.5-2")
+    with pytest.raises(OSError, match="does not match"):
+        _fetch()
+    assert asked and all(path.startswith("/mirror/") for path in asked)
+    assert not folder.exists()
+
+
+def test_a_named_mirror_with_the_right_file_installs(releases, monkeypatch):
+    publish, _, base, asked = releases
+    publish("mirror", FILES)
+    monkeypatch.setenv("FORMCUT_FFMPEG_RELEASE", f"{base}/mirror/ffmpeg-7.1.5-2")
+    assert _fetch()["source"].startswith(f"{base}/mirror/")
+    assert all(path.startswith("/mirror/") for path in asked)
+
+
 def test_a_cancel_is_not_taken_for_a_failed_address(monkeypatch, tmp_path):
     tried = []
 
@@ -307,5 +375,20 @@ def test_a_cancel_is_not_taken_for_a_failed_address(monkeypatch, tmp_path):
 
     monkeypatch.setattr(ffmpeg_fetch, "_download", cancelled)
     with pytest.raises(InterruptedError):
-        ffmpeg_fetch._download_first(["https://first", "https://second"], tmp_path / "a", lambda fraction: None, lambda: True)
+        ffmpeg_fetch._fetch_first(["https://first", "https://second"], tmp_path / "a", lambda fraction: None, lambda: True, lambda path: 0)
+    assert tried == ["https://first"]
+
+
+def test_an_address_that_fails_to_place_a_good_download_for_a_local_reason_is_not_skipped(monkeypatch, tmp_path):
+    tried = []
+
+    def downloaded(url, path, report, cancelled):
+        tried.append(url)
+
+    def full(path):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(ffmpeg_fetch, "_download", downloaded)
+    with pytest.raises(OSError, match="No space left"):
+        ffmpeg_fetch._fetch_first(["https://first", "https://second"], tmp_path / "a", lambda fraction: None, lambda: False, full)
     assert tried == ["https://first"]

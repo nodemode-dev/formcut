@@ -4,7 +4,8 @@
 The macOS and Windows apps carry ffmpeg from the formai-binaries release (tried
 first, then its older name, formcut-binaries, for builds made before the
 rename), every file checked against src-tauri/binaries/ffmpeg-licence.json by the same code the
-app's first-run fetch uses; a file that differs fails the build. The programs are
+app's first-run fetch uses; an address whose build differs from the record is
+passed over for the next, and when none matches the build fails. The programs are
 staged under their plain names, so an installed app, which cannot be written to,
 needs no links. A target with no published build, or a release that cannot be
 reached, is noted and nothing is staged: that app fetches ffmpeg on first run.
@@ -24,6 +25,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+import tarfile
 import tempfile
 import urllib.error
 import urllib.request
@@ -60,17 +62,27 @@ def main() -> int:
         return 0
     with tempfile.TemporaryDirectory() as scratch:
         archive = Path(scratch) / "ffmpeg.tar.gz"
+        failures, refused = [], False
         for url in ffmpeg_fetch.source(record, triple):
             try:
                 urllib.request.urlretrieve(url, archive)  # noqa: S310 - the record's own release address
             except (urllib.error.HTTPError, OSError) as error:
                 print(f"::notice::{url} is not published ({error})")
-            else:
-                break
+                failures.append(f"{url} ({error})")
+                continue
+            try:
+                count = ffmpeg_fetch.install(archive, files, STAGE)
+            except (ValueError, tarfile.TarError) as error:
+                print(f"::notice::{url} has a build that does not match the record ({error})")
+                failures.append(f"{url} ({error})")
+                refused = True
+                continue
+            break
         else:
+            if refused:
+                raise ValueError("no release address has a build that matches the record: " + "; ".join(failures))
             print("::notice::no release address has this build; this app fetches ffmpeg on first run")
             return 0
-        count = ffmpeg_fetch.install(archive, files, STAGE)
     suffix = ".exe" if triple.endswith("windows-msvc") else ""
     for program in ("ffmpeg", "ffprobe"):
         (STAGE / f"{program}-{triple}{suffix}").rename(STAGE / f"{program}{suffix}")
