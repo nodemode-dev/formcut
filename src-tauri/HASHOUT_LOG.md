@@ -2,7 +2,7 @@
 
 Reasoning behind the shell's startup, newest first.
 
-## Unreleased · the shell hands the window its key
+## 2.16.0 · the shell hands the window its key
 
 - **The change.** The engine is spawned with `FORMCUT_WINDOW_KEY_STDOUT=1` (main.rs). `supervise` (engine_lifecycle.rs) keeps a second buffer for stdout only and takes the key from a whole line `formcut-window-key: <32 or more of A-Z a-z 0-9 _ ->` there. The address is read as before (stdout or stderr, then the health check); once it is healthy the port and the moment are kept. The window is built only when both the address and the key are known, with one `initialization_script` that sets `window.__FORMCUT_WINDOW_KEY` when `location.origin` is the engine's own `http://127.0.0.1:<port>` (tauri 2.11.5's `WebviewWindowBuilder::initialization_script(impl Into<String>)`).
 - **How long it waits.** Before the address: the 40 s that main already had, unchanged. After the address: 10 s for the key, counted from the moment the address was found healthy; when they run out the loop ends and takes the existing failure path ("did not hand the window its key") with no window. An engine that exits, errors or closes its output takes the existing path at once. The failure path is the code after the loop, so it runs once.
