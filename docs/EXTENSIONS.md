@@ -23,7 +23,7 @@ Extension pages and their consent dialog live in the window, so `extensions.list
 ## host.hello
 
 ```json
-{ "product": "formcut", "app": "formcut", "appVersion": "2.14.0", "api": "1",
+{ "product": "formcut", "app": "formcut", "appVersion": "the running formcut version", "api": "1",
   "extension": { "id": "beat-markers", "version": "0.1.0", "source": "development" },
   "permissions": ["document"], "theme": { "mode": "dark", "tokens": { "--bg": "#0a0a0a", "...": "..." } }, "locale": "en" }
 ```

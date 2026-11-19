@@ -123,8 +123,10 @@ the launchers export before starting. `.env` is ignored by git.
   rebuildable.
 - `app/orchestration.py` carries orchestration sessions, the operation log and
   the server-sent event stream that jobs publish to.
-- `mcp/` is a separate process: an MCP server over the engine, with its own
-  virtualenv because the MCP SDK and the engine's FastAPI disagree on starlette.
+- The MCP server is `app/agent_mcp.py`, a separate process over the engine's
+  HTTP RPC. `mcp/` holds the launcher for a checkout (`formcut_mcp.py`) and its
+  own virtualenv, because the MCP SDK and the engine's FastAPI disagree on
+  starlette.
 - `frontend/src/engine/audio-playback.ts` schedules the decoded mix and acts as
   the transport's clock source; `frontend/src/ui/clip-visuals.ts`,
   `track-keyframes.ts`, `accordion.ts`, `settings-popout.ts` and `appearance.ts` are the

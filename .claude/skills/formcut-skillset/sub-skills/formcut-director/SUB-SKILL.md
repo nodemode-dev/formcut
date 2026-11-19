@@ -10,7 +10,7 @@ Entry point for formcut work. Scope the request, load the specialists it needs, 
 
 ## Order of work
 
-1. **Locate it.** Decide which side the change lives on before writing anything: engine (`backend/app`), interface (`frontend/src`), shell (`src-tauri`), automation surface (`backend/app/automation.py` plus `mcp/`), or documentation. A change that appears to need both sides usually needs one plus an endpoint; say which.
+1. **Locate it.** Decide which side the change lives on before writing anything: engine (`backend/app`), interface (`frontend/src`), shell (`src-tauri`), automation surface (`backend/app/automation.py` plus `backend/app/agent_mcp.py`), or documentation. A change that appears to need both sides usually needs one plus an endpoint; say which.
 2. **Read the invariant that governs it.** The master body lists seven. Most defects in this codebase were a violated invariant, not a logic error: a colour that bypassed the tokens, a listener for an event the engine never emits, a second path that mutated a project, a cache keyed on the wrong thing.
 3. **Load the specialist.** `engine-architect`, `interface-architect`, `timeline-and-render` or `orchestration-and-mcp`. Read `build-discipline` before the first edit, not after the last.
 4. **Change the smallest region.** Hand-made single-region edits. No scripted rewrites of source, no reformatting a file you are visiting.
@@ -34,7 +34,7 @@ Entry point for formcut work. Scope the request, load the specialists it needs, 
 
 ## Questions worth asking before building
 
-- Does the engine already expose this? Eighty routes exist and three features in this project were built twice before someone checked.
+- Does the engine already expose this? Hundreds of routes exist (`engine-map.md` lists them) and three features in this project were built twice before someone checked.
 - Is this a cache key problem? Ask what the output depends on, not what the input was. Two defects here came from keying a cache on the project revision when the answer only depended on the audio, or on the media rather than the clip window.
-- Will this be visible in all 30 appearance profiles and 16 locales? If it introduces a colour or a string, the answer decides whether the change is finished.
+- Will this be visible in every appearance profile, AMOLED Black included, and in all 16 locales? If it introduces a colour or a string, the answer decides whether the change is finished.
 - Can it be verified without a real key, a real render or real hardware? If not, say so in the note rather than implying it passed.

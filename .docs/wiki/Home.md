@@ -7,6 +7,7 @@ formcut is a local video editor: a TypeScript interface, a Python engine that re
 - [Architecture](Architecture): how the pieces fit, and where a frame comes from
 - [Creator workflow](Creator-workflow): what you can do to a clip, in the order you would do it
 - [Automation](Automation): driving the editor from outside, over RPC or MCP
+- [Extensions](Extensions): loading form.ext extensions, and the contract formcut follows
 - [Translation](Translation): the sixteen languages, and adding or correcting one
 - [Packaging](Packaging): desktop and portable builds
 - [Models](Models): every open-weight model, its link, licence and loader
@@ -21,8 +22,8 @@ formcut is a local video editor: a TypeScript interface, a Python engine that re
 | `frontend/src/engine` | the document, its commands, history, persistence, timing and easing |
 | `frontend/src/ui` | panes, popouts and overlays |
 | `backend/app` | the renderer, the effect catalogue, media, jobs, automation and the model manager |
-| `mcp/` | the MCP server |
+| `mcp/` | the launcher for the MCP server (the server is `backend/app/agent_mcp.py`) |
 | `src-tauri/` | the desktop shell |
 | `.docs/wiki` | these pages |
 
-Every release is on the [Releases page](https://github.com/nodemode-ai/formcompiler/releases), with its downloads, checksums and the changes it carries.
+Every release is on the [Releases page](https://github.com/nodemode-dev/formcut/releases), with its downloads, checksums and the changes it carries.

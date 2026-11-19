@@ -84,10 +84,10 @@ installs as it is and which `setup/registry_entry.py` lists in the registry
 
 ## Appearance and layout
 
-Thirty-one appearance profiles live under Settings, Appearance: Studio, the
+The appearance profiles live under Settings, Appearance: Studio, the
 form family's profile shared with formvfx and formvis and the default since
-2.9.1, twenty-eight palettes generated from one ladder table, plus two
-behaviours that pick a palette (on every click, or every twenty seconds). Every
+2.9.1, AMOLED Black (true black panes for OLED screens), the palettes generated
+from one ladder table, plus two behaviours that pick a palette (on every click, or every twenty seconds). Every
 profile wears the same family chrome: panes with a near-black rim, tabs in a
 darker strip, the chosen tab as a raised pill, and the accent as a tint with a
 line on primary actions rather than a solid fill. The accent is separate and

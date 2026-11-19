@@ -113,17 +113,17 @@ FormCut loads extensions under the Form Extension Contract (API 1): install them
 - **Engine:** Python and FastAPI over FFmpeg's libraries, with WGSL device passes for effects and the CPU path kept as the reference.
 - **Interface:** vanilla TypeScript and Vite on one CSS token system, no UI framework and no icon dependency, in 16 languages.
 - **Automation:** JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, with optimistic concurrency on every edit.
-- **Tested:** 868 Python test functions under `tests/` plus a window test in `frontend/tests/`, run in CI on every push.
+- **Tested:** Python tests under `tests/` plus a window test in `frontend/tests/`, run in CI on every push.
 
 ## Download
 
 | Platform | Download | Release |
 |---|---|---|
-| macOS | [Download FormCut for macOS](https://formai.studio/get/formcut/macos) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
-| Windows | [Download FormCut for Windows](https://formai.studio/get/formcut/windows) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
-| Linux | [Download FormCut for Linux](https://formai.studio/get/formcut/linux) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
+| macOS | [Download FormCut for macOS](https://formai.studio/get/formcut/macos) | [FormCut releases](https://github.com/nodemode-dev/formcut/releases) |
+| Windows | [Download FormCut for Windows](https://formai.studio/get/formcut/windows) | [FormCut releases](https://github.com/nodemode-dev/formcut/releases) |
+| Linux | [Download FormCut for Linux](https://formai.studio/get/formcut/linux) | [FormCut releases](https://github.com/nodemode-dev/formcut/releases) |
 
-All FormCut builds are compiled and released from [FormCompiler](https://github.com/nodemode-dev/formcompiler); this repo holds the source.
+All FormCut builds are compiled by [FormCompiler](https://github.com/nodemode-dev/formcompiler) and released on this repo's Releases page; this repo also holds the source.
 
 **Updates:** FormCut does not update itself. Install [FormPortal](https://formai.studio/formportal/) and it keeps FormCut up to date, or download the new version from [formai.studio](https://formai.studio/formcut/download/).
 
@@ -131,7 +131,7 @@ All FormCut builds are compiled and released from [FormCompiler](https://github.
 
 Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
 
-**Requires:** Node 18+, Python 3.11+, and `ffmpeg` and `ffprobe` on PATH.
+**Requires:** Node 18+, Python 3.11+, and `ffmpeg` and `ffprobe`. FormCut uses the ones on PATH; when it finds none, it downloads its own checked LGPL build on first run (`FORMCUT_FFMPEG_AUTO=0` turns that off).
 
 ```sh
 git clone git@github.com:nodemode-dev/formcut.git
