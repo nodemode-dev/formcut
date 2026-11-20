@@ -2,6 +2,13 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · the engine starts when it has no output streams
+
+- **Why.** A Windows engine of the family, built without a console, stopped at start because `sys.stdout` was `None`. formcut's entry (`desktop_entry.py`, the script `freeze.py` freezes) had the same weakness.
+- **What.** At the very top of `desktop_entry.py`, before any import from the app, a `None` `sys.stdin`, `sys.stdout` or `sys.stderr` is replaced by the null device, as FormWeb's entry does.
+- **Checked on Linux.** `python desktop_entry.py >&- 2>&-` on its own port and data folder: before the change the process ended at start and nothing answered; after it `/api/health` answered `{"status":"ok"}` and the process stayed up. Started normally it still wrote its log, with the address line. A test holds the first case.
+- **Not run.** Windows, and a frozen engine: the case the tester met was not reproduced on its own system.
+
 ## Unreleased · the family's finder for the agent programs, and Antigravity as the fourth
 
 - **Why.** An app started from the desktop has a short PATH, and formcut looked for Claude Code, Codex and Cursor with a bare `which` in four places, each a little differently. The family now has one file that every engine copies unchanged, and Google's Antigravity (`agy`) is offered beside the other three.

@@ -90,6 +90,34 @@ def _drive(command, env):
     return asyncio.run(run())
 
 
+def test_the_engine_starts_when_it_has_no_output_streams(tmp_path):
+    import time
+    import urllib.request
+
+    if sys.platform == "win32":
+        pytest.skip("the streams are closed the POSIX way")
+    env = {**os.environ, "FORMCUT_DATA_DIR": str(tmp_path)}
+    env.pop("FORMCUT_ENGINE", None)
+    engine = subprocess.Popen(
+        [sys.executable, str(ENTRY)], cwd=ROOT / "backend", env=env, stdin=subprocess.DEVNULL, preexec_fn=lambda: (os.close(1), os.close(2))
+    )
+    try:
+        answer, end = None, time.monotonic() + 90
+        while answer is None and time.monotonic() < end and engine.poll() is None:
+            time.sleep(0.25)
+            try:
+                url = json.loads((tmp_path / "engine.json").read_text())["url"]
+                with urllib.request.urlopen(url + "/api/health", timeout=5) as told:
+                    answer = json.loads(told.read())
+            except (OSError, ValueError):
+                continue
+        assert engine.poll() is None, "the engine ended at start"
+        assert answer and answer["status"] == "ok"
+    finally:
+        engine.terminate()
+        engine.wait(timeout=30)
+
+
 def test_an_agent_drives_the_running_engine(tmp_path):
     pytest.importorskip("mcp")
     env = {**os.environ, "FORMCUT_DATA_DIR": str(tmp_path)}
