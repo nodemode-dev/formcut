@@ -2,6 +2,10 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.19.0 · the panel is module 2.2.1
+
+- **The change.** Every file of `frontend/src/dock/` copied unchanged from FormVis commit 23b01889, `MANIFEST.json` included; `DOCK_VERSION` in `setup/agents.py` and the version `tests/test_dock_module.py` expects are 2.2.1. Only `CONTRACT.md` and `strings.ts` differ from 2.2.0: the guide's two sentences for a computer with Claude Code now say that Codex, Cursor and Antigravity each get a button when they are on the computer. formcut does not translate the panel's sentences, so there was nothing more to translate. `tests/test_dock_module.py`, `tests/test_dock_tabs.py` and `setup/agents.py sync --check` pass.
+
 ## 2.19.0 · the agent sentence names all four programs
 
 - **The change.** The one sentence in the window that lists the agent programs (`conn.agents.hint` in Settings, Connections) now reads "Claude Code, Codex, Cursor, Antigravity or any MCP client", in the order the family uses, in `en.json`, `es.json`, `de.json` and the nine languages of `language-pack.ts`, whose row is keyed by the English sentence and so changed with it. `tests/test_runtime_locales.py` passes. No native speaker has read the twelve translations.
