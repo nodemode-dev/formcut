@@ -98,7 +98,7 @@ FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC 
 ```sh
 ./formcut mcp            # MCP server on stdio, starts the engine if nothing answers
 ./formcut claude         # Claude Code here, already connected to the formcut tools
-./formcut agents status  # show how Claude Code, Codex and Cursor are set up
+./formcut agents status  # show how Claude Code, Codex, Cursor and Antigravity are set up
 ```
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).

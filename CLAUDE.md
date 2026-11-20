@@ -64,7 +64,7 @@ from FormVis and never edited here; `agents sync --check` fails when a file
 differs from its `MANIFEST.json`), wired by `frontend/src/dock-adapter.ts` and
 `frontend/src/styles/dock-tokens.css`. Its tabs live in
 `backend/app/dock_tabs.py`: a plain shell tab has no tab token and is asked
-like any outside program, each Claude Code, Codex or Cursor tab has its own,
+like any outside program, each Claude Code, Codex, Cursor or Antigravity tab has its own,
 is not asked, and is refused under Blocked like any other agent.
 A new write route must need the key or be named in
 `security.OPEN`; tests/test_window_key.py fails otherwise. ANA
@@ -76,8 +76,9 @@ path.
 `.mcp.json` (Claude Code), `.codex/config.toml` (Codex) and `.cursor/mcp.json`
 (Cursor) connect this checkout; `AGENTS.md` is the brief for agents other than
 Claude Code, and `.agents/skills/formcut-mcp` mirrors the skill for them.
-`./formcut agents install` sets all three clients up for the user account from
-any folder, and `./formcut agents status` says what it found. After changing the
+`./formcut agents install` sets all four clients up for the user account (Claude
+Code, Codex, Cursor and Antigravity, whose file is
+`~/.gemini/config/mcp_config.json`) from any folder, and `./formcut agents status` says what it found. After changing the
 MCP tools, run `./formcut agents sync` so the tool reference, the mirror and
 `agents/manifest.json` (what formcut offers agents: its tools, which only read,
 which ask first, and its skills; the family's spec reads it) follow;

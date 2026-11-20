@@ -1,8 +1,8 @@
 """Terminal tabs by id, for the family's shared dock.
 
 A tab is a program on a pseudo-terminal that outlives the socket that shows
-it: a plain shell, or Claude Code, Codex or Cursor's agent when the program is
-found on this computer. The window opens, lists, restarts and closes tabs over
+it: a plain shell, or Claude Code, Codex, Cursor's agent or Antigravity when the
+program is found on this computer. The window opens, lists, restarts and closes tabs over
 routes under /api/terminal/ (all of them the window's only, and closed to a
 paired device), and attaches to one with a socket that replays the tab's
 scrollback and then relays typed JSON frames both ways.
