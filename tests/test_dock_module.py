@@ -61,7 +61,11 @@ def test_the_manifest_says_the_dock_is_there_with_the_tabs_the_adapter_offers():
 def test_the_storage_key_is_the_docks_alone_and_the_boot_script_reserves_from_it():
     adapter = (SOURCE / "dock-adapter.ts").read_text(encoding="utf-8")
     assert 'DOCK_KEY = "formcut.dock"' in adapter and "legacy: []" in adapter
-    others = [path for path in SOURCE.rglob("*.ts") if DOCK not in path.parents and path.name != "dock-adapter.ts" and '"formcut.dock"' in path.read_text(encoding="utf-8")]
+    others = [
+        path
+        for path in SOURCE.rglob("*.ts")
+        if DOCK not in path.parents and path.name != "dock-adapter.ts" and '"formcut.dock"' in path.read_text(encoding="utf-8")
+    ]
     assert others == []
     boot = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
     assert 'localStorage.getItem("formcut.dock")' in boot

@@ -46,7 +46,11 @@ def dock_problems(folder: Path = DOCK_DIR) -> list[str]:
     if not listing.is_file():
         return ["frontend/src/dock/MANIFEST.json is missing"]
     manifest = json.loads(listing.read_text(encoding="utf-8"))
-    problems = [] if manifest.get("version") == DOCK_VERSION else [f"MANIFEST.json names module {manifest.get('version')}, expected {DOCK_VERSION}"]
+    problems = (
+        []
+        if manifest.get("version") == DOCK_VERSION
+        else [f"MANIFEST.json names module {manifest.get('version')}, expected {DOCK_VERSION}"]
+    )
     wanted = manifest.get("files", {})
     found = {path.name: path for path in folder.iterdir() if path.is_file() and path.name != "MANIFEST.json"}
     for name in sorted(set(wanted) | set(found)):

@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · the lines the format step would rewrite
+
+- **Why.** The workflow's format step (`ruff format --check backend/app mcp setup tests`) comes after the lint step, so nobody had seen it on this branch. Run here it named nine files: the finder, answered in `ruff.toml`, and eight with a line longer than the 140 columns the configuration allows or a literal laid out by hand.
+- **What.** Each place is written as the formatter writes it, by hand, one place at a time: the refusal in `automation.py` (`rpc_read`), the `READ_METHODS` set in `read_methods.py` (one name per line), `dock_problems` in `setup/agents.py`, and five places in `tests/conftest.py`, `test_dock_module.py` and `test_window_key.py`. `agent_access.py` and `test_agent_manifest.py` had theirs in the commit before. No name, value or order changed.
+- **Checked on Linux, ruff 0.16.8.** Before: 9 files would be reformatted. After: 285 files already formatted, and the lint step still clean.
+
 ## Unreleased · the six lint findings outside the finder
 
 - **Why.** With the finder answered in `ruff.toml`, the lint step still named six places in code written on this branch, which had never been through ruff.

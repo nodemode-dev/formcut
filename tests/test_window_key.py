@@ -89,7 +89,10 @@ def test_every_write_route_needs_the_window_key(bare):
             r = bare.request(method, url, json={}, headers=headers)
             if r.status_code != 403 or r.text not in REFUSED:
                 answered.append(f"{method} {path} {r.status_code}")
-    assert not answered, "write routes that answer without the window key (add the key, or name the path in security.OPEN with its caller): " + ", ".join(answered)
+    assert not answered, (
+        "write routes that answer without the window key (add the key, or name the path in security.OPEN with its caller): "
+        + ", ".join(answered)
+    )
 
 
 def test_the_window_writes_with_the_key(window):
@@ -139,7 +142,9 @@ def test_the_window_queue_is_read_with_the_key_only(bare, window):
 def test_reads_go_without_the_key_and_writes_are_refused_there(bare):
     listed = bare.post("/api/rpc/read", headers=LOCAL, json={"jsonrpc": "2.0", "id": 1, "method": "project.list"})
     assert isinstance(listed.json()["result"], list)
-    refused = bare.post("/api/rpc/read", headers=LOCAL, json={"jsonrpc": "2.0", "id": 1, "method": "project.create", "params": {"title": "no"}})
+    refused = bare.post(
+        "/api/rpc/read", headers=LOCAL, json={"jsonrpc": "2.0", "id": 1, "method": "project.create", "params": {"title": "no"}}
+    )
     assert refused.json()["error"]["code"] == -32601
 
 

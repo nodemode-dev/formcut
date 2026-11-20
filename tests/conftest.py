@@ -63,12 +63,18 @@ def only_stand_in_agent_programs(monkeypatch):
 
     real = agent_lookup.candidates
     monkeypatch.setattr(agent_lookup, "system_folders", lambda platform=None: [])
-    monkeypatch.setattr(agent_lookup, "candidates", lambda *given, **named: [place for place in real(*given, **named) if not place.is_relative_to(_REAL_HOME)])
+    monkeypatch.setattr(
+        agent_lookup,
+        "candidates",
+        lambda *given, **named: [place for place in real(*given, **named) if not place.is_relative_to(_REAL_HOME)],
+    )
     agent_lookup.forget()
 
 
 def pytest_terminal_summary(terminalreporter):
-    terminalreporter.write_line(f"agent program stand-ins started {len(_agent_calls)} time(s): " + (", ".join(sorted(set(_agent_calls))) or "none"))
+    terminalreporter.write_line(
+        f"agent program stand-ins started {len(_agent_calls)} time(s): " + (", ".join(sorted(set(_agent_calls))) or "none")
+    )
 
 
 def window_headers() -> dict:

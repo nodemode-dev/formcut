@@ -1061,7 +1061,11 @@ async def http_rpc_read(request: Request):
         return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Invalid JSON"}}
     if not isinstance(message, dict) or message.get("method") not in READ_METHODS:
         request_id = message.get("id") if isinstance(message, dict) else None
-        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": "not a read method: ask with POST /api/agent-access/request first and use POST /api/rpc"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": -32601, "message": "not a read method: ask with POST /api/agent-access/request first and use POST /api/rpc"},
+        }
     if str(message.get("method", "")).startswith(OFF_LOOP):
         return await run_in_threadpool(rpc, message)
     return rpc(message)
