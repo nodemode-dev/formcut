@@ -2,6 +2,13 @@
 
 Reasoning behind the shell's startup, newest first.
 
+## Unreleased · the engine is told who started it, and a failed start is said before the splash closes
+
+- **The process id.** The engine is spawned with `FORMCUT_SHELL_PID` set to the shell's own process id (main.rs, one `.env` line beside its two twins). From this version a packaged engine that does not get it takes itself for one started alone, opens the app and serves nothing (`backend/desktop_entry.py`), so the app must set it; with it the engine also leaves within about two seconds of the shell ending, however the shell ended, and records the shell in `engine.owner` so the next start can tell a leftover engine from a live one. The 2.17.0 shell set no such variable, so there was none to keep.
+- **The order.** After the loop in `supervise` (engine_lifecycle.rs) the splash was closed and then the failure was said. When no editor window exists yet the splash is the last window, and closing the last window can end the app before the dialog is seen, which is the silent exit a tester met in another app of the family. The dialog is now shown first and the splash is closed when it returns. Two statements in another order; when the editor window exists the splash is already gone and the second statement does nothing, as before.
+- **Not compiled, not run.** No WebKit here, so the shell was not built on any system; `cargo fmt --check` is clean. Whether the dialog is in front of the splash on each system has not been seen.
+- **Held.** The rest of the family's shell side: the Windows job object (`win_job.rs` needs a `std::process::Child`, and this shell starts its engine through tauri-plugin-shell), `engine_start.rs` with the failure text that carries the engine's last lines and the log's path, and a sentence of its own for exit code 2 (a second start now reads "The local engine stopped (exit Some(2))").
+
 ## 2.16.0 · the shell hands the window its key
 
 - **The change.** The engine is spawned with `FORMCUT_WINDOW_KEY_STDOUT=1` (main.rs). `supervise` (engine_lifecycle.rs) keeps a second buffer for stdout only and takes the key from a whole line `formcut-window-key: <32 or more of A-Z a-z 0-9 _ ->` there. The address is read as before (stdout or stderr, then the health check); once it is healthy the port and the moment are kept. The window is built only when both the address and the key are known, with one `initialization_script` that sets `window.__FORMCUT_WINDOW_KEY` when `location.origin` is the engine's own `http://127.0.0.1:<port>` (tauri 2.11.5's `WebviewWindowBuilder::initialization_script(impl Into<String>)`).
