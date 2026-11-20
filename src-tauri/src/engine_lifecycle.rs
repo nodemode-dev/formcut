@@ -3,8 +3,29 @@ use std::net::{SocketAddr, TcpStream};
 use std::time::{Duration, Instant};
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_shell::process::CommandEvent;
+
+use crate::engine_start::{self, Failure, Tail, Wait};
+
+pub fn failed(handle: &tauri::AppHandle, failure: Failure, tail: &Tail) {
+    let log = if failure.ran() {
+        engine_start::engine_log()
+    } else {
+        None
+    };
+    let text = engine_start::message(&failure, &tail.lines(), log.as_deref());
+    eprintln!("formcut: {text}");
+    let _ = handle
+        .dialog()
+        .message(text)
+        .title(engine_start::APP)
+        .kind(MessageDialogKind::Error)
+        .blocking_show();
+    crate::reveal::close_splash(handle);
+    crate::kill_backend(handle);
+    handle.exit(1);
+}
 
 fn healthy(port: u16) -> bool {
     let address = SocketAddr::from(([127, 0, 0, 1], port));
@@ -28,7 +49,7 @@ pub async fn supervise(
     handle: tauri::AppHandle,
     mut rx: tauri::async_runtime::Receiver<CommandEvent>,
 ) {
-    let deadline = Instant::now() + Duration::from_secs(40);
+    let deadline = Instant::now() + Wait::Address.limit();
     let pattern = regex::Regex::new(r"http://127\.0\.0\.1:(\d+)").expect("static port pattern");
     let mut ready = false;
     let key_pattern = regex::Regex::new(r"formcut-window-key: ([A-Za-z0-9_-]{32,})\r?\n")
@@ -37,25 +58,28 @@ pub async fn supervise(
     let mut address: Option<(u16, Instant)> = None;
     let mut pending = String::new();
     let mut stdout_pending = String::new();
-    let mut failure = String::from("The local engine did not become ready within 40 seconds.");
+    let mut failure = Failure::Stopped(None);
+    let mut tail = Tail::default();
+    let mut stopped: Option<Instant> = None;
     loop {
-        let event = if ready {
-            rx.recv().await
-        } else {
-            let until = match address {
-                Some((_, at)) => at + Duration::from_secs(10),
-                None => deadline,
-            };
-            let remaining = until.saturating_duration_since(Instant::now());
-            match tokio::time::timeout(remaining, rx.recv()).await {
-                Ok(event) => event,
-                Err(_) => {
-                    if address.is_some() {
-                        failure = String::from(
-                            "The local engine started but did not hand the window its key.",
-                        );
+        let limit = match (stopped, address) {
+            (Some(at), _) => Some((at + engine_start::EXIT_WAIT, None)),
+            (None, _) if ready => None,
+            (None, Some((_, at))) => Some((at + Wait::Key.limit(), Some(Wait::Key))),
+            (None, None) => Some((deadline, Some(Wait::Address))),
+        };
+        let event = match limit {
+            None => rx.recv().await,
+            Some((until, wait)) => {
+                let remaining = until.saturating_duration_since(Instant::now());
+                match tokio::time::timeout(remaining, rx.recv()).await {
+                    Ok(event) => event,
+                    Err(_) => {
+                        if let Some(wait) = wait {
+                            failure = Failure::TimedOut(wait);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         };
@@ -65,7 +89,10 @@ pub async fn supervise(
         let from_stdout = matches!(&event, CommandEvent::Stdout(_));
         match event {
             CommandEvent::Stdout(bytes) | CommandEvent::Stderr(bytes) => {
-                if ready {
+                for line in String::from_utf8_lossy(&bytes).lines() {
+                    tail.push(line);
+                }
+                if ready || stopped.is_some() {
                     continue;
                 }
                 if from_stdout && key.is_none() {
@@ -134,7 +161,7 @@ pub async fn supervise(
                             stdout_pending.clear();
                         }
                         Err(error) => {
-                            failure = format!("The editor window could not open: {error}");
+                            failure = Failure::Window(error.to_string());
                             break;
                         }
                     }
@@ -144,22 +171,22 @@ pub async fn supervise(
                 }
             }
             CommandEvent::Terminated(payload) => {
-                failure = format!(
-                    "The local engine stopped (exit {:?}). Reopen FormCut to restart it.",
-                    payload.code
-                );
-                break;
+                failure = Failure::Stopped(payload.code);
+                stopped = Some(Instant::now());
             }
-            CommandEvent::Error(error) => {
-                failure = error;
+            CommandEvent::Error(error) if stopped.is_none() => {
+                failure = Failure::Output(error);
                 break;
             }
             _ => {}
         }
     }
+    if ready {
+        failure = failure.after_the_window();
+    }
     if !ready || handle.get_webview_window("main").is_some() {
-        handle.dialog().message(failure).blocking_show();
-        crate::reveal::close_splash(&handle);
+        failed(&handle, failure, &tail);
+        return;
     }
     crate::kill_backend(&handle);
     handle.exit(1);

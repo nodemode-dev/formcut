@@ -1,6 +1,6 @@
 [package]
 name = "formcut"
-version = "2.18.0"
+version = "2.19.0"
 edition = "2021"
 
 [build-dependencies]
@@ -16,6 +16,9 @@ tokio = { version = "1", features = ["time"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWindow", "NSView", "NSResponder", "objc2-core-foundation", "NSColor"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [profile.release]
 strip = false

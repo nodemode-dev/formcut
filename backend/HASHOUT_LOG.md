@@ -2,6 +2,13 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.19.0 · a Windows engine is frozen with no console window (`freeze.py`, `setup/build_windows_portable.bat`)
+
+- **The change.** On Windows `freeze.py` gives PyInstaller `--noconsole` unless `FORMCUT_ENGINE_WINDOWED=0`, the family's switch with its default turned round (the owner's choice: every app's Windows engine runs without a console, as FormWeb's does). The app's engine is started by the shell, which reads its output through pipes, so a console window only showed an empty black box beside the editor that ended the engine when closed.
+- **Why it is safe to print.** `desktop_entry.py` already puts `os.devnull` in place of a missing `sys.stdin`, `sys.stdout` or `sys.stderr` before anything else runs (the entry "the engine starts when it has no output streams" below), so `--version`, `--selfcheck` and the log handlers write to nothing rather than fail.
+- **The portable build keeps its console.** `build_windows_portable.bat` sets `FORMCUT_ENGINE_WINDOWED=0` before it freezes (inside its `setlocal`): its launcher starts the engine with `start /min` and closing that minimised console window is how a person stops it; with no console there would be no way to stop it short of the Task Manager.
+- **Not run.** No Windows build has shown either; checked by reading.
+
 ## 2.18.0, before its merge · an engine that has ended but was not yet collected counts as gone on macOS (`app/startup.py` :: `finished`, `gone_by`)
 
 - **What was seen.** The macOS job of the 2.18.0 pull request failed three tests of `tests/test_startup.py`, each with "formcut could not stop an engine that was left running". `end` had ended the holder, but `gone_by` kept seeing it: `_alive_posix` asks `kill(pid, 0)`, which still answers for a process that has ended and whose parent has not collected it, and it tells such a process apart only by reading `/proc`, which macOS does not have. In the tests the holder is a child of the test, so it stays in that state. In the app it can happen when the holder's own parent is alive and slow to collect it.

@@ -65,6 +65,9 @@ if sys.platform == "win32" and importlib.util.find_spec("av") is not None:
     for dll in ffmpeg_dlls(lgpl):
         arguments.extend(["--add-binary", str(dll) + os.pathsep + "av"])
 
+if sys.platform == "win32" and os.environ.get("FORMCUT_ENGINE_WINDOWED", "1") != "0":
+    arguments.append("--noconsole")
+
 for package in ("mcp", "mcp-types", "numpy", "Pillow", "opencv-python-headless", "wgpu", "onnxruntime", "fastapi", "uvicorn", "python-multipart", "httpx", "grpcio", "yt-dlp"):
     arguments.extend(["--copy-metadata", package])
 for notice in Path(cv2.__file__).parent.glob("LICENSE*"):

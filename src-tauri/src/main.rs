@@ -1,7 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod engine_lifecycle;
+mod engine_start;
 mod reveal;
+#[cfg(windows)]
+mod win_job;
 use std::sync::Mutex;
 
 use tauri::menu::{
@@ -19,6 +22,8 @@ const SCREEN_FRACTION: f64 = 0.9;
 
 fn kill_backend(handle: &tauri::AppHandle) {
     if let Some(child) = handle.state::<Backend>().0.lock().unwrap().take() {
+        #[cfg(windows)]
+        win_job::end();
         let _ = child.kill();
     }
 }
@@ -113,15 +118,33 @@ fn main() {
             });
 
             let handle = app.handle().clone();
-            let (rx, child) = app
+            let started = app
                 .shell()
                 .sidecar("formcut-engine")
-                .expect("sidecar binary is bundled")
-                .env("FORMCUT_PORT", "0")
-                .env("FORMCUT_WINDOW_KEY_STDOUT", "1")
-                .env("FORMCUT_SHELL_PID", std::process::id().to_string())
-                .spawn()
-                .expect("the formcut engine failed to spawn");
+                .map_err(|_| engine_start::Failure::Missing)
+                .and_then(|engine| {
+                    engine
+                        .env("FORMCUT_PORT", "0")
+                        .env("FORMCUT_WINDOW_KEY_STDOUT", "1")
+                        .env(engine_start::SHELL_ENV, std::process::id().to_string())
+                        .spawn()
+                        .map_err(|error| engine_start::Failure::NotStarted(error.to_string()))
+                });
+            let (rx, child) = match started {
+                Ok(pair) => pair,
+                Err(failure) => {
+                    std::thread::spawn(move || {
+                        engine_lifecycle::failed(
+                            &handle,
+                            failure,
+                            &engine_start::Tail::default(),
+                        )
+                    });
+                    return Ok(());
+                }
+            };
+            #[cfg(windows)]
+            win_job::hold_pid(child.pid());
             app.state::<Backend>().0.lock().unwrap().replace(child);
 
             tauri::async_runtime::spawn(engine_lifecycle::supervise(handle, rx));

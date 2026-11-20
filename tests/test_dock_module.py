@@ -21,7 +21,7 @@ def _agents():
 def test_the_committed_folder_matches_its_manifest_and_imports_nothing_of_formcut():
     agents = _agents()
     assert agents.dock_problems() == []
-    assert json.loads((DOCK / "MANIFEST.json").read_text(encoding="utf-8"))["version"] == agents.DOCK_VERSION == "2.2.0"
+    assert json.loads((DOCK / "MANIFEST.json").read_text(encoding="utf-8"))["version"] == agents.DOCK_VERSION == "2.2.1"
     assert len(list(DOCK.iterdir())) == 16
 
 
