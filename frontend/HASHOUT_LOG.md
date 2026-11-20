@@ -2,6 +2,11 @@
 
 Reasoning behind interface changes, newest first.
 
+## 2.19.0 · the agent sentence names all four programs
+
+- **The change.** The one sentence in the window that lists the agent programs (`conn.agents.hint` in Settings, Connections) now reads "Claude Code, Codex, Cursor, Antigravity or any MCP client", in the order the family uses, in `en.json`, `es.json`, `de.json` and the nine languages of `language-pack.ts`, whose row is keyed by the English sentence and so changed with it. `tests/test_runtime_locales.py` passes. No native speaker has read the twelve translations.
+- **Program path.** formcut has no Preferences field for where Claude Code is; each program is overridden only by its own variable (`FORMCUT_CLAUDE_BIN`, `FORMCUT_CODEX_BIN`, `FORMCUT_CURSOR_BIN`, `FORMCUT_ANTIGRAVITY_BIN` in `backend/app/dock_tabs.py`), all four already given to the finder first, so there was nothing to add.
+
 ## Unreleased · the panel is module 2.2.0, and Antigravity is its fourth agent tab
 
 - **Why.** The family's panel now takes its agent kinds from each app's adapter, which is what lets an app offer a fourth program. formcut's engine already starts `agy` in a tab (see the engine log), so the panel gets the tab.

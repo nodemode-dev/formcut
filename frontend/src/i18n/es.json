@@ -1369,7 +1369,7 @@
   "fx.removeConfirm": "¿Quitar este paquete? Podrás importarlo de nuevo más tarde.",
   "fx.packageRemoved": "Paquete quitado",
   "conn.agents": "Agentes de IA",
-  "conn.agents.hint": "Deja que Claude Code, Codex, Cursor o cualquier cliente MCP controlen formcut. Añádelo una vez; mientras formcut esté abierto, el agente lo encuentra solo.",
+  "conn.agents.hint": "Deja que Claude Code, Codex, Cursor, Antigravity o cualquier cliente MCP controlen formcut. Añádelo una vez; mientras formcut esté abierto, el agente lo encuentra solo.",
   "conn.agents.runThis": "Ejecuta esto en una terminal:",
   "conn.agents.addTo": "Añade esto a {file}:",
   "conn.agents.any": "Cualquier otro cliente MCP: el comando y sus argumentos",
