@@ -2,6 +2,13 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · the finder is left as it is by the linter and the formatter
+
+- **Why.** The pull request's lint step (`ruff check backend/app mcp setup tests`, ruff 0.16.8) stopped with twelve findings, six of them inside `app/agent_lookup.py`: E731 (line 161), SIM105 (lines 219, 223 and 227), FURB167 (line 245) and PLW1510 (line 375). The format step behind it would have rewritten the same file. That file is the family's finder, copied byte for byte from FormVis and held to a recorded SHA-256 (`LOOKUP_HASHES` in `setup/agents.py`), so it is never edited here.
+- **What.** `ruff.toml` turns those four rules off for `backend/app/agent_lookup.py` alone (`[lint.per-file-ignores]`) and leaves the same one file out of the formatter (`[format] exclude`). Every other rule still applies to it, and no rule changed for any other file.
+- **Checked on Linux, ruff 0.16.8 on a copy of the tree.** Before: 12 findings. After: the 6 in the finder are gone and the other 6 are still reported; the file's SHA-256 is still the one recorded for 1.0.1.
+- **For the family.** The six findings belong to the file's next version in FormVis.
+
 ## Unreleased · the engine starts when it has no output streams
 
 - **Why.** A Windows engine of the family, built without a console, stopped at start because `sys.stdout` was `None`. formcut's entry (`desktop_entry.py`, the script `freeze.py` freezes) had the same weakness.
