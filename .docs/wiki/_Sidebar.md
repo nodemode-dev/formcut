@@ -15,9 +15,9 @@
 
 **In the repository**
 
-- [README](https://github.com/nodemode-ai/formcut/blob/main/README.md)
-- [Contributing](https://github.com/nodemode-ai/formcut/blob/main/CONTRIBUTING.md)
-- [example.env](https://github.com/nodemode-ai/formcut/blob/main/example.env)
+- [README](https://github.com/nodemode-dev/formcut/blob/main/README.md)
+- [Contributing](https://github.com/nodemode-dev/formcut/blob/main/CONTRIBUTING.md)
+- [example.env](https://github.com/nodemode-dev/formcut/blob/main/example.env)
 
 ---
 

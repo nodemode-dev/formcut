@@ -20,8 +20,8 @@ contributions.
 ## Setting up
 
 Clone the repository and run `./formcut` (or `formcut.bat` on Windows). It installs
-what the engine and the interface need and starts both; the README's Quick Start has
-the details and the requirements.
+what the engine and the interface need and starts both; the README's "Run it from
+source" has the details and the requirements.
 
 The code lives in:
 
@@ -31,7 +31,7 @@ The code lives in:
 | `backend/native` | the Rust kernels the renderer calls |
 | `frontend/src` | the interface (TypeScript, Vite) |
 | `src-tauri` | the desktop shell (Rust, Tauri) |
-| `mcp` | the MCP server |
+| `mcp` | the launcher for the MCP server (the server is `backend/app/agent_mcp.py`) |
 | `setup` | build, packaging and release scripts |
 | `tests` | the test suite |
 | `.docs/wiki` | the wiki's source, published on push |
@@ -54,8 +54,9 @@ python -m pytest tests -q
   twelve in `frontend/src/i18n`, and Arabic, Persian, Hebrew and Croatian in
   `frontend/public/locales` (see the Translation page of the wiki).
 - ffmpeg stays LGPL. Nothing that would make formcut's builds GPL (such as libx264)
-  can be bundled; formcut's own ffmpeg builds live in the formcut-binaries
-  repository.
+  can be bundled; formcut's own ffmpeg builds live in the formai-binaries
+  repository (formcut-binaries before it was renamed; builds made before the
+  rename ask for that name, which keeps working).
 
 ## How changes land
 

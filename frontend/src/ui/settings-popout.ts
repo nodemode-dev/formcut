@@ -10,6 +10,7 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
+type AccessState = { choice: string; stored: string; seal: string; sealBroken: boolean; notice: string };
 import { rateLabel } from "../engine/rates";
 import { buildModePanel } from "./mode-popout";
 import { buildWebhooks } from "./webhooks-settings";
@@ -398,6 +399,25 @@ export function installSettingsPopout(engine: ProjectEngine, bin: MediaBin, open
       agentList.append(card);
     }
   };
+  const accessRows = group(connectionsView, "access.title", "access.hint");
+  const accessSelect = document.createElement("select");
+  for (const choice of ["ask", "allowed", "blocked"]) accessSelect.add(new Option(t(`access.${choice}`), choice));
+  row(accessRows, "access.choice", accessSelect);
+  const accessStatus = document.createElement("small");
+  accessStatus.className = "access-status";
+  accessRows.append(accessStatus);
+  const paintAccess = (state: AccessState, note = "") => {
+    if (accessSelect.value !== state.choice) accessSelect.value = state.choice;
+    const line = note || state.notice || (state.seal === "unavailable" ? t("access.nokeychain") : "");
+    if (accessStatus.textContent !== line) accessStatus.textContent = line;
+  };
+  const readAccess = () => api<AccessState>("/api/agent-access").then((state) => paintAccess(state)).catch(() => undefined);
+  accessSelect.addEventListener("change", () => {
+    void api<AccessState>("/api/agent-access", { choice: accessSelect.value }, "PUT")
+      .then((state) => paintAccess(state))
+      .catch((error: Error) => { void readAccess().then(() => { if (accessStatus.textContent !== error.message) accessStatus.textContent = error.message; }); });
+  });
+  void readAccess();
   const sessionRows = group(connectionsView, "conn.sessions", "conn.sessions.hint");
   const sessionList = document.createElement("div");
   sessionList.className = "conn-list";

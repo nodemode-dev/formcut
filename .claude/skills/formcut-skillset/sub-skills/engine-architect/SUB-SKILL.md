@@ -6,12 +6,12 @@ description: >-
 
 # engine architect
 
-The Python engine: 44 modules under `backend/app`, about eighty routes, one shared renderer, one job runner. Load `references/engine-map.md` for the module and route inventory.
+The Python engine: the modules under `backend/app`, their routes, one shared renderer, one job runner. Load `references/engine-map.md` for the module and route inventory.
 - `references/effect-packages.md`: data-defined effects: the stack format, the loader's rules, where each piece lives, and how to add a look, a grade setting or an effect parameter.
 
 ## How it is put together
 
-`main.py` builds the FastAPI app, holds `APP_VERSION`, binds loopback, adds the local-only middleware and includes the routers listed in `features.py`. Mutating calls carry `x-formcut-local`. `paths.py` resolves the data directory, honouring `FORMCUT_DATA_DIR`, and everything persistent lives under it: media, projects, templates, renders, thumbs, peaks, filmstrips, models, the speech runtime, provider keys.
+`main.py` builds the FastAPI app, holds `APP_VERSION`, binds loopback, adds the local-only middleware and includes the routers listed in `features.py`. Mutating calls carry `x-formcut-local` and the per-launch window key (`window_key.py`); outside agents get a pass from `agent_access.py`, which asks the person in the window; a new write route is refused without the key unless it is named in `security.OPEN` (tests/test_window_key.py walks them). `paths.py` resolves the data directory, honouring `FORMCUT_DATA_DIR`, and everything persistent lives under it: media, projects, templates, renders, thumbs, peaks, filmstrips, models, the speech runtime, provider keys.
 
 `features.py` mounts every feature router in one tuple. Three routers were once written into the body of that loop instead of its tuple, so each was mounted once per module in it: thirteen copies of each route, with no symptom because FastAPI resolves the first match. When adding a router, read the block rather than appending after the last include.
 

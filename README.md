@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version v2.15.9" src="https://img.shields.io/badge/version-v2.15.9-eef0f4?style=flat-square">
+  <img alt="version v2.17.0" src="https://img.shields.io/badge/version-v2.17.0-eef0f4?style=flat-square">
   <img alt="TypeScript and Vite" src="https://img.shields.io/badge/TypeScript-Vite-3178c6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Python FastAPI" src="https://img.shields.io/badge/Python-FastAPI-3776ab?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
@@ -93,12 +93,12 @@
 
 ## Built for agents
 
-FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project.
+FormCut ships an MCP server with 34 workflow tools; the interface, the JSON-RPC surface and the MCP server edit the same project. Tools that only read run at once; before any other tool FormCut asks in its window (Deny, Allow once, Always allow), and Settings, Connections, Outside agents can make that Allowed or Blocked. Only the FormCut window can change that choice or make other changes without asking.
 
 ```sh
 ./formcut mcp            # MCP server on stdio, starts the engine if nothing answers
 ./formcut claude         # Claude Code here, already connected to the formcut tools
-./formcut agents status  # show how Claude Code, Codex and Cursor are set up
+./formcut agents status  # show how Claude Code, Codex, Cursor and Antigravity are set up
 ```
 
 `.mcp.json`, `.codex/config.toml` and `.cursor/mcp.json` are already wired in this repo. See [`AGENTS.md`](AGENTS.md).
@@ -113,17 +113,17 @@ FormCut loads extensions under the Form Extension Contract (API 1): install them
 - **Engine:** Python and FastAPI over FFmpeg's libraries, with WGSL device passes for effects and the CPU path kept as the reference.
 - **Interface:** vanilla TypeScript and Vite on one CSS token system, no UI framework and no icon dependency, in 16 languages.
 - **Automation:** JSON-RPC 2.0 over HTTP, websocket, stdin, TCP and gRPC, with optimistic concurrency on every edit.
-- **Tested:** 868 Python test functions under `tests/` plus a window test in `frontend/tests/`, run in CI on every push.
+- **Tested:** Python tests under `tests/` plus a window test in `frontend/tests/`, run in CI on every push.
 
 ## Download
 
 | Platform | Download | Release |
 |---|---|---|
-| macOS | [Download FormCut for macOS](https://formai.studio/get/formcut/macos) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
-| Windows | [Download FormCut for Windows](https://formai.studio/get/formcut/windows) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
-| Linux | [Download FormCut for Linux](https://formai.studio/get/formcut/linux) | [FormCut releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formcut-v&expanded=true) |
+| macOS | [Download FormCut for macOS](https://formai.studio/get/formcut/macos) | [FormCut releases](https://github.com/nodemode-dev/formcut/releases) |
+| Windows | [Download FormCut for Windows](https://formai.studio/get/formcut/windows) | [FormCut releases](https://github.com/nodemode-dev/formcut/releases) |
+| Linux | [Download FormCut for Linux](https://formai.studio/get/formcut/linux) | [FormCut releases](https://github.com/nodemode-dev/formcut/releases) |
 
-All FormCut builds are compiled and released from [FormCompiler](https://github.com/nodemode-dev/formcompiler); this repo holds the source.
+All FormCut builds are compiled by [FormCompiler](https://github.com/nodemode-dev/formcompiler) and released on this repo's Releases page; this repo also holds the source.
 
 **Updates:** FormCut does not update itself. Install [FormPortal](https://formai.studio/formportal/) and it keeps FormCut up to date, or download the new version from [formai.studio](https://formai.studio/formcut/download/).
 
@@ -131,7 +131,7 @@ All FormCut builds are compiled and released from [FormCompiler](https://github.
 
 Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
 
-**Requires:** Node 18+, Python 3.11+, and `ffmpeg` and `ffprobe` on PATH.
+**Requires:** Node 18+, Python 3.11+, and `ffmpeg` and `ffprobe`. FormCut uses the ones on PATH; when it finds none, it downloads its own checked LGPL build on first run (`FORMCUT_FFMPEG_AUTO=0` turns that off).
 
 ```sh
 git clone git@github.com:nodemode-dev/formcut.git

@@ -109,6 +109,7 @@
     "titlebar.mode": true,
     "titlebar.focus": false,
     "titlebar.panels": false,
+    "titlebar.dock": false,
     "titlebar.settings": true,
     "titlebar.export": true,
     "tab.Media": true,

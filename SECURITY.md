@@ -30,6 +30,14 @@ something outside it could get in:
 - **The network listener** for phones and other computers (off by default, port
   8977): getting past the one-time pairing code, reusing or forging a device token,
   or reaching anything it should not expose.
+- **The window key**: formcut's window holds a key made at each launch, and every
+  change a program on the same computer makes to a project or a setting needs it.
+  Anything that lets a program other than the window make a change without it, or
+  that hands the key to one.
+- **Outside agents**: a program that is not the formcut window must be asked about
+  in the window before it changes anything (Ask each time, Allowed or Blocked in
+  Settings, Connections, Outside agents). Anything that skips the question, lets
+  an agent change that choice, or forges the sealed copy of it.
 - **Provider keys and tokens** kept by the engine: anything that leaks them.
 - **Files**: importing, downloading or extracting media or archives in a way that
   writes outside where it should.

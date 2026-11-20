@@ -11,7 +11,8 @@ if [ "${1:-}" = desktop ] && [ "${2:-}" = build ]; then
 fi
 
 # Agents: ./formcut mcp serves formcut over MCP's stdio (starting the engine when nothing answers), ./formcut claude
-# starts Claude Code here connected to it, ./formcut agents install|sync|status sets Claude Code, Codex and Cursor up.
+# starts Claude Code here connected to it, ./formcut agents install|sync|status sets Claude Code, Codex, Cursor and
+# Antigravity up.
 case "${1:-}" in
   mcp) shift; exec python3 setup/mcp_stdio.py "$@" ;;
   agents) shift; exec python3 setup/agents.py "$@" ;;

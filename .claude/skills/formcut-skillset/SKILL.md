@@ -3,13 +3,13 @@ name: formcut-skillset
 description: "Use for any work on formcut, the local video editor: its Python FastAPI engine, vanilla TypeScript interface, Tauri shell, JSON-RPC automation surface, orchestration event stream and MCP server. Carries the codebase as it stands: module and route maps, the state engine and its commands, the shared renderer, timeline and keyframe behaviour, appearance profiles and tokens, locale keys, and the invariants that explain most bugs. Trigger on formcut, formcut engine, render session, clip visuals, keyframe lanes, appearance profile, formcut MCP, orchestration session, project.edit, api/rpc, or any file under backend/app, frontend/src or src-tauri. Also for adding an engine endpoint, changing a pane, extending the automation or MCP tools, wiring an external orchestrator in, or reviewing a change against this project build discipline. Route through formcut-director unless the question is narrow and owned by one specialist."
 license: Apache-2.0
 metadata:
-  formcut.version: "2.9.4"
+  formcut.version: "2.15.8"
   formcut.compiled: "2026-09-25"
 ---
 
 # formcut skillset
 
-Working knowledge of formcut as it stands at v2.9.4: what each part is, why it is shaped that way, and the rules a change has to satisfy. It exists so that local development, and later an orchestrator driving formcut from outside, can act on the codebase without rediscovering it.
+Working knowledge of formcut as it stands at v2.15.8: what each part is, why it is shaped that way, and the rules a change has to satisfy. It exists so that local development, and later an orchestrator driving formcut from outside, can act on the codebase without rediscovering it.
 
 The premise: formcut is small enough to read and structured enough that most mistakes come from not knowing an invariant rather than from writing bad code. One renderer serves preview and export, one engine owns document state, every colour is a token, every string is a key, and every automated caller goes through one JSON-RPC surface. Break one of those and the symptom appears somewhere else entirely, which is what this pack is written to prevent.
 
@@ -17,7 +17,7 @@ The premise: formcut is small enough to read and structured enough that most mis
 
 ```
 formcut/
-  backend/app/        Python FastAPI engine, 78 modules, 172 routes, the MCP server (agent_mcp.py) among them
+  backend/app/        Python FastAPI engine, its modules and routes mapped in engine-architect's references, the MCP server (agent_mcp.py) among them
   frontend/src/       vanilla TypeScript interface: engine, ui, workers, i18n, styles
   src-tauri/          Tauri 2 desktop shell, spawns the engine as a sidecar
   mcp/                launcher that runs the engine's MCP server from a checkout (the app runs formcut-engine --mcp)
@@ -44,9 +44,9 @@ Start at `sub-skills/formcut-director/SUB-SKILL.md` for anything broad or unscop
 These are the load-bearing rules. Each one has a symptom that shows up far from its cause, which is why they are stated here rather than buried in a reference.
 
 - **One renderer serves preview and export.** `backend/app/renderer.py` composites for both. A preview that differs from the exported file means a path bypassed it, not that the preview is approximate.
-- **The interface engine owns the document.** `frontend/src/engine/project.ts` holds state, applies commands, pushes history and emits. UI modules subscribe and dispatch; nothing else mutates a project. It emits exactly five names: clips, playhead, transport, timeline, project, plus clip-selection. Listening for an invented name fails silently, which has happened twice in this codebase.
-- **Every colour, radius, spacing and z value is a token.** `frontend/src/styles/tokens.css` defines them; 29 appearance profiles override them in `themes.css`, Studio (the form family's) the default. A hardcoded colour looks correct in the default profile and wrong in the other 28.
-- **Every string is a locale key.** 962 keys in each of en, es and de, a generated pack of 1119 phrase rows carrying nine more locales, and four complete locale files (ar, fa, he, hr) under `frontend/public/locales`, loaded at start: sixteen languages, three of them right to left. An English literal in the interface is a defect, not a shortcut.
+- **The interface engine owns the document.** `frontend/src/engine/project.ts` holds state, applies commands, pushes history and emits. UI modules subscribe and dispatch; nothing else mutates a project. It emits exactly six names: clips, playhead, transport, timeline, project and clip-selection. Listening for an invented name fails silently, which has happened twice in this codebase.
+- **Every colour, radius, spacing and z value is a token.** `frontend/src/styles/tokens.css` defines them; every appearance profile overrides them in `themes.css`, Studio (the form family's) the default and AMOLED Black the true-black one. A hardcoded colour looks correct in the default profile and wrong in the others.
+- **Every string is a locale key.** the same keys in each of en, es and de, a generated pack of phrase rows carrying nine more locales, and four complete locale files (ar, fa, he, hr) under `frontend/public/locales`, loaded at start: sixteen languages, three of them right to left. An English literal in the interface is a defect, not a shortcut.
 - **One automation surface.** `POST /api/rpc` is how anything outside the interface builds, edits, renders and collects. Adding a second path to change a project means two clamping rules and two history behaviours.
 - **Jobs are handles, not waits.** Renders return a job id immediately; progress arrives by polling or on the orchestration event stream. A synchronous render is a request that times out.
 - **Media files are named by id.** A library rename changes the entry, never the file, so a project's media references cannot break.

@@ -3,6 +3,13 @@ import os
 import shutil
 import sys
 
+if sys.stdin is None:
+    sys.stdin = open(os.devnull, encoding="utf-8")
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 
 def resource_dir() -> str:
     return getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -116,6 +123,11 @@ def main() -> int:
             await super().shutdown(sockets=sockets)
             withdraw()
 
+    from app import window_key
+
+    if window_key.stdout_mode():
+        sys.stdout.write(f"{window_key.LINE}{window_key.KEY}\n")
+        sys.stdout.flush()
     publish(url, APP_VERSION)
     Server(uvicorn.Config(fastapi_app, host="127.0.0.1", port=port, log_level="info", timeout_graceful_shutdown=3)).run(sockets=[listener])
     return 0

@@ -2,6 +2,73 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · the panel is module 2.2.0, and Antigravity is its fourth agent tab
+
+- **Why.** The family's panel now takes its agent kinds from each app's adapter, which is what lets an app offer a fourth program. formcut's engine already starts `agy` in a tab (see the engine log), so the panel gets the tab.
+- **The folder (`src/dock/`).** Copied byte for byte from FormVis: 16 entries with `MANIFEST.json`, `agents.ts` is new. `setup/agents.py` expects 2.2.0 and the test holds the count. Nothing in the folder is edited here.
+- **The adapter (`src/dock-adapter.ts`).** Typed `DockAdapter<"antigravity">`; `tabs().builtin` ends with `antigravity`; `agentStatus()` returns the `antigravity` key; a tab row of that kind keeps its kind. For a program that is not found, or is found and does not start, the engine's own sentence is passed on as the status `note`, so the panel says where formcut looked.
+- **Studio, Agent terminal.** A third button, Connect Antigravity, beside Connect Claude Code and Connect Codex; it posts `antigravity` to the same route and shows the same line. The sentence has no entry in the seven language tables yet, so it shows in English.
+- **Checked.** `tsc --noEmit` with formcut's flags (clean except `@huggingface/transformers`, which this machine does not have) and the dock folder under the strict set of `CONTRACT.md` (exit 0), both through FormVis's `node_modules`. The engine side was run with a stand-in `agy` (engine log).
+- **Not checked.** Nothing was looked at in a browser in this pass: not the new tab's button and row, not the note, not the Studio button. No production build, no desktop shell, no `npm install`.
+
+## Unreleased · the terminal is the family's panel, at the bottom or the right of the window
+
+- **Why.** Every Form app shows the same terminal panel from one shared module. formcut had one shell on a page of Studio, bound to one socket, and its own outside-agent dialog. Both are replaced by module 2.1.0 (`frontend/src/dock`, 15 files copied byte for byte from FormVis at 8bbdf61b and never edited here; `setup/agents.py sync --check` fails, naming the file, when one differs from `MANIFEST.json` or imports from the app).
+- **Where it sits (styles/dock-tokens.css, main.ts).** The panel is a third in-flow child of `#app`, after `.workspace`, and its row or column is a track of `#app`, not of the workspace: `workspace-layout.ts` rewrites the workspace's own grid on every pane change and stores it per interface profile, so a fourth member there would have to be taught to all of that. The title bar keeps the full width; the right column runs from under it to the bottom edge. The `#app` rule is written `:root #app` because the adapter is imported by modules that load before `app.css`, so source order cannot be relied on. In the compact layout the tracks are zero and the panel is not shown. With a right-to-left language `#app` itself is left to right and its other children are set back, so the column stays physically on the right, where the module's grip and drag expect it. The panel sits on `--z-range`, above the workspace's dividers (`--z-handles`): in a right-to-left window one of them lay over the panel's left edge and took the grip's drag.
+- **Limits.** `keepHeight: 440` and `keepWidth: 940` (the width `compact.ts` says the three panes need), `maxHeightShare: 0.45`, `maxWidthShare: 0.4`. When the window cannot give 320 px beside 940 the panel stays at the bottom.
+- **Before the first paint (index.html).** A second function in the boot script reads `formcut.dock` and writes `data-ft-dock`, `data-ft-dock-side`, `data-ft-dock-h`, `data-ft-dock-w`, `--ft-dock-size` and `--ft-dock-wsize` with the same limits, so the track is there in the first frame. It is its own function because the appearance one returns early when no appearance is stored.
+- **The adapter (dock-adapter.ts).** Tabs by id through `/api/terminal/tabs`; each socket buys a one-time ticket first and is reopened up to five times, with the screen reset before a second replay. Kinds offered: shell, Claude Code, Codex, Cursor. No Chat: the engine has none, so the ask line opens Claude Code with the sentence. `storage.key` is `formcut.dock`, unused before, and there is no older key to move. The chord is Ctrl+J or Cmd+J on every platform, as formcut's own `mod` is; neither did anything before. It is refused while a modal, Studio, Settings or the start screen covers the editor and in the compact layout, formcut's rule for its own shortcuts. `passKey` names no key.
+- **Keys.** The module stops keys at its roots in the bubble phase. `keymap.ts` listens on `window` in the capture phase, so its target test now names `.ft-dock, .ft-consent, .ft-tour`.
+- **The question.** `agentLoop` in ui/extensions.ts hands a `consent` request to `agentQuestion` and no longer answers it itself; the family's dialog answers at the same route. Waiting questions are read at load from `/api/agent-access/waiting` and again 13 s and 27 s later: seen in the window, a question asked within 25 s after a reload did not always arrive through the request loop, and the second or third read showed it (11 s and under 28 s in two runs). The withdrawal long poll runs only while a question is open. `offers`, `always`, `expires` and `notes` are the engine's. Always allow is stored by the engine, so the adapter never calls `storedChoice.set` for it.
+- **Studio's Agent terminal page** keeps its paragraph, the status line and Connect Claude Code and Connect Codex; Open shell closes Studio and opens the panel on a shell. A title bar button (`titlebar.dock`, off in Easy, on in Advanced) toggles the panel.
+- **xterm** 5.5 to 6.0.0 and the fit addon 0.10 to 0.11.0, pinned, as the module expects; the two lockfile entries were written by hand from the registry's published integrity values.
+- **Removed.** ui/agent-access.ts (70 lines, the scrim dialog), its four rules in extensions.css, the three `.term-*` rules in app.css, and the page's terminal:
+
+```ts
+function show(tool: string, agent: string, notice: string): Promise<Answer> {
+  dialog ??= build();
+  const parts = dialog;
+  const note = t("access.dialog.note").replace("{agent}", agent || t("access.someone")).replace("{tool}", tool);
+  ...
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { event.stopPropagation(); done("deny"); } };
+    parts.deny.onclick = () => done("deny");
+    parts.once.onclick = () => done("once");
+    parts.always.onclick = () => done("always");
+```
+
+```ts
+      term = new Terminal({ cursorBlink: true, fontFamily: ..., fontSize: 13, theme: { background: styles.getPropertyValue("--ground").trim() || "#121617", foreground: ..., cursor: ... } });
+      term.onData((data) => { termSocket?.send(data); });
+      term.onResize(({ cols, rows }) => { termSocket?.send(JSON.stringify({ resize: [cols, rows] })); });
+    const socket = new WebSocket(`${protocol}://${location.host}/api/terminal/ws?cols=${term.cols}&rows=${term.rows}&ticket=${encodeURIComponent(ticket)}`);
+    socket.onmessage = (event) => { term?.write(String(event.data)); };
+    socket.onclose = () => { if (termSocket === socket) closeShell(); term?.write("\r\n[" + text("shell closed") + "]\r\n"); };
+```
+
+```css
+.term-pane { height: min(60vh, 480px); background: var(--ground); padding: var(--sp-2); }
+.agent-access .modal-panel { width: min(420px, 90vw); border: 1px solid var(--edge); }
+.agent-access-notice { color: var(--fault); }
+```
+
+- **Slip.** The commit that added the module folder also carried the staged removal of ui/agent-access.ts, one commit before the code that stopped importing it; the two commits belong together.
+- **Not here.** The module's sentences are in no language table and show in English. The strings `access.dialog.title`, `access.dialog.note`, `access.someone`, "Close shell", "shell closed" and "The shell could not be opened" are no longer used and are still in the tables.
+
+## Unreleased · the window holds the key, and answers outside agents
+
+- **The key (engine/window-key.ts, engine/local-transport.ts).** `keyReady` is made once when `local-transport` is imported: the shell's `window.__FORMCUT_WINDOW_KEY` first (then deleted); else the key kept in `sessionStorage`, kept only if `POST /api/window/ticket` accepts it; else `POST /api/window/key` once, kept in `sessionStorage`. The page already sent every same-origin `/api/` write through one `window.fetch` wrapper (it added `x-formcut-local`); the wrapper now waits for `keyReady` and adds `X-Formcut-Window-Key` to every same-origin `/api/` request, so the raw `fetch` calls across the interface and `api()` all carry it, including the window's request queue. A search of `frontend/src` finds no `XMLHttpRequest` or `sendBeacon`; the one `EventSource` (`/api/orchestration/events`) is a plain read; the one `WebSocket` (the Agent terminal) now asks `socketTicket()` and opens with `&ticket=`. A paired phone gets no key (the bootstrap is 404 through the network listener) and keeps writing with its device cookie.
+- **The question (ui/agent-access.ts).** The consent dialog is built once, hidden, when the extensions view is built, and shown by removing `hidden`; the answer clears it. It reuses the modal scrim and panel (`--z-overlay`, `--pane`, `--veil`), an inline SVG in `currentColor` tinted `--cue`, buttons Deny, Allow once, Always allow (focus on Deny, Escape denies), one question at a time. The window's request loop (`agentLoop` in ui/extensions.ts) answers the engine's new `consent` action with it. The engine's one-sentence notice for a choice changed outside the app shows in `--fault` under the question.
+- **Settings, Connections, Outside agents.** One select (Ask each time, Allowed, Blocked) through `PUT /api/agent-access`, and a status line for the notice, for a missing keychain, or for the engine's refusal. Strings in en, de, es and the four shipped locales.
+- **Checked.** Engine on 30200 and Vite on 30210 (a throwaway config outside the repo proxying to the engine and stamping the dev Origin), headless Chrome 1440 by 900, empty project folder: the page booted, the global was gone, the key was kept (43 characters), `project.create` from the page's `fetch` gave 200; a load and two reloads made one bootstrap request (200) and two tickets, no 403 anywhere, every page write carried the key. Two stdio MCP calls under ask: the dialog opened each time with "mcp wants to run formcut_create_project.", focus on Deny, z-index 700; Deny refused, Allow once created the project; 7077 elements before, during and after, the same dialog node throughout. Under AMOLED Black the panel is `#000000` with text `#ededed` and a `#262626` edge (screenshot looked at). No console errors. `tsc --noEmit` clean. A long-poll left by a page that was reloaded can take a question in the 25 s after the reload; the question is then refused when nobody answers (seen once in this run, avoided by waiting 27 s).
+
+## Unreleased · AMOLED Black, a true-black profile for OLED screens
+
+- **Profile (setup/gen_appearance.py, themes.css).** `amoled`, "AMOLED Black", the 30th palette, after High Contrast. It is a second `FIXED` row beside Studio, because the ladder cannot give black ground with grey fields. Ground, inset, pane, track beds and screen are `#000000`, since a black pixel is off on an OLED screen and panes are told apart by their rims. `--control`, `--float` and `--timescale` are `#141414`: fields, menus and the ruler have that fill as their only outline and would vanish at black. Hover and press are `#1f1f1f` and `#2a2a2a`, one step above the field. `--edge` `#262626`, `--edge-strong` `#3a3a3a`, ink `#ededed`, `#a6a6a6`, `#858585` (17.9, 8.6 and 5.7 to 1 on black; faint is 5.0 to 1 on `#141414`). The accent is Studio's orange, unchanged. themes.css was regenerated by the script; the other 29 blocks came out byte for byte the same.
+- **The flag (appearance.ts).** `Profile.oled`; `paint` sets `data-oled` on the root for an oled profile and removes it for every other, touching the attribute only when it changes, so a switch is one attribute and no node is rebuilt.
+- **Pre-paint (index.html).** The boot script sets `data-oled` beside `data-theme` from its own one-row table of oled ids, so a reload is black from the first frame. A one-rule style paints the root black when `data-oled` is set: in the dev server the stylesheets arrive with the module, and until then the window was white for about 27 s under a 4x CPU and slow network profile.
+- **True-black exceptions (tokens.css, app.css), on `data-oled`, never the theme id.** `--rim` takes `--edge`: it mixes the ground with black, which on black hides every pane outline. The title bar's gradient from `--float` to `--pane` drew `#141414` across its top; it takes `--pane`. Measured in the window (every element over 12,000 px2 with a non-black fill, start screen and editor): after these two rules only the ruler (`#141414`, kept), effect thumbnails while their pictures load, and chosen tabs and the accent tints remain.
+- **Checked.** Engine and Vite dev server on loopback, headless Chrome 1440 by 900, 4x CPU, 150 ms and 1.6 Mbit/s, cache off. Cold load and hard reload with `amoled` saved (both land on the start screen): 70 corner and centre samples at the window and the places of the title bar, rail, panes, timeline tabs, ruler and lanes; every frame after the navigation is `#000000` at all 70 (the cold load's one white frame, 0.04 s after the request, is the blank page before the first byte could arrive). Live switch in a new project, Studio to AMOLED Black and back through `setTheme`: 0 nodes added or removed, 7308 elements with the same identity, 0 bounding boxes moved, `data-oled` on and then off; of 65 editor samples under AMOLED, 60 are `#000000` and the rest are the ruler and a field (`#141414`), the playhead marker and a tab label. `tsc --noEmit` clean; tests/test_theme_contrast.py passes with 30 profiles. Hover contrast was not looked at in a screenshot.
+
 ## Unreleased · review fixes in the window
 
 - The Project page of Settings refilled its frame-rate field with the raw number each time it was shown (29.97002997002997); it now shows the rate's label, as the field does when Settings is built. The card's `data-proxy-action` attribute is escaped like every other value put into the card's markup.

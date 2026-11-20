@@ -76,3 +76,12 @@ ignore = [
 "backend/app/gpu_effects.py" = ["BLE001"]
 "backend/app/media.py" = ["BLE001", "ASYNC221"]
 "backend/app/video_source.py" = ["BLE001", "SIM115"]
+# The family's finder for the agent programs is copied unchanged from FormVis
+# and held to a recorded hash (setup/agents.py, LOOKUP_HASHES). What the linter
+# finds in it is a matter for the file's next version there, never for an edit
+# of the copy here, so these four rules are off for this one file.
+"backend/app/agent_lookup.py" = ["E731", "SIM105", "FURB167", "PLW1510"]
+
+[format]
+# The same file, for the same reason: reformatting it would change its bytes.
+exclude = ["backend/app/agent_lookup.py"]

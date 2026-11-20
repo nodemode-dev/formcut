@@ -8,6 +8,7 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <style>html[data-oled] { background: #000000; }</style>
     <script>
       // Pre-paint appearance. Runs before the first paint and before any module
       // loads, so a stored profile or accent is never visible as a change. The
@@ -37,12 +38,33 @@
               theme = dark ? (moved(saved.dark) || "studio") : (saved.light || "light");
             }
             document.documentElement.dataset.theme = theme;
+            if ({ "amoled": 1 }[theme]) document.documentElement.setAttribute("data-oled", "");
           }
           if (saved && saved.derived) {
             for (var name in saved.derived) document.documentElement.style.setProperty(name, saved.derived[name]);
           }
         } catch (error) {
           // A blocked store leaves the default profile in place, which is fine.
+        }
+      })();
+      // The terminal panel's row or column is reserved before the first paint from formcut.dock, with the limits dock-adapter.ts gives the panel.
+      (function () {
+        try {
+          var root = document.documentElement;
+          var dock = JSON.parse(localStorage.getItem("formcut.dock") || "{}") || {};
+          var wide = Math.min(window.innerWidth * 0.4, window.innerWidth - 940);
+          var tall = Math.min(window.innerHeight * 0.45, window.innerHeight - 440);
+          var w = Math.round(Math.max(320, Math.min(wide, typeof dock.w === "number" ? dock.w : 400)));
+          var h = Math.round(Math.max(120, Math.min(tall, typeof dock.h === "number" ? dock.h : 260)));
+          var small = window.matchMedia && window.matchMedia("(max-width: 940px), (max-height: 500px)").matches;
+          root.setAttribute("data-ft-dock", dock.open === true ? "open" : "closed");
+          root.setAttribute("data-ft-dock-side", dock.side === "right" && !small && wide >= 320 ? "right" : "bottom");
+          root.setAttribute("data-ft-dock-h", String(h));
+          root.setAttribute("data-ft-dock-w", String(w));
+          root.style.setProperty("--ft-dock-size", h + "px");
+          root.style.setProperty("--ft-dock-wsize", w + "px");
+        } catch (error) {
+          // Without the store the panel starts closed.
         }
       })();
     </script>

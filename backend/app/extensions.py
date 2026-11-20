@@ -230,6 +230,7 @@ _queue: deque[str] = deque()
 _requests: dict[str, dict] = {}
 _seen = {"poll": 0.0}
 POLL_GAP_SECONDS = 35.0
+ENDED: dict = {}
 
 
 def ask_window(action: str, payload: dict, seconds: float) -> dict:
@@ -252,6 +253,15 @@ def ask_window(action: str, payload: dict, seconds: float) -> dict:
             _requests.pop(rid, None)
             if rid in _queue:
                 _queue.remove(rid)
+        ended = ENDED.get(action)
+        if ended is not None:
+            ended(rid, "answered" if entry["done"].is_set() else "expired" if entry["claimed"].is_set() else "unclaimed")
+
+
+def waiting(action: str) -> list[dict]:
+    """The requests of one kind that a caller is still waiting on, oldest first."""
+    with _cond:
+        return [dict(e["request"]) for e in _requests.values() if e["request"].get("action") == action and not e["done"].is_set()]
 
 
 @router.get("/agent/next")

@@ -93,3 +93,7 @@
   --raise: var(--float);
   --cue-ink: color-mix(in srgb, var(--cue) 85%, var(--ink));
 }
+
+:root[data-oled] {
+  --rim: var(--edge);
+}

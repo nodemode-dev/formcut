@@ -15,6 +15,7 @@ Ledger per dev-rules and the tauri pack's sidecar-tier policy. Distribution axis
 | 3d-mock-models device library v0.10.0 | CC0-1.0 | ten device models in backend/app/device_library (generated in code by the owner's 3d-mock-models; LICENSE beside them) | ship |
 | Inter glyphs in the device key legends | OFL-1.1 | drawn into the laptop and 2-in-1 models' legend textures by the generator; images only, no font file | ship |
 | httpx | BSD-3-Clause | Pexels API and media fetch | ship |
+| keyring | MIT | keeps the key that seals the outside agents choice in the system keychain (backend/app/seal.py) | ship |
 | yt-dlp | Unlicense (public domain) | URL media import, invoked as a module subprocess | ship |
 | @huggingface/transformers | Apache-2.0 | in-browser Whisper transcription | ship |
 | onnxruntime-web 1.31.0-dev.20260914 (with onnxruntime-common 1.30.0 and flatbuffers) | MIT; flatbuffers Apache-2.0 | the runtime transformers.js uses for Whisper in the window, including its WebAssembly files | ship |
@@ -125,7 +126,9 @@ ffmpeg as a **separate program** rather than linking against it. The two meet at
 a process boundary, and neither licence reaches across it.
 
 The builds are **LGPL-2.1** (`--disable-gpl --disable-nonfree`), published one
-archive per target on the formcut-binaries release. The macOS, Windows and
+archive per target on the formai-binaries release (builds of formcut made
+before the repository was renamed ask for its older name, formcut-binaries,
+which keeps working). The macOS, Windows and
 Linux release zips carry the build for their platform, checked file by file
 against the SHA-256 recorded in `ffmpeg-licence.json` when the release is made
 (`setup/bundle_ffmpeg.py`). Any machine where no ffmpeg is found, such as a run
@@ -157,9 +160,10 @@ a flag to flip: including x264 makes the bundle GPL. formcut copes because its
 encoder detection prefers hardware and confirms each candidate by encoding two
 frames rather than trusting a list, so videotoolbox on macOS, mediafoundation
 or nvenc on Windows and vaapi or nvenc on Linux are used where present.
-`setup/build_ffmpeg_lgpl.sh` also links openh264 (BSD), libvpx and libaom when
-they are installed, so a machine with no hardware encoder still has a non-GPL
-software path for H.264, VP9 and AV1.
+`setup/build_ffmpeg_lgpl_macos_v1.1.0.sh` also links libvpx and libopus (both
+BSD) by default, so a machine with no hardware encoder still has a non-GPL
+software path for VP9, and software H.264 comes from OpenH264, the separate
+Cisco download.
 
 **ffprobe.** An LGPL build made with `--disable-programs --enable-ffmpeg`
 contains ffmpeg alone, since ffprobe is a separate program. formcut does not
@@ -169,7 +173,7 @@ LGPL ffprobe placed in the folder is used in preference.
 
 ## Icons and assets
 
-All UI icons are hand-authored inline currentColor SVG in this repo, except the timeline and track glyph family in frontend/src/ui/icons-lucide.ts, which is generated from the Lucide set (ISC licence) of the bundled IcoLab library: 22 keys, default style, 24-unit grid, currentColor bodies with stroke weight left to the caller. ISC requires the copyright notice be retained, which travels with the set; no attribution is displayed in the UI and no icon package is a dependency. The favicon, PWA icons and Tauri icon set derive from the owner-supplied formcut icon (src-tauri/icons/formcut-icon.svg); the in-app brand glyph in frontend/src/ui/icons.ts keeps its earlier currentColor drawing. The demo media in examples/demo are tracked in the repository and keep their own licences, listed in [examples/demo/README.md](https://github.com/nodemode-ai/formcut/blob/main/examples/demo/README.md): the two clips (input-clip-example.mp4, model-drop-MV.mp4) and the image (effect-example-image.jpg) are from Pexels under the Pexels License, and the spoken line (a-sample.wav) was generated for formcut with Kokoro-82M (Apache-2.0). They are not covered by formcut's Apache-2.0 licence. Since 2.12.6 the four files ship inside the frozen engine (backend/freeze.py) for the first-run demo, and NOTICE credits each one with its creator, source and licence. The browser demo in demo/ has its own media, separate from examples/demo: eight Pexels clips (Pexels License) and the Aria of Bach's Goldberg Variations as played by Kimiko Ishizaka (CC0 1.0), listed file by file with author, source page and changes in [demo/CREDITS.md](https://github.com/nodemode-ai/formcut/blob/main/demo/CREDITS.md). They are not covered by formcut's Apache-2.0 licence. The two further browser demos have their own media: [demos/grade](https://github.com/nodemode-ai/formcut/blob/main/demos/grade/CREDITS.md) carries six Pexels clips (Pexels License) and a Goldberg Variation by Kimiko Ishizaka (CC0 1.0), and [demos/deliver](https://github.com/nodemode-ai/formcut/blob/main/demos/deliver/CREDITS.md) carries eight Pexels clips, a LibriVox reading of Thoreau's Walden by Gord Mackenzie (public domain) and a Goldberg Variation (CC0 1.0), each file listed with author, source page and changes. They are not covered by formcut's Apache-2.0 licence. Since 2.15.0 the media of all three browser demos also ships inside the app, decoded from the demos' data packs by scripts/extract_demo_media.py into frontend/public/demos/<id>/ (the built interface, which the frozen engine carries), so Help > Demos and the start screen open each film as a new project; NOTICE credits every one of those files under Demo films.
+All UI icons are hand-authored inline currentColor SVG in this repo, except the timeline and track glyph family in frontend/src/ui/icons-lucide.ts, which is generated from the Lucide set (ISC licence) of the bundled IcoLab library: 22 keys, default style, 24-unit grid, currentColor bodies with stroke weight left to the caller. ISC requires the copyright notice be retained, which travels with the set; no attribution is displayed in the UI and no icon package is a dependency. The favicon, PWA icons and Tauri icon set derive from the owner-supplied formcut icon (src-tauri/icons/formcut-icon.svg); the in-app brand glyph in frontend/src/ui/icons.ts keeps its earlier currentColor drawing. The demo media in examples/demo are tracked in the repository and keep their own licences, listed in [examples/demo/README.md](https://github.com/nodemode-dev/formcut/blob/main/examples/demo/README.md): the two clips (input-clip-example.mp4, model-drop-MV.mp4) and the image (effect-example-image.jpg) are from Pexels under the Pexels License, and the spoken line (a-sample.wav) was generated for formcut with Kokoro-82M (Apache-2.0). They are not covered by formcut's Apache-2.0 licence. Since 2.12.6 the four files ship inside the frozen engine (backend/freeze.py) for the first-run demo, and NOTICE credits each one with its creator, source and licence. The browser demo in demo/ has its own media, separate from examples/demo: eight Pexels clips (Pexels License) and the Aria of Bach's Goldberg Variations as played by Kimiko Ishizaka (CC0 1.0), listed file by file with author, source page and changes in [demo/CREDITS.md](https://github.com/nodemode-dev/formcut/blob/main/demo/CREDITS.md). They are not covered by formcut's Apache-2.0 licence. The two further browser demos have their own media: [demos/grade](https://github.com/nodemode-dev/formcut/blob/main/demos/grade/CREDITS.md) carries six Pexels clips (Pexels License) and a Goldberg Variation by Kimiko Ishizaka (CC0 1.0), and [demos/deliver](https://github.com/nodemode-dev/formcut/blob/main/demos/deliver/CREDITS.md) carries eight Pexels clips, a LibriVox reading of Thoreau's Walden by Gord Mackenzie (public domain) and a Goldberg Variation (CC0 1.0), each file listed with author, source page and changes. They are not covered by formcut's Apache-2.0 licence. Since 2.15.0 the media of all three browser demos also ships inside the app, decoded from the demos' data packs by scripts/extract_demo_media.py into frontend/public/demos/<id>/ (the built interface, which the frozen engine carries), so Help > Demos and the start screen open each film as a new project; NOTICE credits every one of those files under Demo films.
 
 ## Implementation dependencies
 

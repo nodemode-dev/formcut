@@ -16,7 +16,7 @@ Normal blending composites on the CPU by default because per-layer GPU upload an
 
 Background work uses `jobs.py`, with two workers and up to eight active jobs. Status, progress, cancellation and file retrieval have one contract. Model installation and speech use this queue. Reference-counted long-lived assets are not yet implemented; media/assets are retained independently of individual project files.
 
-Writable state comes from `paths.py`. No runtime writes belong under frontend assets or a PyInstaller extraction directory. HTTP binds to loopback. Mutating API clients send `x-formcut-local: 1`; the middleware also rejects non-loopback hosts/origins. Web page code has no Tauri shell permissions.
+Writable state comes from `paths.py`. No runtime writes belong under frontend assets or a PyInstaller extraction directory. HTTP binds to loopback. The middleware (`security.py`) rejects non-loopback hosts and origins, and every write needs `x-formcut-local: 1` and the per-launch window key (`window_key.py`): the packaged shell reads it from the engine's first line and hands it to its window; a source run gives it once at `POST /api/window/key`. Sockets take a one-time ticket bought with the key. A short open list (`security.OPEN`) serves the bootstrap, outside agents asking for a pass (`agent_access.py`, which asks the person in the window by the sealed choice in Settings) and read-only JSON-RPC. Web page code has no Tauri shell permissions.
 
 Keep code comments short; the reasoning behind a change belongs in its commit message. Make manual, single-region edits; do not use bulk replacement or codemods. Preserve mounted controls and their focus. Static creation before mounting is allowed; inspect update paths separately. Every version is driven in a real browser before it is released.
 
@@ -123,8 +123,10 @@ the launchers export before starting. `.env` is ignored by git.
   rebuildable.
 - `app/orchestration.py` carries orchestration sessions, the operation log and
   the server-sent event stream that jobs publish to.
-- `mcp/` is a separate process: an MCP server over the engine, with its own
-  virtualenv because the MCP SDK and the engine's FastAPI disagree on starlette.
+- The MCP server is `app/agent_mcp.py`, a separate process over the engine's
+  HTTP RPC. `mcp/` holds the launcher for a checkout (`formcut_mcp.py`) and its
+  own virtualenv, because the MCP SDK and the engine's FastAPI disagree on
+  starlette.
 - `frontend/src/engine/audio-playback.ts` schedules the decoded mix and acts as
   the transport's clock source; `frontend/src/ui/clip-visuals.ts`,
   `track-keyframes.ts`, `accordion.ts`, `settings-popout.ts` and `appearance.ts` are the

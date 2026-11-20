@@ -139,7 +139,7 @@ export function installKeymap(engine: ProjectEngine): void {
       const layout = LAYOUTS[currentLayout()];
       if (!Object.keys(layout.keys).length) return;
       const target = event.target as HTMLElement;
-      if (target.closest?.("input,textarea,select,[contenteditable=true]") || document.querySelector(".modal-scrim:not([hidden]),.start-overlay:not([hidden])")) return;
+      if (target.closest?.("input,textarea,select,[contenteditable=true],.ft-dock,.ft-consent,.ft-tour") || document.querySelector(".modal-scrim:not([hidden]),.start-overlay:not([hidden])")) return;
       const name = keyName(event);
       const action = (Object.entries(layout.keys) as Array<[KeyAction, string[]]>).find(([, keys]) => keys.includes(name))?.[0];
       if (!action) return;

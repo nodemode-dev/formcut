@@ -1,9 +1,9 @@
 # Releasing formcut
 
 A release is a version, and only the maintainer makes one. formcut builds
-nothing in its own repository: nodemode-ai/formcompiler builds every form* app
-and opens a draft release on its own release page
-(https://github.com/nodemode-ai/formcompiler/releases), which the maintainer
+nothing in its own repository: nodemode-dev/formcompiler builds every form* app
+and opens a draft release on this repository's Releases page
+(https://github.com/nodemode-dev/formcut/releases), which the maintainer
 reviews and publishes. This repository supplies the build scripts
 (`setup/build_release`, `setup/build_phone`, `setup/release_assets`).
 
@@ -36,7 +36,9 @@ git push origin main:refs/heads/compile_vX.Y.Z
    companion apps by `setup/build_phone`.
    Each desktop build makes the interface, then the engine with formcut's Rust
    kernels (an engine without them is refused), OpenCV rebuilt without its own
-   FFmpeg, formcut's verified LGPL ffmpeg from nodemode-dev/formcut-binaries, the
+   FFmpeg, formcut's verified LGPL ffmpeg from nodemode-dev/formai-binaries
+   (tried first, then its older name, formcut-binaries, which builds made
+   before the rename use and which keeps working), the
    app, and one zip (`setup/package_release.py`); on Windows the app is built
    with `--bundles nsis` and its installer is released beside the zip.
 3. **One draft.** `setup/release_assets` writes `SHA256SUMS`, `manifest.json` and

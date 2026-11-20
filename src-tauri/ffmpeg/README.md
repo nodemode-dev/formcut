@@ -1,7 +1,8 @@
 # src-tauri/ffmpeg
 
 `setup/bundle_ffmpeg.py` fills this folder with formcut's LGPL ffmpeg from the
-formcut-binaries release, after checking every file against
+formai-binaries release (or its older name, formcut-binaries, which builds made
+before the rename use and which keeps working), after checking every file against
 `src-tauri/binaries/ffmpeg-licence.json`: the release workflow runs it for the
 macOS and Windows installers, and `setup/build_macos_app` for a Mac built locally.
 It empties the folder first, all but this file and `.gitignore`. The programs are staged

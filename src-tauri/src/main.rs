@@ -118,6 +118,7 @@ fn main() {
                 .sidecar("formcut-engine")
                 .expect("sidecar binary is bundled")
                 .env("FORMCUT_PORT", "0")
+                .env("FORMCUT_WINDOW_KEY_STDOUT", "1")
                 .spawn()
                 .expect("the formcut engine failed to spawn");
             app.state::<Backend>().0.lock().unwrap().replace(child);

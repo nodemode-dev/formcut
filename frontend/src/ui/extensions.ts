@@ -3,6 +3,7 @@ import type { MediaBin } from "../engine/media";
 import { api } from "../engine/api";
 import { t } from "../i18n";
 import { icon } from "./icons";
+import { agentQuestion } from "../dock-adapter";
 import { ERR, ExtensionHost, HostError, PERMISSION_WORDS, type ExtensionRecord, type Frame, type Permission, type Theme } from "../extensions/host-bridge";
 import { applyOps, commandList, readDocument, runCommand } from "../extensions/catalogue";
 
@@ -527,6 +528,7 @@ async function agentLoop() {
     if (!request) continue;
     const ask: AgentRequest = request;
     const id = ask.id;
+    if (ask.action === "consent") { agentQuestion(ask); continue; }
     const answer = async () => {
       try {
         if (ask.action === "list") return { result: listForAgent() };

@@ -35,9 +35,13 @@ desktop client launches; nothing here writes to stdout but the protocol.
 
 from __future__ import annotations
 
+import contextvars
+import functools
 import json
 import os
+import types
 import uuid
+from collections.abc import Mapping
 from typing import Annotated, Any
 
 import httpx
@@ -45,6 +49,7 @@ from mcp.server.mcpserver import Image, MCPServer
 from pydantic import Field
 
 from . import rates
+from .read_methods import READ_METHODS
 
 SOURCE_RUN = "http://127.0.0.1:8040"
 
@@ -63,6 +68,7 @@ SESSION_NAME = os.environ.get("FORMCUT_MCP_SESSION", "mcp")
 RATE_REFUSED = "fps must be a whole rate from 1 to 120, or 23.976, 29.97, 59.94 or 119.88; nothing was changed"
 TIMEOUT = float(os.environ.get("FORMCUT_MCP_TIMEOUT", "120"))
 HEADERS = {"x-formcut-local": "1"}
+ASK_TIMEOUT = 135.0
 
 mcp = MCPServer(
     name="formcut",
@@ -79,6 +85,82 @@ mcp = MCPServer(
 )
 
 _session: dict[str, str] = {}
+_pass: contextvars.ContextVar[Mapping[str, str]] = contextvars.ContextVar("agent_pass", default=types.MappingProxyType({}))
+_tool: contextvars.ContextVar[str] = contextvars.ContextVar("agent_tool", default="")
+_register_tool = mcp.tool
+
+
+def _headers() -> dict[str, str]:
+    return {**HEADERS, **_pass.get()}
+
+
+def _ask(tool: str) -> tuple[bool, str]:
+    """Ask the engine for a pass for one call of a tool that changes something; the engine asks the person."""
+    tab = os.environ.get("FORMCUT_AGENT_TAB", "").strip()
+    try:
+        with httpx.Client(timeout=ASK_TIMEOUT, headers={**HEADERS, **({"x-formcut-agent-tab": tab} if tab else {})}) as client:
+            response = client.post(f"{_engine()}/api/agent-access/request", json={"tool": tool, "agent": SESSION_NAME})
+    except httpx.HTTPError as error:
+        return False, _explain(error)
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    if response.status_code >= 400 or not isinstance(body.get("pass"), str):
+        return False, str(body.get("detail") or f"formcut did not allow {tool} ({response.status_code}); nothing was changed")
+    return True, body["pass"]
+
+
+def _need_pass() -> tuple[bool, str]:
+    """The pass for this tool call, asked for at its first write, so a tool's own checks refuse before anything is asked."""
+    if _pass.get():
+        return True, ""
+    tool = _tool.get()
+    if not tool:
+        return False, "a read-only tool cannot change anything in formcut"
+    ok, value = _ask(tool)
+    if ok:
+        _pass.set({"x-formcut-agent-pass": value})
+        return True, ""
+    return False, value
+
+
+def _end(value: str) -> None:
+    try:
+        with httpx.Client(timeout=5, headers={**HEADERS, "x-formcut-agent-pass": value}) as client:
+            client.delete(f"{_engine()}/api/agent-access/pass")
+    except httpx.HTTPError:
+        return
+
+
+def _gated_tool(*args: Any, **kwargs: Any):
+    """mcp.tool, with the person's consent asked for before any tool that is not read-only."""
+    register = _register_tool(*args, **kwargs)
+    read_only = bool((kwargs.get("annotations") or {}).get("readOnlyHint"))
+
+    def wrap(fn):
+        if read_only:
+            return register(fn)
+
+        @functools.wraps(fn)
+        def gated(*call_args: Any, **call_kwargs: Any):
+            tool = _tool.set(kwargs.get("name") or fn.__name__)
+            held = _pass.set({})
+            try:
+                return fn(*call_args, **call_kwargs)
+            finally:
+                given = _pass.get().get("x-formcut-agent-pass")
+                _pass.reset(held)
+                _tool.reset(tool)
+                if given:
+                    _end(given)
+
+        return register(gated)
+
+    return wrap
+
+
+mcp.tool = _gated_tool
 
 
 def _explain(error: Exception) -> str:
@@ -97,8 +179,12 @@ def _explain(error: Exception) -> str:
 
 
 def _rest(method: str, path: str, payload: dict | None = None) -> tuple[bool, Any]:
+    if method.upper() not in ("GET", "HEAD"):
+        ok, why = _need_pass()
+        if not ok:
+            return False, why
     try:
-        with httpx.Client(timeout=TIMEOUT, headers=HEADERS) as client:
+        with httpx.Client(timeout=TIMEOUT, headers=_headers()) as client:
             response = client.request(method, f"{_engine()}{path}", json=payload)
     except httpx.HTTPError as error:
         return False, _explain(error)
@@ -131,15 +217,20 @@ def _session_id() -> str | None:
 def _rpc(method: str, params: dict | None = None, identify: bool = True, timeout: float = TIMEOUT) -> tuple[bool, Any]:
     body: dict[str, Any] = {"jsonrpc": "2.0", "id": 1, "method": method}
     params = dict(params or {})
-    if identify:
+    if method not in READ_METHODS:
+        ok, why = _need_pass()
+        if not ok:
+            return False, why
+    held = bool(_pass.get())
+    if identify and held:
         session = _session_id()
         if session:
             params["session"] = session
     if params:
         body["params"] = params
     try:
-        with httpx.Client(timeout=timeout, headers=HEADERS) as client:
-            response = client.post(f"{_engine()}/api/rpc", json=body)
+        with httpx.Client(timeout=timeout, headers=_headers()) as client:
+            response = client.post(f"{_engine()}/api/rpc" if held else f"{_engine()}/api/rpc/read", json=body)
     except httpx.HTTPError as error:
         return False, _explain(error)
     try:
@@ -988,8 +1079,11 @@ def formcut_edit(
 
 
 def _upload(path: str, filename: str, data: bytes) -> tuple[bool, Any]:
+    ok, why = _need_pass()
+    if not ok:
+        return False, why
     try:
-        with httpx.Client(timeout=TIMEOUT, headers=HEADERS) as client:
+        with httpx.Client(timeout=TIMEOUT, headers=_headers()) as client:
             response = client.post(f"{_engine()}{path}", files={"file": (filename, data, "application/json")})
     except httpx.HTTPError as error:
         return False, _explain(error)

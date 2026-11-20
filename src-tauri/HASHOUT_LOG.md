@@ -2,6 +2,13 @@
 
 Reasoning behind the shell's startup, newest first.
 
+## 2.16.0 · the shell hands the window its key
+
+- **The change.** The engine is spawned with `FORMCUT_WINDOW_KEY_STDOUT=1` (main.rs). `supervise` (engine_lifecycle.rs) keeps a second buffer for stdout only and takes the key from a whole line `formcut-window-key: <32 or more of A-Z a-z 0-9 _ ->` there. The address is read as before (stdout or stderr, then the health check); once it is healthy the port and the moment are kept. The window is built only when both the address and the key are known, with one `initialization_script` that sets `window.__FORMCUT_WINDOW_KEY` when `location.origin` is the engine's own `http://127.0.0.1:<port>` (tauri 2.11.5's `WebviewWindowBuilder::initialization_script(impl Into<String>)`).
+- **How long it waits.** Before the address: the 40 s that main already had, unchanged. After the address: 10 s for the key, counted from the moment the address was found healthy; when they run out the loop ends and takes the existing failure path ("did not hand the window its key") with no window. An engine that exits, errors or closes its output takes the existing path at once. The failure path is the code after the loop, so it runs once.
+- **Order seen.** Engine from source with the variable set: the key line first, on stdout, once; the address on stderr after uvicorn starts. Both orders are handled.
+- **Checked.** Not compiled (no WebKit here); `rustfmt --check` clean. The loop was copied into a scratch crate (tokio 1.53.1 and regex 1.13.1 as pinned) with a channel for the events and run: key then address, window at 0.0 s; address then key 3 s later, window at 3.0 s; both in one chunk, window at 0.0 s; address then 11 s of silence with the output open, failure at 10.0 s and no window; 35 s of silence then key and address, window at 35.0 s; exit before the address, failure at 0.0 s; address then exit 2 s later, failure at 2.0 s; address then the output closed, failure at 1.0 s; 45 s of silence, failure at 40.0 s. A first copy set the key message when the address arrived, which then also showed when a running engine went away later; the message is now set only when the 10 s run out.
+
 ## 2.13.2 · splash parity with formvis
 
 - **Why the main window is built hidden.** It is created only once the engine answers, so before that the person sees nothing; with the splash up first the launch shows a card at once. On macOS a hidden window's web view stops its animation frames and the page renders through them, so the window is built hidden and `conceal` puts it on screen at alpha 0 with clicks passed through; elsewhere it is built hidden and shown by `show_main`. Both carry the page's #0a0a0a background, so no white frame shows.

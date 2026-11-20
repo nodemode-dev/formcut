@@ -22,9 +22,10 @@ The rest is written by hand.
 | Module | Prefix | Routes |
 | --- | --- | --- |
 | addons.py | /api/addons | 3 |
+| agent_access.py | /api/agent-access | 6 |
 | agent_connect.py | /api/agents | 2 |
 | assets.py | /api/assets | 3 |
-| automation.py | /api/rpc | 2 |
+| automation.py | /api/rpc | 3 |
 | brush.py | /api/render | 2 |
 | catalogue.py | /api/catalogue | 1 |
 | checkpoints.py | /api/checkpoints | 1 |
@@ -34,6 +35,7 @@ The rest is written by hand.
 | demo.py | /api/demo | 3 |
 | device_templates.py | /api/devices | 2 |
 | devices.py | /api/devices | 3 |
+| dock_tabs.py | /api/terminal | 6 |
 | effect_previews.py | /api/catalogue/preview | 1 |
 | engine_report.py | /api/engine | 1 |
 | extensions.py | /api/extensions | 9 |
@@ -77,6 +79,7 @@ The rest is written by hand.
 | tts.py | /api/tts | 3 |
 | upscale.py | /api/media | 2 |
 | webhooks.py | /api/webhooks | 5 |
+| window_key.py | /api/window | 3 |
 
 ## Modules with no routes of their own
 
@@ -84,6 +87,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
+- `agent_lookup.py`
 - `agent_mcp.py`
 - `ai_upscale.py`
 - `alpha_export.py`
@@ -137,11 +141,13 @@ the automation transports.
 - `proxies.py`
 - `qc.py`
 - `rates.py`
+- `read_methods.py`
 - `render_document.py`
 - `renderer.py`
 - `rhythm.py`
 - `sam_video.py`
 - `scenes.py`
+- `seal.py`
 - `security.py`
 - `segmentation.py`
 - `speech.py`
