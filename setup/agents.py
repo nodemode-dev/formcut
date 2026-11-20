@@ -32,7 +32,36 @@ MANIFEST = ROOT / "agents" / "manifest.json"
 APP = "formcut"
 SERVER = ROOT / "backend" / "app" / "agent_mcp.py"
 HOST = ROOT / "backend" / "app" / "formext_host.py"
-DOCK = {"present": False, "positions": [], "tabs": []}
+DOCK = {"present": True, "positions": ["bottom", "right"], "tabs": ["shell", "claude", "codex", "cursor"]}
+DOCK_DIR = ROOT / "frontend" / "src" / "dock"
+DOCK_VERSION = "2.1.0"
+
+
+def dock_problems(folder: Path = DOCK_DIR) -> list[str]:
+    """What is wrong with the shared dock folder: a file that differs from MANIFEST.json, is missing or extra, or imports from the app."""
+    import hashlib
+
+    listing = folder / "MANIFEST.json"
+    if not listing.is_file():
+        return ["frontend/src/dock/MANIFEST.json is missing"]
+    manifest = json.loads(listing.read_text(encoding="utf-8"))
+    problems = [] if manifest.get("version") == DOCK_VERSION else [f"MANIFEST.json names module {manifest.get('version')}, expected {DOCK_VERSION}"]
+    wanted = manifest.get("files", {})
+    found = {path.name: path for path in folder.iterdir() if path.is_file() and path.name != "MANIFEST.json"}
+    for name in sorted(set(wanted) | set(found)):
+        if name not in found:
+            problems.append(f"frontend/src/dock/{name} is missing")
+        elif name not in wanted:
+            problems.append(f"frontend/src/dock/{name} is not in MANIFEST.json")
+        elif hashlib.sha256(found[name].read_bytes()).hexdigest() != wanted[name]:
+            problems.append(f"frontend/src/dock/{name} differs from MANIFEST.json")
+    for name, path in sorted(found.items()):
+        if path.suffix != ".ts":
+            continue
+        for target in re.findall(r"""(?:from|import)\s*\(?\s*['"]([^'"]+)['"]""", path.read_text(encoding="utf-8")):
+            if not (target.startswith("./") and "/" not in target[2:]) and not target.startswith("@xterm/"):
+                problems.append(f"frontend/src/dock/{name} imports {target} from outside the dock folder")
+    return problems
 
 
 def _files(folder: Path) -> dict:
@@ -105,11 +134,14 @@ def sync(check: bool) -> int:
         if not check:
             shutil.rmtree(MIRROR, ignore_errors=True)
             shutil.copytree(SKILL, MIRROR)
+    problems = dock_problems()
+    for problem in problems:
+        print(f"agents: dock module: {problem} (copy the folder again from FormVis; sync never writes it)")
     if check:
         print("agents: in step" if not drift else "agents: drifted: " + ", ".join(drift) + " (run ./formcut agents sync)")
-        return 1 if drift else 0
+        return 1 if drift or problems else 0
     print("agents: " + ("updated " + ", ".join(drift) if drift else "already in step"))
-    return 0
+    return 1 if problems else 0
 
 
 def _copy_skill(target: Path, dry: bool) -> str:

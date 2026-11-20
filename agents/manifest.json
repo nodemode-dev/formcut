@@ -106,9 +106,17 @@
     }
   ],
   "dock": {
-    "present": false,
-    "positions": [],
-    "tabs": []
+    "present": true,
+    "positions": [
+      "bottom",
+      "right"
+    ],
+    "tabs": [
+      "shell",
+      "claude",
+      "codex",
+      "cursor"
+    ]
   },
   "extensions": {
     "host_api": "1"
