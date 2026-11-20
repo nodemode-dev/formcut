@@ -19,6 +19,7 @@ call backend\.venv-portable\Scripts\pip install -r backend\requirements.txt pyin
 echo [3/4] freeze
 cd backend
 call .venv-portable\Scripts\python prepare_cv.py || exit /b 1
+set FORMCUT_ENGINE_WINDOWED=0
 call .venv-portable\Scripts\python freeze.py || exit /b 1
 cd ..
 
