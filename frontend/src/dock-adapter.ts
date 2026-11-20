@@ -12,13 +12,14 @@ import { openSettings } from "./ui/settings-link";
 export const DOCK_KEY = "formcut.dock";
 export const DOCK_SIZES = { minHeight: 120, defaultHeight: 260, maxHeightShare: 0.45, keepHeight: 440, minWidth: 320, defaultWidth: 400, maxWidthShare: 0.4, keepWidth: 940 };
 
-type Kind = Exclude<PtyKind, "agent">;
+type Kind = Exclude<PtyKind, "agent"> | "antigravity";
+type Told = Partial<DockProgramStatus> & { finding?: string; said?: string };
 type Row = { id: string; title: string; alive: boolean; kind: string; tip?: string };
 type Frame = { type?: string; data?: string };
 type Question = { id: string; action?: string; tool?: string; agent?: string; client?: string; what?: string; offers?: string[]; always?: string; expires?: number; notes?: string[] };
 type Withdrawals = { seq: number; events: Array<{ type: string; id: string }> };
 
-const KINDS: Kind[] = ["shell", "claude", "codex", "cursor"];
+const KINDS: Kind[] = ["shell", "claude", "codex", "cursor", "antigravity"];
 const CHOICES: ConsentChoice[] = ["deny", "once", "always"];
 const COVERED = ".modal-scrim:not([hidden]),.set-scrim:not([hidden]),.start-overlay:not([hidden])";
 
@@ -46,7 +47,7 @@ function errorKind(err: unknown): DockErrorKind | null {
   return err.code === "missing" ? "oldEngine" : null;
 }
 
-function terminal(row: Row): DockTerminal {
+function terminal(row: Row): DockTerminal<"antigravity"> {
   const kind = KINDS.includes(row.kind as Kind) ? row.kind as Kind : "shell";
   return row.tip ? { id: row.id, title: row.title, alive: row.alive, kind, tip: row.tip } : { id: row.id, title: row.title, alive: row.alive, kind };
 }
@@ -95,8 +96,9 @@ function channel(id: string): DockChannel {
   };
 }
 
-const program = (row: Partial<DockProgramStatus> | undefined): DockProgramStatus => ({
+const program = (row: Told | undefined): DockProgramStatus => ({
   installed: row?.installed === true, version: row?.version ?? null, install: row?.install ?? "", signedIn: row?.signedIn ?? null,
+  ...(row?.finding && row.finding !== "runs" && typeof row.said === "string" ? { note: row.said } : {}),
 });
 
 let add: ((request: ConsentRequest) => void) | null = null;
@@ -134,13 +136,13 @@ export function agentQuestion(raw: Question): void {
 
 const available = (): boolean => !compact() && !document.querySelector(COVERED);
 
-const adapter: DockAdapter = {
+const adapter: DockAdapter<"antigravity"> = {
   words: { app: "formcut", noun: "video", lead: "Claude Code works on your {noun} in {app} with you: say what you want done.", example: "cut the pauses and add captions", start: "./formcut" },
   placement: { mode: "own", storage: { key: DOCK_KEY, legacy: [] }, sizes: DOCK_SIZES, canDockRight: () => !compact() },
   passKey: () => false,
   isDockChord: (event) => event.code === "KeyJ" && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && available(),
   chordLabel: () => keyLabel("mod+j"),
-  tabs: () => ({ builtin: ["shell", "claude", "codex", "cursor"] }),
+  tabs: () => ({ builtin: ["shell", "claude", "codex", "cursor", "antigravity"] }),
   classes: { iconButton: "iconbtn", button: "tool-chip", primaryButton: "is-primary", input: "", select: "", note: "fc-dock-note" },
   t: (key, english) => { const name = `dock.${key}`; const own = t(name); return own === name ? text(english) : own; },
   onTheme: () => undefined,
@@ -153,10 +155,10 @@ const adapter: DockAdapter = {
     close: async (id) => { await call(`/api/terminal/tabs/${encodeURIComponent(id)}`, "DELETE"); },
     channel,
   },
-  agentStatus: async (): Promise<DockAgentStatus | null> => {
+  agentStatus: async (): Promise<DockAgentStatus<"antigravity"> | null> => {
     try {
-      const told = await call<Partial<Record<"claude" | "codex" | "cursor", Partial<DockProgramStatus>>>>("/api/terminal/agents");
-      return { claude: program(told.claude), codex: program(told.codex), cursor: program(told.cursor) };
+      const told = await call<Partial<Record<"claude" | "codex" | "cursor" | "antigravity", Told>>>("/api/terminal/agents");
+      return { claude: program(told.claude), codex: program(told.codex), cursor: program(told.cursor), antigravity: program(told.antigravity) };
     } catch { return null; }
   },
   consent: {
@@ -188,10 +190,10 @@ const adapter: DockAdapter = {
   openSettings: () => openSettings("connections", "access"),
 };
 
-let dock: Dock | null = null;
+let dock: Dock<"antigravity"> | null = null;
 
 /** The family's terminal panel, built once and placed after the workspace; it asks the engine nothing until it is opened. */
-export function installDock(host: HTMLElement, before: Node | null = null): Dock {
+export function installDock(host: HTMLElement, before: Node | null = null): Dock<"antigravity"> {
   if (dock) return dock;
   dock = new Dock(adapter);
   dock.mount(host, before);

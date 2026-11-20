@@ -2,6 +2,15 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · the panel is module 2.2.0, and Antigravity is its fourth agent tab
+
+- **Why.** The family's panel now takes its agent kinds from each app's adapter, which is what lets an app offer a fourth program. formcut's engine already starts `agy` in a tab (see the engine log), so the panel gets the tab.
+- **The folder (`src/dock/`).** Copied byte for byte from FormVis: 16 entries with `MANIFEST.json`, `agents.ts` is new. `setup/agents.py` expects 2.2.0 and the test holds the count. Nothing in the folder is edited here.
+- **The adapter (`src/dock-adapter.ts`).** Typed `DockAdapter<"antigravity">`; `tabs().builtin` ends with `antigravity`; `agentStatus()` returns the `antigravity` key; a tab row of that kind keeps its kind. For a program that is not found, or is found and does not start, the engine's own sentence is passed on as the status `note`, so the panel says where formcut looked.
+- **Studio, Agent terminal.** A third button, Connect Antigravity, beside Connect Claude Code and Connect Codex; it posts `antigravity` to the same route and shows the same line. The sentence has no entry in the seven language tables yet, so it shows in English.
+- **Checked.** `tsc --noEmit` with formcut's flags (clean except `@huggingface/transformers`, which this machine does not have) and the dock folder under the strict set of `CONTRACT.md` (exit 0), both through FormVis's `node_modules`. The engine side was run with a stand-in `agy` (engine log).
+- **Not checked.** Nothing was looked at in a browser in this pass: not the new tab's button and row, not the note, not the Studio button. No production build, no desktop shell, no `npm install`.
+
 ## Unreleased · the terminal is the family's panel, at the bottom or the right of the window
 
 - **Why.** Every Form app shows the same terminal panel from one shared module. formcut had one shell on a page of Studio, bound to one socket, and its own outside-agent dialog. Both are replaced by module 2.1.0 (`frontend/src/dock`, 15 files copied byte for byte from FormVis at 8bbdf61b and never edited here; `setup/agents.py sync --check` fails, naming the file, when one differs from `MANIFEST.json` or imports from the app).

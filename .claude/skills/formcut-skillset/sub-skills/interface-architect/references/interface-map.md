@@ -23,6 +23,7 @@ The module list and the engine commands are generated from `frontend/src` by
 - `demos/woods-paths.ts`
 - `demos/woods.ts`
 - `dock/adapter.ts`
+- `dock/agents.ts`
 - `dock/chat.ts`
 - `dock/consent.ts`
 - `dock/dock.ts`

@@ -33,9 +33,9 @@ MANIFEST = ROOT / "agents" / "manifest.json"
 APP = "formcut"
 SERVER = ROOT / "backend" / "app" / "agent_mcp.py"
 HOST = ROOT / "backend" / "app" / "formext_host.py"
-DOCK = {"present": True, "positions": ["bottom", "right"], "tabs": ["shell", "claude", "codex", "cursor"]}
+DOCK = {"present": True, "positions": ["bottom", "right"], "tabs": ["shell", "claude", "codex", "cursor", "antigravity"]}
 DOCK_DIR = ROOT / "frontend" / "src" / "dock"
-DOCK_VERSION = "2.1.0"
+DOCK_VERSION = "2.2.0"
 
 
 def dock_problems(folder: Path = DOCK_DIR) -> list[str]:

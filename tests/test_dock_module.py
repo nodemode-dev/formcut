@@ -21,8 +21,8 @@ def _agents():
 def test_the_committed_folder_matches_its_manifest_and_imports_nothing_of_formcut():
     agents = _agents()
     assert agents.dock_problems() == []
-    assert json.loads((DOCK / "MANIFEST.json").read_text(encoding="utf-8"))["version"] == agents.DOCK_VERSION == "2.1.0"
-    assert len(list(DOCK.iterdir())) == 15
+    assert json.loads((DOCK / "MANIFEST.json").read_text(encoding="utf-8"))["version"] == agents.DOCK_VERSION == "2.2.0"
+    assert len(list(DOCK.iterdir())) == 16
 
 
 def test_a_changed_an_extra_and_a_missing_file_are_each_named(tmp_path):
@@ -52,7 +52,7 @@ def test_sync_reports_a_dock_problem_and_fails(monkeypatch, tmp_path, capsys):
 
 def test_the_manifest_says_the_dock_is_there_with_the_tabs_the_adapter_offers():
     dock = json.loads((ROOT / "agents" / "manifest.json").read_text(encoding="utf-8"))["dock"]
-    assert dock == {"present": True, "positions": ["bottom", "right"], "tabs": ["shell", "claude", "codex", "cursor"]}
+    assert dock == {"present": True, "positions": ["bottom", "right"], "tabs": ["shell", "claude", "codex", "cursor", "antigravity"]}
     adapter = (SOURCE / "dock-adapter.ts").read_text(encoding="utf-8")
     offered = re.search(r"tabs: \(\) => \(\{ builtin: \[([^\]]+)\]", adapter).group(1)
     assert [word.strip().strip('"') for word in offered.split(",")] == dock["tabs"]

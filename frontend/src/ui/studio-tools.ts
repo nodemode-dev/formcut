@@ -217,7 +217,7 @@ export function installStudioTools(engine: ProjectEngine, bin: MediaBin): void {
     <section data-view="terminal" class="set-view" hidden>
       <div class="panel-section"><div class="panel-section-head"><span>${text("Agent terminal")}</span><small data-term-status></small></div><div class="panel-rows">
         <p class="stock-note">${text("A real shell inside formcut, started with this engine's MCP server in its environment. Connect a client once, then run claude or codex here and it drives the editor through the formcut tools while you watch.")}</p>
-        <div class="stock-row"><button class="tool-chip" data-term-connect="claude-code">${icon("plus")}${text("Connect Claude Code")}</button><button class="tool-chip" data-term-connect="codex">${icon("plus")}${text("Connect Codex")}</button><button class="tool-chip" data-term-open>${icon("terminal")}${text("Open shell")}</button></div>
+        <div class="stock-row"><button class="tool-chip" data-term-connect="claude-code">${icon("plus")}${text("Connect Claude Code")}</button><button class="tool-chip" data-term-connect="codex">${icon("plus")}${text("Connect Codex")}</button><button class="tool-chip" data-term-connect="antigravity">${icon("plus")}${text("Connect Antigravity")}</button><button class="tool-chip" data-term-open>${icon("terminal")}${text("Open shell")}</button></div>
         <p class="stock-note" data-term-note></p>
       </div></div>
     </section>

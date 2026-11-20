@@ -87,6 +87,7 @@ These are the working parts the routed modules call: the renderer and its
 helpers, the export graph, decoding, effects, expressions, paths, processes and
 the automation transports.
 
+- `agent_lookup.py`
 - `agent_mcp.py`
 - `ai_upscale.py`
 - `alpha_export.py`
