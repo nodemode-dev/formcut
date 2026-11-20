@@ -58,10 +58,14 @@ window holds (`backend/app/window_key.py`, checked in `security.py`); the
 fixed `x-formcut-local` header alone is not enough. Outside agents (the MCP
 server, any local program) ask `POST /api/agent-access/request` before a
 tool that changes something, and the window asks the person (Deny, Allow
-once, Always allow) by the sealed choice in Settings; the Agent terminal's
-own shell is not asked, and Blocked refuses it like any other agent. Terminal
-tabs by id for the shared dock live in `backend/app/dock_tabs.py`: a plain
-shell tab has no tab token, each Claude Code, Codex or Cursor tab has its own.
+once, Always allow) by the sealed choice in Settings. The window's terminal
+panel is the family's shared dock: `frontend/src/dock` (module 2.1.0, copied
+from FormVis and never edited here; `agents sync --check` fails when a file
+differs from its `MANIFEST.json`), wired by `frontend/src/dock-adapter.ts` and
+`frontend/src/styles/dock-tokens.css`. Its tabs live in
+`backend/app/dock_tabs.py`: a plain shell tab has no tab token and is asked
+like any outside program, each Claude Code, Codex or Cursor tab has its own,
+is not asked, and is refused under Blocked like any other agent.
 A new write route must need the key or be named in
 `security.OPEN`; tests/test_window_key.py fails otherwise. ANA
 connecting in will use this surface, so extend it rather than adding a second

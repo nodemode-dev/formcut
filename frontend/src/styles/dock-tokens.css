@@ -58,7 +58,7 @@
 :root #app { grid-template-rows: 40px minmax(0, 1fr) var(--ft-dock-h); grid-template-columns: minmax(0, 1fr) var(--ft-dock-w); }
 #app > .titlebar { grid-area: 1 / 1 / 2 / -1; }
 #app > .workspace { grid-area: 2 / 1 / 3 / 2; }
-#app > .ft-dock { grid-area: 3 / 1 / 4 / -1; }
+#app > .ft-dock { grid-area: 3 / 1 / 4 / -1; z-index: var(--z-range); }
 :root[data-ft-dock-side="right"] #app > .ft-dock { grid-area: 2 / 2 / 4 / 3; }
 :root[dir="rtl"] #app { direction: ltr; }
 :root[dir="rtl"] #app > :not(.ft-dock) { direction: rtl; }
