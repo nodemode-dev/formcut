@@ -2,6 +2,11 @@
 
 Reasoning behind the demo, newest first.
 
+## 2.19.0 · rebuilt from the tip
+
+- **The change.** `npm run demo` in `frontend` (`vite build --config ../demo/vite.config.mjs`) after `npm ci --ignore-scripts`; `assets/demo.js` and `assets/style.css` change with the interface they share, `index.html` does not. The demo names no agent program, so the four-program sentence does not appear in it. It takes its version from `frontend/package.json`, so it is built once more after the release's version edit, in the release commit.
+- **Seen.** Opened from `file://` in headless Chromium (Playwright 1.63.0): 871 elements, 3 canvases, the title "FormCut demo", no console error. `tests/test_repo_demos_in_app.py`, `tests/test_demo_media.py` and `tests/test_demo_media_bundled.py`: 10 passed.
+
 ## 2.13.1 · real media
 
 - **Theme and story.** Eight Pexels clips run from a Milky Way time-lapse through sunrise, snow peaks, fog, a waterfall slope, a cloud sea and a campfire to a southern lights time-lapse, a night-to-night day with no person in frame. Landscapes make a film that looks finished without faces, brands or releases to worry about. The cloud sea page calls its clip a sunrise and the frames could be either, so its tag and caption say only what is visible.
