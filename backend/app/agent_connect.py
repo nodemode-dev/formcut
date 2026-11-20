@@ -13,13 +13,14 @@ from __future__ import annotations
 import json
 import os
 import shlex
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
+from . import agent_lookup
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 ROOT = Path(__file__).resolve().parents[2]
@@ -71,6 +72,13 @@ def clients() -> list[dict]:
             "text": json.dumps({"mcpServers": {"formcut": stdio}}, indent=2),
         },
         {
+            "id": "antigravity",
+            "name": "Antigravity",
+            "kind": "file",
+            "file": "~/.gemini/config/mcp_config.json",
+            "text": json.dumps({"mcpServers": {"formcut": stdio}}, indent=2),
+        },
+        {
             "id": "claude-desktop",
             "name": "Claude Desktop",
             "kind": "file",
@@ -99,7 +107,39 @@ class InstallBody(BaseModel):
 
 
 def _run(words: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run(words, capture_output=True, text=True, timeout=60, check=False)
+    from . import dock_tabs
+
+    return agent_lookup.run(words, dock_tabs.agent_env(words[0]), 60)
+
+
+def _antigravity(command: str, args: list[str]) -> dict:
+    """Writes formcut into Antigravity's MCP servers file, keeping every other server and key that is there."""
+    path = Path.home() / ".gemini" / "config" / "mcp_config.json"
+    older = Path.home() / ".gemini" / "antigravity-cli" / "mcp_config.json"
+    seen = str(older) if older.is_file() and not path.is_file() else None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8") or "{}") if path.is_file() else {}
+    except ValueError:
+        data = None
+    if not isinstance(data, dict) or not isinstance(data.get("mcpServers", {}), dict):
+        raise HTTPException(409, f"{path} is not an MCP servers file formcut can read, so it was left alone")
+    entry = {"command": command, "args": args}
+    have = data.get("mcpServers", {}).get("formcut")
+    ours = isinstance(have, dict) and Path(str(have.get("command", ""))).name == Path(command).name
+    if have is not None and have != entry and not ours:
+        raise HTTPException(409, f"{path} has a server named formcut that formcut did not write, so it was left alone")
+    if have != entry:
+        data.setdefault("mcpServers", {})["formcut"] = entry
+        path.parent.mkdir(parents=True, exist_ok=True)
+        part = path.with_name(path.name + f".part-{os.getpid()}")
+        part.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        os.replace(part, path)
+    return {
+        "client": "antigravity",
+        "written": str(path),
+        "present": have == entry,
+        "older": seen,
+    }
 
 
 def _claude_runs(claude: str, command: str, args: list[str]) -> bool:
@@ -117,9 +157,12 @@ def install(body: InstallBody) -> dict:
     """Register formcut's MCP server with a client in one click, so the embedded terminal's agent finds it."""
     command, args = server_command()
     if body.client == "claude-code":
-        claude = shutil.which("claude")
-        if not claude:
-            raise HTTPException(409, "claude is not on this machine's PATH; install Claude Code first")
+        from . import dock_tabs
+
+        found = dock_tabs.usable("claude")
+        if found.state != "runs":
+            raise HTTPException(409, dock_tabs.said("claude", found))
+        claude = found.path
         add = [claude, "mcp", "add", "formcut", "--scope", "user", "--", command, *args]
         run = _run(add)
         text = (run.stdout + run.stderr).strip()
@@ -157,4 +200,6 @@ def install(body: InstallBody) -> dict:
             "present": "[mcp_servers.formcut]" in existing,
             "backup": str(path.with_suffix(".toml.bak")) if existing else None,
         }
-    raise HTTPException(400, "client must be claude-code or codex")
+    if body.client == "antigravity":
+        return _antigravity(command, args)
+    raise HTTPException(400, "client must be claude-code, codex or antigravity")

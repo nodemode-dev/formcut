@@ -55,9 +55,10 @@ def _shell() -> list[str]:
 class Session:
     """One shell on one socket."""
 
-    def __init__(self, cols: int, rows: int, tab: str = "", argv: list[str] | None = None, env: dict | None = None):
+    def __init__(self, cols: int, rows: int, tab: str = "", argv: list[str] | None = None, env: dict | None = None, cwd: str | None = None):
         argv = argv or _shell()
         env = _environment(tab) if env is None else env
+        cwd = cwd or os.path.expanduser("~")
         self.cols, self.rows = max(20, min(400, cols)), max(5, min(200, rows))
         self.pid = None
         self.fd = None
@@ -67,7 +68,7 @@ class Session:
 
             pid, fd = pty.fork()
             if pid == 0:
-                os.chdir(os.path.expanduser("~"))
+                os.chdir(cwd)
                 os.execvpe(argv[0], argv, env)  # noqa: S606 the shell is the feature
             self.pid, self.fd = pid, fd
             self.resize(self.cols, self.rows)
@@ -80,7 +81,7 @@ class Session:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 env=env,
-                cwd=os.path.expanduser("~"),
+                cwd=cwd,
             )
 
     def resize(self, cols: int, rows: int) -> None:
@@ -123,7 +124,7 @@ class Session:
 
 @router.get("/status")
 def status(request: Request) -> dict:
-    from shutil import which
+    from . import dock_tabs
 
     if request.scope.get("formcut.remote"):
         raise HTTPException(403, "the terminal is open to the desktop only")
@@ -132,8 +133,8 @@ def status(request: Request) -> dict:
         "available": True,
         "pty": POSIX,
         "shell": _shell()[0],
-        "claude": which("claude") is not None,
-        "codex": which("codex") is not None,
+        "claude": dock_tabs.located("claude").state == "runs",
+        "codex": dock_tabs.located("codex").state == "runs",
         "mcp": _environment()["FORMCUT_MCP"],
         "contract": DOCK_CONTRACT,
     }

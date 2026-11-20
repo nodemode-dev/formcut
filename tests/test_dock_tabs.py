@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 import pytest
-from app import agent_access, dock_tabs, extensions, terminal
+from app import agent_access, agent_lookup, dock_tabs, extensions, terminal
 from app.main import app
 from conftest import bare as as_any_program
 from conftest import window_headers
@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(os.name != "posix", reason="the stand-in program
 
 OWN = "http://127.0.0.1:8123"
 LOCAL = {"x-formcut-local": "1"}
-PROGRAMS = {"claude": "claude", "codex": "codex", "cursor": "cursor-agent"}
+PROGRAMS = {"claude": "claude", "codex": "codex", "cursor": "cursor-agent", "antigravity": "agy"}
 
 
 @pytest.fixture(scope="module")
@@ -64,12 +64,15 @@ def programs(tmp_path, monkeypatch):
             "exec sleep 30\n",
         )
     shell = script(
-        tmp_path / "plainsh", f'echo "tab=[$FORMCUT_AGENT_TAB] config=[$FORMCUT_TAB_MCP_CONFIG]" > "{tmp_path}/shell.seen"\nexec sleep 30\n'
+        tmp_path / "plainsh",
+        'for word in "$@"; do if [ "$found" = 1 ]; then exec /bin/sh -c "$word"; fi; if [ "$word" = "-c" ]; then found=1; fi; done\n'
+        f'echo "tab=[$FORMCUT_AGENT_TAB] config=[$FORMCUT_TAB_MCP_CONFIG]" > "{tmp_path}/shell.seen"\nexec sleep 30\n',
     )
     monkeypatch.setenv("PATH", f"{folder}:/usr/bin:/bin")
     monkeypatch.setenv("SHELL", str(shell))
-    dock_tabs._found.clear()
+    agent_lookup.forget()
     yield tmp_path
+    agent_lookup.forget()
     with dock_tabs._lock:
         left = list(dock_tabs._tabs.values())
         dock_tabs._tabs.clear()
@@ -103,19 +106,43 @@ def test_agent_status_in_one_call(window, programs, monkeypatch):
     found = window.get("/api/terminal/agents").json()
     assert found["contract"] == terminal.DOCK_CONTRACT
     for kind, name in PROGRAMS.items():
-        assert found[kind]["installed"] is True and found[kind]["version"] == f"1.2.3 ({name})" and found[kind]["install"] == ""
+        assert found[kind]["installed"] is True and found[kind]["version"] == "1.2.3" and found[kind]["install"] == ""
+        assert found[kind]["finding"] == "runs" and found[kind]["how"] == "path" and found[kind]["path"].endswith(f"/bin/{name}")
+    assert found["antigravity"]["signedIn"] is None
     monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    agent_lookup.forget()
     missing = window.get("/api/terminal/agents").json()
     for kind in PROGRAMS:
-        assert missing[kind] == {
+        title = dock_tabs.PROGRAMS[kind]["title"]
+        assert missing[kind]["said"].startswith(f"{title} was not found. Looked in: PATH (/usr/bin:/bin); ")
+        assert {name: missing[kind][name] for name in ("installed", "version", "install", "signedIn", "title", "finding", "path")} == {
             "installed": False,
             "version": None,
             "install": dock_tabs.PROGRAMS[kind]["install"],
             "signedIn": None,
-            "title": dock_tabs.PROGRAMS[kind]["title"],
+            "title": title,
+            "finding": "missing",
+            "path": None,
         }
     refused = window.post("/api/terminal/tabs", json={"kind": "codex"})
     assert refused.status_code == 409 and refused.json()["detail"]["code"] == "notInstalled"
+    assert refused.json()["detail"]["message"] == missing["codex"]["said"]
+
+
+def test_an_antigravity_tab_writes_its_entry_beside_the_others_and_takes_it_out_again(window, programs):
+    file = dock_tabs.TAB_FOLDER / ".agents" / "mcp_config.json"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps({"note": "mine", "mcpServers": {"other": {"command": "/bin/true", "args": []}}}), encoding="utf-8")
+    tab = window.post("/api/terminal/tabs", json={"kind": "antigravity"}).json()
+    assert tab["kind"] == "antigravity" and tab["title"] == "Antigravity" and tab["alive"] is True
+    token = seen(programs / "agy.seen")["tab"]
+    held = json.loads(file.read_text(encoding="utf-8"))
+    assert held["note"] == "mine" and held["mcpServers"]["other"] == {"command": "/bin/true", "args": []}
+    assert held["mcpServers"][dock_tabs.MCP_NAME]["env"][agent_access.TAB_ENV] == token and agent_access.tab_live(token)
+    assert stat.S_IMODE(os.stat(file).st_mode) == 0o600
+    assert window.delete(f"/api/terminal/tabs/{tab['id']}").status_code == 200
+    assert json.loads(file.read_text(encoding="utf-8")) == {"note": "mine", "mcpServers": {"other": {"command": "/bin/true", "args": []}}}
+    assert not agent_access.tab_live(token)
 
 
 def test_a_plain_shell_tab_carries_no_tab_token(window, programs):
@@ -144,7 +171,7 @@ def test_each_agent_tab_has_its_own_token_and_a_closed_tab_s_token_is_refused(ba
         assert entry["env"] == {agent_access.TAB_ENV: "${" + agent_access.TAB_ENV + "}"}
         assert ask(bare, **{agent_access.TAB_HEADER: token}).status_code == 200
         tokens[kind] = (tab["id"], token, config)
-    assert len({token for _, token, _ in tokens.values()}) == 3
+    assert len({token for _, token, _ in tokens.values()}) == len(PROGRAMS)
     for tab_id, token, config in tokens.values():
         assert window.delete(f"/api/terminal/tabs/{tab_id}").status_code == 200
         assert not agent_access.tab_live(token)

@@ -80,3 +80,16 @@ def test_the_old_dialog_and_the_old_socket_are_gone_from_the_window():
         text = path.read_text(encoding="utf-8")
         assert "/api/terminal/ws" not in text, path.name
         assert "askAgentAccess" not in text, path.name
+
+
+def test_the_finder_for_the_agent_programs_is_the_family_s_file_at_a_recorded_version(tmp_path):
+    agents = _agents()
+    assert agents.lookup_problems() == []
+    version = re.search(r'^VERSION = "([^"]+)"$', agents.LOOKUP.read_text(encoding="utf-8"), re.MULTILINE).group(1)
+    assert version in agents.LOOKUP_HASHES
+    changed = tmp_path / "agent_lookup.py"
+    changed.write_bytes(agents.LOOKUP.read_bytes() + b"\n")
+    assert agents.lookup_problems(changed) == [
+        f"{changed}: does not match the hash recorded for version {version} (the shared finder changes only as a whole new version)"
+    ]
+    assert agents.lookup_problems(tmp_path / "gone.py") == [f"{tmp_path / 'gone.py'}: missing (the shared finder for the agent programs)"]

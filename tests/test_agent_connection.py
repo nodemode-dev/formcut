@@ -57,10 +57,11 @@ def test_every_client_gets_text_it_can_read(monkeypatch):
     monkeypatch.setattr(agent_connect, "server_command", lambda: (command, args))
     monkeypatch.setattr(agent_connect.sys, "platform", "darwin")
     listed = {client["id"]: client for client in agent_connect.clients()}
-    assert set(listed) == {"claude-code", "codex", "cursor", "claude-desktop", "vscode", "any"}
+    assert set(listed) == {"claude-code", "codex", "cursor", "antigravity", "claude-desktop", "vscode", "any"}
+    assert listed["antigravity"]["file"] == "~/.gemini/config/mcp_config.json"
     assert shlex.split(listed["claude-code"]["text"]) == ["claude", "mcp", "add", "formcut", "--scope", "user", "--", command, *args]
     assert tomllib.loads(listed["codex"]["text"])["mcp_servers"]["formcut"] == {"command": command, "args": args}
-    for client in ("cursor", "claude-desktop"):
+    for client in ("cursor", "antigravity", "claude-desktop"):
         assert json.loads(listed[client]["text"])["mcpServers"]["formcut"] == {"command": command, "args": args}
     assert json.loads(listed["vscode"]["text"])["servers"]["formcut"] == {"type": "stdio", "command": command, "args": args}
     assert shlex.split(listed["any"]["text"]) == [command, *args]
@@ -181,3 +182,23 @@ def test_a_failed_reconnect_is_reported(claude, monkeypatch):
     with pytest.raises(agent_connect.HTTPException) as raised:
         connect("Volumes/formcut")
     assert raised.value.status_code == 502 and "refused" in raised.value.detail
+
+
+def test_connecting_antigravity_writes_one_entry_and_keeps_the_rest(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(agent_connect, "server_command", lambda: ("/Applications/formcut.app/Contents/MacOS/formcut-engine", ["--mcp"]))
+    file = tmp_path / ".gemini" / "config" / "mcp_config.json"
+    file.parent.mkdir(parents=True)
+    file.write_text(json.dumps({"mcpServers": {"theirs": {"serverUrl": "https://example.invalid/mcp"}}, "theme": "dark"}), encoding="utf-8")
+    first = agent_connect.install(agent_connect.InstallBody(client="antigravity"))
+    assert first == {"client": "antigravity", "written": str(file), "present": False, "older": None}
+    assert json.loads(file.read_text(encoding="utf-8")) == {
+        "mcpServers": {
+            "theirs": {"serverUrl": "https://example.invalid/mcp"},
+            "formcut": {"command": "/Applications/formcut.app/Contents/MacOS/formcut-engine", "args": ["--mcp"]},
+        },
+        "theme": "dark",
+    }
+    written = file.stat().st_mtime_ns
+    assert agent_connect.install(agent_connect.InstallBody(client="antigravity"))["present"] is True
+    assert file.stat().st_mtime_ns == written
