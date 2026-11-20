@@ -99,7 +99,7 @@ def test_the_engine_starts_when_it_has_no_output_streams(tmp_path):
     env = {**os.environ, "FORMCUT_DATA_DIR": str(tmp_path)}
     env.pop("FORMCUT_ENGINE", None)
     engine = subprocess.Popen(
-        [sys.executable, str(ENTRY)], cwd=ROOT / "backend", env=env, stdin=subprocess.DEVNULL, preexec_fn=lambda: (os.close(1), os.close(2))
+        ["/bin/sh", "-c", 'exec "$0" "$1" >&- 2>&-', sys.executable, str(ENTRY)], cwd=ROOT / "backend", env=env, stdin=subprocess.DEVNULL
     )
     try:
         answer, end = None, time.monotonic() + 90
@@ -107,7 +107,7 @@ def test_the_engine_starts_when_it_has_no_output_streams(tmp_path):
             time.sleep(0.25)
             try:
                 url = json.loads((tmp_path / "engine.json").read_text())["url"]
-                with urllib.request.urlopen(url + "/api/health", timeout=5) as told:
+                with urllib.request.urlopen(url + "/api/health", timeout=5) as told:  # noqa: S310 - the test's own loopback engine
                     answer = json.loads(told.read())
             except (OSError, ValueError):
                 continue

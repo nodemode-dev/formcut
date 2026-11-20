@@ -39,7 +39,9 @@ import contextvars
 import functools
 import json
 import os
+import types
 import uuid
+from collections.abc import Mapping
 from typing import Annotated, Any
 
 import httpx
@@ -83,7 +85,7 @@ mcp = MCPServer(
 )
 
 _session: dict[str, str] = {}
-_pass: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar("agent_pass", default={})
+_pass: contextvars.ContextVar[Mapping[str, str]] = contextvars.ContextVar("agent_pass", default=types.MappingProxyType({}))
 _tool: contextvars.ContextVar[str] = contextvars.ContextVar("agent_tool", default="")
 _register_tool = mcp.tool
 

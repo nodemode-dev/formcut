@@ -35,13 +35,15 @@ router = APIRouter(prefix="/api/agent-access", tags=["agent-access"])
 
 STORE = DATA_DIR / "agent-access.json"
 CHOICES = ("ask", "allowed", "blocked")
-PASS_HEADER = "x-formcut-agent-pass"
+PASS_HEADER = "x-formcut-agent-pass"  # noqa: S105 - the header's name, not a password
 TAB_HEADER = "x-formcut-agent-tab"
 TAB_ENV = "FORMCUT_AGENT_TAB"
 PASS_LIFE = 900.0
 ASK_SECONDS = 120.0
 BROKEN = "Outside agent access was changed outside formcut, so it is back to Ask."
-NO_WINDOW = "formcut asks before an outside agent changes anything, and no formcut window is open: open formcut, or choose Allowed in Settings"
+NO_WINDOW = (
+    "formcut asks before an outside agent changes anything, and no formcut window is open: open formcut, or choose Allowed in Settings"
+)
 _lock = threading.Lock()
 _passes: dict[str, float] = {}
 _tabs: set[str] = set()

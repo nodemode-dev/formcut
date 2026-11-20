@@ -2,6 +2,16 @@
 
 Reasoning behind engine changes, newest first.
 
+## Unreleased · the six lint findings outside the finder
+
+- **Why.** With the finder answered in `ruff.toml`, the lint step still named six places in code written on this branch, which had never been through ruff.
+- **The pass header's name (agent_access.py, S105).** `PASS_HEADER` holds the name of a header, `x-formcut-agent-pass`, and the rule reads a name with `PASS` in it as a password. It carries a `noqa` with that reason on its own line, as `cloud.py` does for Dropbox's parameter name (S106). The name is used by `security.py` and the tests and stays.
+- **The MCP server's pass for one tool call (agent_mcp.py, B039).** The context variable `_pass` had `{}` as its default, one dictionary shared by every context that never set it. Nothing wrote into it, but nothing prevented it either. The default is now a read-only empty mapping (`types.MappingProxyType({})`), and the variable is typed as a `Mapping`. Every reader (`_headers`, `_need_pass`, the gate's `finally`, `_rpc`) only reads it or replaces it with `set`.
+- **The routers' imports (main.py, I001).** `window_key` and `dock_tabs` were added out of alphabetical order in the block beside the mounting; they are in order now. The order of `include_router` calls did not change.
+- **The tests (PLW1509, S310, PLW1510).** The closed-streams test started the entry with `preexec_fn`, which is unsafe in a process with threads; it now starts it through `/bin/sh -c 'exec "$0" "$1" >&- 2>&-'`, the same thing the check by hand did, and the process keeps one id so the test can still end it. Its read of the engine's own health address carries the `noqa` the other loopback tests carry. The manifest test's `subprocess.run` says `check=False`, because the test reads the exit code itself and prints the output with it.
+- **Checked on Linux.** ruff 0.16.8: the lint step is clean. A script started through the same shell line saw `sys.stdout` and `sys.stderr` as `None`. `tests/test_agent_connection.py`, `test_agent_manifest.py`, `test_window_key.py`, `test_dock_module.py` and `test_dock_tabs.py` pass.
+- **Not run.** Windows and macOS.
+
 ## Unreleased · the finder is left as it is by the linter and the formatter
 
 - **Why.** The pull request's lint step (`ruff check backend/app mcp setup tests`, ruff 0.16.8) stopped with twelve findings, six of them inside `app/agent_lookup.py`: E731 (line 161), SIM105 (lines 219, 223 and 227), FURB167 (line 245) and PLW1510 (line 375). The format step behind it would have rewritten the same file. That file is the family's finder, copied byte for byte from FormVis and held to a recorded SHA-256 (`LOOKUP_HASHES` in `setup/agents.py`), so it is never edited here.

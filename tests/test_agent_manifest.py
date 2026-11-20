@@ -21,7 +21,9 @@ def test_the_committed_manifest_is_what_sync_writes():
 
 
 def test_sync_check_passes_on_the_committed_tree():
-    done = subprocess.run([sys.executable, str(ROOT / "setup" / "agents.py"), "sync", "--check"], capture_output=True, text=True)
+    done = subprocess.run(
+        [sys.executable, str(ROOT / "setup" / "agents.py"), "sync", "--check"], capture_output=True, text=True, check=False
+    )
     assert done.returncode == 0, done.stdout + done.stderr
 
 
@@ -32,4 +34,6 @@ def test_the_manifest_lists_the_servers_tools_and_keeps_its_subsets_inside_them(
     assert mcp["tools"] and len(mcp["tools"]) == len(set(mcp["tools"]))
     assert set(mcp["read_only"]) <= set(mcp["tools"]) and set(mcp["approval_gated"]) <= set(mcp["tools"])
     assert mcp["transports"] == ["stdio"]
-    assert [s["name"] for s in data["skills"]] == sorted(p.name for p in (ROOT / ".claude" / "skills").iterdir() if (p / "SKILL.md").is_file())
+    assert [s["name"] for s in data["skills"]] == sorted(
+        p.name for p in (ROOT / ".claude" / "skills").iterdir() if (p / "SKILL.md").is_file()
+    )
