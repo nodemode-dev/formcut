@@ -11,12 +11,12 @@
 </p>
 
 <p align="center">
-  <img alt="version v2.19.0" src="https://img.shields.io/badge/version-v2.19.0-eef0f4?style=flat-square">
+  <img alt="version v2.20.0" src="https://img.shields.io/badge/version-v2.20.0-eef0f4?style=flat-square">
   <img alt="TypeScript and Vite" src="https://img.shields.io/badge/TypeScript-Vite-3178c6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Python FastAPI" src="https://img.shields.io/badge/Python-FastAPI-3776ab?style=flat-square">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
   <img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
-  <img alt="Status: active" src="https://img.shields.io/badge/status-active-d69e2e?style=flat-square">
+  <img alt="Status: released" src="https://img.shields.io/badge/status-released-d69e2e?style=flat-square">
 </p>
 
 <p align="center">
@@ -147,7 +147,7 @@ The interface opens at http://localhost:3040. On first run `.env` is created fro
 On Windows run `formcut.bat`. The engine listens on http://127.0.0.1:8040; `FORMCUT_DATA_DIR`, `FORMCUT_MODELS_DIR` and `FORMCUT_PORT` in `.env` move its data, models and port.
 
 > [!IMPORTANT]
-> **Status:** active development. The Android and iOS apps are companions that pair with FormCut running on a computer, and have not been tested on real devices yet.
+> **Status:** released. FormCut is built and bundled for macOS, Windows and Linux and has been tested on all three. The Android and iOS apps are companions that pair with FormCut running on a computer, and have not been tested on real devices yet.
 
 **Contributing:** branch from `main`, keep changes to source here, and leave packaging and releases to formcompiler. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md).
 

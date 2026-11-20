@@ -97,3 +97,169 @@
 :root[data-oled] {
   --rim: var(--edge);
 }
+
+:root {
+  --accent-color: var(--cue);
+  --accent-color-dim: color-mix(in srgb, var(--cue) 20%, transparent);
+  --accent-color-hover: var(--cue-hover);
+
+  --bg-primary: var(--pane);
+  --bg-secondary: var(--float);
+  --bg-tertiary: var(--control);
+  --bg-node: var(--float);
+  --border-color: var(--edge);
+  --border-light: var(--control-press);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
+  --text-muted: var(--ink-faint);
+  --canvas-bg: #1c1b1d;
+  --grid-color: #5e5e60;
+  --node-shadow: 0 6px 18px rgba(0,0,0,0.45);
+
+  --grid-size: 24px;
+  --node-opacity: 1;
+  --connection-width: 2.5px;
+  --canvas-bg-image: none;
+
+  --handle-text: var(--tag-text);
+  --handle-image: var(--tag-image);
+  --handle-array: #9ca3af;
+  --handle-video: var(--tag-video);
+  --handle-audio: var(--tag-audio);
+  --handle-3d: #eab308;
+  --handle-number: #2eff3f;
+  --handle-list: #f7e81c;
+  --handle-boolean: #22c55e;
+  --handle-mask: #a78bfa;
+  --handle-archive: #427268;
+  --handle-code: #191d1a;
+  --handle-data: #242323;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --ease-glass: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-window: 0 24px 60px rgba(0,0,0,0.6);
+
+  --space-1: var(--sp-1);
+  --space-2: var(--sp-2);
+  --space-3: var(--sp-3);
+  --space-4: var(--sp-4);
+  --space-5: 20px;
+  --space-6: var(--sp-5);
+  --space-7: 28px;
+  --space-8: 32px;
+
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius: var(--radius-s);
+  --radius-md: var(--radius-m);
+  --radius-lg: var(--radius-l);
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+
+  --fs-9: 9px;
+  --fs-10: 10px;
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+
+  --ctl-sm: 24px;
+  --ctl-md: 28px;
+  --ctl: 32px;
+  --ctl-lg: 36px;
+  --ctl-xl: 40px;
+
+  --bg-input: var(--control);
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-scrim: var(--veil);
+  --text-on-accent: var(--on-cue);
+  --text-on-cta: #000;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --accent-tint: color-mix(in srgb, var(--cue) 6%, transparent);
+  --accent-tint-strong: color-mix(in srgb, var(--cue) 10%, transparent);
+
+  --accent-intensity: 1;
+  --surface-0: var(--ground);
+  --surface-1: var(--inset);
+  --surface-2: rgb(255 255 255 / 0.03);
+  --surface-field: var(--control);
+  --surface-raised: var(--raise);
+  --group-head: var(--head);
+  --line-0: var(--rim);
+  --line-1: var(--edge);
+  --line-2: var(--control-press);
+  --line-3: var(--raise-edge);
+  --cta-bg: #ffffff;
+  --cta-bg-hover: #f2f2f2;
+  --cta-text: #000000;
+  --accent-soft: var(--cue-soft);
+  --accent-line: var(--cue-line);
+  --accent-glow: var(--cue-soft-hover);
+  --accent-ink: var(--cue-ink);
+  --accent-wash: var(--cue-veil);
+
+  --ok: #22c55e;
+  --ok-soft: #86efac;
+  --warn: #e0806a;
+  --danger: var(--fault);
+  --danger-soft: #f87171;
+  --danger-text: #fca5a5;
+  --success-fill: #059669;
+  --success-fill-hover: #047857;
+  --danger-fill: #dc2626;
+  --danger-fill-hover: #b91c1c;
+  --brand-orange: #f97316;
+
+  --z-under: -1;
+  --z-local-2: 2;
+  --z-local-4: 4;
+  --z-local-5: 5;
+  --z-selected: 9;
+  --z-rail: 10;
+  --z-chrome: var(--z-sticky);
+  --z-menu: var(--z-dropdown);
+  --z-temp: 500;
+  --z-companion: 800;
+  --z-taskbar: 900;
+  --z-modal: 1000;
+  --z-settings: 1500;
+  --z-context: 2000;
+  --z-portal: 4000;
+  --z-home: 10000;
+  --z-home-modal: 10010;
+  --z-home-preview: 10100;
+  --z-account-panel: 10500;
+  --z-overlay-modal: 60000;
+  --z-debug: 100000;
+
+  --cv-titlebar-h: 40px;
+  --cv-options-h: 40px;
+  --cv-tabs-h: 34px;
+  --cv-status-h: 28px;
+  --cv-rail-w: 52px;
+  --cv-layers-w: 288px;
+  --cv-row-h: 40px;
+  --cv-thumb: 30px;
+  --cv-checker-a: #ffffff;
+  --cv-checker-b: #cccccc;
+  --cv-ants-a: #000000;
+  --cv-ants-b: #ffffff;
+  --cv-pixel-grid: rgba(128, 128, 140, 0.35);
+  --cv-handle-fill: #ffffff;
+  --cv-doc-edge: rgba(0, 0, 0, 0.55);
+  --cv-action-blue: #3b82f6;
+  --cv-action-violet: #8b5cf6;
+
+  --glass-bg: color-mix(in srgb, var(--float) 82%, transparent);
+  --glass-border: color-mix(in srgb, var(--ink) 16%, transparent);
+  --glass-highlight: color-mix(in srgb, var(--ink) 12%, transparent);
+  --glass-filter: blur(40px) saturate(1.8);
+  --glass-shadow: 0 22px 56px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+}

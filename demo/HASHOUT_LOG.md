@@ -2,6 +2,11 @@
 
 Reasoning behind the demo, newest first.
 
+## 2.20.0 · rebuilt in the release commit
+
+- **The change.** `npm run demo` in `frontend` after the version edit. Only `assets/style.css` changes: it carries the interface's tokens, which now also declare the FormVis names. `assets/demo.js` and `index.html` are byte-identical; the build defines `__APP_VERSION__` from `frontend/package.json`, but no demo source reads it, so the built files hold no version string.
+- **Seen.** Opened from `file://` in headless Chromium (Playwright 1.63.0): 881 elements, 3 canvases, the title "FormCut demo", no console error. The demo and its media tests passed with the version, README and panel tests (26).
+
 ## 2.19.0 · rebuilt from the tip
 
 - **The change.** `npm run demo` in `frontend` (`vite build --config ../demo/vite.config.mjs`) after `npm ci --ignore-scripts`; `assets/demo.js` and `assets/style.css` change with the interface they share, `index.html` does not. The demo names no agent program, so the four-program sentence does not appear in it. It takes its version from `frontend/package.json`, so it is built once more after the release's version edit, in the release commit.
