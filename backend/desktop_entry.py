@@ -1,7 +1,12 @@
+import contextlib
 import json
+import logging
 import os
 import shutil
 import sys
+from pathlib import Path
+
+RECORDS_SINCE = (2, 18, 0)
 
 if sys.stdin is None:
     sys.stdin = open(os.devnull, encoding="utf-8")
@@ -91,12 +96,102 @@ def main() -> int:
 
         agent_server()
         return 0
+    try:
+        return serve()
+    except Exception:
+        logging.getLogger("formcut").exception("the engine stopped on an error")
+        raise
+
+
+def give_up(record: Path) -> None:
+    from app import startup
+
+    if startup.read_lock(record).get("pid") == os.getpid():
+        with contextlib.suppress(OSError):
+            record.unlink()
+
+
+def released_engine(data: Path) -> dict:
+    import datetime
+
+    try:
+        found = json.loads((data / "engine.json").read_text(encoding="utf-8"))
+        version = tuple(int(part) for part in str(found["version"]).split(".")[:3])
+        started = datetime.datetime.fromisoformat(found["started"]).timestamp()
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+    return {"pid": found.get("pid"), "started": started} if version < RECORDS_SINCE else {}
+
+
+def hold_folder(data: Path, shell: int) -> Path:
+    from app import jobs, startup
+
+    log = logging.getLogger("formcut")
+    record, replaced = startup.claim(data, shell)
+    if replaced:
+        log.info("an engine left running on %s was stopped (process %s)", data, replaced)
+    if jobs.claim_data_dir():
+        return record
+    old = released_engine(data)
+    state = startup.holder(old, shell > 0)
+    held = startup.number(old.get("pid")) if state != startup.FREE else 0
+    if state == startup.LEFTOVER and startup.end(held) and jobs.claim_data_dir():
+        log.info("an engine from before 2.18.0 left running on %s was stopped (process %s)", data, held)
+        return record
+    give_up(record)
+    who = f"engine process {held}" if held else "its engine recorded no process id"
+    raise startup.Busy(f"formcut is already running on {data} ({who}).")
+
+
+def watch_shell(record: Path, shell: int) -> None:
+    from app import startup
+    from app.discovery import withdraw
+
+    if shell <= 1:
+        return
+
+    def leave() -> None:
+        logging.getLogger("formcut").info("the app that started this engine is gone (process %s), stopping", shell)
+        withdraw()
+        give_up(record)
+        os._exit(0)
+
+    startup.watch(shell, leave)
+
+
+def serve() -> int:
     os.environ.setdefault("FORMCUT_DIST", os.path.join(resource_dir(), "frontend_dist"))
+    from app import startup
+    from app.paths import DATA_DIR
+
+    try:
+        (DATA_DIR / "logs").mkdir(parents=True, exist_ok=True)
+    except OSError as err:
+        print(f"formcut cannot use its data folder: {err}", file=sys.stderr)
+        return 5
     import uvicorn
 
+    from app.main import LOGS
     from app.main import app as fastapi_app
 
-    import logging
+    startup.keep_errors(LOGS)
+    log = logging.getLogger("formcut")
+    if startup.alone():
+        beside = startup.app_beside(Path(sys.executable))
+        if beside is not None and startup.open_app(beside):
+            log.info("started without its app, so it opened %s and stopped", beside)
+            return 0
+        log.error("started without its app, and no app program was found near %s", sys.executable)
+        print("formcut-engine is a part of FormCut and serves nothing on its own. Open FormCut instead.", file=sys.stderr)
+        return 4
+    shell = startup.shell_pid()
+    try:
+        record = hold_folder(DATA_DIR, shell)
+    except startup.Busy as err:
+        log.error("%s", err)
+        print(err, file=sys.stderr)
+        return 2
+    watch_shell(record, shell)
     import socket
 
     from app.discovery import publish, withdraw
@@ -122,6 +217,7 @@ def main() -> int:
         async def shutdown(self, sockets=None):
             await super().shutdown(sockets=sockets)
             withdraw()
+            give_up(record)
 
     from app import window_key
 
