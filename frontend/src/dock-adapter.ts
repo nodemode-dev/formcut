@@ -164,10 +164,14 @@ const adapter: DockAdapter = {
       add = onAdd;
       withdraw = onWithdraw;
       for (const request of early.splice(0)) onAdd(request);
-      void call<{ seq: number; requests: Question[] }>("/api/agent-access/waiting").then((told) => {
-        seq = Math.max(seq, told.seq);
-        for (const raw of told.requests) agentQuestion(raw);
-      }, () => undefined);
+      const read = (): void => {
+        void call<{ seq: number; requests: Question[] }>("/api/agent-access/waiting").then((told) => {
+          seq = Math.max(seq, told.seq);
+          for (const raw of told.requests) agentQuestion(raw);
+        }, () => undefined);
+      };
+      read();
+      for (const later of [13000, 27000]) window.setTimeout(read, later);
     },
     answer: async (id: string, choice: ConsentChoice) => {
       open.delete(id);
