@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.18.0, before its merge · an engine that has ended but was not yet collected counts as gone on macOS (`app/startup.py` :: `finished`, `gone_by`)
+
+- **What was seen.** The macOS job of the 2.18.0 pull request failed three tests of `tests/test_startup.py`, each with "formcut could not stop an engine that was left running". `end` had ended the holder, but `gone_by` kept seeing it: `_alive_posix` asks `kill(pid, 0)`, which still answers for a process that has ended and whose parent has not collected it, and it tells such a process apart only by reading `/proc`, which macOS does not have. In the tests the holder is a child of the test, so it stays in that state. In the app it can happen when the holder's own parent is alive and slow to collect it.
+- **The change.** `finished(pid)` asks `ps -o stat= -p <pid>` where there is no `/proc` (never on Windows, never on Linux) and answers true for a state that starts with `Z`. `gone_by` stops waiting when the process is not alive or is finished. `alive` itself is unchanged, so the two second watch on the app starts no program.
+- **Seen.** With `PROC` pointed at a folder that does not exist, on Linux: the two `claim` tests fail with the macOS job's own sentence before the change and pass after it. The third failing test starts a second engine as a program, which runs the same `end`; it could not be made to fail here. Lint and format clean. Not run on macOS.
+
 ## Unreleased · starting and stopping cleanly: one engine per folder, a leftover engine is replaced, the engine leaves with its app
 
 - **Why.** On Windows a quit ends the one-file engine's outer process and leaves the real one running, a failed start is silent, and a double click on the engine serves a page nobody sees. FormTools 0.10.0 has the family's answer; this is its engine side, fitted to what formcut already had.
