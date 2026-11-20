@@ -22,6 +22,19 @@ The module list and the engine commands are generated from `frontend/src` by
 - `demos/woods-data.ts`
 - `demos/woods-paths.ts`
 - `demos/woods.ts`
+- `dock/adapter.ts`
+- `dock/chat.ts`
+- `dock/consent.ts`
+- `dock/dock.ts`
+- `dock/dom.ts`
+- `dock/icons.ts`
+- `dock/keys.ts`
+- `dock/placement.ts`
+- `dock/state.ts`
+- `dock/strings.ts`
+- `dock/terminal.ts`
+- `dock/tour.ts`
+- `dock-adapter.ts`
 - `engine/api.ts`
 - `engine/audio-playback.ts`
 - `engine/captions.ts`
@@ -49,7 +62,6 @@ The module list and the engine commands are generated from `frontend/src` by
 - `main.ts`
 - `types/assets.d.ts`
 - `ui/accordion.ts`
-- `ui/agent-access.ts`
 - `ui/appearance.ts`
 - `ui/browser-view.ts`
 - `ui/category-icons.ts`
