@@ -2,7 +2,7 @@
   "format": "form-functions",
   "format_version": 1,
   "app": "formcut",
-  "app_version": "2.19.0",
+  "app_version": "2.20.0",
   "functions": [
     {
       "id": "transcribe",
