@@ -152,6 +152,7 @@ the automation transports.
 - `segmentation.py`
 - `speech.py`
 - `stabilise.py`
+- `startup.py`
 - `store.py`
 - `subject.py`
 - `template_assets.py`
