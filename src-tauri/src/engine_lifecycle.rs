@@ -158,8 +158,8 @@ pub async fn supervise(
         }
     }
     if !ready || handle.get_webview_window("main").is_some() {
-        crate::reveal::close_splash(&handle);
         handle.dialog().message(failure).blocking_show();
+        crate::reveal::close_splash(&handle);
     }
     crate::kill_backend(&handle);
     handle.exit(1);

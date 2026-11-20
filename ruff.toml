@@ -81,6 +81,10 @@ ignore = [
 # finds in it is a matter for the file's next version there, never for an edit
 # of the copy here, so these four rules are off for this one file.
 "backend/app/agent_lookup.py" = ["E731", "SIM105", "FURB167", "PLW1510"]
+# The family's start and stop rules are copied from FormTools with only the
+# names at the top changed. The file it opens for a missing standard error is
+# kept open for the engine's life on purpose, which is what SIM115 objects to.
+"backend/app/startup.py" = ["SIM115"]
 
 [format]
 # The same file, for the same reason: reformatting it would change its bytes.

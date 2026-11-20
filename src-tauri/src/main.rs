@@ -119,6 +119,7 @@ fn main() {
                 .expect("sidecar binary is bundled")
                 .env("FORMCUT_PORT", "0")
                 .env("FORMCUT_WINDOW_KEY_STDOUT", "1")
+                .env("FORMCUT_SHELL_PID", std::process::id().to_string())
                 .spawn()
                 .expect("the formcut engine failed to spawn");
             app.state::<Backend>().0.lock().unwrap().replace(child);
