@@ -40,6 +40,7 @@ export function buildTitlebar(engine: ProjectEngine, actions?: AppActions): HTML
     <div class="titlebar-right">
       <button class="iconbtn" title="${t('layout.focus')}" data-ref="focus-preview" data-feature="titlebar.focus">${icon("pip")}</button>
       <button class="iconbtn" title="${t('layout.panels')}" data-ref="panels" data-feature="titlebar.panels">${icon("sliders")}</button>
+      <button class="iconbtn" title="${text("Agent terminal")}" aria-label="${text("Agent terminal")}" data-ref="dock" data-feature="titlebar.dock">${icon("terminal")}</button>
       <button class="iconbtn mode-chip" data-ref="mode" data-feature="titlebar.mode" aria-expanded="false" aria-label="${t("layout.mode")}">${icon("layout")}<span class="sr-only" data-ref="mode-name"></span></button>
       <button class="iconbtn" title="${t('set.title')}" data-ref="settings" data-feature="titlebar.settings">${icon("settings")}</button>
       <button class="btn-export" data-ref="export" data-feature="titlebar.export">${icon("export")}${t("btn.export")}</button>

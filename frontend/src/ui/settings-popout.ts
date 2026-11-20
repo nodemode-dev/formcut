@@ -10,7 +10,7 @@ import type { ProjectEngine } from "../engine/project";
 import type { MediaBin } from "../engine/media";
 import { ACCENTS, PROFILES, apply, read, setAccent, setTheme } from "./appearance";
 import { api } from "../engine/api";
-import type { AccessState } from "./agent-access";
+type AccessState = { choice: string; stored: string; seal: string; sealBroken: boolean; notice: string };
 import { rateLabel } from "../engine/rates";
 import { buildModePanel } from "./mode-popout";
 import { buildWebhooks } from "./webhooks-settings";

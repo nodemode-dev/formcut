@@ -3,7 +3,7 @@ import type { MediaBin } from "../engine/media";
 import { api } from "../engine/api";
 import { t } from "../i18n";
 import { icon } from "./icons";
-import { askAgentAccess, installAgentAccess } from "./agent-access";
+import { agentQuestion } from "../dock-adapter";
 import { ERR, ExtensionHost, HostError, PERMISSION_WORDS, type ExtensionRecord, type Frame, type Permission, type Theme } from "../extensions/host-bridge";
 import { applyOps, commandList, readDocument, runCommand } from "../extensions/catalogue";
 
@@ -528,9 +528,9 @@ async function agentLoop() {
     if (!request) continue;
     const ask: AgentRequest = request;
     const id = ask.id;
+    if (ask.action === "consent") { agentQuestion(ask); continue; }
     const answer = async () => {
       try {
-        if (ask.action === "consent") return { result: await askAgentAccess(ask as { tool?: string; agent?: string; notice?: string }) };
         if (ask.action === "list") return { result: listForAgent() };
         if (ask.action === "run") return { result: (await runExtensionCommand(ask.extension ?? "", ask.command ?? "", ask.args ?? {})) ?? null };
         return { error: { code: ERR.NOT_FOUND, message: `${ask.action} is not a window request` } };
@@ -620,7 +620,6 @@ export function buildExtensionsView(engine: ProjectEngine, bin: MediaBin) {
   watchEngine();
   watchTheme();
   void refresh().then(() => void poll());
-  installAgentAccess();
   void agentLoop();
   window.addEventListener("focus", () => void api<{ stamp: number[] }>("/api/extensions/stamp").then((now) => { if (now.stamp.join(",") !== stamp) void refresh(); }, () => undefined));
   return { tab: "Extensions", el: view, pause() {}, async load() {} };

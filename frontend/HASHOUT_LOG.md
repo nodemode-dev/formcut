@@ -2,6 +2,49 @@
 
 Reasoning behind interface changes, newest first.
 
+## Unreleased · the terminal is the family's panel, at the bottom or the right of the window
+
+- **Why.** Every Form app shows the same terminal panel from one shared module. formcut had one shell on a page of Studio, bound to one socket, and its own outside-agent dialog. Both are replaced by module 2.1.0 (`frontend/src/dock`, 15 files copied byte for byte from FormVis at 8bbdf61b and never edited here; `setup/agents.py sync --check` fails, naming the file, when one differs from `MANIFEST.json` or imports from the app).
+- **Where it sits (styles/dock-tokens.css, main.ts).** The panel is a third in-flow child of `#app`, after `.workspace`, and its row or column is a track of `#app`, not of the workspace: `workspace-layout.ts` rewrites the workspace's own grid on every pane change and stores it per interface profile, so a fourth member there would have to be taught to all of that. The title bar keeps the full width; the right column runs from under it to the bottom edge. The `#app` rule is written `:root #app` because the adapter is imported by modules that load before `app.css`, so source order cannot be relied on. In the compact layout the tracks are zero and the panel is not shown. With a right-to-left language `#app` itself is left to right and its other children are set back, so the column stays physically on the right, where the module's grip and drag expect it.
+- **Limits.** `keepHeight: 440` and `keepWidth: 940` (the width `compact.ts` says the three panes need), `maxHeightShare: 0.45`, `maxWidthShare: 0.4`. When the window cannot give 320 px beside 940 the panel stays at the bottom.
+- **Before the first paint (index.html).** A second function in the boot script reads `formcut.dock` and writes `data-ft-dock`, `data-ft-dock-side`, `data-ft-dock-h`, `data-ft-dock-w`, `--ft-dock-size` and `--ft-dock-wsize` with the same limits, so the track is there in the first frame. It is its own function because the appearance one returns early when no appearance is stored.
+- **The adapter (dock-adapter.ts).** Tabs by id through `/api/terminal/tabs`; each socket buys a one-time ticket first and is reopened up to five times, with the screen reset before a second replay. Kinds offered: shell, Claude Code, Codex, Cursor. No Chat: the engine has none, so the ask line opens Claude Code with the sentence. `storage.key` is `formcut.dock`, unused before, and there is no older key to move. The chord is Ctrl+J or Cmd+J on every platform, as formcut's own `mod` is; neither did anything before. It is refused while a modal, Studio, Settings or the start screen covers the editor and in the compact layout, formcut's rule for its own shortcuts. `passKey` names no key.
+- **Keys.** The module stops keys at its roots in the bubble phase. `keymap.ts` listens on `window` in the capture phase, so its target test now names `.ft-dock, .ft-consent, .ft-tour`.
+- **The question.** `agentLoop` in ui/extensions.ts hands a `consent` request to `agentQuestion` and no longer answers it itself; the family's dialog answers at the same route. Waiting questions are read once at load from `/api/agent-access/waiting`; the withdrawal long poll runs only while a question is open. `offers`, `always`, `expires` and `notes` are the engine's. Always allow is stored by the engine, so the adapter never calls `storedChoice.set` for it.
+- **Studio's Agent terminal page** keeps its paragraph, the status line and Connect Claude Code and Connect Codex; Open shell closes Studio and opens the panel on a shell. A title bar button (`titlebar.dock`, off in Easy, on in Advanced) toggles the panel.
+- **xterm** 5.5 to 6.0.0 and the fit addon 0.10 to 0.11.0, pinned, as the module expects; the two lockfile entries were written by hand from the registry's published integrity values.
+- **Removed.** ui/agent-access.ts (70 lines, the scrim dialog), its four rules in extensions.css, the three `.term-*` rules in app.css, and the page's terminal:
+
+```ts
+function show(tool: string, agent: string, notice: string): Promise<Answer> {
+  dialog ??= build();
+  const parts = dialog;
+  const note = t("access.dialog.note").replace("{agent}", agent || t("access.someone")).replace("{tool}", tool);
+  ...
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { event.stopPropagation(); done("deny"); } };
+    parts.deny.onclick = () => done("deny");
+    parts.once.onclick = () => done("once");
+    parts.always.onclick = () => done("always");
+```
+
+```ts
+      term = new Terminal({ cursorBlink: true, fontFamily: ..., fontSize: 13, theme: { background: styles.getPropertyValue("--ground").trim() || "#121617", foreground: ..., cursor: ... } });
+      term.onData((data) => { termSocket?.send(data); });
+      term.onResize(({ cols, rows }) => { termSocket?.send(JSON.stringify({ resize: [cols, rows] })); });
+    const socket = new WebSocket(`${protocol}://${location.host}/api/terminal/ws?cols=${term.cols}&rows=${term.rows}&ticket=${encodeURIComponent(ticket)}`);
+    socket.onmessage = (event) => { term?.write(String(event.data)); };
+    socket.onclose = () => { if (termSocket === socket) closeShell(); term?.write("\r\n[" + text("shell closed") + "]\r\n"); };
+```
+
+```css
+.term-pane { height: min(60vh, 480px); background: var(--ground); padding: var(--sp-2); }
+.agent-access .modal-panel { width: min(420px, 90vw); border: 1px solid var(--edge); }
+.agent-access-notice { color: var(--fault); }
+```
+
+- **Slip.** The commit that added the module folder also carried the staged removal of ui/agent-access.ts, one commit before the code that stopped importing it; the two commits belong together.
+- **Not here.** The module's sentences are in no language table and show in English. The strings `access.dialog.title`, `access.dialog.note`, `access.someone`, "Close shell", "shell closed" and "The shell could not be opened" are no longer used and are still in the tables.
+
 ## Unreleased · the window holds the key, and answers outside agents
 
 - **The key (engine/window-key.ts, engine/local-transport.ts).** `keyReady` is made once when `local-transport` is imported: the shell's `window.__FORMCUT_WINDOW_KEY` first (then deleted); else the key kept in `sessionStorage`, kept only if `POST /api/window/ticket` accepts it; else `POST /api/window/key` once, kept in `sessionStorage`. The page already sent every same-origin `/api/` write through one `window.fetch` wrapper (it added `x-formcut-local`); the wrapper now waits for `keyReady` and adds `X-Formcut-Window-Key` to every same-origin `/api/` request, so the raw `fetch` calls across the interface and `api()` all carry it, including the window's request queue. A search of `frontend/src` finds no `XMLHttpRequest` or `sendBeacon`; the one `EventSource` (`/api/orchestration/events`) is a plain read; the one `WebSocket` (the Agent terminal) now asks `socketTicket()` and opens with `&ticket=`. A paired phone gets no key (the bootstrap is 404 through the network listener) and keeps writing with its device cookie.
