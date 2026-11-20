@@ -214,6 +214,7 @@ def test_a_failed_reconnect_is_reported(claude, monkeypatch):
 
 def test_connecting_antigravity_writes_one_entry_and_keeps_the_rest(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setattr(agent_connect, "server_command", lambda: ("/Applications/formcut.app/Contents/MacOS/formcut-engine", ["--mcp"]))
     file = tmp_path / ".gemini" / "config" / "mcp_config.json"
     file.parent.mkdir(parents=True)
