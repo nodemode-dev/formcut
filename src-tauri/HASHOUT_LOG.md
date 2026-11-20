@@ -2,6 +2,14 @@
 
 Reasoning behind the shell's startup, newest first.
 
+## 2.19.0 · the engine ends with the app on Windows, and a failed start says what the engine said
+
+- **Which way.** FormVis's: the engine is still started through tauri-plugin-shell's sidecar, so `win_job.rs` takes it into the job by its process id (`hold_pid(child.pid())`, `OpenProcess` with `PROCESS_SET_QUOTA | PROCESS_TERMINATE`, then `AssignProcessToJobObject`). The job is made with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, so Windows ends the engine when the shell's last handle to the job goes, however the shell ends. `kill_backend` ends the job before it kills the child. `windows-sys` 0.61.2 is a Windows-only dependency; it was already in `Cargo.lock` through tauri, so the lock gains one line in formcut's own entry and no new package.
+- **The failure text.** `engine_start.rs` holds the sentences, the engine's last twelve lines (control characters dropped, 300 characters a line, never a line with the window key), and the path of the newest `engine-*.log` under the data folder's `logs` (found the way `backend/app/paths.py` finds the data folder: `FORMCUT_DATA_DIR`, a `portable` folder beside the program, then the system's place). The exit code is said in words. Exit code 2, which the engine returns when another copy holds the data folder, has a sentence of its own in place of "The local engine stopped (exit Some(2))". An engine that stops while the window is open says so in its own sentence.
+- **The order.** The dialog is shown first, then the splash is closed, the engine ended and the app left, as in the entry below. A start that fails before the engine runs (missing sidecar, spawn error) no longer panics in `setup`: the dialog is shown from a thread of its own so `setup` returns.
+- **The wait.** 90 seconds for the address (the owner's choice for the family), 10 for the key after it, and one second after the engine stops so its last lines can still arrive.
+- **Checked.** The two files in a scratch crate: `cargo check` and `cargo clippy` for `x86_64-pc-windows-msvc` clean, six tests of the plain functions pass, `cargo fmt --check` clean, `cargo metadata --locked` agrees. The shell itself was not compiled (no WebKit here).
+
 ## Unreleased · the engine is told who started it, and a failed start is said before the splash closes
 
 - **The process id.** The engine is spawned with `FORMCUT_SHELL_PID` set to the shell's own process id (main.rs, one `.env` line beside its two twins). From this version a packaged engine that does not get it takes itself for one started alone, opens the app and serves nothing (`backend/desktop_entry.py`), so the app must set it; with it the engine also leaves within about two seconds of the shell ending, however the shell ended, and records the shell in `engine.owner` so the next start can tell a leftover engine from a live one. The 2.17.0 shell set no such variable, so there was none to keep.
