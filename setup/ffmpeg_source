@@ -5,8 +5,26 @@ dest="${1:?usage: setup/ffmpeg_source <folder>}"
 version="$(sed -n 's/^FFMPEG_VERSION=//p' "$here/build_lgpl_av")"
 sha="$(sed -n 's/^FFMPEG_SHA256=//p' "$here/build_lgpl_av")"
 mkdir -p "$dest"
-out="$dest/ffmpeg-$version.tar.xz"
-curl -fL --retry 3 -o "$out" "https://ffmpeg.org/releases/ffmpeg-$version.tar.xz"
-got="$( (sha256sum "$out" 2>/dev/null || shasum -a 256 "$out") | cut -d' ' -f1)"
-[ "$got" = "$sha" ] || { echo "ffmpeg_source: checksum mismatch for $out" >&2; exit 1; }
-echo "attached $out $got"
+name="ffmpeg-$version.tar.xz"
+out="$dest/$name"
+digest() { (sha256sum "$1" 2>/dev/null || shasum -a 256 "$1") | cut -d' ' -f1; }
+# Each address is checked on its own: a wrong SHA-256 is said with the address that gave it, the file is removed and
+# the next address is tried. Only a file with the pinned SHA-256 is ever left in the folder.
+if [ -f "$out" ] && [ "$(digest "$out")" != "$sha" ]; then
+  echo "ffmpeg_source: the $name already in $dest has the wrong SHA-256, so it was removed" >&2
+  rm -f "$out"
+fi
+if [ ! -f "$out" ]; then
+  for url in "https://ffmpeg.org/releases/$name" "https://dl.formai.studio/sources/ffmpeg/$name"; do
+    if ! curl -fL --retry 3 -o "$out" "$url"; then
+      echo "ffmpeg_source: $url did not answer with $name; trying the next address" >&2
+      rm -f "$out"
+      continue
+    fi
+    [ "$(digest "$out")" = "$sha" ] && break
+    echo "ffmpeg_source: $url gave a $name with the wrong SHA-256, so it was removed; trying the next address" >&2
+    rm -f "$out"
+  done
+  [ -f "$out" ] || { echo "ffmpeg_source: no address gave a $name with the expected SHA-256 (ffmpeg.org, dl.formai.studio); nothing was kept" >&2; exit 1; }
+fi
+echo "attached $out $sha"

@@ -16,9 +16,9 @@ extra=(--enable-zlib)
 if [ ! -f "$prefix/lib/pkgconfig/libavcodec.pc" ]; then
   mkdir -p "$work"
   tarball="$work/ffmpeg-$FFMPEG_VERSION.tar.xz"
-  [ -f "$tarball" ] || curl -fL --retry 3 -o "$tarball" "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz"
-  sum="$( (sha256sum "$tarball" 2>/dev/null || shasum -a 256 "$tarball") | cut -d' ' -f1)"
-  [ "$sum" = "$FFMPEG_SHA256" ] || { say "checksum mismatch for $tarball"; exit 1; }
+  # ffmpeg.org first, the family copy second, each address checked against FFMPEG_SHA256 on its own (the same order
+  # and the same check as setup/build_lgpl_ffmpeg_msvc on Windows).
+  "$here/ffmpeg_source" "$work" >/dev/null || { say "the FFmpeg source could not be fetched with the expected SHA-256"; exit 1; }
   rm -rf "$work/src" && mkdir -p "$work/src"
   tar -xJf "$tarball" -C "$work/src" --strip-components 1
   # x86 builds assemble FFmpeg's SIMD paths with nasm; Apple silicon (NEON) does not need it. GitHub's Intel Mac

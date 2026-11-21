@@ -2,6 +2,13 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.20.1 · a wrong hash from the first download address moves on to the next one (`setup/ffmpeg_source`, `setup/build_lgpl_av`, `setup/build_lgpl_ffmpeg_msvc`, `setup/release_assets`, `app/ffmpeg_fetch.py`, `app/openh264.py`, `app/model_manager.py`, `prepare_cv.py`)
+
+- **What was there.** The Windows FFmpeg source fetch (`build_lgpl_ffmpeg_msvc`) had two addresses but checked the SHA-256 only after the loop, so a wrong file from ffmpeg.org stopped the build and stayed in the work folder. `ffmpeg_source`, `build_lgpl_av` and the release's sidecar source had one address each and kept a wrong file where it landed. The engine's ffmpeg fetch and `bundle_ffmpeg.py` already moved on to the next address.
+- **The change.** Each address is checked on its own: a wrong SHA-256 is said with the address that gave it, the file is removed and the next address is tried (ffmpeg.org, then the family copy at `dl.formai.studio/sources/ffmpeg/`). Only when no address gives the pinned bytes does it stop, with one sentence that names both, and nothing kept. A cached tarball with the wrong SHA-256 is removed and fetched again. `build_lgpl_av` now calls `ffmpeg_source`, so the POSIX and Windows builds fetch in the same order with the same check. The engine's ffmpeg fetch removes a refused archive before the next address and logs which address was refused. OpenH264, the model files and the PyAV sdist have one address each: the stop is unchanged and its sentence now names the address.
+- **Seen.** With a local stand-in for both addresses: first wrong and second right, the right file is kept and the first address is named; both wrong, exit 1, both addresses named and no file; first down, the second is used. `tests/test_ffmpeg_source_fallback.py` runs those three for `ffmpeg_source` and for `build_lgpl_ffmpeg_msvc` (with stand-ins for `pacman`, `cygpath` and `link`), each run limited to 60 seconds.
+- **Not run.** No Windows build; the family copy's addresses were not fetched from here.
+
 ## 2.19.0 · a Windows engine is frozen with no console window (`freeze.py`, `setup/build_windows_portable.bat`)
 
 - **The change.** On Windows `freeze.py` gives PyInstaller `--noconsole` unless `FORMCUT_ENGINE_WINDOWED=0`, the family's switch with its default turned round (the owner's choice: every app's Windows engine runs without a console, as FormWeb's does). The app's engine is started by the shell, which reads its output through pipes, so a console window only showed an empty black box beside the editor that ended the engine when closed.

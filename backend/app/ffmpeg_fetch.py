@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import shutil
 import sys
@@ -28,6 +29,7 @@ RELEASES = (
     "https://github.com/nodemode-dev/formcut-binaries/releases/download",
 )
 DOCUMENTS = ("LGPL-2.1.txt", "THIRD-PARTY-NOTICES.txt", "README.md")
+log = logging.getLogger(__name__)
 
 
 def record() -> dict | None:
@@ -118,12 +120,16 @@ def _fetch_first(urls: list[str], path: Path, report, cancelled, place) -> tuple
         except InterruptedError:
             raise
         except (httpx.HTTPError, OSError) as error:
+            path.unlink(missing_ok=True)
             failures.append(f"{url} ({error})")
             continue
         try:
             return url, place(path)
         except (ValueError, tarfile.TarError) as error:
+            # the refused archive is removed before the next address is tried
+            path.unlink(missing_ok=True)
             failures.append(f"{url} ({error})")
+            log.warning("ffmpeg from %s was refused (%s); trying the next address", url, error)
     raise OSError("ffmpeg could not be downloaded from " + "; ".join(failures))
 
 

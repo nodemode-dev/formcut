@@ -10,14 +10,23 @@ export PATH="$(cygpath -u "$msvc_bin"):$PATH"
 command -v link | grep -qv '^/usr/bin/'
 cd "$(cygpath -u "$work")"
 tarball="ffmpeg-$version.tar.xz"
+if [ -f "$tarball" ] && [ "$(sha256sum "$tarball" | cut -d' ' -f1)" != "$sha" ]; then
+  echo "[lgpl-av] the $tarball already here has the wrong SHA-256, so it was removed"
+  rm -f "$tarball"
+fi
 if [ ! -f "$tarball" ]; then
   for url in "https://ffmpeg.org/releases/$tarball" "https://dl.formai.studio/sources/ffmpeg/$tarball"; do
-    curl -fL --retry 3 -o "$tarball" "$url" && break
+    if ! curl -fL --retry 3 -o "$tarball" "$url"; then
+      echo "[lgpl-av] $url did not answer with $tarball; trying the next address"
+      rm -f "$tarball"
+      continue
+    fi
+    [ "$(sha256sum "$tarball" | cut -d' ' -f1)" = "$sha" ] && break
+    echo "[lgpl-av] $url gave a $tarball with the wrong SHA-256, so it was removed; trying the next address"
     rm -f "$tarball"
   done
-  [ -f "$tarball" ] || { echo "[lgpl-av] could not download $tarball from ffmpeg.org or dl.formai.studio"; exit 1; }
+  [ -f "$tarball" ] || { echo "[lgpl-av] no address gave a $tarball with the expected SHA-256 (ffmpeg.org, dl.formai.studio); nothing was kept"; exit 1; }
 fi
-[ "$(sha256sum "$tarball" | cut -d' ' -f1)" = "$sha" ] || { echo "[lgpl-av] checksum mismatch for $tarball"; exit 1; }
 rm -rf src && mkdir src && tar -xJf "$tarball" -C src --strip-components 1
 cd src
 ./configure --toolchain=msvc --prefix="$(cygpath -m "$prefix")" --enable-shared --disable-static \

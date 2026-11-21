@@ -382,7 +382,10 @@ def download(model: str, report, cancelled):
                     # P8: a file that does not match its pin never lands. It is
                     # deleted and named, so a bad mirror cannot poison the cache.
                     temporary.unlink(missing_ok=True)
-                    raise ValueError(f"Checksum mismatch for {name}: expected {expected[:16]}..., got {digest.hexdigest()[:16]}...")
+                    raise ValueError(
+                        f"Checksum mismatch for {name} from {download_url}: expected {expected[:16]}..., "
+                        f"got {digest.hexdigest()[:16]}..., so it was not kept"
+                    )
                 temporary.replace(path)
                 path.with_suffix(path.suffix + ".json").write_text(
                     json.dumps({"url": download_url, "sha256": digest.hexdigest(), "license": MODELS[model]["license"]})
@@ -614,7 +617,7 @@ def hub_fetch(model: str, path: str):
                         out.write(chunk)
                         digest.update(chunk)
             if digest.hexdigest() != expected:
-                raise ValueError(f"Checksum mismatch for {model}/{path}")
+                raise ValueError(f"Checksum mismatch for {model}/{path} from {url}, so it was not kept")
             temporary.replace(target)
         finally:
             temporary.unlink(missing_ok=True)

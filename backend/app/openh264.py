@@ -105,7 +105,7 @@ def install() -> Path:
     response.raise_for_status()
     library = bz2.decompress(response.content)
     if hashlib.sha256(library).hexdigest() != found[1]:
-        raise RuntimeError("The OpenH264 download did not match the library formcut expects, so it was not kept")
+        raise RuntimeError(f"The OpenH264 download from {SOURCE + found[0]} did not match the library formcut expects, so it was not kept")
     DIR.mkdir(parents=True, exist_ok=True)
     staged = local.with_suffix(local.suffix + ".part")
     staged.write_bytes(library)
