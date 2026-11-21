@@ -43,13 +43,27 @@ python setup/release_notes.py --version "$VERSION" > notes.md
 # The LGPL source offer: the exact FFmpeg source of the sidecar (ffmpeg-licence.json) and of the libraries PyAV
 # links (setup/build_lgpl_av), each checked against its pinned SHA-256, with the licence texts beside them.
 python - "$DIR" <<'PY'
-import hashlib, json, sys, urllib.request
+import hashlib, json, os, sys, urllib.request
 dist = sys.argv[1]
 src = json.load(open("src-tauri/binaries/ffmpeg-licence.json"))["source"]["ffmpeg"]
-name = dist + "/" + src["url"].rsplit("/", 1)[1]
-urllib.request.urlretrieve(src["url"], name)
-digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
-assert digest == src["sha256"], (digest, src["sha256"])
+base = src["url"].rsplit("/", 1)[1]
+name = dist + "/" + base
+# The record's address first, the family copy second; a file with the wrong SHA-256 is removed and the next is tried.
+for url in (src["url"], "https://dl.formai.studio/sources/ffmpeg/" + base):
+    try:
+        urllib.request.urlretrieve(url, name)
+    except OSError as error:
+        if os.path.exists(name):
+            os.remove(name)
+        print(f"{url} did not answer with {base} ({error}); trying the next address", file=sys.stderr)
+        continue
+    digest = hashlib.sha256(open(name, "rb").read()).hexdigest()
+    if digest == src["sha256"]:
+        break
+    os.remove(name)
+    print(f"{url} gave a {base} with the wrong SHA-256, so it was removed; trying the next address", file=sys.stderr)
+else:
+    sys.exit(f"no address gave a {base} with the expected SHA-256; nothing was kept")
 print("attached", name, digest)
 PY
 setup/ffmpeg_source "$DIR"

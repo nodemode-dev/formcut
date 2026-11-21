@@ -65,7 +65,8 @@ def windows_source(folder: Path) -> Path:
             digest.update(chunk)
             out.write(chunk)
     if digest.hexdigest() != sdist["digests"]["sha256"]:
-        raise SystemExit(f"{sdist['filename']} does not match the SHA-256 PyPI publishes for it.")
+        archive.unlink(missing_ok=True)
+        raise SystemExit(f"{sdist['filename']} from {sdist['url']} does not match the SHA-256 PyPI publishes for it, so it was removed.")
     with tarfile.open(archive) as tar:
         tar.extractall(folder, filter="data")
     source = folder / f"{PACKAGE}-{VERSION}"
