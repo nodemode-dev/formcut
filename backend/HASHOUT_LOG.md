@@ -2,6 +2,12 @@
 
 Reasoning behind engine changes, newest first.
 
+## 2.20.2 · the MCP tools give the clip ids that per-clip edits need (`app/agent_mcp.py`)
+
+- **What was there.** `formcut_edit` takes a clip id for its per-clip operations (crossfade, trim, move, remove), but no tool gave one: `formcut_add_clip` answered with the clip's name and place, and `formcut_get_project` listed clips by label. An agent could place clips and then not change them.
+- **The change.** `formcut_add_clip` answers with the id of the clip it placed, and `formcut_get_project` lists each clip with its id. Both tool descriptions say so. The agent reference pages for the tools are brought in line. Nothing else in the engine, the window or the build changed from 2.20.1.
+- **Tests.** `tests/test_mcp_clip_ids.py`.
+
 ## 2.20.1 · a wrong hash from the first download address moves on to the next one (`setup/ffmpeg_source`, `setup/build_lgpl_av`, `setup/build_lgpl_ffmpeg_msvc`, `setup/release_assets`, `app/ffmpeg_fetch.py`, `app/openh264.py`, `app/model_manager.py`, `prepare_cv.py`)
 
 - **What was there.** The Windows FFmpeg source fetch (`build_lgpl_ffmpeg_msvc`) had two addresses but checked the SHA-256 only after the loop, so a wrong file from ffmpeg.org stopped the build and stayed in the work folder. `ffmpeg_source`, `build_lgpl_av` and the release's sidecar source had one address each and kept a wrong file where it landed. The engine's ffmpeg fetch and `bundle_ffmpeg.py` already moved on to the next address.
