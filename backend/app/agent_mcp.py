@@ -368,8 +368,9 @@ def formcut_create_project(
 @mcp.tool(
     name="formcut_get_project",
     description=(
-        "Read a formcut project: its title, frame, duration, current revision and the clips on each track. Use "
-        "it to recover the revision after a stale-revision refusal, or to see what a project already contains."
+        "Read a formcut project: its title, frame, duration, current revision and the clips on each track, each "
+        "with its clip id. Use it to recover the revision after a stale-revision refusal, to see what a project "
+        "already contains, or to find the clip id that a per-clip operation in formcut_edit needs."
     ),
     annotations={"readOnlyHint": True, "openWorldHint": False},
 )
@@ -390,7 +391,7 @@ def formcut_get_project(
     for index, track in enumerate(timeline.get("tracks", [])):
         clips = (
             ", ".join(
-                f"{clip.get('label', clip.get('id'))} at {clip.get('start')}s for {clip.get('duration')}s"
+                f"{clip.get('label', clip.get('id'))} [clip {clip.get('id')}] at {clip.get('start')}s for {clip.get('duration')}s"
                 + (
                     f" (media {clip['mediaId']}, source in {clip.get('sourceIn') or 0}s, speed {clip.get('speed') or 1})"
                     if clip.get("mediaId")
@@ -475,7 +476,8 @@ def formcut_list_projects() -> str:
     description=(
         "Put an imported media item on a project timeline and return the new revision. Give the media id from "
         "formcut_import_media, the track index (0 is the top track), where the clip starts in seconds, how long "
-        "it runs, and optionally where in the source to start from. Returns the revision the next edit must carry."
+        "it runs, and optionally where in the source to start from. Returns the new clip's id, which per-clip "
+        "operations in formcut_edit take, and the revision the next edit must carry."
     ),
     annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False},
 )
@@ -515,7 +517,7 @@ def formcut_add_clip(
     if not ok:
         return f"{edited}\nIf the revision was stale, call formcut_get_project to read the current one and retry."
     return (
-        f"added {name} to track {track} at {start} s for {duration} s\n"
+        f"added {name} as clip {clip['id']} to track {track} at {start} s for {duration} s\n"
         f"project {project_id} is now revision {edited.get('revision')}, duration "
         f"{round(edited.get('duration') or 0, 2)} s"
     )
